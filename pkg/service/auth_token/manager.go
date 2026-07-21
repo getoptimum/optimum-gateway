@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -28,8 +29,8 @@ var (
 )
 
 const (
-	mintPath  = "/api/v1/auth/token" // mintPath is appended to AppConfig.RemoteAuthURL to form the mint endpoint.
-	flagsPath = "/api/v1/auth/flags" // per-gateway runtime flags, polled between re-mints.
+	mintPath  = "/api/v1/auth/token"
+	flagsPath = "/api/v1/auth/flags" // per-gateway runtime flags, polled between re-mints
 	// Upstream issues 6h JWTs; refreshing around the 3h mark leaves a 3h
 	// fence for transient auth-service outages while still hitting the
 	// auth service only ~8 times/day.
@@ -62,6 +63,10 @@ type Service struct {
 	propagationSink     func(bool)
 	propagationEnabled  atomic.Bool
 	flagsUnsupportedLog atomic.Bool
+	// terminal closes when the key is revoked/unknown/suspended so both
+	// background loops stop together.
+	terminal     chan struct{}
+	terminalOnce sync.Once
 }
 
 type mintResponse struct {
@@ -142,6 +147,7 @@ func New(ctx context.Context, log logger.AppLogger, appCfg *config.AppConfig) (*
 		propagationSink: appCfg.SetKeyPropagationEnabled,
 	}
 	srv.propagationEnabled.Store(true)
+	srv.terminal = make(chan struct{})
 	return srv, nil
 }
 
@@ -409,16 +415,15 @@ func (m *Service) mint(ctx context.Context) (string, error) {
 	return parsed.AccessToken, nil
 }
 
-// flagsLoop polls /auth/flags between re-mints so a propagation toggle lands
-// in ~1-2 minutes instead of the ~3h mint cadence. Fail-open on every error:
-// the last applied value stays until a poll succeeds. A pre-rollout auth
-// service (404/405) is logged once and polling continues so an upgraded
-// service is picked up without a restart.
+// flagsLoop polls /auth/flags between re-mints so a toggle lands in ~1-2 min.
+// Errors keep the last value; a pre-rollout auth service (404/405) logs once.
 func (m *Service) flagsLoop(ctx context.Context) {
 	for {
 		sleepSec, _ := randutil.RandBetween(flagsIntervalMinSec, flagsIntervalMaxSec)
 		select {
 		case <-ctx.Done():
+			return
+		case <-m.terminal:
 			return
 		case <-time.After(time.Duration(sleepSec) * time.Second):
 		}
@@ -433,13 +438,18 @@ func (m *Service) flagsLoop(ctx context.Context) {
 				m.log.Info("auth service does not serve /auth/flags yet; propagation toggles apply on re-mint only")
 			}
 		case statusCode == http.StatusUnauthorized:
-			// Key no longer active; refreshLoop owns terminal handling, this loop
-			// just stops flapping the flag.
-			m.log.Error("flags poll unauthorized; keeping last value", ErrUnknownKey)
+			m.log.Error("flags poll unauthorized — key is terminal, loop exiting", ErrUnknownKey)
+			m.markTerminal()
+			return
 		default:
 			m.log.Debug("flags poll unexpected status; keeping last value", logger.WithInt("status", statusCode))
 		}
 	}
+}
+
+// markTerminal signals both background loops to stop; safe to call repeatedly.
+func (m *Service) markTerminal() {
+	m.terminalOnce.Do(func() { close(m.terminal) })
 }
 
 // refreshLoop sleeps for a randomized interval, then re-mints. The random
@@ -455,6 +465,7 @@ func (m *Service) refreshLoop(ctx context.Context) {
 				errors.Is(err, ErrKeyRevoked),
 				errors.Is(err, ErrKeySuspended):
 				m.log.Error("api key terminal failure — refresh loop exiting", err)
+				m.markTerminal()
 				return
 			default:
 				m.log.Error("auth refresh failed; will retry next tick", err)

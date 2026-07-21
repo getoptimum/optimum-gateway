@@ -96,9 +96,8 @@ type AppConfig struct {
 
 	rotator            *commonconfig.Rotator
 	propagationEnabled atomic.Bool
-	// keyPropagationEnabled is the per-key flag from the auth mint/flags poll
-	// (crossover tests); ANDed with the cluster-level flag above. The dynamic-config
-	// rotator never writes it, so the two channels can't clobber each other.
+	// keyPropagationEnabled is the per-key flag from the auth mint/flags poll,
+	// ANDed with the cluster flag above; the DC rotator never writes it.
 	keyPropagationEnabled atomic.Bool
 	skipMessageFromSelf   atomic.Bool
 	aggregationIntervalMs atomic.Int64
