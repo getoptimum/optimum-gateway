@@ -11,7 +11,7 @@
 [![Docker image](https://img.shields.io/docker/v/getoptimum/gateway?label=docker&sort=semver)](https://hub.docker.com/r/getoptimum/gateway)
 [![Shadow Bench](https://github.com/getoptimum/optimum-bench/actions/workflows/from-gateway.yml/badge.svg)](https://getoptimum.github.io/optimum-bench)
 [![Kurtosis Readiness](https://github.com/getoptimum/optimum-gateway/actions/workflows/optimum-package.yml/badge.svg)](https://github.com/getoptimum/optimum-gateway/actions/workflows/optimum-package.yml)
-[![License](https://img.shields.io/github/license/getoptimum/optimum-gateway)](./LICENSE)
+[![License](https://img.shields.io/badge/License-Ms--RSL-blue)](./LICENSE)
 
 # Optimum Gateway
 
