@@ -9,9 +9,8 @@
 [![Go version](https://img.shields.io/github/go-mod/go-version/getoptimum/optimum-gateway)](go.mod)
 [![Coverage](https://img.shields.io/badge/coverage-%E2%89%A571%25-green)](Makefile)
 [![Docker image](https://img.shields.io/docker/v/getoptimum/gateway?label=docker&sort=semver)](https://hub.docker.com/r/getoptimum/gateway)
-[![Shadow Bench](https://github.com/getoptimum/optimum-bench/actions/workflows/from-gateway.yml/badge.svg)](https://getoptimum.github.io/optimum-bench)
 [![Kurtosis Readiness](https://github.com/getoptimum/optimum-gateway/actions/workflows/optimum-package.yml/badge.svg)](https://github.com/getoptimum/optimum-gateway/actions/workflows/optimum-package.yml)
-[![License](https://img.shields.io/github/license/getoptimum/optimum-gateway)](./LICENSE)
+[![License](https://img.shields.io/badge/License-Ms--RSL-blue)](./LICENSE)
 
 # Optimum Gateway
 
@@ -206,7 +205,6 @@ make vulcheck    # govulncheck (with documented exception list)
 - [Integration guide for validators](guide.md)
 - [Versioned docs & release notes](docs/versions/)
 - [Changelog](docs/CHANGELOG.md)
-- [Architecture decision records](docs/ADR/)
 - [Security model](SECURITY.md)
 
 ## Contributing
