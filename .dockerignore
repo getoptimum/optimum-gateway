@@ -1,0 +1,29 @@
+# Integration tests and data
+integration/
+
+# Documentation (not needed for build)
+docs/
+
+# Build artifacts (will be built inside container)
+bin/
+
+# Runtime data directories (created at runtime)
+data/
+identity/
+logs/
+teku-data/
+
+# Secrets (should never be in image)
+secrets/
+
+# Test files and coverage
+*_test.go
+cover.out
+
+# CI/CD and development files
+.github/
+Makefile
+docker-compose*.yml
+
+# Test data
+internal/**/test_data/

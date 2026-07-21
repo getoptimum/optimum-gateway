@@ -1,0 +1,71 @@
+version: "3.8"
+
+services:
+  hermes:
+    image: getoptimum/hermes-gateway-sidecar:latest
+    networks:
+      - mump2p_cluster
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          # hardcoded 2 CPU cores limitation
+          # probably we should dynamically adjust it based on the host CPU cores count
+          cpus: '1.5' # 0.75 * 2 cores
+          memory: 1024M
+        reservations:
+          cpus: '1'
+          memory: 512M
+    ports:
+      - 9010:9010 # libp2p
+      - 9011:9011 # discv5
+      - 127.0.0.1:6064:6064
+    command: >-
+      hermes
+      --log.level=info
+      --log.format=json
+      --metrics=true
+      --metrics.addr=0.0.0.0
+      --metrics.port=6064
+      --data.stream.type=noop
+      --libp2p.host=0.0.0.0
+      --libp2p.port=9010
+      --dial.concurrency=32
+      --libp2p.max-peers=250
+      --libp2p.peerscore.snapshot.frequency=1m
+      --libp2p.filter.mode="denylist"
+      --libp2p.filter.patterns="^hermes.*,^lodestar.*,^erigon.*"
+      --libp2p.direct-connections="/dns4/mump2p_gateway/tcp/33212/p2p/$GATEWAY_PEER_ID"
+      eth
+      --chain=hoodi
+      --devp2p.host=0.0.0.0
+      --devp2p.port=9011
+      --prysm.host=$PRYSM_HOST
+      --prysm.port.http=3501
+      --prysm.port.grpc=4001
+      --prysm.tls=false
+      --subscription.topics=beacon_block
+
+  mump2p_gateway:
+    image: getoptimum/gateway:latest
+    restart: unless-stopped
+    networks:
+      - mump2p_cluster
+    ports:
+      - "33212:33212" # libp2p port
+      - "33213:33213" # opt port
+      - "48123:48123" # telemetry + API
+    volumes:
+      - "./config:/app/config:ro"
+      - "./mump2p/data/mump2p/:/tmp/mump2p" # identity_mump2p_dir in app_conf.yml must match container path
+      - "./mump2p/data/libp2p/:/tmp/libp2p" # BE SURE THAT IN app_conf.yml identity_libp2p_dir is /tmp/libp2p
+    command: -config=/app/config/app_conf.yml
+    healthcheck:
+      test:
+        ["CMD", "curl", "-f", "http://mump2p_gateway:48123/api/v1/self_info"]
+      interval: 15s
+      timeout: 2s
+      retries: 5
+
+networks:
+  mump2p_cluster:

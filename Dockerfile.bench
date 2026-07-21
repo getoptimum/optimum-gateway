@@ -1,0 +1,73 @@
+# Glibc build of the gateway, used by optimum-bench for Shadow simulations.
+#
+# Why this exists separately from the production Dockerfile:
+#   The release image is Alpine/musl, but Shadow's libc shim is glibc-only.
+#   Shadow refuses to run an Alpine binary because the named ELF interpreter
+#   (/lib/ld-musl-x86_64.so.1) doesn't exist on its glibc-based runner host.
+#   This file produces an identical gateway binary built against glibc, so
+#   Shadow can intercept its syscalls.
+#
+# Linux/amd64 only — Shadow is x86_64-only anyway.
+
+FROM golang:1.26.5-bookworm AS builder
+
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      build-essential git clang lld openssh-client ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV CGO_ENABLED=1
+ENV CC=clang CXX=clang++
+
+WORKDIR /optimum-gateway
+
+# Same private-repo handling as the release Dockerfile: prefer github_token
+# secret, fall back to SSH agent, fail loudly if neither is present.
+RUN --mount=type=ssh,required=false \
+    --mount=type=secret,id=github_token,required=false \
+    if [ -f /run/secrets/github_token ]; then \
+        git config --global url."https://x-access-token:$(cat /run/secrets/github_token)@github.com/".insteadOf "https://github.com/"; \
+    elif [ -n "$SSH_AUTH_SOCK" ] || [ -f /run/buildkit/ssh_agent.0 ]; then \
+        git config --global url."git@github.com:".insteadOf "https://github.com/" && \
+        mkdir -p -m 0700 ~/.ssh && \
+        ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null || true; \
+    else \
+        echo "ERROR: Neither github_token nor SSH authentication available"; \
+        exit 1; \
+    fi
+
+ENV GOPRIVATE=github.com/getoptimum
+ENV GONOSUMDB=github.com/getoptimum
+
+COPY go.mod go.sum ./
+RUN --mount=type=ssh,required=false \
+    --mount=type=secret,id=github_token,required=false \
+    --mount=type=cache,target=/go/pkg/mod \
+    go mod download
+
+COPY . .
+
+# -linkmode=external forces the cgo external linker so the resulting binary is
+# dynamically linked against glibc (libc.so.6, ld-linux-x86-64.so.2). Shadow
+# requires a dynamic ELF — a fully-static binary is rejected by its libc shim.
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    go build -ldflags='-linkmode=external' -o /gateway/optimum-gateway ./cmd
+
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /gateway
+
+RUN mkdir -p /gateway/logs
+
+COPY --from=builder /gateway/optimum-gateway /optimum-gateway
+
+EXPOSE 33212 33213 48123
+
+ENTRYPOINT ["/optimum-gateway"]

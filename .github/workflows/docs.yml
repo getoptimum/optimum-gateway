@@ -1,0 +1,66 @@
+name: Docs (build, lint, deploy)
+
+on:
+  push:
+    branches:
+      - main
+      - 'releases/**'
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    name: Docs - Lint, Build & Deploy
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: docs
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '23'
+          cache: 'yarn'
+          cache-dependency-path: docs/yarn.lock
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Remove ADR folder from docs
+        run: rm -rf ADR
+
+      - name: Lint
+        run: make lint
+
+      - name: Lint markdown
+        run: make lint-markdown
+
+
+      - name: Build VitePress
+        env:
+          BASE: /${{ github.event.repository.name }}/
+        run: make build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
+        with:
+          name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
+          path: docs/.vitepress/dist
+
+      - name: Deploy to GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
+        with:
+          artifact_name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}

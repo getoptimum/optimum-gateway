@@ -1,0 +1,44 @@
+name: Go setup with GitHub App token
+description: Generate a GitHub App token, set up Go, and configure git for private modules.
+
+inputs:
+  go-version:
+    description: Go version to install
+    required: true
+  app-id:
+    description: GitHub App ID
+    required: true
+  private-key:
+    description: GitHub App private key
+    required: true
+  owner:
+    description: GitHub organization/owner for the App token
+    required: true
+
+outputs:
+  token:
+    description: Generated GitHub App token
+    value: ${{ steps.generate-token.outputs.token }}
+
+runs:
+  using: composite
+  steps:
+    - name: Generate GitHub App Token
+      id: generate-token
+      uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+      with:
+        app-id: ${{ inputs.app-id }}
+        private-key: ${{ inputs.private-key }}
+        owner: ${{ inputs.owner }}
+
+    - name: Set up Go
+      uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+      with:
+        go-version: ${{ inputs.go-version }}
+        cache: true
+
+    - name: Configure git for private modules
+      shell: bash
+      run: |
+        set -euo pipefail
+        git config --global url."https://x-access-token:${{ steps.generate-token.outputs.token }}@github.com/".insteadOf "https://github.com/"

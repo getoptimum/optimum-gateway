@@ -1,0 +1,74 @@
+# License Policy Configuration
+# Enforced by scripts/check-licenses.py via the license-check job in
+# .github/workflows/security-scan.yml.
+#
+# Two passes run against this policy:
+#   - Shipped binary (./cmd): strict, blocked licenses and unknowns fail CI.
+#   - Test/infra (./...): report-only, printed but never gates the build.
+
+policy:
+  # Strong-copyleft SPDX IDs blocked from the shipped binary.
+  # Covers all SPDX variant suffixes (-only, -or-later) explicitly because
+  # go-licenses reports whichever variant appears in the upstream LICENSE file.
+  blocked_licenses:
+    - GPL-2.0
+    - GPL-2.0-only
+    - GPL-2.0-or-later
+    - GPL-3.0
+    - GPL-3.0-only
+    - GPL-3.0-or-later
+    - AGPL-3.0
+    - AGPL-3.0-only
+    - AGPL-3.0-or-later
+    - LGPL-2.0
+    - LGPL-2.0-only
+    - LGPL-2.0-or-later
+    - LGPL-2.1
+    - LGPL-2.1-only
+    - LGPL-2.1-or-later
+    - LGPL-3.0
+    - LGPL-3.0-only
+    - LGPL-3.0-or-later
+
+  # Reference list of unconditionally allowed licenses.
+  # The check script blocks blocked_licenses; this list is for documentation.
+  allowed_licenses:
+    - MIT
+    - Apache-2.0
+    - BSD-2-Clause
+    - BSD-3-Clause
+    - ISC
+    - MPL-2.0      # weak copyleft, file-level; safe for binary distribution
+    - Unlicense
+    - 0BSD
+    - CC0-1.0
+
+exceptions:
+  # An exception clears a package whose license is blocked OR undetected.
+  # Use it for permissive deps that go-licenses cannot classify (detection
+  # gaps), not to wave through genuine copyleft.
+  #
+  # - package: github.com/example/pkg
+  #   license: GPL-3.0-only
+  #   reason: |
+  #     Explanation of why this is safe. Legal review ref if applicable.
+  #   review_date: "YYYY-MM-DD"
+  #   next_review: "YYYY-MM-DD"
+
+  - package: github.com/multiformats/go-base36
+    license: Apache-2.0 OR MIT
+    reason: |
+      go-licenses reports "Unknown": the LICENSE.md is Protocol Labs' dual
+      Apache-2.0/MIT "Permissive License Stack", which is not a single SPDX ID.
+      Verified permissive; no copyleft obligation.
+    review_date: "2026-07-08"
+    next_review: "2027-07-08"
+
+  - package: github.com/herumi/bls-eth-go-binary/bls
+    license: BSD-3-Clause
+    reason: |
+      go-licenses reports "Unknown": the published Go module snapshot ships no
+      LICENSE file. Upstream (github.com/herumi/bls-eth-go-binary) is
+      BSD-3-Clause. Verified permissive; no copyleft obligation.
+    review_date: "2026-07-08"
+    next_review: "2027-07-08"

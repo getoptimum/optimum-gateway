@@ -1,0 +1,22 @@
+.idea/
+.vscode/
+optimum-gateway
+cover.out
+bin/*
+!bin/.gitkeep
+config/app_conf.yml
+vendor
+.env
+identity
+third_party
+secrets
+.DS_Store
+data
+libid
+optid
+logs/
+p2p.key
+docs/node_modules/
+path/
+# Python bytecode from scripts/ tooling
+scripts/__pycache__/

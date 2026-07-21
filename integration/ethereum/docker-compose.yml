@@ -1,0 +1,357 @@
+services:
+  # ========================================================
+  # Optimum Gateway service (always required)
+  # ========================================================
+  optimum-gateway:
+    # platform: linux/arm64
+    image: getoptimum/gateway:${GATEWAY_VERSION}   # Use version from env var
+    container_name: optimum-gateway
+    restart: unless-stopped
+    profiles: ["lite", "full", "geth", "nethermind", "teku", "prysm", "lighthouse", "nimbus", "lodestar"]
+    ports:
+      - "33212:33212"         # libp2p port (CL clients connect here)
+      - "43213:43213"         # mump2p agent port
+      - "48123:48123"         # Telemetry/metrics port
+    volumes:
+      - ./config:/app/config  # Config directory (must contain app_conf.yml)
+      - ./identity/libp2p:/tmp/libp2p   # Persistent libp2p identity
+      - ./identity/mump2p:/tmp/mump2p   # Persistent mump2p identity
+    environment:
+      OPT_API_KEY: ${OPT_API_KEY}
+    command: ["-config=/app/config/app_conf.yml"]  # Explicit config path
+    networks:
+      hop-hoodi-testnet:
+        ipv4_address: 172.29.0.16
+
+  # ========================================================
+  # Execution Layer (EL) - choose either geth OR nethermind
+  # Activated using --profile geth or --profile nethermind
+  # Both expose alias "execution" so CL clients can connect
+  # ========================================================
+  geth:
+    image: ethereum/client-go:${GETH_VERSION:-stable}
+    container_name: geth
+    restart: unless-stopped
+    profiles: ["geth"]  # run only if --profile geth or full
+    command:
+      - --hoodi                        # Custom Hoodi testnet flag
+      - --http                         # Enable HTTP RPC
+      - --http.api=eth,net,engine,admin
+      - --authrpc.jwtsecret=/jwt.hex   # JWT secret for EL-CL auth
+      - --datadir=/data
+    ports:
+      - "8545:8545"           # HTTP RPC
+      - "8551:8551"           # Auth RPC (Engine API for CL)
+      - "30303:30303/tcp"     # P2P TCP
+      - "30303:30303/udp"     # P2P UDP (discovery)
+    volumes:
+      - ./hop-hoodi/geth-data:/data
+      - ./hop-hoodi/ethereum:/ethereum
+      - ./hop-hoodi/jwt.hex:/jwt.hex
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8545"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      hop-hoodi-testnet:
+        aliases:
+          - execution # gives this EL the alias "execution"
+
+  nethermind:
+    image: nethermind/nethermind:${NETHERMIND_VERSION:-1.33.0}
+    container_name: nethermind
+    restart: unless-stopped
+    profiles: ["nethermind"]
+    ports:
+      - "8545:8545"          # HTTP RPC
+      - "8551:8551"         # Auth RPC (Engine API for CL)
+      - "30303:30303/tcp"    # P2P TCP
+      - "30303:30303/udp"   # P2P UDP (discovery)
+    command: >
+      --config=hoodi
+      --datadir=/nethermind/data
+      --JsonRpc.Enabled=true
+      --JsonRpc.JwtSecretFile="/root/jwt/jwt.hex"
+      --JsonRpc.EngineHost=0.0.0.0
+      --JsonRpc.EnginePort=8551
+      --JsonRpc.Host=0.0.0.0
+      --JsonRpc.Port=8545
+      --Metrics.Enabled=true
+      --Metrics.ExposePort=8008
+      --Sync.SnapSync=true
+    volumes:
+      - ./data/nethermind:/nethermind/data
+      - ./hop-hoodi/jwt.hex:/root/jwt/jwt.hex
+    networks:
+      hop-hoodi-testnet:
+        aliases:
+          - execution # gives this EL the alias "execution"
+
+
+  # ========================================================
+  # Consensus Layer (CL) - choose prysm, teku, or lighthouse
+  # They connect to whichever EL is running via alias "execution"
+  # GATEWAY_PEER is split during make init into ADDR + PEER_ID
+  # ========================================================
+  prysm-beacon:
+    image: gcr.io/offchainlabs/prysm/beacon-chain:${PRYSM_VERSION:-v7.1.4}
+    container_name: prysm-beacon
+    restart: unless-stopped
+    profiles: ["prysm"]
+    command:
+      - --execution-endpoint=http://execution:8551   # Connect to Geth EL
+      - --datadir=/eth-hoodi-disk/prysm-data
+      - --hoodi
+      - --jwt-secret=/jwt.hex
+      - --checkpoint-sync-url=https://hoodi.beaconstate.info   # Quick sync
+      - --genesis-beacon-api-url=https://hoodi.beaconstate.info
+      - --accept-terms-of-use
+      - --peer=${GATEWAY_PEER}   # Connect to Optimum Gateway
+    ports:
+      - "4000:4000"           # Prysm gRPC
+      - "3500:3500"           # HTTP API
+      - "12000:12000/tcp"     # P2P TCP
+      - "12000:12000/udp"     # P2P UDP
+      - "13000:13000"         # Extra P2P
+    volumes:
+      - ./hop-hoodi/prysm-data:/prysm-data
+      - ./hop-hoodi/ethereum:/ethereum
+      - ./hop-hoodi/jwt.hex:/jwt.hex
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:13000/eth/v1/node/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - hop-hoodi-testnet
+
+  teku-beacon:
+    image: consensys/teku:${TEKU_VERSION:-latest}
+    container_name: teku-beacon
+    restart: unless-stopped
+    user: "0:0"
+    profiles: ["teku"]
+    volumes:
+      - ./hop-hoodi/teku-data:/teku-data
+      - ./hop-hoodi/jwt.hex:/jwt.hex
+    command:
+      - --network=hoodi
+      - --data-base-path=/teku-data
+      - --data-storage-mode=prune
+      - --checkpoint-sync-url=https://hoodi.beaconstate.info
+      - --ee-endpoint=http://execution:8551
+      - --ee-jwt-secret-file=/jwt.hex
+      - --log-destination=CONSOLE
+      - --logging=INFO
+      - --p2p-enabled=true
+      - --p2p-discovery-enabled=true
+      - --p2p-port=13000
+      - --p2p-subscribe-all-subnets-enabled
+      - --p2p-subscribe-all-custody-subnets-enabled
+      - --metrics-enabled=true
+      - --metrics-host-allowlist=*
+      - --metrics-interface=0.0.0.0
+      - --metrics-port=8008
+      - --rest-api-enabled=true
+      - --rest-api-port=3500
+      - --rest-api-host-allowlist=*
+      - --validators-proposer-default-fee-recipient=0x0000000000000000000000000000000000000000
+      - --validators-builder-registration-default-enabled
+      - --validators-graffiti-client-append-format=DISABLED
+      - --p2p-direct-peers=${GATEWAY_PEER}
+      - --p2p-static-peers=${GATEWAY_PEER}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3500/eth/v1/node/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - hop-hoodi-testnet
+
+  nimbus:
+    image: statusim/nimbus-eth2:${NIMBUS_VERSION:-multiarch-v26.5.0}
+    container_name: nimbus
+    restart: unless-stopped
+    profiles: ["nimbus"]
+    volumes:
+      - ./hop-hoodi/nimbus-data:/data
+      - ./hop-hoodi/jwt.hex:/data/jwt.hex
+    command:
+      - --network=hoodi
+      - --data-dir=/data
+      - --graffiti=Optimum/Nimbus
+      - --el=http://execution:8551
+      - --jwt-secret=/data/jwt.hex
+      - --listen-address=0.0.0.0
+      - --tcp-port=19000
+      - --udp-port=19000
+      - --max-peers=50
+      - --metrics=true
+      - --metrics-address=0.0.0.0
+      - --metrics-port=8008
+      - --rest=true
+      - --rest-port=3500
+      - --rest-address=0.0.0.0
+      - --rest-allow-origin=*
+      - --external-beacon-api-url=https://hoodi.beaconstate.info
+      - --doppelganger-detection=false
+      - --light-client-data-serve=false
+      - --validator-monitor-auto=false
+      - --direct-peer=${GATEWAY_PEER}
+    ports:
+      - "13500:3500"
+      - "19000:19000/tcp"
+      - "19000:19000/udp"
+      - "18008:8008"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3500/eth/v1/node/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+    networks:
+      - hop-hoodi-testnet
+
+  lodestar:
+    image: chainsafe/lodestar:${LODESTAR_VERSION:-v1.43.0}
+    container_name: lodestar
+    restart: unless-stopped
+    profiles: ["lodestar"]
+    volumes:
+      - ./hop-hoodi/lodestar-data:/data
+      - ./hop-hoodi/jwt.hex:/jwt.hex
+    command:
+      - beacon
+      - --network=hoodi
+      - --dataDir=/data
+      - --checkpointSyncUrl=https://hoodi.beaconstate.info
+      - --execution.urls=http://execution:8551
+      - --jwtSecret=/jwt.hex
+      - --rest.address=0.0.0.0
+      - --rest.port=9596
+      - --listenAddress=0.0.0.0
+      - --port=19001
+      - --discoveryPort=19001
+      - --metrics
+      - --metrics.address=0.0.0.0
+      - --metrics.port=8008
+      - --subscribeAllSubnets
+      - --directPeers=${GATEWAY_PEER}
+    ports:
+      - "9596:9596"             # REST API
+      - "19001:19001/tcp"       # P2P TCP (avoid :9000 clash with Lighthouse)
+      - "19001:19001/udp"       # P2P UDP (discv5)
+      - "19008:8008"            # Metrics
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9596/eth/v1/node/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+    networks:
+      - hop-hoodi-testnet
+
+  lighthouse:
+    image: sigp/lighthouse:${LIGHTHOUSE_VERSION:-v8.2.0}
+    profiles: ["lighthouse"]
+    restart: unless-stopped
+    ports:
+      - 9000:9000/tcp # P2P TCP
+      - 9000:9000/udp # P2P UDP
+      - 5052:5052   # HTTP API
+    command: |
+      lighthouse bn
+      --network=hoodi
+      --checkpoint-sync-url=https://hoodi.beaconstate.info 
+      --checkpoint-sync-url-timeout=600
+      --execution-endpoint=http://execution:8551
+      --execution-jwt=/jwt/jwt.hex
+      --datadir=/lighthouse-data
+      --http
+      --http-address=0.0.0.0
+      --http-port=5052
+      --metrics
+      --metrics-address=0.0.0.0
+      --metrics-port=5054
+      --metrics-allow-origin="*"
+      --boot-nodes=${ADDR}
+      --trusted-peers=${PEER_ID}
+      --semi-supernode
+      --target-peers=500
+    volumes:
+      - ./hop-hoodi/lighthouse-data:/lighthouse-data
+      - ./hop-hoodi/jwt.hex:/jwt/jwt.hex
+    networks:
+      - hop-hoodi-testnet
+
+  # ========================================================
+  # Monitoring stack (enabled with --profile lite or --profile full)
+  # ========================================================
+
+  # Prometheus metrics collector
+  prometheus:
+    image: prom/prometheus:latest
+    profiles: ["lite", "full"]  # enabled with either profile
+    volumes:
+      - ../grafana/prometheus:/etc/prometheus  # Prometheus config
+      - prometheus-data:/prometheus            # Persist TSDB data
+    ports:
+      - "9090:9090"          # Prometheus UI
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=1h"     # Keep 1h of history
+      - "--storage.tsdb.retention.size=2GB"    # Or max 2GB
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:   # Limit log size to avoid disk bloat
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - hop-hoodi-testnet
+
+
+  grafana:
+    image: grafana/grafana:latest
+    profiles: ["lite", "full"]  # enabled with either profile
+    ports:
+      - "3000:3000"          # Grafana UI
+    volumes:
+      - ../grafana/grafana-provisioning:/etc/grafana/provisioning:ro  # Datasources
+      - ../grafana/grafana-dashboards:/var/lib/grafana/dashboards:ro # Dashboards
+      - grafana-data:/var/lib/grafana                                 # Persist state
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin   # Default admin user
+      - GF_SECURITY_ADMIN_PASSWORD=admin  # Default password (change in prod!)
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:   # Limit logs
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - hop-hoodi-testnet
+    depends_on:
+      - prometheus
+volumes:
+  prometheus-data:   # Persistent Prometheus storage
+  grafana-data:      # Persistent Grafana storage
+
+networks:
+  hop-hoodi-testnet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.29.0.0/16

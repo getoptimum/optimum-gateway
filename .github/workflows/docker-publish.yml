@@ -1,0 +1,192 @@
+name: Docker Image Publish
+
+env:
+  DOCKER_ORG: getoptimum
+  GOPRIVATE: "github.com/getoptimum"
+  go-version: "1.26.5"
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - v*
+
+jobs:
+  docker:
+    name: Build and Push Docker Images
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_TOKEN: ${{ secrets.OPT_DOCKER_ACCESS_TOKEN }}
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+      tag: ${{ steps.meta.outputs.tag }}
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Go setup with GitHub App token
+        id: go-setup
+        uses: ./.github/actions/go-setup-with-app-token
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: getoptimum
+          go-version: ${{ env.go-version }}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+        with:
+          platforms: all
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          username: ${{ env.DOCKER_ORG }}
+          password: ${{ env.DOCKER_TOKEN }}
+
+      - name: Set image tag
+        id: meta
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+            echo "latest=true" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+            echo "latest=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and Push Gateway Image
+        id: build
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5.4.0
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          sbom: true
+          provenance: mode=max
+          secrets: |
+            github_token=${{ steps.go-setup.outputs.token }}
+          tags: |
+            ${{ env.DOCKER_ORG }}/gateway:${{ steps.meta.outputs.tag }}
+            ${{ steps.meta.outputs.latest == 'true' && format('{0}/gateway:latest', env.DOCKER_ORG) || '' }}
+            ${{ github.ref_type != 'tag' && format('{0}/gateway:dev-latest', env.DOCKER_ORG) || '' }}
+
+      - name: Unset global git insteadOf
+        run: git config --global --unset-all url.https://github.com/.insteadOf || true
+
+      - name: Generate token for gitops
+        id: gitops-token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: getoptimum
+          repositories: gitops
+
+      - name: Checkout gitops repo
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: getoptimum/gitops
+          token: ${{ steps.gitops-token.outputs.token }}
+          path: gitops
+
+      - name: Update gateway image in gitops manifests
+        run: |
+          MANIFEST_DIR=gitops/clusters/optimum-infrastructure/manifest/optimum
+          NEW_IMG="${{ env.DOCKER_ORG }}/gateway@${{ steps.build.outputs.digest }}"
+          for FILE in \
+            "$MANIFEST_DIR"/gateway-lighthouse/deployment.yaml \
+            "$MANIFEST_DIR"/gateway-nimbus/deployment.yaml \
+            "$MANIFEST_DIR"/gateway-prysm/deployment.yaml \
+            "$MANIFEST_DIR"/gateway-prysm-canary/deployment.yaml; do
+            sed -i.bak "s|getoptimum/gateway[@:][^ ]*|${NEW_IMG}|" "$FILE" && rm -f "${FILE}.bak"
+          done
+
+      - name: Commit and push to gitops
+        working-directory: gitops
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "actions@github.com"
+          git add clusters/optimum-infrastructure/manifest/optimum/gateway-lighthouse/deployment.yaml
+          git add clusters/optimum-infrastructure/manifest/optimum/gateway-nimbus/deployment.yaml
+          git add clusters/optimum-infrastructure/manifest/optimum/gateway-prysm/deployment.yaml
+          git add clusters/optimum-infrastructure/manifest/optimum/gateway-prysm-canary/deployment.yaml
+          if [ -n "$(git status --porcelain)" ]; then
+            git commit -m "gateway: update image to ${{ steps.meta.outputs.tag }}"
+            git push origin main
+          fi
+
+      # Trigger Ansible deploy for VM gateways when a tag is pushed
+      - name: Generate token for infrastructure dispatch
+        id: infra-dispatch-token
+        if: github.ref_type == 'tag'
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: getoptimum
+          repositories: infrastructure
+
+      - name: Trigger Ansible deploy
+        if: github.ref_type == 'tag'
+        run: |
+          gh api repos/getoptimum/infrastructure/dispatches \
+            -f event_type=deploy_gateways \
+            -f "client_payload[tag]=${{ github.ref_name }}" \
+            -f "client_payload[digest]=${{ steps.build.outputs.digest }}"
+        env:
+          GH_TOKEN: ${{ steps.infra-dispatch-token.outputs.token }}
+
+  # Signing is its own job, decoupled from build and deploy: it runs whenever an
+  # image was pushed (`digest != ''`), even if the gitops/deploy steps failed, so
+  # deployed images are always signed; and a Sigstore outage here can never block
+  # a deploy. On tagged releases it also attaches the committed CycloneDX SBOM.
+  sign:
+    name: Sign and attest gateway image
+    needs: docker
+    if: always() && needs.docker.outputs.digest != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write   # cosign keyless (Fulcio OIDC)
+    steps:
+      # Checkout provides the local composite action and docs/sbom.json (tags).
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - name: Sign and attest
+        uses: ./.github/actions/sign-image
+        with:
+          image: ${{ env.DOCKER_ORG }}/gateway@${{ needs.docker.outputs.digest }}
+          docker-username: ${{ env.DOCKER_ORG }}
+          docker-token: ${{ secrets.OPT_DOCKER_ACCESS_TOKEN }}
+          cyclonedx-sbom: ${{ github.ref_type == 'tag' && 'docs/sbom.json' || '' }}
+
+  deploy-dev:
+    name: Trigger dev cluster deploy
+    needs: docker
+    # Run even if the gitops steps in `docker` fail, as long as the image was pushed.
+    if: always() && needs.docker.outputs.digest != '' && github.ref_type != 'tag'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate token for infrastructure dispatch (main)
+        id: infra-dispatch-token-main
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: getoptimum
+          repositories: infrastructure
+
+      - name: Trigger Ansible deploy (main)
+        run: |
+          gh api repos/getoptimum/infrastructure/dispatches \
+            -f event_type=deploy_gateways \
+            -f "client_payload[tag]=dev-latest" \
+            -f "client_payload[digest]=${{ needs.docker.outputs.digest }}"
+        env:
+          GH_TOKEN: ${{ steps.infra-dispatch-token-main.outputs.token }}

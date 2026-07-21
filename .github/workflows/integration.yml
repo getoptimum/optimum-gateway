@@ -1,0 +1,92 @@
+name: Integration
+
+on:
+  push:
+    tags:
+      - v*
+  pull_request:
+    branches:
+      - master
+      - main
+      - '**'
+
+permissions:
+  contents: read
+
+env:
+  go-version: "1.26.5"
+  GOPRIVATE: "github.com/getoptimum"
+  IMAGE_TAG: "v0.0.1"
+
+jobs:
+  golangci:
+    # go-version and golangci-lint version are resolved from go.mod by the
+    # reusable workflow. golangci-lint is pinned as a go.mod tool dependency.
+    permissions:
+      contents: read
+      pull-requests: read
+      checks: write
+    uses: getoptimum/.github/.github/workflows/go-lint.yml@398f1436255c41d176b673c771dce8d52e657ca5 # getoptimum/.github#7
+    secrets:
+      GH_APP_ID: ${{ secrets.GH_APP_ID }}
+      GH_APP_PRIVATE_KEY: ${{ secrets.GH_APP_PRIVATE_KEY }}
+
+  proto:
+    name: proto
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - name: Go setup with GitHub App token
+        uses: ./.github/actions/go-setup-with-app-token
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: getoptimum
+          go-version: ${{ env.go-version }}
+      - name: Install dependencies
+        run: go mod download
+      - name: Lint
+        run: go tool buf lint
+      - name: Check formatting
+        run: go tool buf format --diff --exit-code
+      - name: Check generated code is up to date
+        run: |
+          go tool buf generate
+          if [ -n "$(git status --porcelain -- '*.pb.go')" ]; then
+            echo "::error::Generated protobuf code is out of date. Run 'make proto' and commit the result."
+            git status --porcelain -- '*.pb.go'
+            git diff -- '*.pb.go'
+            exit 1
+          fi
+
+  tests:
+    name: unit and integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write # publish coverage badge/report to the repo wiki
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Go setup with GitHub App token
+        uses: ./.github/actions/go-setup-with-app-token
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: getoptimum
+          go-version: ${{ env.go-version }}
+      - name: Install dependencies
+        run: go mod download
+      - name: Run tests
+        run: CI_RUN="true" PROMETHEUS_VALIDATION_SCHEME=legacy make test
+      - name: Measure test coverage
+        run: make coverage
+      - name: Publish coverage report to wiki
+        # Only on tag pushes (release cadence); PRs (incl. from forks) must not write to the wiki.
+        if: github.event_name == 'push'
+        continue-on-error: true # first run requires the repo wiki to be initialized once
+        uses: ncruces/go-coverage-report@dfc237255099f2d25066babde51253992175e365 # v0.3.2
+        with:
+          coverage-file: cover.out

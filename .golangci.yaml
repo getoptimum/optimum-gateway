@@ -1,0 +1,146 @@
+# Based on the canonical template: getoptimum/.github/golangci/golangci.yaml
+# Repo-specific addition: suppress AppLogger deprecation until it is purged.
+version: "2"
+
+run:
+  tests: true
+  allow-parallel-runners: true
+
+linters:
+  default: none
+  enable:
+    # Official Go tooling
+    - govet
+    - staticcheck
+    - errcheck
+    - ineffassign
+    - unused
+    - copyloopvar
+    - errorlint
+    # Resource safety (stdlib-mandated)
+    - bodyclose
+    - sqlclosecheck
+    # Naming and style (official Go naming conventions)
+    - revive
+    # Community best practices (well-maintained, low FP)
+    - misspell
+    - unconvert
+    - nakedret
+    - goconst
+    - gocritic
+    - dupl
+    - funlen
+    - dogsled
+    - whitespace
+    - thelper
+    - gosec
+    # Org policy
+    - depguard
+    - nolintlint
+
+  settings:
+    staticcheck:
+      checks:
+        - all
+        - -ST1000
+        - -ST1003
+    depguard:
+      rules:
+        main:
+          list-mode: lax
+          files:
+            - '**/*.go'
+          deny:
+            - pkg: github.com/sirupsen/logrus
+              desc: "not allowed — use go.uber.org/zap"
+            - pkg: github.com/pkg/errors
+              desc: "deprecated — use stdlib errors package"
+    dogsled:
+      max-blank-identifiers: 4
+    dupl:
+      threshold: 200
+    funlen:
+      lines: 300
+      statements: 200
+    goconst:
+      min-len: 2
+      min-occurrences: 6
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+        - style
+      disabled-checks:
+        - regexpMust
+        - appendAssign
+        - ifElseChain
+        - wrapperFunc
+        - dupImport
+        - octalLiteral
+        - whyNoLint
+    gosec:
+      excludes:
+        - G107
+        - G404
+      confidence: medium
+    misspell:
+      locale: US
+    nolintlint:
+      require-explanation: true
+      require-specific: false
+      allow-unused: false
+    revive:
+      enable-default-rules: true
+      rules:
+        - name: var-naming
+          disabled: true
+        - name: redefines-builtin-id
+          disabled: true
+        - name: import-alias-naming
+          disabled: false
+          arguments:
+            - "^[a-z][a-z0-9]{0,}$"
+
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters: [dupl, gosec]
+        path: _test\.go
+    paths:
+      - .*\.pb\.go$
+      - .*\.pb\.gw\.go$
+      - .*\.pulsar\.go$
+      - .*_mock\.go$
+      - swagger\/.*
+      - fastssz_codegen\/.*
+      - third_party$
+
+issues:
+  max-issues-per-linter: 10000
+  max-same-issues: 10000
+
+formatters:
+  enable:
+    - gci
+    - gofumpt
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/getoptimum)
+      custom-order: true
+    gofumpt:
+      extra-rules: true
+  exclusions:
+    generated: lax
+    paths:
+      - .*\.pb\.go$
+      - .*\.pb\.gw\.go$
+      - .*\.pulsar\.go$
+      - third_party$

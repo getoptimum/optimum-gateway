@@ -1,0 +1,41 @@
+# Gitleaks configuration file
+# Documentation: https://github.com/gitleaks/gitleaks#configuration
+
+title = "Gitleaks Configuration for Optimum Gateway"
+
+[extend]
+# Use default gitleaks rules as base
+useDefault = true
+
+[allowlist]
+description = "Allowlisted files and patterns"
+
+# Common false positives
+regexes = [
+    # Example test keys (add your patterns here)
+    '''test[_-]?(key|secret|token)''',
+    # GPG public key IDs (not secrets)
+    '''PRYLABS_SIGNING_KEY''',
+]
+
+# Files to skip
+paths = [
+    '''\.env\.example$''',
+    '''go\.sum$''',
+    '''\.git/''',
+    '''/vendor/''',
+    '''/node_modules/''',
+    '''docs/api\.md$''',
+    '''gitleaks-report\.json$''',
+    '''integration/.*/prysm\.sh$''',
+]
+
+# Add specific commits to allowlist if needed
+# Example: commits = ["commit-hash-here"]
+
+# Custom rules can be added below if needed
+# [[rules]]
+# id = "custom-rule-id"
+# description = "Custom rule description"
+# regex = '''custom-pattern-here'''
+# tags = ["custom"]

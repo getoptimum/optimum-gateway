@@ -1,0 +1,65 @@
+name: Sign image
+description: >
+  Keyless-sign a pushed image by digest with cosign, optionally attaching a
+  CycloneDX SBOM as a signed attestation. Intended to run in a dedicated job
+  after the image is pushed, so signing never blocks the build/deploy path.
+  The calling job must grant `permissions: id-token: write` for Fulcio OIDC;
+  a composite action cannot declare permissions itself.
+
+inputs:
+  image:
+    description: Image reference pinned by digest, e.g. getoptimum/gateway@sha256:...
+    required: true
+  docker-username:
+    description: Docker Hub username for the registry the image lives in.
+    required: true
+  docker-token:
+    description: >
+      Docker Hub access token with write scope; cosign pushes the signature
+      (and attestation) to the same repository as the image.
+    required: true
+  cyclonedx-sbom:
+    description: >
+      Optional path to a CycloneDX SBOM to attach as a signed attestation.
+      Empty (the default) skips the attestation.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Log in to Docker Hub
+      uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+      with:
+        username: ${{ inputs.docker-username }}
+        password: ${{ inputs.docker-token }}
+
+    - name: Install cosign
+      uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+    # Fail early if the caller passed a mutable tag: signing a tag would sign
+    # whatever it resolves to at sign-time, a TOCTOU gap with the build-push.
+    - name: Validate image is digest-pinned
+      shell: bash
+      env:
+        IMG: ${{ inputs.image }}
+      run: |
+        case "$IMG" in
+          *@sha256:*) ;;
+          *) echo "image must be pinned by digest (name@sha256:...), got: $IMG" >&2; exit 1 ;;
+        esac
+
+    # Sign the pushed index by digest; all tags pointing at it are covered.
+    - name: Sign
+      shell: bash
+      env:
+        IMG: ${{ inputs.image }}
+      run: cosign sign --yes "$IMG"
+
+    - name: Attest CycloneDX SBOM
+      if: inputs.cyclonedx-sbom != ''
+      shell: bash
+      env:
+        IMG: ${{ inputs.image }}
+        SBOM: ${{ inputs.cyclonedx-sbom }}
+      run: cosign attest --yes --type cyclonedx --predicate "$SBOM" "$IMG"

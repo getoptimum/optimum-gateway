@@ -1,0 +1,144 @@
+name: Optimum Kurtosis Package
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Docker Image Publish"]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  run-optimum-package:
+    name: Run Optimum Package
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+    timeout-minutes: 50
+
+    env:
+      GOPRIVATE: github.com/getoptimum
+      ENCLAVE_NAME: optimum-gateway-in-kurtosis-${{ github.run_id }}
+      OPTIMUM_PACKAGE_PATH: ./optimum-package
+      GATEWAY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: ${{ env.GATEWAY_SHA }}
+
+      - name: Generate token from GitHub App
+        id: token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: getoptimum
+
+      - name: Free runner disk
+        run: |
+          sudo rm -rf /usr/share/dotnet "${RUNNER_TOOL_CACHE:-}"
+          sudo apt-get clean
+          docker system prune -af --volumes || true
+
+      - uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+      - uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          username: getoptimum
+          password: ${{ secrets.OPT_DOCKER_ACCESS_TOKEN }}
+
+      - name: Resolve gateway image
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+          GATEWAY_IMAGE="getoptimum/gateway:ci-${GATEWAY_SHA}"
+          echo "GATEWAY_IMAGE=$GATEWAY_IMAGE" >> "$GITHUB_ENV"
+          for tag in "$HEAD_BRANCH" "${GATEWAY_SHA}"; do
+            [ -z "$tag" ] && continue
+            docker pull --platform linux/amd64 "getoptimum/gateway:$tag" &&
+              docker tag "getoptimum/gateway:$tag" "$GATEWAY_IMAGE" && exit 0
+          done
+          echo "::error::No published image found for sha=${GATEWAY_SHA}; cannot proceed."
+          exit 1
+
+      - name: Checkout dependency repos
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+        run: |
+          set -euo pipefail
+          clone() { git clone --depth 1 -b "$2" "https://x-access-token:${GH_TOKEN}@github.com/getoptimum/$1.git" "$3"; }
+          clone optimum-package initial optimum-package
+          clone ethereum-package main ethereum-package
+          perl -i -pe 's/^replace:\s*\{\s*\}$/replace:\n  github.com\/getoptimum\/ethereum-package: ..\/ethereum-package/' optimum-package/kurtosis.yml
+          grep -q 'github.com/getoptimum/ethereum-package: ../ethereum-package' optimum-package/kurtosis.yml \
+            || { echo "ERROR: kurtosis.yml patch failed:"; cat optimum-package/kurtosis.yml; exit 1; }
+
+      - name: Install Kurtosis and start engine
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+        run: |
+          set -euo pipefail
+          echo "deb [trusted=yes] https://apt.fury.io/kurtosis-tech/ /" | sudo tee /etc/apt/sources.list.d/kurtosis.list
+          sudo apt-get update && sudo apt-get install -y ca-certificates curl zip kurtosis-cli
+          kurtosis engine start --github-auth-token "${GH_TOKEN}" --restart-api-containers
+
+      - name: Prepare CI args
+        run: |
+          set -euo pipefail
+          : "${GATEWAY_IMAGE:?}"
+          # args.yml carries auth/bootstrap/cluster and the per-gateway API keys;
+          # CI only overrides the image under test.
+          CI_ARGS_FILE="/tmp/optimum-package-ci-args.yml"
+          cp optimum-package/args.yml "$CI_ARGS_FILE"
+          printf 'gateway_image: "%s"\n' "$GATEWAY_IMAGE" >> "$CI_ARGS_FILE"
+          echo "CI_ARGS_FILE=$CI_ARGS_FILE" >> "$GITHUB_ENV"
+
+      - name: Run optimum-package
+        id: run_pkg
+        continue-on-error: true
+        run: |
+          trap 'rm -f "$CI_ARGS_FILE"' EXIT
+          kurtosis run --enclave "$ENCLAVE_NAME" "$OPTIMUM_PACKAGE_PATH" --args-file "$CI_ARGS_FILE"
+
+      - name: Collect failure artifacts
+        if: steps.run_pkg.outcome != 'success'
+        run: |
+          mkdir -p /tmp/kurtosis-artifacts
+          kurtosis enclave dump "$ENCLAVE_NAME" "/tmp/kurtosis-artifacts/$ENCLAVE_NAME"
+          (cd /tmp && zip -r "kurtosis-${ENCLAVE_NAME}.zip" "kurtosis-artifacts/$ENCLAVE_NAME")
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: steps.run_pkg.outcome != 'success'
+        with:
+          name: kurtosis-enclave-dump-${{ env.ENCLAVE_NAME }}
+          path: /tmp/kurtosis-${{ env.ENCLAVE_NAME }}.zip
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Cleanup and report failure
+        if: always()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          kurtosis clean -a || true
+          if [ "${{ steps.run_pkg.outcome }}" = "success" ]; then exit 0; fi
+          if [ -n "${SLACK_WEBHOOK_URL:-}" ]; then
+            jq -n \
+              --arg repo "$GITHUB_REPOSITORY" \
+              --arg url  "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+              --arg sha  "${GATEWAY_SHA:0:7}" \
+              '{text: ":red_circle: *Kurtosis CI failed* on `\($repo)` (<\($url)|\($sha)>)"}' \
+              | curl -sf --max-time 10 -X POST -H 'Content-Type: application/json' \
+              -d @- "$SLACK_WEBHOOK_URL" || true
+          fi
+          exit 1

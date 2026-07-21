@@ -1,0 +1,48 @@
+# ─── Required ─────────────────────────────────────────────────────────────────
+log_level: debug
+identity_libp2p_dir: /tmp/libp2p
+identity_mump2p_dir: /tmp/mump2p
+agent_lib_p2p_port: 33212
+agent_mump2p_port: 43213
+gateway_cluster_id: optimum_hoodi_v0_2
+api_key: your-api-key # or set OPT_API_KEY env var
+
+# ─── Telemetry ────────────────────────────────────────────────────────────────
+telemetry_enable: true
+telemetry_port: 48123
+# telemetry_namespace: mump2p              # default: mump2p (changing this will affect the metrics observable in Grafana, don't change)
+# telemetry_subsystem: gateway             # default: gateway (changing this will affect the metrics observable in Grafana, don't change)
+
+# ─── Auth ─────────────────────────────────────────────────────────────────────
+# enable_auth: true                        # default: true — set false for local dev
+# remote_auth_url: https://auth.getoptimum.io
+# jwks_refresh_interval_sec: 3600          # bounds revocation-propagation lag
+# jwks_cache_path: /gateway/cache/jwks.json
+
+# ─── Bootstrap ────────────────────────────────────────────────────────────────
+# remote_bootstrap_url: bootstrap.getoptimum.io
+
+# ─── Remote push observability (Loki + Mimir) ────────────────────────────────
+# Requires enable_auth=true. Existing /metrics scrape endpoint is unaffected.
+# remote_push_enable: false
+# remote_push_loki_url: https://v2-loki.getoptimum.io
+# remote_push_mimir_url: https://v2-mimir.getoptimum.io
+
+# ─── Diagnostics ──────────────────────────────────────────────────────────────
+# enable_pprof: false                      # default: false
+# pprof_addr: 127.0.0.1:6060              # only used when enable_pprof=true
+# trace_mesh: false                        # mump2p mesh trace events
+# trace_shard: false                       # shard trace events
+# trace_rpc: false                         # high-frequency — deep debugging only
+
+# ─── Advanced / tuning ───────────────────────────────────────────────────────
+# aggregation_interval_ms: 25              # default: 25, max: 600000
+# propagation_disabled: true               # default: true
+
+# ─── Dev-mode only (ignored when enable_auth=true) ───────────────────────────
+# chain: hoodi                             # OPT_DEV_CHAIN — overridden by JWT chain_id claim
+# gateway_id: dev-gateway                  # OPT_GATEWAY_ID — overridden by JWT sub claim
+
+# ─── Direct CL peers (optional) ──────────────────────────────────────────────
+# direct_cl_peers:
+#   - /ip4/1.2.3.4/tcp/13000/p2p/16Uiu2...

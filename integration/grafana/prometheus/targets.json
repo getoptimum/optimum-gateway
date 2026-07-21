@@ -1,0 +1,10 @@
+[
+  {
+    "targets": [
+      "optimum-gateway:48123"
+    ],
+    "labels": {
+      "job": "gateway"
+    }
+  }
+]

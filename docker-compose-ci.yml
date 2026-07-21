@@ -1,0 +1,70 @@
+version: "3.8"
+
+services:
+  geth:
+    image: ethereum/client-go:stable
+    container_name: geth
+    restart: unless-stopped
+    command:
+      - --hoodi
+      - --http
+      - --http.api=eth,net,engine,admin
+      - --authrpc.addr=0.0.0.0
+      - --authrpc.port=8551
+      - --authrpc.vhosts=*
+      - --authrpc.jwtsecret=/jwt/jwt.hex
+      - --datadir=/data
+      - --ipcdisable
+    volumes:
+      - ${GET_DATA_DIR:-/mnt/eth-hoodi-disk/.ethereum}:/data
+      - ${ETH_JWT_DIR:-/mnt/eth-hoodi-disk/etherium}:/jwt:ro
+    ports:
+      - "8545:8545"          # HTTP-RPC
+      - "8551:8551"          # Engine API (exposed for debugging; Prysm uses internal DNS)
+      - "30303:30303/tcp"    # P2P TCP
+      - "30303:30303/udp"    # P2P UDP (discv5)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8545"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    network_mode: host
+
+  prysm-beacon:
+    image: gcr.io/offchainlabs/prysm/beacon-chain:v7.1.4
+    container_name: prysm-beacon
+    restart: unless-stopped
+    depends_on:
+      - geth
+    command:
+      - --execution-endpoint=http://127.0.0.1:8551   # Connect to Geth EL
+      - --datadir=/data
+      - --hoodi
+      - --jwt-secret=/jwt/jwt.hex
+      - --checkpoint-sync-url=https://hoodi.beaconstate.info   # Quick sync
+      - --genesis-beacon-api-url=https://hoodi.beaconstate.info
+      - --grpc-gateway-host=0.0.0.0
+      - --grpc-gateway-port=3500
+      - --peer=${GATEWAY_PEER}
+      - --rpc-host=0.0.0.0
+      - --grpc-gateway-host=0.0.0.0
+      - --accept-terms-of-use
+    ports:
+      - "4001:4000"           # Prysm gRPC
+      - "3501:3500"           # HTTP API
+      - "12000:12000/tcp"     # P2P TCP
+      - "12000:12000/udp"     # P2P UDP
+      - "13000:13000"         # Extra P2P
+    volumes:
+      - ${PRYSM_DATA_DIR:-/mnt/eth-hoodi-disk}:/data
+      - ${ETH_JWT_DIR:-/mnt/eth-hoodi-disk/etherium}:/jwt:ro
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3500/eth/v1/node/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    network_mode: host
+
+networks:
+  hop-hoodi-testnet:
+    driver: bridge

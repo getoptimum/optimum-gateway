@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package getoptimum.optimum_gateway.service.aggregator.v1;
+
+option go_package = "github.com/getoptimum/optimum-gateway/pkg/service/aggregator";
+
+// Container groups encoded messages by gossip topic.
+message Container {
+  string topic = 1;
+  repeated bytes data = 2;
+}
+
+// AttestationItem describes one attester contribution inside a packed attestation.
+message AttestationItem {
+  uint64 committee_id = 1;
+  uint64 attester_index = 2;
+  uint32 topic_index = 3;
+  bytes signature = 4;
+}
+
+// AttestationPack contains one unique attestation payload and all matching attesters.
+message AttestationPack {
+  bytes attestation_ssz_data = 1;
+  repeated AttestationItem items = 2;
+  int64 send_ts_ms = 3; // unix millis when the sending gateway emitted this pack
+}
+
+// Msg is an aggregated batch emitted by the gateway.
+message Msg {
+  int64 tms = 1; // unix millis
+  repeated Container container = 2;
+}

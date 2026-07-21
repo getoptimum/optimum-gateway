@@ -1,0 +1,296 @@
+name: Security Scanning
+
+env:
+  go-version: "1.26.5"
+  GOPRIVATE: "github.com/getoptimum"
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: write
+  security-events: write
+
+jobs:
+  secrets-scan:
+    name: Secrets Scanning (TruffleHog)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0  # Full history needed for TruffleHog
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@a1d997362d636325de3acbb6318517a6e16ed766
+        with:
+          extra_args: --only-verified
+
+  dependency-scan:
+    name: Dependency Vulnerability Scanning
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Go setup with GitHub App token
+        id: go-setup
+        uses: ./.github/actions/go-setup-with-app-token
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: getoptimum
+          go-version: ${{ env.go-version }}
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@774cde5e03be6cddba74dbeda8a3809e0f4497da
+      - name: Run dependency vulnerability scan with filtering
+        run: |
+          # Read accepted vulnerability exceptions from govulncheck.yaml
+          IGNORED_VULNS=$(awk '/- id:/ {print $3}' govulncheck.yaml | paste -sd '|' -)
+
+          if [ -z "$IGNORED_VULNS" ]; then
+            echo "No ignored vulnerabilities configured in govulncheck.yaml"
+            IGNORED_VULNS="^$"  # Match nothing
+          else
+            echo "Ignored vulnerabilities from govulncheck.yaml: $IGNORED_VULNS"
+          fi
+
+          echo "Running govulncheck..."
+          set +e  # Don't exit on error, we want to process the results
+          govulncheck ./... 2>&1 | tee /tmp/govulncheck-output.txt
+          govulncheck_exit=$?
+          set -e
+
+          # Extract vulnerability IDs and check if only ignored ones were found
+          found_vulns=$(grep -o 'GO-[0-9]\{4\}-[0-9]\+' /tmp/govulncheck-output.txt | sort -u || true)
+
+          echo "Found vulnerabilities: $found_vulns"
+          echo "Govulncheck exit code: $govulncheck_exit"
+
+          # Check if govulncheck crashed (non-zero exit but no vulnerabilities found)
+          if [ $govulncheck_exit -ne 0 ] && [ -z "$found_vulns" ]; then
+            echo "❌ govulncheck failed with exit code $govulncheck_exit (no vulnerabilities detected in output)"
+            exit $govulncheck_exit
+          fi
+
+          if [ -z "$found_vulns" ]; then
+            echo "✅ No vulnerabilities found"
+            exit 0
+          fi
+
+          # Filter out ignored vulnerabilities
+          non_ignored=$(echo "$found_vulns" | grep -Ev "$IGNORED_VULNS" || true)
+          echo "Non-ignored vulnerabilities: $non_ignored"
+
+          if [ -z "$non_ignored" ]; then
+            echo "✅ Only accepted vulnerabilities found: $found_vulns"
+            echo "   (Documented in govulncheck.yaml as accepted risks)"
+            exit 0
+          else
+            echo "❌ Found non-accepted vulnerabilities: $non_ignored"
+            echo "   Please fix or document these in govulncheck.yaml"
+            exit 1
+          fi
+
+  code-security-scan:
+    name: Code Security Scanning (gosec)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Go setup with GitHub App token
+        id: go-setup
+        uses: ./.github/actions/go-setup-with-app-token
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: getoptimum
+          go-version: ${{ env.go-version }}
+      - name: Download Go dependencies
+        run: go mod download
+      - name: Install gosec
+        run: go install github.com/securego/gosec/v2/cmd/gosec@7387d225921a2efbcf1613bdb32f490285f9af65
+      - name: Run gosec security scanner
+        run: |
+          # Read exclusions from gosec.yaml
+          EXCLUDED_RULES=$(grep '^\s*- rule:' gosec.yaml | sed 's/.*rule:\s*//' | tr '\n' ',' | sed 's/,$//')
+
+          if [ -z "$EXCLUDED_RULES" ]; then
+            echo "No excluded rules configured in gosec.yaml"
+            echo "Running gosec -exclude-generated -severity high ./..."
+            gosec -exclude-generated -severity high ./...
+          else
+            echo "Running gosec with exclusions: $EXCLUDED_RULES"
+            gosec -exclude-generated -exclude="$EXCLUDED_RULES" -severity high ./...
+          fi
+
+  docker-image-scan:
+    name: Docker Image Scanning (Trivy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Generate token from GitHub App
+        id: generate-token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: getoptimum
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@c47758b77c9736f4b2ef4073d4d51994fabfe349 # v3.7.1
+      - name: Build gateway image
+        uses: docker/build-push-action@4f58ea79222b3b9dc2c8bbdd6debcef730109a75 # v6.9.0
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          secrets: |
+            github_token=${{ steps.generate-token.outputs.token }}
+          tags: optimum-gateway:${{ github.sha }}
+      - name: Run Trivy vulnerability scanner on gateway image
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
+        with:
+          image-ref: optimum-gateway:${{ github.sha }}
+          version: 'v0.69.3'
+          format: 'table'
+          exit-code: '1'
+          severity: 'CRITICAL'
+
+  license-check:
+    name: License Compliance (go-licenses)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      # Gateway pulls in cgo deps (e.g. prysm/blst); go-licenses must load the
+      # full build graph. ubuntu-latest ships gcc.
+      CGO_ENABLED: "1"
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - name: Go setup with GitHub App token
+        id: go-setup
+        uses: ./.github/actions/go-setup-with-app-token
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: getoptimum
+          go-version: ${{ env.go-version }}
+      - name: Install go-licenses
+        run: go install github.com/google/go-licenses@v1.6.0
+      - name: Download Go dependencies
+        run: go mod download
+      # Shipped binary: the ./cmd dependency closure is distributed, so strong
+      # copyleft and undetected licenses hard-fail the build.
+      - name: License check (shipped binary ./cmd)
+        run: |
+          set -euo pipefail
+          go-licenses csv ./cmd \
+            --ignore github.com/getoptimum 2>go-licenses-errors.txt | \
+            python3 scripts/check-licenses.py --config licenses.yaml --strict-unknown
+      # Test harness / infra / tooling deps are never distributed: reported for
+      # visibility but never gate the build.
+      - name: License report (test/infra ./...)
+        run: |
+          # report-only: a go-licenses failure here must not gate the build, so
+          # disable pipefail and let the (always-0) classifier set the exit code.
+          set +o pipefail
+          go-licenses csv ./... \
+            --ignore github.com/getoptimum 2>>go-licenses-errors.txt | \
+            python3 scripts/check-licenses.py --config licenses.yaml --report-only
+      - name: Show go-licenses warnings
+        if: always()
+        run: if [ -s go-licenses-errors.txt ]; then cat go-licenses-errors.txt; fi
+
+  # Regenerates the committed SBOMs, THIRD-PARTY-NOTICES.md and the vendored
+  # fastssz codegen, pushing the update back to the PR branch only on drift.
+  # No drift -> no commit -> nobody has to pull. Output is deterministic (SBOMs
+  # via -noserial -notimestamp; notices are sorted), and a loop guard skips
+  # bot-authored HEADs, so this cannot ping-pong.
+  sbom-refresh:
+    name: Generated artifact refresh
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Same-repo PRs only: App-token secrets and branch push are unavailable to
+    # forks and Dependabot runs. Enable Dependabot later via Dependabot secrets.
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
+    permissions:
+      contents: write   # needed to push the refreshed SBOMs back to the PR branch
+    env:
+      CGO_ENABLED: "1"
+    steps:
+      - name: Generate token from GitHub App
+        id: generate-token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: getoptimum
+          # Scoped to this repo (push target) plus the private module deps that
+          # `go` must fetch to build the branch-tip SBOM, not the whole org.
+          repositories: optimum-gateway,optimum-common,optimum-p2p,rlnc
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ steps.generate-token.outputs.token }}
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: ${{ env.go-version }}
+          cache: true
+      - name: Configure git for private modules
+        run: git config --global url."https://x-access-token:${{ steps.generate-token.outputs.token }}@github.com/".insteadOf "https://github.com/"
+      # Loop guard: never regenerate on top of a bot refresh commit.
+      - name: Skip if HEAD is already a bot refresh
+        id: guard
+        run: |
+          if git log -1 --format='%an' | grep -qx 'optimum-sbom-bot'; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "HEAD is a bot refresh; nothing to do."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Download module dependencies
+        if: steps.guard.outputs.skip == 'false'
+        run: go mod download
+      - name: Regenerate SBOMs and third-party notices
+        if: steps.guard.outputs.skip == 'false'
+        run: make sbom notices
+      # Deterministic: copies the spectests package from the go.mod-pinned module.
+      - name: Re-vendor fastssz codegen
+        if: steps.guard.outputs.skip == 'false'
+        run: make fastssz-generate
+      - name: Commit generated-artifact drift to the PR branch
+        if: steps.guard.outputs.skip == 'false'
+        # Pass the branch name via env, never interpolate ${{ github.head_ref }}
+        # directly into the shell (ref names can carry shell metacharacters).
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          if [ -z "$(git status --porcelain docs/sbom.json docs/sbom-full.json THIRD-PARTY-NOTICES.md pkg/protocol/fastssz_codegen)" ]; then
+            echo "Generated artifacts already up to date."
+            exit 0
+          fi
+          echo "Drift detected; committing refreshed generated artifacts to the PR branch."
+          git config user.name  'optimum-sbom-bot'
+          git config user.email 'bot@getoptimum.xyz'
+          git add docs/sbom.json docs/sbom-full.json THIRD-PARTY-NOTICES.md pkg/protocol/fastssz_codegen
+          git commit -m "chore: refresh generated artifacts"
+          # Non-fatal on a race: if the branch advanced under us (rapid pushes),
+          # the push is rejected non-fast-forward; a newer run refreshes instead.
+          if ! git push origin "HEAD:refs/heads/$HEAD_REF"; then
+            echo "Push rejected (branch advanced); a newer run will refresh."
+          fi

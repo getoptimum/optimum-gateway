@@ -1,0 +1,164 @@
+name: Docker Bench Image Publish
+
+env:
+  DOCKER_ORG: getoptimum
+  IMAGE_NAME: gateway-bench
+  go-version: "1.26.5"
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - v*
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "image tag to publish"
+        required: true
+        default: "manual"
+
+jobs:
+  docker:
+    name: Build and Push Bench Image
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_TOKEN: ${{ secrets.OPT_DOCKER_ACCESS_TOKEN }}
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+      tag: ${{ steps.meta.outputs.tag }}
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      # Reuse the same Go-with-app-token action as the release pipeline so
+      # private modules (github.com/getoptimum/*) resolve identically.
+      - name: Go setup with GitHub App token
+        id: go-setup
+        uses: ./.github/actions/go-setup-with-app-token
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: getoptimum
+          go-version: ${{ env.go-version }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          username: ${{ env.DOCKER_ORG }}
+          password: ${{ env.DOCKER_TOKEN }}
+
+      - name: Set image tag
+        id: meta
+        # Resolve the docker tag from the trigger:
+        #   tag push (v*)              → :<tag> + :latest
+        #   workflow_dispatch          → :<inputs.tag>
+        #   main branch push           → :<sha> + :dev-latest
+        # Any other ref is unsupported and fails below.
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            tag="${{ github.ref_name }}"
+            extra_tag="latest"
+            bench_version="${{ github.ref_name }}"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            tag="${{ inputs.tag }}"
+            extra_tag=""
+            bench_version="${{ inputs.tag }}"
+          elif [ "${{ github.ref_name }}" = "main" ]; then
+            tag="${{ github.sha }}"
+            extra_tag="dev-latest"
+            bench_version="dev-latest"
+          fi
+          if [ -z "$tag" ]; then
+            echo "::error::could not derive image tag for ref=${GITHUB_REF} event=${{ github.event_name }}"
+            exit 1
+          fi
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "extra_tag=${extra_tag}" >> "$GITHUB_OUTPUT"
+          echo "bench_version=${bench_version}" >> "$GITHUB_OUTPUT"
+          echo "resolved tag: ${tag}"
+
+      - name: Build and Push Bench Image
+        id: build
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5.4.0
+        with:
+          context: .
+          file: Dockerfile.bench
+          # Shadow only supports x86_64; no need for arm64 here even though
+          # the release image is multi-arch.
+          platforms: linux/amd64
+          push: true
+          # sbom/provenance turn this single-platform image into an OCI index
+          # (the amd64 manifest plus attestation manifests). optimum-bench pulls
+          # it via plain docker pull/create/cp, which resolve the index
+          # transparently, so the shape change is safe. BuildKit's SBOM describes
+          # the bench image; the repo's CycloneDX SBOM is for ./cmd, not
+          # Dockerfile.bench, so it is not attached here.
+          sbom: true
+          provenance: mode=max
+          secrets: |
+            github_token=${{ steps.go-setup.outputs.token }}
+          tags: |
+            ${{ env.DOCKER_ORG }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
+            ${{ steps.meta.outputs.extra_tag != '' && format('{0}/{1}:{2}', env.DOCKER_ORG, env.IMAGE_NAME, steps.meta.outputs.extra_tag) || '' }}
+
+      - name: Unset global git insteadOf
+        run: git config --global --unset-all url.https://github.com/.insteadOf || true
+
+      - name: Generate token for bench dispatch
+        id: bench-token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: getoptimum
+          repositories: optimum-bench
+
+      - name: Dispatch bench run
+        env:
+          GH_TOKEN: ${{ steps.bench-token.outputs.token }}
+          BENCH_IMAGE: ${{ env.DOCKER_ORG }}/${{ env.IMAGE_NAME }}
+          BENCH_IMAGE_TAG: ${{ steps.meta.outputs.tag }}
+          BENCH_VERSION: ${{ steps.meta.outputs.bench_version }}
+        run: |
+          set -euo pipefail
+          jq -n --arg img "$BENCH_IMAGE" --arg tag "$BENCH_IMAGE_TAG" --arg ver "$BENCH_VERSION" \
+            '{event_type: "gateway-release", client_payload: {image: $img, image_tag: $tag, version: $ver}}' \
+            | gh api repos/getoptimum/optimum-bench/dispatches --input -
+          echo "Dispatched gateway-release to optimum-bench (pull ${BENCH_IMAGE}:${BENCH_IMAGE_TAG}, report tag ${BENCH_VERSION})"
+
+      - name: Summary
+        run: |
+          echo "### Pushed bench image" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.DOCKER_ORG }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}\`" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ steps.meta.outputs.extra_tag }}" ]; then
+            echo "- \`${{ env.DOCKER_ORG }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.extra_tag }}\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Digest: \`${{ steps.build.outputs.digest }}\`" >> $GITHUB_STEP_SUMMARY
+
+  # Signing is its own job so a Sigstore outage can never block the benchmark
+  # dispatch, and it runs whenever an image was pushed (`digest != ''`).
+  sign:
+    name: Sign bench image
+    needs: docker
+    if: always() && needs.docker.outputs.digest != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write   # cosign keyless (Fulcio OIDC)
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - name: Sign
+        uses: ./.github/actions/sign-image
+        with:
+          image: ${{ env.DOCKER_ORG }}/${{ env.IMAGE_NAME }}@${{ needs.docker.outputs.digest }}
+          docker-username: ${{ env.DOCKER_ORG }}
+          docker-token: ${{ secrets.OPT_DOCKER_ACCESS_TOKEN }}

@@ -1,0 +1,23 @@
+# Automatically require code review from Senior engineers
+
+* @getoptimum/senior-core-dev @swarna1101
+
+# CI workflows
+/.github/workflows/ @Taranpreet26311 @abergasov @swarna1101 @CryptoFewka
+
+# Critical paths — last match wins, so these override the global rule above.
+
+# Security policy and review process
+/SECURITY.md            @getoptimum/senior-core-dev @CryptoFewka 
+/.github/CODEOWNERS     @getoptimum/senior-core-dev @swarna1101 @CryptoFewka
+
+# Configuration (runtime config + schema/samples)
+/config/                @getoptimum/senior-core-dev
+/internal/config/       @getoptimum/senior-core-dev
+
+# Dependencies (supply-chain surface)
+/go.mod                 @getoptimum/senior-core-dev @swarna1101
+/go.sum                 @getoptimum/senior-core-dev @swarna1101
+
+# Protocol definitions (wire format / cross-network compatibility)
+/proto/                 @getoptimum/senior-core-dev

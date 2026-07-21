@@ -1,0 +1,14 @@
+apiVersion: 1
+
+providers:
+  - name: 'optimum-gateway'
+    orgId: 1
+    folder: 'Default'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      # look for .json files recursively
+      foldersFromFilesStructure: true

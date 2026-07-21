@@ -1,0 +1,14 @@
+version: v2
+modules:
+  - path: proto
+lint:
+  use:
+    - COMMENTS
+    - STANDARD
+    - FILE_LOWER_SNAKE_CASE
+  except:
+    - COMMENT_FIELD
+    - RPC_RESPONSE_STANDARD_NAME
+breaking:
+  use:
+    - FILE

@@ -1,0 +1,104 @@
+name: Hermes Docker Image Publish
+
+env:
+  DOCKER_ORG: getoptimum
+  DOCKER_TOKEN: ${{ secrets.OPT_DOCKER_ACCESS_TOKEN }}
+  HERMES_REPO: probe-lab/hermes
+  GO_VERSION: "1.26.5"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/docker-hermes-publish.yml
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  docker-hermes:
+    name: Build and Push Hermes Docker Image
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+
+    steps:
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+        with:
+          platforms: all
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          username: ${{ env.DOCKER_ORG }}
+          password: ${{ env.DOCKER_TOKEN }}
+
+      - name: Set image tag
+        id: meta
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+            echo "latest=true" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+            echo "latest=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Clone Hermes repository
+        run: |
+          git clone https://github.com/${{ env.HERMES_REPO }}.git /tmp/hermes
+
+      - name: Fix Dockerfile for multi-platform build
+        run: |
+          # Update Go version
+          sed -i 's/FROM golang:[0-9.]\+/FROM golang:${{ env.GO_VERSION }}/' /tmp/hermes/Dockerfile
+          # replacing hardcoded GOARCH=amd64 with TARGETARCH build arg
+          sed -i 's/GOOS=linux GOARCH=amd64/GOOS=linux GOARCH=${TARGETARCH}/' /tmp/hermes/Dockerfile
+          # adding ARG declarations at the top of the builder stage
+          sed -i '/FROM golang:${{ env.GO_VERSION }} AS builder/a ARG TARGETARCH\nARG TARGETOS' /tmp/hermes/Dockerfile
+          echo "modified Dockerfile:"
+          cat /tmp/hermes/Dockerfile
+
+      - name: Build and Push Hermes Image
+        id: build
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5.4.0
+        with:
+          context: /tmp/hermes
+          file: /tmp/hermes/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          sbom: true
+          provenance: mode=max
+          tags: |
+            ${{ env.DOCKER_ORG }}/hermes-gateway-sidecar:${{ steps.meta.outputs.tag }}
+            ${{ steps.meta.outputs.latest == 'true' && format('{0}/hermes-gateway-sidecar:latest', env.DOCKER_ORG) || '' }}
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -rf /tmp/hermes
+
+  # Signing is its own job so a Sigstore outage can't fail the publish, and it
+  # runs whenever an image was pushed (`digest != ''`).
+  sign:
+    name: Sign hermes image
+    needs: docker-hermes
+    if: always() && needs.docker-hermes.outputs.digest != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write   # cosign keyless (Fulcio OIDC)
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - name: Sign
+        uses: ./.github/actions/sign-image
+        with:
+          image: ${{ env.DOCKER_ORG }}/hermes-gateway-sidecar@${{ needs.docker-hermes.outputs.digest }}
+          docker-username: ${{ env.DOCKER_ORG }}
+          docker-token: ${{ secrets.OPT_DOCKER_ACCESS_TOKEN }}

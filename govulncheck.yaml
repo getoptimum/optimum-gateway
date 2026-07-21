@@ -1,0 +1,37 @@
+# Known Vulnerabilities - Documentation
+# This file documents known vulnerabilities that are accepted risks or have no fix available
+# Note: govulncheck does not support automatic suppression, so the dependency-scan job
+# in security-scan.yml uses filtering logic to ignore these documented exceptions
+
+accepted_risks:
+  - id: GO-2024-3218
+    cve: CVE-2023-26248
+    github_advisory: GHSA-mqr9-hjr8-2m9w
+    package: github.com/libp2p/go-libp2p-kad-dht@v0.33.1
+    title: Content Censorship via Kademlia DHT Sybil attack
+    severity: reachable; assessed CVSS ~7.5 (range 5.3-8.6), not the upstream 5.3
+    fixed_in: N/A (all versions affected, no patch; only removing the dependency clears it)
+    reason: |
+      Reachable, not theoretical. The gateway runs a permissionless libp2p
+      Kademlia DHT (`internal/service/mum_p2p/dhtdiscovery`, ModeAutoServer) for
+      ongoing mump2p peer discovery. The rendezvous namespace is derived from the
+      public ClusterID, so any host can join the DHT with no credentials and
+      flood or eclipse the lookup. This is an availability/censorship vector on
+      the RLNC discovery layer (no confidentiality or integrity impact: the mesh
+      carries public Ethereum consensus data, uses StrictSign, and receiving
+      beacon nodes validate independently). Full write-up and CVSS rationale:
+      getoptimum/optimum-gateway#924.
+
+      Accepted because the exploitable impact is bounded at the mesh layer, not
+      because the DHT is unused. Mesh admission is now default-deny and gated on
+      the authenticated handshake (#955, closing #923), and cluster membership is
+      bound by the JWT (#951), so a DHT-discovered Sybil peer cannot join the
+      RLNC mesh or exchange shards. The residual is discovery-layer degradation
+      (wasted dials, slower/partitioned discovery), recoverable and non-persistent.
+
+      Removing the DHT entirely was explored (#922) and not adopted; the chosen
+      path keeps the DHT and hardens the mesh/registry layers. Registry-side
+      discovery hardening is tracked in getoptimum/optimum-bootstrap#310.
+    review_date: "2026-07-16"
+    next_review: "2027-01-16"
+    status: monitoring

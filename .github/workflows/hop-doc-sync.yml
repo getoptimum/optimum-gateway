@@ -1,0 +1,66 @@
+name: Sync integration folder to hop
+
+on:
+  push:
+    branches:
+      - main
+      - 'releases/**'
+    paths:
+      - 'integration/**'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  sync_integration:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout private (this repo)
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Generate GitHub App Token
+        id: generate-token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: getoptimum
+          repositories: optimum-hop
+
+      - name: Checkout repo
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          repository: getoptimum/optimum-hop
+          token: ${{ steps.generate-token.outputs.token }}
+          path: hop
+
+      - name: Copy integration folder
+        run: |
+          rm -rf hop/integration
+          cp -R integration hop/integration
+
+      - name: Open PR in hop if changed
+        working-directory: hop
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "actions@github.com"
+
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No change to integration folder"; exit 0
+          fi
+
+          BRANCH="docs/sync-integration"
+          git checkout -B "$BRANCH"
+          git add integration
+          git commit -m "docs: sync integration folder from optimum-gateway (${GITHUB_SHA::7})"
+          git push -u origin "$BRANCH" --force
+
+          gh pr create --base main --head "$BRANCH" \
+            --title "docs: sync integration folder from optimum-gateway" \
+            --body "Automated sync of \`integration/\` from optimum-gateway. Merge after required checks pass." \
+            || echo "PR already open for $BRANCH; branch updated with latest sync."
