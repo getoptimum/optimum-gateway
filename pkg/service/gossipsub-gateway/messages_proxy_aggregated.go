@@ -73,6 +73,14 @@ func (s *Service) EmitAggregatedMessage(payload []byte) {
 func (s *Service) handleAggregatedMessages(l logger.AppLogger, message *commonentities.P2PMessage) {
 	aggregated.Add(float64(len(message.Message)))
 	telemetry.IncAggregationMessage("in", len(message.Message))
+	// Propagation gates attestation delivery like beacon blocks: a disabled
+	// gateway keeps contributing to the mesh but delivers nothing to its CL.
+	propagationEnabled := s.cfg.PropagationEnabled()
+	telemetry.SetPropagationState(propagationEnabled)
+	if !propagationEnabled {
+		l.Debug("skip aggregated message since propagation is disabled")
+		return
+	}
 	decoded, err := s.aggregatorMessages.DecodeAggregatedMessage(s.srvForkMgr.ActiveDigest(), message.Message)
 	if err != nil {
 		telemetry.IncParseSSZError(mumP2PAggregatedMessagesTopic, entities.SourceMumP2P)

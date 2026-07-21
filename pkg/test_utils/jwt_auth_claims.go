@@ -36,6 +36,9 @@ type AuthTestRig struct {
 	ValidatorIndexes []uint64
 	// OperatorID appears in the mint response body (not the JWT).
 	OperatorID string
+	// PropagationEnabled appears in the mint response when set; nil omits the
+	// field (pre-rollout auth service shape).
+	PropagationEnabled *bool
 	// ResponseStatus / ResponseBody override the mint reply for error-path tests.
 	ResponseStatus int
 	ResponseBody   []byte
@@ -191,13 +194,17 @@ func NewAuthTestRig(t *testing.T, opts ...Option) *AuthTestRig {
 		signed, err := tok.SignedString(privateKey)
 		require.NoError(t, err)
 
-		_ = json.NewEncoder(w).Encode(map[string]any{
+		resp := map[string]any{
 			"access_token":      signed,
 			"token_type":        "Bearer",
 			"expires_in":        3600,
 			"operator_id":       rig.OperatorID,
 			"validator_indexes": rig.ValidatorIndexes,
-		})
+		}
+		if rig.PropagationEnabled != nil {
+			resp["propagation_enabled"] = *rig.PropagationEnabled
+		}
+		_ = json.NewEncoder(w).Encode(resp)
 	})
 	rig.server = httptest.NewServer(mux)
 	t.Cleanup(rig.server.Close)

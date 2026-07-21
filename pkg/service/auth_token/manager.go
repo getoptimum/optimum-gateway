@@ -28,12 +28,17 @@ var (
 )
 
 const (
-	mintPath = "/api/v1/auth/token" // mintPath is appended to AppConfig.RemoteAuthURL to form the mint endpoint.
+	mintPath  = "/api/v1/auth/token" // mintPath is appended to AppConfig.RemoteAuthURL to form the mint endpoint.
+	flagsPath = "/api/v1/auth/flags" // per-gateway runtime flags, polled between re-mints.
 	// Upstream issues 6h JWTs; refreshing around the 3h mark leaves a 3h
 	// fence for transient auth-service outages while still hitting the
 	// auth service only ~8 times/day.
 	refreshIntervalMinSec = 10_500 // 2h55m
 	refreshIntervalMaxSec = 11_100 // 3h05m
+	// Flags poll cadence: fast enough that a propagation toggle lands in ~1-2
+	// minutes, jittered so a fleet doesn't poll in lockstep.
+	flagsIntervalMinSec = 55
+	flagsIntervalMaxSec = 70
 )
 
 type Service struct {
@@ -51,6 +56,12 @@ type Service struct {
 	servicesClaims atomic.Pointer[jwks_verifier.Claims]
 	operatorID     atomic.Pointer[string]
 	indexes        syncx.RWSlice[uint64]
+	flagsURL       string
+	// propagationSink pushes the per-key propagation flag into config so
+	// PropagationEnabled() reflects it; nil on a disabled manager.
+	propagationSink     func(bool)
+	propagationEnabled  atomic.Bool
+	flagsUnsupportedLog atomic.Bool
 }
 
 type mintResponse struct {
@@ -60,7 +71,14 @@ type mintResponse struct {
 	ExpiresIn        int64    `json:"expires_in,omitempty"`
 	OperatorID       string   `json:"operator_id,omitempty"`
 	ValidatorIndexes []uint64 `json:"validator_indexes,omitempty"`
-	Error            string   `json:"error,omitempty"`
+	// Pointer so a pre-rollout auth service (field absent) stays fail-open true.
+	PropagationEnabled *bool  `json:"propagation_enabled,omitempty"`
+	Error              string `json:"error,omitempty"`
+}
+
+type flagsResponse struct {
+	PropagationEnabled *bool  `json:"propagation_enabled,omitempty"`
+	Error              string `json:"error,omitempty"`
 }
 
 // New always returns a non-nil Manager. When auth is off (EnableAuth=false
@@ -111,16 +129,20 @@ func New(ctx context.Context, log logger.AppLogger, appCfg *config.AppConfig) (*
 		return nil, fmt.Errorf("auth_token: extract identity: %w", err)
 	}
 
-	return &Service{
+	srv := &Service{
 		log:      log.With(logger.WithService("auth_token")),
 		apiKey:   appCfg.APIKey,
 		mintURL:  strings.TrimRight(appCfg.RemoteAuthURL, "/") + mintPath,
+		flagsURL: strings.TrimRight(appCfg.RemoteAuthURL, "/") + flagsPath,
 		verifier: verifier,
 		mintPayload: map[string]string{
 			"api_key": appCfg.APIKey,
 			"peer_id": identityKey.ID.String(),
 		},
-	}, nil
+		propagationSink: appCfg.SetKeyPropagationEnabled,
+	}
+	srv.propagationEnabled.Store(true)
+	return srv, nil
 }
 
 // NewDisabled returns a Manager whose every operation is a no-op. Same as
@@ -250,13 +272,37 @@ func (m *Service) HasValidToken() bool {
 	return c != nil && c.ExpiresAt != nil && time.Now().Before(c.ExpiresAt.Time)
 }
 
-// Start kicks off the background refresh loop. No-op on a disabled Manager.
+// Start kicks off the background refresh and flags-poll loops. No-op on a
+// disabled Manager.
 func (m *Service) Start(ctx context.Context) {
 	if !m.IsEnabled() {
 		return
 	}
 	m.log.Info("auth_token manager started")
 	go m.refreshLoop(ctx)
+	go m.flagsLoop(ctx)
+}
+
+// PropagationEnabled returns the per-key flag from the most recent mint or
+// flags poll. True pre-mint and on a disabled Manager (fail-open).
+func (m *Service) PropagationEnabled() bool {
+	if !m.IsEnabled() {
+		return true
+	}
+	return m.propagationEnabled.Load()
+}
+
+// applyPropagation stores the flag (nil = absent field = fail-open true),
+// pushes it into config and logs transitions.
+func (m *Service) applyPropagation(v *bool) {
+	next := v == nil || *v
+	prev := m.propagationEnabled.Swap(next)
+	if m.propagationSink != nil {
+		m.propagationSink(next)
+	}
+	if prev != next {
+		m.log.Info("per-key propagation flag changed", logger.WithBool("propagation_enabled", next))
+	}
 }
 
 // VerifyToken checks that token from another gateway is valid and associated with same chain as ours.
@@ -326,6 +372,7 @@ func (m *Service) mint(ctx context.Context) (string, error) {
 	m.claims.Store(claims)
 	m.operatorID.Store(new(parsed.OperatorID))
 	m.indexes.Replace(parsed.ValidatorIndexes)
+	m.applyPropagation(parsed.PropagationEnabled)
 
 	// Cache the services token (aud=services) for centralized pushes. Verified
 	// like the handshake token; if upstream omitted it (pre-split auth) or it
@@ -360,6 +407,39 @@ func (m *Service) mint(ctx context.Context) (string, error) {
 		logger.WithInt("validator_indexes", len(parsed.ValidatorIndexes)),
 	)
 	return parsed.AccessToken, nil
+}
+
+// flagsLoop polls /auth/flags between re-mints so a propagation toggle lands
+// in ~1-2 minutes instead of the ~3h mint cadence. Fail-open on every error:
+// the last applied value stays until a poll succeeds. A pre-rollout auth
+// service (404/405) is logged once and polling continues so an upgraded
+// service is picked up without a restart.
+func (m *Service) flagsLoop(ctx context.Context) {
+	for {
+		sleepSec, _ := randutil.RandBetween(flagsIntervalMinSec, flagsIntervalMaxSec)
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(time.Duration(sleepSec) * time.Second):
+		}
+		parsed, statusCode, err := commonnet.PostCurl[flagsResponse](ctx, m.flagsURL, m.mintPayload, nil)
+		switch {
+		case err != nil:
+			m.log.Debug("flags poll failed; keeping last value", logger.WithString("err", err.Error()))
+		case statusCode == http.StatusOK && parsed != nil:
+			m.applyPropagation(parsed.PropagationEnabled)
+		case statusCode == http.StatusNotFound || statusCode == http.StatusMethodNotAllowed:
+			if m.flagsUnsupportedLog.CompareAndSwap(false, true) {
+				m.log.Info("auth service does not serve /auth/flags yet; propagation toggles apply on re-mint only")
+			}
+		case statusCode == http.StatusUnauthorized:
+			// Key no longer active; refreshLoop owns terminal handling, this loop
+			// just stops flapping the flag.
+			m.log.Error("flags poll unauthorized; keeping last value", ErrUnknownKey)
+		default:
+			m.log.Debug("flags poll unexpected status; keeping last value", logger.WithInt("status", statusCode))
+		}
+	}
 }
 
 // refreshLoop sleeps for a randomized interval, then re-mints. The random

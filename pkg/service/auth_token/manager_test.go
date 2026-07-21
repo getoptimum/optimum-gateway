@@ -405,3 +405,34 @@ func TestGatewayLabels_NilWhenNoServicesToken(t *testing.T) {
 	})
 	require.Nil(t, m.GatewayLabels())
 }
+
+func TestMint_PropagationFlag(t *testing.T) {
+	t.Run("AbsentFieldFailsOpen", func(t *testing.T) {
+		rig := test_utils.NewAuthTestRig(t)
+		cfg := rig.AppCfg(t)
+		m, err := auth_token.New(t.Context(), logger.NewAppSLogger(logger.Debug), cfg)
+		require.NoError(t, err)
+		require.True(t, m.PropagationEnabled(), "fail-open before mint")
+		_, err = m.Token(context.Background())
+		require.NoError(t, err)
+		require.True(t, m.PropagationEnabled(), "absent field must stay fail-open")
+		require.True(t, cfg.KeyPropagationEnabled(), "sink must keep config fail-open")
+	})
+	t.Run("FalseAppliesToManagerAndConfig", func(t *testing.T) {
+		rig := test_utils.NewAuthTestRig(t)
+		disabled := false
+		rig.PropagationEnabled = &disabled
+		cfg := rig.AppCfg(t)
+		m, err := auth_token.New(t.Context(), logger.NewAppSLogger(logger.Debug), cfg)
+		require.NoError(t, err)
+		_, err = m.Token(context.Background())
+		require.NoError(t, err)
+		require.False(t, m.PropagationEnabled())
+		require.False(t, cfg.KeyPropagationEnabled(), "sink must push the flag into config")
+		require.False(t, cfg.PropagationEnabled(), "effective flag must AND in the key flag")
+	})
+	t.Run("DisabledManagerFailsOpen", func(t *testing.T) {
+		m := auth_token.NewDisabled(logger.NewAppSLogger(logger.Debug))
+		require.True(t, m.PropagationEnabled())
+	})
+}

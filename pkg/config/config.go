@@ -94,8 +94,12 @@ type AppConfig struct {
 	RemotePushMimirURL string `yaml:"remote_push_mimir_url" env:"OPT_REMOTE_PUSH_MIMIR_URL" default:"https://v2-mimir.getoptimum.io"`
 	RemotePushLokiURL  string `yaml:"remote_push_loki_url" env:"OPT_REMOTE_PUSH_LOKI_URL" default:"https://v2-loki.getoptimum.io"`
 
-	rotator               *commonconfig.Rotator
-	propagationEnabled    atomic.Bool
+	rotator            *commonconfig.Rotator
+	propagationEnabled atomic.Bool
+	// keyPropagationEnabled is the per-key flag from the auth mint/flags poll
+	// (crossover tests); ANDed with the cluster-level flag above. The dynamic-config
+	// rotator never writes it, so the two channels can't clobber each other.
+	keyPropagationEnabled atomic.Bool
 	skipMessageFromSelf   atomic.Bool
 	aggregationIntervalMs atomic.Int64
 	logger                logger.AppLogger
@@ -115,6 +119,7 @@ func LoadConfig(confFile string) (*AppConfig, error) {
 	cfg.Version = version.GetVersion()
 	cfg.CommitHash = version.GetCommitHash()
 	cfg.propagationEnabled.Store(cfg.PropagationEnabledRaw)
+	cfg.keyPropagationEnabled.Store(true) // fail-open until the first mint/flags poll
 	cfg.skipMessageFromSelf.Store(true)
 	var aggMs int64
 	if cfg.AggregationIntervalMs == 0 {
@@ -259,8 +264,24 @@ func (c *AppConfig) Validate() error {
 	return nil
 }
 
+// PropagationEnabled is the effective flag gating mesh→CL delivery: the
+// cluster-level dynamic-config flag AND the per-key flag from auth.
 func (c *AppConfig) PropagationEnabled() bool {
+	return c.propagationEnabled.Load() && c.keyPropagationEnabled.Load()
+}
+
+func (c *AppConfig) ClusterPropagationEnabled() bool {
 	return c.propagationEnabled.Load()
+}
+
+func (c *AppConfig) KeyPropagationEnabled() bool {
+	return c.keyPropagationEnabled.Load()
+}
+
+// SetKeyPropagationEnabled is called by the auth_token manager on each mint
+// and flags poll.
+func (c *AppConfig) SetKeyPropagationEnabled(v bool) {
+	c.keyPropagationEnabled.Store(v)
 }
 
 func (c *AppConfig) GetSkipMessagesFromSelf() bool {

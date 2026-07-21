@@ -269,3 +269,30 @@ gateway_id: local-dockerized
 	require.Equal(t, "local-dockerized", cfg.GatewayID)
 	require.Equal(t, "optimum_hoodi_v0_1", cfg.GatewayClusterID)
 }
+
+func TestPropagationEnabled_AndSemantics(t *testing.T) {
+	confPath := writeTempConfig(t, `
+log_level: "info"
+identity_libp2p_dir: "/tmp/lib"
+identity_mump2p_dir: "/tmp/mump2p"
+agent_lib_p2p_port: 4000
+agent_mump2p_port: 4001
+gateway_id: "gw-1"
+gateway_cluster_id: "gw-cluster"`)
+	cfg, err := config.LoadConfig(confPath)
+	require.NoError(t, err)
+
+	// Both flags seed true; the key flag ANDs into the effective value and
+	// never touches the cluster flag.
+	require.True(t, cfg.PropagationEnabled())
+	require.True(t, cfg.ClusterPropagationEnabled())
+	require.True(t, cfg.KeyPropagationEnabled())
+
+	cfg.SetKeyPropagationEnabled(false)
+	require.False(t, cfg.PropagationEnabled())
+	require.False(t, cfg.KeyPropagationEnabled())
+	require.True(t, cfg.ClusterPropagationEnabled(), "auth path must not clobber the cluster flag")
+
+	cfg.SetKeyPropagationEnabled(true)
+	require.True(t, cfg.PropagationEnabled())
+}
