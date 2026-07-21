@@ -147,6 +147,9 @@ func New(ctx context.Context, log logger.AppLogger, appCfg *config.AppConfig) (*
 		propagationSink: appCfg.SetKeyPropagationEnabled,
 	}
 	srv.propagationEnabled.Store(true)
+	// Sync the fail-open seed into config immediately so the effective flag is
+	// consistent even before the first mint (and on non-LoadConfig configs).
+	srv.propagationSink(true)
 	srv.terminal = make(chan struct{})
 	return srv, nil
 }
@@ -427,24 +430,33 @@ func (m *Service) flagsLoop(ctx context.Context) {
 			return
 		case <-time.After(time.Duration(sleepSec) * time.Second):
 		}
-		parsed, statusCode, err := commonnet.PostCurl[flagsResponse](ctx, m.flagsURL, m.mintPayload, nil)
-		switch {
-		case err != nil:
-			m.log.Debug("flags poll failed; keeping last value", logger.WithString("err", err.Error()))
-		case statusCode == http.StatusOK && parsed != nil:
-			m.applyPropagation(parsed.PropagationEnabled)
-		case statusCode == http.StatusNotFound || statusCode == http.StatusMethodNotAllowed:
-			if m.flagsUnsupportedLog.CompareAndSwap(false, true) {
-				m.log.Info("auth service does not serve /auth/flags yet; propagation toggles apply on re-mint only")
-			}
-		case statusCode == http.StatusUnauthorized:
-			m.log.Error("flags poll unauthorized — key is terminal, loop exiting", ErrUnknownKey)
-			m.markTerminal()
+		if terminal := m.pollFlagsOnce(ctx); terminal {
 			return
-		default:
-			m.log.Debug("flags poll unexpected status; keeping last value", logger.WithInt("status", statusCode))
 		}
 	}
+}
+
+// pollFlagsOnce runs a single flags poll; true means the key is terminal and
+// the loop must exit.
+func (m *Service) pollFlagsOnce(ctx context.Context) bool {
+	parsed, statusCode, err := commonnet.PostCurl[flagsResponse](ctx, m.flagsURL, m.mintPayload, nil)
+	switch {
+	case err != nil:
+		m.log.Debug("flags poll failed; keeping last value", logger.WithString("err", err.Error()))
+	case statusCode == http.StatusOK && parsed != nil:
+		m.applyPropagation(parsed.PropagationEnabled)
+	case statusCode == http.StatusNotFound || statusCode == http.StatusMethodNotAllowed:
+		if m.flagsUnsupportedLog.CompareAndSwap(false, true) {
+			m.log.Info("auth service does not serve /auth/flags yet; propagation toggles apply on re-mint only")
+		}
+	case statusCode == http.StatusUnauthorized:
+		m.log.Error("flags poll unauthorized — key is terminal, loop exiting", ErrUnknownKey)
+		m.markTerminal()
+		return true
+	default:
+		m.log.Debug("flags poll unexpected status; keeping last value", logger.WithInt("status", statusCode))
+	}
+	return false
 }
 
 // markTerminal signals both background loops to stop; safe to call repeatedly.

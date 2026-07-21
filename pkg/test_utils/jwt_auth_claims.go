@@ -39,6 +39,9 @@ type AuthTestRig struct {
 	// PropagationEnabled appears in the mint response when set; nil omits the
 	// field (pre-rollout auth service shape).
 	PropagationEnabled *bool
+	// FlagsStatus drives the /auth/flags stub: 0 → 404 (pre-rollout default),
+	// else the given status with a body echoing PropagationEnabled.
+	FlagsStatus int
 	// ResponseStatus / ResponseBody override the mint reply for error-path tests.
 	ResponseStatus int
 	ResponseBody   []byte
@@ -148,6 +151,18 @@ func NewAuthTestRig(t *testing.T, opts ...Option) *AuthTestRig {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/.well-known/jwks.json", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write(jwksDoc)
+	})
+	mux.HandleFunc("/api/v1/auth/flags", func(w http.ResponseWriter, _ *http.Request) {
+		if rig.FlagsStatus == 0 {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(rig.FlagsStatus)
+		resp := map[string]any{}
+		if rig.PropagationEnabled != nil {
+			resp["propagation_enabled"] = *rig.PropagationEnabled
+		}
+		_ = json.NewEncoder(w).Encode(resp)
 	})
 	mux.HandleFunc("/api/v1/auth/token", func(w http.ResponseWriter, req *http.Request) {
 		rig.Calls.Add(1)
