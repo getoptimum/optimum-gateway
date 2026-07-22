@@ -479,7 +479,9 @@ func (*StreamCommandsRequest_SubmitDecryptionKey) isStreamCommandsRequest_Comman
 
 // Request a JWT suitable for calling the endpoints in gateway.
 type GetAccessTokenRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Client pecify network which he will use for send blocks
+	Network       string `protobuf:"bytes,1,opt,name=network,proto3" json:"network,omitempty"` // mainet or hoodi
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -514,13 +516,21 @@ func (*GetAccessTokenRequest) Descriptor() ([]byte, []int) {
 	return file_getoptimum_optimum_gateway_service_relay_v1_relay_proto_rawDescGZIP(), []int{6}
 }
 
+func (x *GetAccessTokenRequest) GetNetwork() string {
+	if x != nil {
+		return x.Network
+	}
+	return ""
+}
+
 // Response to a GetAccessTokenRequest, containing the token and its expiration.
 type GetAccessTokenResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
+	Code  Code                   `protobuf:"varint,1,opt,name=code,proto3,enum=getoptimum.optimum_gateway.service.relay.v1.Code" json:"code,omitempty"`
 	// Bearer token to be used in Authorization metadata.
-	Token string `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	Token string `protobuf:"bytes,2,opt,name=token,proto3" json:"token,omitempty"`
 	// Unix epoch seconds when the token expires.
-	ExpiresAtUnix int64 `protobuf:"varint,2,opt,name=expires_at_unix,json=expiresAtUnix,proto3" json:"expires_at_unix,omitempty"`
+	ExpiresAtUnix int64 `protobuf:"varint,3,opt,name=expires_at_unix,json=expiresAtUnix,proto3" json:"expires_at_unix,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -553,6 +563,13 @@ func (x *GetAccessTokenResponse) ProtoReflect() protoreflect.Message {
 // Deprecated: Use GetAccessTokenResponse.ProtoReflect.Descriptor instead.
 func (*GetAccessTokenResponse) Descriptor() ([]byte, []int) {
 	return file_getoptimum_optimum_gateway_service_relay_v1_relay_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *GetAccessTokenResponse) GetCode() Code {
+	if x != nil {
+		return x.Code
+	}
+	return Code_CODE_UNSPECIFIED
 }
 
 func (x *GetAccessTokenResponse) GetToken() string {
@@ -597,11 +614,13 @@ const file_getoptimum_optimum_gateway_service_relay_v1_relay_proto_rawDesc = "" 
 	"request_id\x18\x01 \x01(\tR\trequestId\x12\x80\x01\n" +
 	"\x16submit_encrypted_block\x18\x02 \x01(\v2H.getoptimum.optimum_gateway.service.relay.v1.SubmitEncryptedBlockRequestH\x00R\x14submitEncryptedBlock\x12}\n" +
 	"\x15submit_decryption_key\x18\x03 \x01(\v2G.getoptimum.optimum_gateway.service.relay.v1.SubmitDecryptionKeyRequestH\x00R\x13submitDecryptionKeyB\t\n" +
-	"\acommand\"\x17\n" +
-	"\x15GetAccessTokenRequest\"V\n" +
-	"\x16GetAccessTokenResponse\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token\x12&\n" +
-	"\x0fexpires_at_unix\x18\x02 \x01(\x03R\rexpiresAtUnix*n\n" +
+	"\acommand\"1\n" +
+	"\x15GetAccessTokenRequest\x12\x18\n" +
+	"\anetwork\x18\x01 \x01(\tR\anetwork\"\x9d\x01\n" +
+	"\x16GetAccessTokenResponse\x12E\n" +
+	"\x04code\x18\x01 \x01(\x0e21.getoptimum.optimum_gateway.service.relay.v1.CodeR\x04code\x12\x14\n" +
+	"\x05token\x18\x02 \x01(\tR\x05token\x12&\n" +
+	"\x0fexpires_at_unix\x18\x03 \x01(\x03R\rexpiresAtUnix*n\n" +
 	"\x04Code\x12\x14\n" +
 	"\x10CODE_UNSPECIFIED\x10\x00\x12\v\n" +
 	"\aCODE_OK\x10\x01\x12\x19\n" +
@@ -640,24 +659,25 @@ var file_getoptimum_optimum_gateway_service_relay_v1_relay_proto_goTypes = []any
 	(*GetAccessTokenResponse)(nil),      // 8: getoptimum.optimum_gateway.service.relay.v1.GetAccessTokenResponse
 }
 var file_getoptimum_optimum_gateway_service_relay_v1_relay_proto_depIdxs = []int32{
-	0, // 0: getoptimum.optimum_gateway.service.relay.v1.StreamAck.code:type_name -> getoptimum.optimum_gateway.service.relay.v1.Code
-	0, // 1: getoptimum.optimum_gateway.service.relay.v1.SubmitDecryptionKeyAck.code:type_name -> getoptimum.optimum_gateway.service.relay.v1.Code
-	0, // 2: getoptimum.optimum_gateway.service.relay.v1.SubmitEncryptedBlockAck.code:type_name -> getoptimum.optimum_gateway.service.relay.v1.Code
-	1, // 3: getoptimum.optimum_gateway.service.relay.v1.StreamCommandsRequest.submit_encrypted_block:type_name -> getoptimum.optimum_gateway.service.relay.v1.SubmitEncryptedBlockRequest
-	2, // 4: getoptimum.optimum_gateway.service.relay.v1.StreamCommandsRequest.submit_decryption_key:type_name -> getoptimum.optimum_gateway.service.relay.v1.SubmitDecryptionKeyRequest
-	7, // 5: getoptimum.optimum_gateway.service.relay.v1.PrePropagationService.GetAccessToken:input_type -> getoptimum.optimum_gateway.service.relay.v1.GetAccessTokenRequest
-	1, // 6: getoptimum.optimum_gateway.service.relay.v1.PrePropagationService.SubmitEncryptedBlock:input_type -> getoptimum.optimum_gateway.service.relay.v1.SubmitEncryptedBlockRequest
-	2, // 7: getoptimum.optimum_gateway.service.relay.v1.PrePropagationService.SubmitDecryptionKey:input_type -> getoptimum.optimum_gateway.service.relay.v1.SubmitDecryptionKeyRequest
-	6, // 8: getoptimum.optimum_gateway.service.relay.v1.PrePropagationService.StreamCommands:input_type -> getoptimum.optimum_gateway.service.relay.v1.StreamCommandsRequest
-	8, // 9: getoptimum.optimum_gateway.service.relay.v1.PrePropagationService.GetAccessToken:output_type -> getoptimum.optimum_gateway.service.relay.v1.GetAccessTokenResponse
-	5, // 10: getoptimum.optimum_gateway.service.relay.v1.PrePropagationService.SubmitEncryptedBlock:output_type -> getoptimum.optimum_gateway.service.relay.v1.SubmitEncryptedBlockAck
-	4, // 11: getoptimum.optimum_gateway.service.relay.v1.PrePropagationService.SubmitDecryptionKey:output_type -> getoptimum.optimum_gateway.service.relay.v1.SubmitDecryptionKeyAck
-	3, // 12: getoptimum.optimum_gateway.service.relay.v1.PrePropagationService.StreamCommands:output_type -> getoptimum.optimum_gateway.service.relay.v1.StreamAck
-	9, // [9:13] is the sub-list for method output_type
-	5, // [5:9] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	0,  // 0: getoptimum.optimum_gateway.service.relay.v1.StreamAck.code:type_name -> getoptimum.optimum_gateway.service.relay.v1.Code
+	0,  // 1: getoptimum.optimum_gateway.service.relay.v1.SubmitDecryptionKeyAck.code:type_name -> getoptimum.optimum_gateway.service.relay.v1.Code
+	0,  // 2: getoptimum.optimum_gateway.service.relay.v1.SubmitEncryptedBlockAck.code:type_name -> getoptimum.optimum_gateway.service.relay.v1.Code
+	1,  // 3: getoptimum.optimum_gateway.service.relay.v1.StreamCommandsRequest.submit_encrypted_block:type_name -> getoptimum.optimum_gateway.service.relay.v1.SubmitEncryptedBlockRequest
+	2,  // 4: getoptimum.optimum_gateway.service.relay.v1.StreamCommandsRequest.submit_decryption_key:type_name -> getoptimum.optimum_gateway.service.relay.v1.SubmitDecryptionKeyRequest
+	0,  // 5: getoptimum.optimum_gateway.service.relay.v1.GetAccessTokenResponse.code:type_name -> getoptimum.optimum_gateway.service.relay.v1.Code
+	7,  // 6: getoptimum.optimum_gateway.service.relay.v1.PrePropagationService.GetAccessToken:input_type -> getoptimum.optimum_gateway.service.relay.v1.GetAccessTokenRequest
+	1,  // 7: getoptimum.optimum_gateway.service.relay.v1.PrePropagationService.SubmitEncryptedBlock:input_type -> getoptimum.optimum_gateway.service.relay.v1.SubmitEncryptedBlockRequest
+	2,  // 8: getoptimum.optimum_gateway.service.relay.v1.PrePropagationService.SubmitDecryptionKey:input_type -> getoptimum.optimum_gateway.service.relay.v1.SubmitDecryptionKeyRequest
+	6,  // 9: getoptimum.optimum_gateway.service.relay.v1.PrePropagationService.StreamCommands:input_type -> getoptimum.optimum_gateway.service.relay.v1.StreamCommandsRequest
+	8,  // 10: getoptimum.optimum_gateway.service.relay.v1.PrePropagationService.GetAccessToken:output_type -> getoptimum.optimum_gateway.service.relay.v1.GetAccessTokenResponse
+	5,  // 11: getoptimum.optimum_gateway.service.relay.v1.PrePropagationService.SubmitEncryptedBlock:output_type -> getoptimum.optimum_gateway.service.relay.v1.SubmitEncryptedBlockAck
+	4,  // 12: getoptimum.optimum_gateway.service.relay.v1.PrePropagationService.SubmitDecryptionKey:output_type -> getoptimum.optimum_gateway.service.relay.v1.SubmitDecryptionKeyAck
+	3,  // 13: getoptimum.optimum_gateway.service.relay.v1.PrePropagationService.StreamCommands:output_type -> getoptimum.optimum_gateway.service.relay.v1.StreamAck
+	10, // [10:14] is the sub-list for method output_type
+	6,  // [6:10] is the sub-list for method input_type
+	6,  // [6:6] is the sub-list for extension type_name
+	6,  // [6:6] is the sub-list for extension extendee
+	0,  // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_getoptimum_optimum_gateway_service_relay_v1_relay_proto_init() }

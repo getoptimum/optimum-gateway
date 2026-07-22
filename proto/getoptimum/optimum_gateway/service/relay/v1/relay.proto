@@ -76,14 +76,18 @@ message StreamCommandsRequest {
 }
 
 // Request a JWT suitable for calling the endpoints in gateway.
-message GetAccessTokenRequest {}
+message GetAccessTokenRequest {
+  // Client pecify network which he will use for send blocks
+  string network = 1; // mainet or hoodi
+}
 
 // Response to a GetAccessTokenRequest, containing the token and its expiration.
 message GetAccessTokenResponse {
+  Code code = 1;
   // Bearer token to be used in Authorization metadata.
-  string token = 1;
+  string token = 2;
   // Unix epoch seconds when the token expires.
-  int64 expires_at_unix = 2;
+  int64 expires_at_unix = 3;
 }
 
 // PrePropagationService is the main entrypoint for the gateway to accept encrypted blocks and decryption keys from RELAY nodes.
