@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+package getoptimum.optimum_gateway.service.relay.v1;
+
+option go_package = "github.com/getoptimum/optimum-gateway/pkg/service/relay";
+
+// Request to submit the encrypted block bytes.
+// Gateway computes SHA-256 of payload
+message SubmitEncryptedBlockRequest {
+  // Submit either a single block or a batch.
+  repeated bytes items = 1;
+}
+
+// Request to submit the decryption key and signature for a previously
+// submitted encrypted block.
+message SubmitDecryptionKeyRequest {
+  // Required: SHA-256(encrypted_block) as defined above
+  bytes encrypted_block_sha256 = 1;
+  // AES-128-GCM key for the block (unique per slot)
+  bytes decryption_key = 2;
+  // Proposer signature over the final SignedBeaconBlock
+  bytes signature = 3;
+}
+
+// Lightweight response for both unary calls and streamed acks
+enum Code {
+  // Default value, should not be used in practice.
+  CODE_UNSPECIFIED = 0;
+  // Success, no error.
+  CODE_OK = 1;
+  // Invalid argument, e.g. missing required field or invalid value.
+  CODE_INVALID_ARGUMENT = 2;
+  // Caller is not authorized to perform the requested operation.
+  CODE_UNAUTHORIZED = 3;
+  // Internal server error, e.g. database failure or unexpected exception.
+  CODE_INTERNAL = 4;
+}
+
+// Acknowledgement of a request, with optional error code and message.
+message StreamAck {
+  Code code = 1;
+  string message = 2; // human-readable context on failure
+  // Present whenever known; allows clients to correlate subsequent key
+  // submissions with the computed hash from encrypted_block submissions.
+  bytes encrypted_block_sha256 = 3;
+}
+
+// Acknowledgement of a request, with optional error code and message.
+message SubmitDecryptionKeyAck {
+  Code code = 1;
+  string message = 2; // human-readable context on failure
+  // Present whenever known; allows clients to correlate subsequent key
+  // submissions with the computed hash from encrypted_block submissions.
+  bytes encrypted_block_sha256 = 3;
+}
+
+// Acknowledgement of a request, with optional error code and message.
+message SubmitEncryptedBlockAck {
+  Code code = 1;
+  string message = 2; // human-readable context on failure
+  // Present whenever known; allows clients to correlate subsequent key
+  // submissions with the computed hash from encrypted_block submissions.
+  bytes encrypted_block_sha256 = 3;
+}
+
+// Stream envelope allowing the same commands to be sent over a bidi stream
+message StreamCommandsRequest {
+  // Client-provided identifier to correlate requests and acks over the stream
+  string request_id = 1;
+
+  // Command to be executed by the gateway. Only one of the commands may be set per message.
+  oneof command {
+    SubmitEncryptedBlockRequest submit_encrypted_block = 2;
+    SubmitDecryptionKeyRequest submit_decryption_key = 3;
+  }
+}
+
+// Request a JWT suitable for calling the endpoints in gateway.
+message GetAccessTokenRequest {}
+
+// Response to a GetAccessTokenRequest, containing the token and its expiration.
+message GetAccessTokenResponse {
+  // Bearer token to be used in Authorization metadata.
+  string token = 1;
+  // Unix epoch seconds when the token expires.
+  int64 expires_at_unix = 2;
+}
+
+// PrePropagationService is the main entrypoint for the gateway to accept encrypted blocks and decryption keys from RELAY nodes.
+service PrePropagationService {
+  // Token issuance. Gateway MUST only issue tokens to callers already
+  // authenticated as RELAY. Otherwise, return UNAUTHORIZED
+  rpc GetAccessToken(GetAccessTokenRequest) returns (GetAccessTokenResponse);
+  // Direct RPC for submitting an encrypted block. The gateway computes SHA-256 of the payload and returns it in the Ack.
+  rpc SubmitEncryptedBlock(SubmitEncryptedBlockRequest) returns (SubmitEncryptedBlockAck);
+  // Direct RPC for submitting the decryption key and signature for a previously submitted encrypted block.
+  rpc SubmitDecryptionKey(SubmitDecryptionKeyRequest) returns (SubmitDecryptionKeyAck);
+  // Bidirectional stream carrying the same commands and per-message acks
+  rpc StreamCommands(stream StreamCommandsRequest) returns (stream StreamAck);
+}
