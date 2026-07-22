@@ -1,0 +1,13 @@
+log_level: info
+gateway_cluster_id: optimum_hoodi_v0_2
+
+agent_lib_p2p_port: 33212
+agent_mump2p_port: 43213
+telemetry_enable: true
+telemetry_port: 48123
+identity_libp2p_dir: /tmp/libp2p
+identity_mump2p_dir: /tmp/mump2p
+
+# Populated by init-optimum.sh (Approach A: gateway dials the CL on dvnode).
+direct_cl_peers:
+  - /dns4/REPLACE_CL_HOST/tcp/9000/p2p/REPLACE_CL_PEER_ID

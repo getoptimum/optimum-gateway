@@ -135,11 +135,16 @@ curl -s http://localhost:9596/eth/v1/node/peers/$(grep PEER_ID .env | cut -d= -f
 
 When CL is connected: gateway `checks.cl_peers` ≥ 1 and CL peer `state` is `connected` (brief `disconnected` can occur during churn).
 
+## Obol CDVN overlay
+
+Opt-in Compose overlay for [Obol Charon CDVN](https://github.com/ObolNetwork/charon-distributed-validator-node): see [`obol/README.md`](obol/README.md).
+
 ## Structure
 
 ```text
 integration/
 ├── README.md
+├── obol/                 # Opt-in overlay for Obol CDVN
 ├── ethereum/
 │   ├── docker-compose.yml
 │   ├── Makefile
