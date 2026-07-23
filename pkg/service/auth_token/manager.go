@@ -282,7 +282,15 @@ func (m *Service) VerifyToken(rawJWT string) (*jwks_verifier.Claims, error) {
 // mint hits /auth/token, verifies the response locally, and atomically
 // swaps the cached token + claims + indexes.
 func (m *Service) mint(ctx context.Context) (string, error) {
-	parsed, statusCode, err := utils.RetryPostRequest[mintResponse](ctx, m.mintURL, m.mintPayload, nil)
+	parsed, statusCode, err := utils.RetryPostRequestWithStopCodes[mintResponse](
+		ctx,
+		m.mintURL,
+		m.mintPayload,
+		nil,
+		[]int{
+			http.StatusUnauthorized,
+			http.StatusForbidden,
+		})
 	if err != nil {
 		telemetry.IncAuthMintResult(telemetry.AuthMintResultNetworkError)
 		return "", fmt.Errorf("auth mint POST: %w", err)
