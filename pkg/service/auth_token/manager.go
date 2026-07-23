@@ -12,13 +12,13 @@ import (
 	"github.com/getoptimum/optimum-common/pkg/chain"
 	"github.com/getoptimum/optimum-common/pkg/identity"
 	"github.com/getoptimum/optimum-common/pkg/logger"
-	commonnet "github.com/getoptimum/optimum-common/pkg/net"
 	"github.com/getoptimum/optimum-common/pkg/pointers"
 	randutil "github.com/getoptimum/optimum-common/pkg/rand"
 	"github.com/getoptimum/optimum-common/pkg/syncx"
 	"github.com/getoptimum/optimum-gateway/pkg/config"
 	"github.com/getoptimum/optimum-gateway/pkg/service/jwks_verifier"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
+	"github.com/getoptimum/optimum-gateway/pkg/utils"
 )
 
 var (
@@ -282,7 +282,7 @@ func (m *Service) VerifyToken(rawJWT string) (*jwks_verifier.Claims, error) {
 // mint hits /auth/token, verifies the response locally, and atomically
 // swaps the cached token + claims + indexes.
 func (m *Service) mint(ctx context.Context) (string, error) {
-	parsed, statusCode, err := commonnet.PostCurl[mintResponse](ctx, m.mintURL, m.mintPayload, nil)
+	parsed, statusCode, err := utils.RetryPostRequest[mintResponse](ctx, m.mintURL, m.mintPayload, nil)
 	if err != nil {
 		telemetry.IncAuthMintResult(telemetry.AuthMintResultNetworkError)
 		return "", fmt.Errorf("auth mint POST: %w", err)
