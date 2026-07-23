@@ -9,7 +9,6 @@ on:
   push:
     branches:
       - main
-      - feat/mimir-remote-write-wal-v2
     tags:
       - v*
 
