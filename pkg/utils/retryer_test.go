@@ -137,3 +137,24 @@ func TestRetryPostRequest_RetriesUntilSuccess_WithUnusedStopCodes(t *testing.T) 
 	require.Equal(t, want, *got)
 	require.EqualValues(t, 3, calls.Load())
 }
+
+func TestRetryPostRequest_DoNotRetry(t *testing.T) {
+	t.Parallel()
+
+	want := retryResponse{Value: "created"}
+	srv, calls := newRetryServer(t, http.MethodPost, []int{
+		http.StatusUnauthorized,
+	}, want)
+
+	got, code, err := utils.RetryPostRequest[retryResponse](
+		context.Background(), srv.URL, map[string]string{"hello": "world"},
+		nil,
+		http.StatusUnauthorized,
+	)
+
+	require.NoError(t, err)
+	require.Equal(t, http.StatusUnauthorized, code)
+	require.NotNil(t, got)
+	require.Equal(t, want, *got)
+	require.EqualValues(t, 1, calls.Load())
+}
