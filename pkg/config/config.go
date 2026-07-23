@@ -93,6 +93,8 @@ type AppConfig struct {
 	RemotePushEnable   bool   `yaml:"remote_push_enable" env:"OPT_REMOTE_PUSH_ENABLE" default:"false"`
 	RemotePushMimirURL string `yaml:"remote_push_mimir_url" env:"OPT_REMOTE_PUSH_MIMIR_URL" default:"https://v2-mimir.getoptimum.io"`
 	RemotePushLokiURL  string `yaml:"remote_push_loki_url" env:"OPT_REMOTE_PUSH_LOKI_URL" default:"https://v2-loki.getoptimum.io"`
+	// RemotePushWALDir is the base dir for prometheus agent + remote-write WAL.
+	RemotePushWALDir string `yaml:"remote_push_wal_dir" env:"OPT_REMOTE_PUSH_WAL_DIR" default:"/gateway/storage/wal"`
 
 	rotator               *commonconfig.Rotator
 	propagationEnabled    atomic.Bool
