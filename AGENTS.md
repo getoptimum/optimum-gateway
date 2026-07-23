@@ -49,10 +49,9 @@ make vulcheck        # govulncheck with hardcoded exception list
 
 Proto files define gRPC and aggregation messages:
 
-- `proto/aggregator.proto` — Batched message container
-- `proto/remote_write.proto` — Prometheus remote write (Mimir)
+- `proto/getoptimum/optimum_gateway/service/aggregator/v1/aggregator.proto` — Batched message container
 
-After editing, run `make proto` to regenerate `internal/service/aggregator/*.pb.go` and `internal/service/telemetry/remotepb/*.pb.go`.
+After editing, run `make proto` to regenerate `pkg/service/aggregator/*.pb.go`.
 
 ### Testing Strategy
 
