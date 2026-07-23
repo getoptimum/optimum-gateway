@@ -65,7 +65,6 @@ const (
 	mimirRemoteFlushDeadline = time.Minute
 	mimirScrapeInterval      = 15 * time.Second
 	mimirScrapeTimeout       = 10 * time.Second
-	mimirShutdownTimeout     = 30 * time.Second
 	metricsProbeTimeout      = 5 * time.Second
 )
 
@@ -261,12 +260,6 @@ func buildMimirPromConfig(cfg *config.AppConfig, scrapeInterval time.Duration) (
 	rwCfg := promconfig.DefaultRemoteWriteConfig
 	rwCfg.URL = &commonconfig.URL{URL: pushURL}
 	rwCfg.Name = "mimir"
-	if token := currentPushToken(); token != "" {
-		rwCfg.HTTPClientConfig.Authorization = &commonconfig.Authorization{
-			Type:        "Bearer",
-			Credentials: commonconfig.Secret(token),
-		}
-	}
 
 	target := fmt.Sprintf("127.0.0.1:%d", cfg.TelemetryPort)
 	scrapeCfg := &promconfig.ScrapeConfig{
@@ -294,16 +287,23 @@ func buildMimirPromConfig(cfg *config.AppConfig, scrapeInterval time.Duration) (
 		ScrapeConfigs:      []*promconfig.ScrapeConfig{scrapeCfg},
 		RemoteWriteConfigs: []*promconfig.RemoteWriteConfig{&rwCfg},
 	}
-	prevMarshalSecrets := commonconfig.MarshalSecretValue
-	commonconfig.MarshalSecretValue = true
 	yml, err := promyaml.Marshal(raw)
-	commonconfig.MarshalSecretValue = prevMarshalSecrets
 	if err != nil {
 		return nil, fmt.Errorf("marshal prometheus config: %w", err)
 	}
 	loaded, err := promconfig.Load(string(yml), promslog.NewNopLogger())
 	if err != nil {
 		return nil, fmt.Errorf("load prometheus config: %w", err)
+	}
+	// Set the bearer token on the parsed config directly. Marshaling it through
+	// YAML would require flipping the process-global commonconfig.MarshalSecretValue,
+	// which races with concurrent token refreshes (SetPushToken) and could leak
+	// secrets from any concurrent Secret marshal.
+	if token := currentPushToken(); token != "" {
+		loaded.RemoteWriteConfigs[0].HTTPClientConfig.Authorization = &commonconfig.Authorization{
+			Type:        "Bearer",
+			Credentials: commonconfig.Secret(token),
+		}
 	}
 	return loaded, nil
 }

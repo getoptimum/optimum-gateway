@@ -82,6 +82,27 @@ func TestBuildMimirPromConfig_preservesBearerToken(t *testing.T) {
 	require.Equal(t, wantToken, string(auth.Credentials))
 }
 
+// TestBuildMimirPromConfig_concurrent guards against reintroducing a shared-global
+// mutation in the build path (token refresh can race with startup). Run with -race.
+func TestBuildMimirPromConfig_concurrent(t *testing.T) {
+	SetPushToken("test-token")
+	t.Cleanup(func() { SetPushToken("") })
+
+	cfg := &config.AppConfig{RemotePushMimirURL: "https://v2-mimir.example.test", TelemetryPort: 48123}
+	var wg sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < 50; j++ {
+				_, err := buildMimirPromConfig(cfg, mimirScrapeInterval)
+				require.NoError(t, err)
+			}
+		}()
+	}
+	wg.Wait()
+}
+
 func TestMimirRemoteWrite_shutdown(t *testing.T) {
 	setTestToken(t)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -112,7 +133,7 @@ func TestMimirRemoteWrite_shutdown(t *testing.T) {
 
 	select {
 	case <-done:
-	case <-time.After(mimirShutdownTimeout + doneWaitSlack):
+	case <-time.After(mimirRemoteFlushDeadline + doneWaitSlack):
 		t.Fatal("done channel did not close within expected timeout")
 	}
 }
@@ -176,7 +197,7 @@ func TestMimirRemoteWrite_walReplay(t *testing.T) {
 	cancel()
 	select {
 	case <-done:
-	case <-time.After(mimirShutdownTimeout + doneWaitSlack):
+	case <-time.After(mimirRemoteFlushDeadline + doneWaitSlack):
 		t.Fatal("done channel did not close")
 	}
 }
@@ -222,7 +243,7 @@ func TestMimirRemoteWrite_processRestart(t *testing.T) {
 	cancel1()
 	select {
 	case <-done1:
-	case <-time.After(mimirShutdownTimeout + doneWaitSlack):
+	case <-time.After(mimirRemoteFlushDeadline + doneWaitSlack):
 		t.Fatal("first run did not shut down")
 	}
 
@@ -239,7 +260,7 @@ func TestMimirRemoteWrite_processRestart(t *testing.T) {
 	cancel2()
 	select {
 	case <-done2:
-	case <-time.After(mimirShutdownTimeout + doneWaitSlack):
+	case <-time.After(mimirRemoteFlushDeadline + doneWaitSlack):
 		t.Fatal("second run did not shut down")
 	}
 }
@@ -290,7 +311,7 @@ func TestInitMetrics_MimirDone(t *testing.T) {
 	cancel()
 	select {
 	case <-ch:
-	case <-time.After(mimirShutdownTimeout + doneWaitSlack):
+	case <-time.After(mimirRemoteFlushDeadline + doneWaitSlack):
 		t.Fatal("mimirDone channel did not close within expected timeout")
 	}
 }
