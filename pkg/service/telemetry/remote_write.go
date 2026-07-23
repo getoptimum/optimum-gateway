@@ -12,10 +12,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/getoptimum/optimum-common/pkg/logger"
-	"github.com/getoptimum/optimum-gateway/pkg/config"
-	commonconfig "github.com/prometheus/common/config"
 	"github.com/prometheus/client_golang/prometheus"
+	commonconfig "github.com/prometheus/common/config"
 	"github.com/prometheus/common/model"
 	"github.com/prometheus/common/promslog"
 	promconfig "github.com/prometheus/prometheus/config"
@@ -26,6 +24,9 @@ import (
 	"github.com/prometheus/prometheus/tsdb/agent"
 	"github.com/prometheus/prometheus/util/logging"
 	promyaml "gopkg.in/yaml.v2"
+
+	"github.com/getoptimum/optimum-common/pkg/logger"
+	"github.com/getoptimum/optimum-gateway/pkg/config"
 )
 
 type mimirRemoteState struct {
@@ -177,6 +178,7 @@ func runMimirRemoteWrite(ctx context.Context, log logger.AppLogger, cfg *config.
 		slogLogger.With("component", "scrape"),
 		logging.NewJSONFileLogger,
 		agentDB,
+		nil,
 		remoteReg,
 	)
 	if err != nil {
@@ -231,7 +233,7 @@ func waitForMetricsEndpoint(ctx context.Context, port int) error {
 	defer ticker.Stop()
 
 	for {
-		req, err := http.NewRequestWithContext(deadlineCtx, http.MethodGet, metricsURL, nil)
+		req, err := http.NewRequestWithContext(deadlineCtx, http.MethodGet, metricsURL, http.NoBody)
 		if err != nil {
 			return fmt.Errorf("create metrics probe request: %w", err)
 		}

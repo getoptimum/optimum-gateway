@@ -14,11 +14,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/getoptimum/optimum-common/pkg/logger"
-	"github.com/getoptimum/optimum-gateway/pkg/config"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/stretchr/testify/require"
+
+	"github.com/getoptimum/optimum-common/pkg/logger"
+	"github.com/getoptimum/optimum-gateway/pkg/config"
 )
 
 const (
@@ -49,7 +50,7 @@ func testTelemetryPort(t *testing.T, metricsBaseURL string) int {
 func walHasData(t *testing.T, walDir string) bool {
 	t.Helper()
 	var found bool
-	err := filepath.WalkDir(walDir, func(path string, d os.DirEntry, err error) error {
+	err := filepath.WalkDir(walDir, func(_ string, d os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
