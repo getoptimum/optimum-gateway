@@ -108,17 +108,9 @@ func runMimirRemoteWrite(ctx context.Context, log logger.AppLogger, cfg *config.
 		return err
 	}
 
-	promLevel := promslog.NewLevel()
-	_ = promLevel.Set("info")
-	promFormat := promslog.NewFormat()
-	_ = promFormat.Set("logfmt")
-	slogLogger := promslog.New(&promslog.Config{
-		Level:  promLevel,
-		Format: promFormat,
-	}).With("component", "mimir_remote_write")
+	slogLogger := promslog.New(&promslog.Config{}).With("component", "mimir_remote_write")
 
 	readyScrape := &readyScrapeManager{}
-	startTime := func() (int64, error) { return 0, nil }
 
 	remoteReg := prometheus.NewRegistry()
 	mimirRemoteReg.Store(remoteReg)
@@ -127,7 +119,7 @@ func runMimirRemoteWrite(ctx context.Context, log logger.AppLogger, cfg *config.
 	remoteStore := remote.NewStorage(
 		slogLogger,
 		remoteReg,
-		startTime,
+		func() (int64, error) { return 0, nil },
 		walDir,
 		mimirRemoteFlushDeadline,
 		readyScrape,
