@@ -45,7 +45,8 @@ type Node struct {
 	subscriptions  *syncx.RWMap[string, *pubsub.Subscription] // Active topic subscriptions
 	broadcaster    *syncx.Broadcaster[*entities.MumP2PResponse]
 
-	peersMap *syncx.TTLMap[peer.ID, entities.PeerState]
+	peersMap         *syncx.TTLMap[peer.ID, entities.PeerState]
+	peersApprovedMap *syncx.RWMap[peer.ID, struct{}] // list of peers which can be used for message publish
 
 	tk *topics_keeper.Service // Topics keeper for persisting subscribed topics. Using on node startup.
 
@@ -138,15 +139,16 @@ func NewNodeWithHost(
 		return nil, fmt.Errorf("failed to validate config: %w", err)
 	}
 	ret = &Node{
-		ctx:           ctx,
-		host:          h,
-		log:           log,
-		cfg:           cfg,
-		topics:        syncx.NewRWMap[string, *pubsub.Topic](),
-		subscriptions: syncx.NewRWMap[string, *pubsub.Subscription](),
-		broadcaster:   syncx.NewBroadcaster[*entities.MumP2PResponse](),
-		peersMap:      syncx.NewTTLMap[peer.ID, entities.PeerState](15*time.Second, 15*time.Second),
-		tk:            topics_keeper.NewService(ctx, log.With(logger.WithService("topic_keeper")), identityDir),
+		ctx:              ctx,
+		host:             h,
+		log:              log,
+		cfg:              cfg,
+		topics:           syncx.NewRWMap[string, *pubsub.Topic](),
+		subscriptions:    syncx.NewRWMap[string, *pubsub.Subscription](),
+		broadcaster:      syncx.NewBroadcaster[*entities.MumP2PResponse](),
+		peersMap:         syncx.NewTTLMap[peer.ID, entities.PeerState](15*time.Second, 15*time.Second),
+		peersApprovedMap: syncx.NewRWMap[peer.ID, struct{}](), // list of peers which can be used for message publish
+		tk:               topics_keeper.NewService(ctx, log.With(logger.WithService("topic_keeper")), identityDir),
 
 		handshakeBuilder: func() any {
 			return entities.NewHandshake(cfg.ClusterID)
@@ -179,6 +181,10 @@ func NewNodeWithHost(
 		// Default-deny mesh admission (#923): a peer joins the mesh only after its
 		// handshake verifies (AllowPeer in handshake.go), not merely on connect.
 		pubsub.WithPeerAdmissionControl(),
+		pubsub.WithPeerMsgFilter(func(pid peer.ID, _ string) bool {
+			_, ok := ret.peersApprovedMap.Load(pid)
+			return ok
+		}),
 	}
 	if telemetry.MetricsEnabled() {
 		options = append(options, pubsub.WithRawTracer(telemetry.NewMumP2PCollector()))
@@ -285,4 +291,10 @@ func (n *Node) getPeerState(peerID peer.ID) (entities.PeerState, bool) {
 
 func (n *Node) setPeerState(peerID peer.ID, state entities.PeerState) {
 	n.peersMap.Put(peerID, state)
+	switch state {
+	case entities.PeerStateHandshakeValid:
+		n.peersApprovedMap.Store(peerID, struct{}{})
+	case entities.PeerStateHandshakeInvalid:
+		n.peersMap.Delete(peerID)
+	}
 }

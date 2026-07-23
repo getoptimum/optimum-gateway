@@ -137,7 +137,7 @@ Total distributed third-party packages: 142
 - [golang.org/x/net](https://cs.opensource.google/go/x/net/+/v0.56.0:LICENSE)
 - [golang.org/x/sync/errgroup](https://cs.opensource.google/go/x/sync/+/v0.21.0:LICENSE)
 - [golang.org/x/sys](https://cs.opensource.google/go/x/sys/+/v0.46.0:LICENSE)
-- [golang.org/x/text](https://cs.opensource.google/go/x/text/+/v0.38.0:LICENSE)
+- [golang.org/x/text](https://cs.opensource.google/go/x/text/+/v0.39.0:LICENSE)
 - [golang.org/x/time/rate](https://cs.opensource.google/go/x/time/+/v0.14.0:LICENSE)
 - [gonum.org/v1/gonum/mathext](https://github.com/gonum/gonum/blob/v0.17.0/LICENSE)
 - [google.golang.org/protobuf](https://github.com/protocolbuffers/protobuf-go/blob/v1.36.11/LICENSE)
