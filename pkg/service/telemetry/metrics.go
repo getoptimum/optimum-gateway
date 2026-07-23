@@ -13,6 +13,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
+	dto "github.com/prometheus/client_model/go"
 
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	commonnet "github.com/getoptimum/optimum-common/pkg/net"
@@ -48,18 +49,22 @@ var (
 var pushToken atomic.Pointer[string]
 
 const (
-	// backoffBaseDelay is the initial delay between retries in case we have issue to push metrics
-	// it will be doubled on each failure until it reaches backoffMaxDelay
-	// starting with 5 seconds to avoid too frequent retries in case of temporary network issues
-	// or pushgateway being temporarily unavailable
-	backoffBaseDelay = 5 * time.Second
-	// backoffMaxDelay caps the maximum delay between retries in case we have issue to push metrics
-	backoffMaxDelay = 5 * time.Minute
-	// scrapePushTimeout bounds a single scrape+push round-trip. Kept well below
-	// mimirPushInterval (15s) so a slow/stuck push is abandoned rather than
-	// queued behind the next tick.
+	// scrapePushTimeout bounds a single Loki push round-trip.
 	scrapePushTimeout = 5 * time.Second
 )
+
+// MetricsGatherer returns the gatherer used for /metrics, including remote-write when active.
+func MetricsGatherer() prometheus.Gatherer {
+	if r := mimirRemoteRegistry(); r != nil {
+		return prometheus.Gatherers{CustomRegistry, r}
+	}
+	return CustomRegistry
+}
+
+// HTTPMetricsGatherer re-resolves MetricsGatherer on each scrape so async remote-write metrics are included.
+var HTTPMetricsGatherer prometheus.Gatherer = prometheus.GathererFunc(func() ([]*dto.MetricFamily, error) {
+	return MetricsGatherer().Gather()
+})
 
 func MetricsEnabled() bool {
 	return enabledMetrics
@@ -89,7 +94,7 @@ func newMetricsHTTPClient() *http.Client {
 // InitMetrics initializes the metrics registry.
 // namespace and subsystem are taken directly from cfg — defaults are defined
 // in AppConfig (OPT_TELEMETRY_NAMESPACE / OPT_TELEMETRY_SUBSYSTEM).
-// It returns a done channel that is closed once the Mimir push goroutine has
+// It returns a done channel that is closed once the Mimir remote-write goroutine has
 // completed its final flush (nil when RemotePushEnable is false).
 func InitMetrics(ctx context.Context, log logger.AppLogger, cfg *config.AppConfig) <-chan struct{} {
 	oncer.Do(func() {
@@ -112,7 +117,7 @@ func InitMetrics(ctx context.Context, log logger.AppLogger, cfg *config.AppConfi
 		commonmetrics.SetLabeledRegistry(labeledRegistry, namespace)
 		InitMetricsWithRegistry(log, cfg.GatewayType)
 		if cfg.RemotePushEnable {
-			mimirDone = startMimirPush(ctx, log, cfg)
+			mimirDone = startMimirRemoteWrite(ctx, log, cfg)
 		}
 	})
 	return mimirDone
@@ -121,6 +126,7 @@ func InitMetrics(ctx context.Context, log logger.AppLogger, cfg *config.AppConfi
 // SetPushToken installs the bearer token used by subsequent mimir/loki pushes.
 func SetPushToken(token string) {
 	pushToken.Store(&token)
+	refreshMimirRemoteWriteHeaders()
 }
 
 // currentPushToken returns the most recently installed token, or "" if none.

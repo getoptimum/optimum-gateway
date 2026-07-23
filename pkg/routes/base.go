@@ -47,7 +47,7 @@ func NewAppRouter(
 	}
 	app.httpEngine.Use(recover.New())
 	if app.cfg.TelemetryEnable {
-		app.httpEngine.Get("/metrics", adaptor.HTTPHandler(promhttp.HandlerFor(telemetry.CustomRegistry, promhttp.HandlerOpts{})))
+		app.httpEngine.Get("/metrics", adaptor.HTTPHandler(promhttp.HandlerFor(telemetry.HTTPMetricsGatherer, promhttp.HandlerOpts{})))
 	}
 	app.initRoutes()
 	return app
