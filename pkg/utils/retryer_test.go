@@ -100,14 +100,14 @@ func newRetryServer(t *testing.T, wantMethod string, statuses []int, body retryR
 	return srv, &calls
 }
 
-func TestRetryPostRequestWithStopCodes_StopsOnStopCode(t *testing.T) {
+func TestRetryPostRequest_StopsOnStopCode(t *testing.T) {
 	t.Parallel()
 
 	want := retryResponse{Value: "stop"}
 	srv, calls := newRetryServer(t, http.MethodPost, []int{http.StatusBadGateway, http.StatusBadRequest}, want)
 
-	got, code, err := utils.RetryPostRequestWithStopCodes[retryResponse](
-		context.Background(), srv.URL, map[string]string{"hello": "world"}, nil, []int{http.StatusBadRequest},
+	got, code, err := utils.RetryPostRequest[retryResponse](
+		context.Background(), srv.URL, map[string]string{"hello": "world"}, nil, http.StatusBadRequest,
 	)
 
 	require.NoError(t, err)
@@ -117,7 +117,7 @@ func TestRetryPostRequestWithStopCodes_StopsOnStopCode(t *testing.T) {
 	require.EqualValues(t, 2, calls.Load())
 }
 
-func TestRetryPostRequestWithStopCodes_RetriesUntilSuccess(t *testing.T) {
+func TestRetryPostRequest_RetriesUntilSuccess_WithUnusedStopCodes(t *testing.T) {
 	t.Parallel()
 
 	want := retryResponse{Value: "created"}
@@ -127,11 +127,8 @@ func TestRetryPostRequestWithStopCodes_RetriesUntilSuccess(t *testing.T) {
 		http.StatusCreated,
 	}, want)
 
-	got, code, err := utils.RetryPostRequestWithStopCodes[retryResponse](
-		context.Background(), srv.URL, map[string]string{"hello": "world"}, nil, []int{
-			http.StatusUnauthorized,
-			http.StatusForbidden,
-		},
+	got, code, err := utils.RetryPostRequest[retryResponse](
+		context.Background(), srv.URL, map[string]string{"hello": "world"}, nil, http.StatusUnauthorized, http.StatusForbidden,
 	)
 
 	require.NoError(t, err)

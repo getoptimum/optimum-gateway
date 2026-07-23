@@ -12,18 +12,12 @@ import (
 
 const retryAttempts = 3
 
-func RetryPostRequest[T any](ctx context.Context, url string, payload any, headers map[string]string) (res *T, code int, err error) {
-	return retryRequest(ctx, func() (*T, int, error) {
-		return commonnet.PostCurl[T](ctx, url, payload, headers)
-	}, IsPostSuccess)
-}
-
-func RetryPostRequestWithStopCodes[T any](
+func RetryPostRequest[T any](
 	ctx context.Context,
 	url string,
 	payload any,
 	headers map[string]string,
-	stopCodes []int,
+	codes ...int,
 ) (res *T, code int, err error) {
 	return retryRequest(ctx, func() (*T, int, error) {
 		return commonnet.PostCurl[T](ctx, url, payload, headers)
@@ -31,10 +25,10 @@ func RetryPostRequestWithStopCodes[T any](
 		if IsPostSuccess(i) {
 			return true
 		}
-		if len(stopCodes) == 0 {
+		if len(codes) == 0 {
 			return false
 		}
-		return slices.Contains(stopCodes, i)
+		return slices.Contains(codes, i)
 	})
 }
 
