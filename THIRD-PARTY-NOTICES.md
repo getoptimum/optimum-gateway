@@ -12,18 +12,18 @@ distributed with this binary.
 Attribution notices required by these licenses (Apache-2.0 §4 and the upstream
 `NOTICE` files it references) are reproduced in the accompanying `NOTICE` file.
 
-Total distributed third-party packages: 142
+Total distributed third-party packages: 223
 
 ## Summary
 
 | License | Packages |
 | --- | --- |
-| MIT | 77 |
-| BSD-3-Clause | 28 |
-| Apache-2.0 | 25 |
-| BSD-2-Clause | 5 |
-| ISC | 3 |
-| MPL-2.0 | 3 |
+| MIT | 97 |
+| Apache-2.0 | 73 |
+| BSD-3-Clause | 38 |
+| BSD-2-Clause | 6 |
+| ISC | 4 |
+| MPL-2.0 | 4 |
 | Apache-2.0 OR MIT | 1 |
 
 > **MPL-2.0** is a weak, file-scoped copyleft license: the copyleft reaches only
@@ -33,13 +33,22 @@ Total distributed third-party packages: 142
 
 ## MIT
 
+- [github.com/Azure/azure-sdk-for-go/sdk/azcore](https://github.com/Azure/azure-sdk-for-go/blob/sdk/azcore/v1.20.0/sdk/azcore/LICENSE.txt)
+- [github.com/Azure/azure-sdk-for-go/sdk/azidentity](https://github.com/Azure/azure-sdk-for-go/blob/sdk/azidentity/v1.13.1/sdk/azidentity/LICENSE.txt)
+- [github.com/Azure/azure-sdk-for-go/sdk/internal](https://github.com/Azure/azure-sdk-for-go/blob/sdk/internal/v1.11.2/sdk/internal/LICENSE.txt)
+- [github.com/AzureAD/microsoft-authentication-library-for-go/apps](https://github.com/AzureAD/microsoft-authentication-library-for-go/blob/v1.6.0/LICENSE)
+- [github.com/alecthomas/units](https://github.com/alecthomas/units/blob/0f3dac36c52b/COPYING)
 - [github.com/andybalholm/brotli](https://github.com/andybalholm/brotli/blob/v1.2.2/LICENSE)
 - [github.com/benbjohnson/clock](https://github.com/benbjohnson/clock/blob/v1.3.5/LICENSE)
 - [github.com/beorn7/perks/quantile](https://github.com/beorn7/perks/blob/v1.0.1/LICENSE)
 - [github.com/cespare/xxhash/v2](https://github.com/cespare/xxhash/blob/v2.3.0/LICENSE.txt)
 - [github.com/davidlazar/go-crypto/salsa20](https://github.com/davidlazar/go-crypto/blob/b73af7476f6c/LICENSE)
+- [github.com/dennwc/varint](https://github.com/dennwc/varint/blob/v1.0.0/LICENSE)
 - [github.com/emicklei/dot](https://github.com/emicklei/dot/blob/v1.9.1/LICENSE)
+- [github.com/felixge/httpsnoop](https://github.com/felixge/httpsnoop/blob/v1.0.4/LICENSE.txt)
 - [github.com/ferranbt/fastssz](https://github.com/ferranbt/fastssz/blob/0b1f38e43198/LICENSE)
+- [github.com/go-viper/mapstructure/v2](https://github.com/go-viper/mapstructure/blob/v2.5.0/LICENSE)
+- [github.com/gobwas/glob](https://github.com/gobwas/glob/blob/v0.2.3/LICENSE)
 - [github.com/gofiber/fiber/v3](https://github.com/gofiber/fiber/blob/v3.4.0/LICENSE)
 - [github.com/gofiber/utils/v2](https://github.com/gofiber/utils/blob/v2.1.1/LICENSE)
 - [github.com/golang-jwt/jwt/v5](https://github.com/golang-jwt/jwt/blob/v5.3.1/LICENSE)
@@ -50,8 +59,13 @@ Total distributed third-party packages: 142
 - [github.com/ipfs/go-log/v2](https://github.com/ipfs/go-log/blob/v2.6.0/LICENSE)
 - [github.com/ipld/go-ipld-prime](https://github.com/ipld/go-ipld-prime/blob/v0.21.0/LICENSE)
 - [github.com/jbenet/go-temp-err-catcher](https://github.com/jbenet/go-temp-err-catcher/blob/v0.1.0/LICENSE)
+- [github.com/jpillora/backoff](https://github.com/jpillora/backoff/blob/v1.0.0/LICENSE)
+- [github.com/json-iterator/go](https://github.com/json-iterator/go/blob/v1.1.12/LICENSE)
 - [github.com/klauspost/compress/zstd/internal/xxhash](https://github.com/klauspost/compress/blob/v1.19.0/zstd/internal/xxhash/LICENSE.txt)
 - [github.com/klauspost/cpuid/v2](https://github.com/klauspost/cpuid/blob/v2.3.0/LICENSE)
+- [github.com/knadh/koanf/maps](https://github.com/knadh/koanf/blob/maps/v0.1.2/maps/LICENSE)
+- [github.com/knadh/koanf/providers/confmap](https://github.com/knadh/koanf/blob/providers/confmap/v1.0.0/providers/confmap/LICENSE)
+- [github.com/knadh/koanf/v2](https://github.com/knadh/koanf/blob/v2.3.0/LICENSE)
 - [github.com/koron/go-ssdp](https://github.com/koron/go-ssdp/blob/v0.0.6/LICENSE)
 - [github.com/libp2p/go-buffer-pool](https://github.com/libp2p/go-buffer-pool/blob/v0.1.0/LICENSE)
 - [github.com/libp2p/go-cidranger](https://github.com/libp2p/go-cidranger/blob/v1.1.0/LICENSE)
@@ -67,7 +81,9 @@ Total distributed third-party packages: 142
 - [github.com/libp2p/go-msgio](https://github.com/libp2p/go-msgio/blob/v0.3.0/LICENSE)
 - [github.com/mattn/go-colorable](https://github.com/mattn/go-colorable/blob/v0.1.15/LICENSE)
 - [github.com/mattn/go-isatty](https://github.com/mattn/go-isatty/blob/v0.0.22/LICENSE)
+- [github.com/mitchellh/copystructure](https://github.com/mitchellh/copystructure/blob/v1.2.0/LICENSE)
 - [github.com/mitchellh/mapstructure](https://github.com/mitchellh/mapstructure/blob/v1.5.0/LICENSE)
+- [github.com/mitchellh/reflectwalk](https://github.com/mitchellh/reflectwalk/blob/v1.0.2/LICENSE)
 - [github.com/montanaflynn/stats](https://github.com/montanaflynn/stats/blob/v0.7.1/LICENSE)
 - [github.com/mr-tron/base58/base58](https://github.com/mr-tron/base58/blob/v1.3.0/LICENSE)
 - [github.com/multiformats/go-multiaddr](https://github.com/multiformats/go-multiaddr/blob/v0.16.1/LICENSE)
@@ -99,69 +115,86 @@ Total distributed third-party packages: 142
 - [github.com/quic-go/qpack](https://github.com/quic-go/qpack/blob/v0.6.0/LICENSE.md)
 - [github.com/quic-go/quic-go](https://github.com/quic-go/quic-go/blob/v0.59.1/LICENSE)
 - [github.com/quic-go/webtransport-go](https://github.com/quic-go/webtransport-go/blob/v0.10.0/LICENSE)
+- [github.com/stretchr/testify](https://github.com/stretchr/testify/blob/v1.11.1/LICENSE)
 - [github.com/tinylib/msgp/msgp](https://github.com/tinylib/msgp/blob/v1.6.4/LICENSE)
 - [github.com/valyala/bytebufferpool](https://github.com/valyala/bytebufferpool/blob/v1.0.0/LICENSE)
 - [github.com/valyala/fasthttp](https://github.com/valyala/fasthttp/blob/v1.72.0/LICENSE)
 - [github.com/valyala/fasthttp/reuseport](https://github.com/valyala/fasthttp/blob/v1.72.0/reuseport/LICENSE)
 - [github.com/whyrusleeping/go-keyspace](https://github.com/whyrusleeping/go-keyspace/blob/5b898ac5add1/LICENSE)
+- [go.uber.org/atomic](https://github.com/uber-go/atomic/blob/v1.11.0/LICENSE.txt)
 - [go.uber.org/dig](https://github.com/uber-go/dig/blob/v1.19.0/LICENSE)
 - [go.uber.org/fx](https://github.com/uber-go/fx/blob/v1.24.0/LICENSE)
+- [go.uber.org/goleak](https://github.com/uber-go/goleak/blob/v1.3.0/LICENSE)
 - [go.uber.org/multierr](https://github.com/uber-go/multierr/blob/v1.11.0/LICENSE.txt)
 - [go.uber.org/zap](https://github.com/uber-go/zap/blob/v1.28.0/LICENSE)
+- [go.yaml.in/yaml/v3](https://github.com/yaml/go-yaml/blob/v3.0.4/LICENSE)
 - [gopkg.in/yaml.v3](https://github.com/go-yaml/yaml/blob/v3.0.1/LICENSE)
 - [lukechampine.com/blake3](https://github.com/lukechampine/blake3/blob/v1.4.1/LICENSE)
 
-## BSD-3-Clause
-
-- [filippo.io/bigmod](https://github.com/FiloSottile/bigmod/blob/f8a47775ebe5/LICENSE)
-- [github.com/andybalholm/brotli/flate](https://github.com/andybalholm/brotli/blob/v1.2.2/flate/LICENSE)
-- [github.com/dunglas/httpsfv](https://github.com/dunglas/httpsfv/blob/v1.1.0/LICENSE)
-- [github.com/flynn/noise](https://github.com/flynn/noise/blob/v1.1.0/LICENSE)
-- [github.com/gofiber/schema](https://github.com/gofiber/schema/blob/v1.8.0/LICENSE)
-- [github.com/gogo/protobuf/proto](https://github.com/gogo/protobuf/blob/v1.3.2/LICENSE)
-- [github.com/golang/snappy](https://github.com/golang/snappy/blob/v1.0.0/LICENSE)
-- [github.com/google/gopacket/routing](https://github.com/google/gopacket/blob/v1.1.19/LICENSE)
-- [github.com/google/uuid](https://github.com/google/uuid/blob/v1.6.0/LICENSE)
-- [github.com/hashicorp/golang-lru/v2/simplelru](https://github.com/hashicorp/golang-lru/blob/v2.0.7/simplelru/LICENSE_list)
-- [github.com/klauspost/compress/internal/snapref](https://github.com/klauspost/compress/blob/v1.19.0/internal/snapref/LICENSE)
-- [github.com/libp2p/go-netroute](https://github.com/libp2p/go-netroute/blob/v0.4.0/LICENSE)
-- [github.com/miekg/dns](https://github.com/miekg/dns/blob/v1.1.66/LICENSE)
-- [github.com/multiformats/go-base32](https://github.com/multiformats/go-base32/blob/v0.1.0/LICENSE)
-- [github.com/munnerz/goautoneg](https://github.com/munnerz/goautoneg/blob/a7dc8b61c822/LICENSE)
-- [github.com/pbnjay/memory](https://github.com/pbnjay/memory/blob/7b4eea64cf58/LICENSE)
-- [github.com/prometheus/client_golang/internal/github.com/golang/gddo/httputil](https://github.com/prometheus/client_golang/blob/v1.23.2/internal/github.com/golang/gddo/LICENSE)
-- [github.com/spaolacci/murmur3](https://github.com/spaolacci/murmur3/blob/v1.1.0/LICENSE)
-- [github.com/wlynxg/anet](https://github.com/wlynxg/anet/blob/v0.0.5/LICENSE)
-- [golang.org/x/crypto](https://cs.opensource.google/go/x/crypto/+/v0.53.0:LICENSE)
-- [golang.org/x/exp/slices](https://cs.opensource.google/go/x/exp/+/74f9aab9:LICENSE)
-- [golang.org/x/net](https://cs.opensource.google/go/x/net/+/v0.56.0:LICENSE)
-- [golang.org/x/sync/errgroup](https://cs.opensource.google/go/x/sync/+/v0.21.0:LICENSE)
-- [golang.org/x/sys](https://cs.opensource.google/go/x/sys/+/v0.46.0:LICENSE)
-- [golang.org/x/text](https://cs.opensource.google/go/x/text/+/v0.39.0:LICENSE)
-- [golang.org/x/time/rate](https://cs.opensource.google/go/x/time/+/v0.14.0:LICENSE)
-- [gonum.org/v1/gonum/mathext](https://github.com/gonum/gonum/blob/v0.17.0/LICENSE)
-- [google.golang.org/protobuf](https://github.com/protocolbuffers/protobuf-go/blob/v1.36.11/LICENSE)
-
 ## Apache-2.0
 
+- [cloud.google.com/go/auth](https://github.com/googleapis/google-cloud-go/blob/auth/v0.17.0/auth/LICENSE)
+- [cloud.google.com/go/auth/oauth2adapt](https://github.com/googleapis/google-cloud-go/blob/auth/oauth2adapt/v0.2.8/auth/oauth2adapt/LICENSE)
+- [cloud.google.com/go/compute/metadata](https://github.com/googleapis/google-cloud-go/blob/compute/metadata/v0.9.0/compute/metadata/LICENSE)
 - [github.com/MicahParks/jwkset](https://github.com/MicahParks/jwkset/blob/v0.11.0/LICENSE)
 - [github.com/MicahParks/keyfunc/v3](https://github.com/MicahParks/keyfunc/blob/v3.8.0/LICENSE)
+- [github.com/aws/aws-sdk-go-v2](https://github.com/aws/aws-sdk-go-v2/blob/v1.41.0/LICENSE.txt)
+- [github.com/aws/aws-sdk-go-v2/config](https://github.com/aws/aws-sdk-go-v2/blob/config/v1.32.6/config/LICENSE.txt)
+- [github.com/aws/aws-sdk-go-v2/credentials](https://github.com/aws/aws-sdk-go-v2/blob/credentials/v1.19.6/credentials/LICENSE.txt)
+- [github.com/aws/aws-sdk-go-v2/feature/ec2/imds](https://github.com/aws/aws-sdk-go-v2/blob/feature/ec2/imds/v1.18.16/feature/ec2/imds/LICENSE.txt)
+- [github.com/aws/aws-sdk-go-v2/internal/configsources](https://github.com/aws/aws-sdk-go-v2/blob/internal/configsources/v1.4.16/internal/configsources/LICENSE.txt)
+- [github.com/aws/aws-sdk-go-v2/internal/endpoints/v2](https://github.com/aws/aws-sdk-go-v2/blob/internal/endpoints/v2.7.16/internal/endpoints/v2/LICENSE.txt)
+- [github.com/aws/aws-sdk-go-v2/internal/ini](https://github.com/aws/aws-sdk-go-v2/blob/internal/ini/v1.8.4/internal/ini/LICENSE.txt)
+- [github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding](https://github.com/aws/aws-sdk-go-v2/blob/service/internal/accept-encoding/v1.13.4/service/internal/accept-encoding/LICENSE.txt)
+- [github.com/aws/aws-sdk-go-v2/service/internal/presigned-url](https://github.com/aws/aws-sdk-go-v2/blob/service/internal/presigned-url/v1.13.16/service/internal/presigned-url/LICENSE.txt)
+- [github.com/aws/aws-sdk-go-v2/service/signin](https://github.com/aws/aws-sdk-go-v2/blob/service/signin/v1.0.4/service/signin/LICENSE.txt)
+- [github.com/aws/aws-sdk-go-v2/service/sso](https://github.com/aws/aws-sdk-go-v2/blob/service/sso/v1.30.8/service/sso/LICENSE.txt)
+- [github.com/aws/aws-sdk-go-v2/service/ssooidc](https://github.com/aws/aws-sdk-go-v2/blob/service/ssooidc/v1.35.12/service/ssooidc/LICENSE.txt)
+- [github.com/aws/aws-sdk-go-v2/service/sts](https://github.com/aws/aws-sdk-go-v2/blob/service/sts/v1.41.5/service/sts/LICENSE.txt)
+- [github.com/aws/smithy-go](https://github.com/aws/smithy-go/blob/v1.24.0/LICENSE)
+- [github.com/bboreham/go-loser](https://github.com/bboreham/go-loser/blob/fcc2c21820a3/LICENSE)
 - [github.com/go-logr/logr](https://github.com/go-logr/logr/blob/v1.4.3/LICENSE)
 - [github.com/go-logr/stdr](https://github.com/go-logr/stdr/blob/v1.2.2/LICENSE)
+- [github.com/google/s2a-go](https://github.com/google/s2a-go/blob/v0.1.9/LICENSE.md)
+- [github.com/googleapis/enterprise-certificate-proxy/client](https://github.com/googleapis/enterprise-certificate-proxy/blob/v0.3.7/LICENSE)
 - [github.com/ipfs/boxo](https://github.com/ipfs/boxo/blob/v0.30.0/LICENSE.md)
 - [github.com/jackpal/go-nat-pmp](https://github.com/jackpal/go-nat-pmp/blob/v1.0.2/LICENSE)
 - [github.com/klauspost/compress](https://github.com/klauspost/compress/blob/v1.19.0/LICENSE)
+- [github.com/kylelemons/godebug](https://github.com/kylelemons/godebug/blob/v1.1.0/LICENSE)
 - [github.com/libp2p/go-libp2p-pubsub](https://github.com/libp2p/go-libp2p-pubsub/blob/41b11d5cb1a7/LICENSE-APACHE)
 - [github.com/libp2p/go-libp2p/p2p/net/nat/internal/nat](https://github.com/libp2p/go-libp2p/blob/v0.48.0/p2p/net/nat/internal/nat/LICENSE)
 - [github.com/libp2p/go-libp2p/p2p/transport/websocket](https://github.com/libp2p/go-libp2p/blob/v0.48.0/p2p/transport/websocket/LICENSE-APACHE)
 - [github.com/minio/sha256-simd](https://github.com/minio/sha256-simd/blob/v1.0.1/LICENSE)
+- [github.com/modern-go/concurrent](https://github.com/modern-go/concurrent/blob/bacd9c7ef1dd/LICENSE)
+- [github.com/modern-go/reflect2](https://github.com/modern-go/reflect2/blob/35a7c28c31ee/LICENSE)
 - [github.com/multiformats/go-multicodec](https://github.com/multiformats/go-multicodec/blob/v0.9.2/LICENSE-APACHE)
+- [github.com/mwitkow/go-conntrack](https://github.com/mwitkow/go-conntrack/blob/2f068394615f/LICENSE)
+- [github.com/oklog/ulid/v2](https://github.com/oklog/ulid/blob/v2.1.1/LICENSE)
+- [github.com/open-telemetry/opentelemetry-collector-contrib/internal/exp/metrics/identity](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/internal/exp/metrics/v0.142.0/internal/exp/metrics/LICENSE)
+- [github.com/open-telemetry/opentelemetry-collector-contrib/pkg/pdatautil](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/pkg/pdatautil/v0.142.0/pkg/pdatautil/LICENSE)
+- [github.com/open-telemetry/opentelemetry-collector-contrib/processor/deltatocumulativeprocessor](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/processor/deltatocumulativeprocessor/v0.142.0/processor/deltatocumulativeprocessor/LICENSE)
 - [github.com/opentracing/opentracing-go](https://github.com/opentracing/opentracing-go/blob/v1.2.0/LICENSE)
+- [github.com/prometheus/client_golang/exp](https://github.com/prometheus/client_golang/blob/7ba246a648ca/exp/LICENSE)
 - [github.com/prometheus/client_golang/prometheus](https://github.com/prometheus/client_golang/blob/v1.23.2/LICENSE)
 - [github.com/prometheus/client_model/go](https://github.com/prometheus/client_model/blob/v0.6.2/LICENSE)
 - [github.com/prometheus/common](https://github.com/prometheus/common/blob/v0.67.4/LICENSE)
+- [github.com/prometheus/otlptranslator](https://github.com/prometheus/otlptranslator/blob/v1.0.0/LICENSE)
 - [github.com/prometheus/procfs](https://github.com/prometheus/procfs/blob/v0.19.2/LICENSE)
+- [github.com/prometheus/prometheus](https://github.com/prometheus/prometheus/blob/v0.309.1/LICENSE)
+- [github.com/prometheus/sigv4](https://github.com/prometheus/sigv4/blob/v0.3.0/LICENSE)
+- [github.com/puzpuzpuz/xsync/v3](https://github.com/puzpuzpuz/xsync/blob/v3.5.1/LICENSE)
 - [go.opentelemetry.io/auto/sdk](https://github.com/open-telemetry/opentelemetry-go-instrumentation/blob/sdk/v1.2.1/sdk/LICENSE)
+- [go.opentelemetry.io/collector/component](https://github.com/open-telemetry/opentelemetry-collector/blob/component/v1.48.0/component/LICENSE)
+- [go.opentelemetry.io/collector/confmap](https://github.com/open-telemetry/opentelemetry-collector/blob/confmap/v1.48.0/confmap/LICENSE)
+- [go.opentelemetry.io/collector/confmap/xconfmap](https://github.com/open-telemetry/opentelemetry-collector/blob/confmap/xconfmap/v0.142.0/confmap/xconfmap/LICENSE)
+- [go.opentelemetry.io/collector/consumer](https://github.com/open-telemetry/opentelemetry-collector/blob/consumer/v1.48.0/consumer/LICENSE)
+- [go.opentelemetry.io/collector/featuregate](https://github.com/open-telemetry/opentelemetry-collector/blob/featuregate/v1.48.0/featuregate/LICENSE)
+- [go.opentelemetry.io/collector/pdata](https://github.com/open-telemetry/opentelemetry-collector/blob/pdata/v1.48.0/pdata/LICENSE)
+- [go.opentelemetry.io/collector/pipeline](https://github.com/open-telemetry/opentelemetry-collector/blob/pipeline/v1.48.0/pipeline/LICENSE)
+- [go.opentelemetry.io/collector/processor](https://github.com/open-telemetry/opentelemetry-collector/blob/processor/v1.48.0/processor/LICENSE)
+- [go.opentelemetry.io/collector/semconv/v1.6.1](https://github.com/open-telemetry/opentelemetry-collector/blob/semconv/v0.128.0/semconv/LICENSE)
+- [go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/instrumentation/net/http/httptrace/otelhttptrace/v0.64.0/instrumentation/net/http/httptrace/otelhttptrace/LICENSE)
+- [go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/instrumentation/net/http/otelhttp/v0.68.0/instrumentation/net/http/otelhttp/LICENSE)
 - [go.opentelemetry.io/otel](https://github.com/open-telemetry/opentelemetry-go/blob/v1.43.0/LICENSE)
 - [go.opentelemetry.io/otel/metric](https://github.com/open-telemetry/opentelemetry-go/blob/metric/v1.43.0/metric/LICENSE)
 - [go.opentelemetry.io/otel/trace](https://github.com/open-telemetry/opentelemetry-go/blob/trace/v1.43.0/trace/LICENSE)
@@ -169,23 +202,71 @@ Total distributed third-party packages: 142
 - [google.golang.org/genproto/googleapis/rpc/status](https://github.com/googleapis/go-genproto/blob/0a33c5d7ca68/googleapis/rpc/LICENSE)
 - [google.golang.org/grpc](https://github.com/grpc/grpc-go/blob/v1.81.1/LICENSE)
 - [gopkg.in/yaml.v2](https://github.com/go-yaml/yaml/blob/v2.4.0/LICENSE)
+- [k8s.io/apimachinery/pkg/util](https://github.com/kubernetes/apimachinery/blob/v0.34.3/LICENSE)
+- [k8s.io/client-go](https://github.com/kubernetes/client-go/blob/v0.34.3/LICENSE)
+- [k8s.io/klog/v2](https://github.com/kubernetes/klog/blob/v2.130.1/LICENSE)
+- [k8s.io/utils/clock](https://github.com/kubernetes/utils/blob/4c0f3b243397/LICENSE)
+
+## BSD-3-Clause
+
+- [filippo.io/bigmod](https://github.com/FiloSottile/bigmod/blob/f8a47775ebe5/LICENSE)
+- [github.com/andybalholm/brotli/flate](https://github.com/andybalholm/brotli/blob/v1.2.2/flate/LICENSE)
+- [github.com/aws/aws-sdk-go-v2/internal/sync/singleflight](https://github.com/aws/aws-sdk-go-v2/blob/v1.41.0/internal/sync/singleflight/LICENSE)
+- [github.com/aws/smithy-go/internal/sync/singleflight](https://github.com/aws/smithy-go/blob/v1.24.0/internal/sync/singleflight/LICENSE)
+- [github.com/dunglas/httpsfv](https://github.com/dunglas/httpsfv/blob/v1.1.0/LICENSE)
+- [github.com/flynn/noise](https://github.com/flynn/noise/blob/v1.1.0/LICENSE)
+- [github.com/gofiber/schema](https://github.com/gofiber/schema/blob/v1.8.0/LICENSE)
+- [github.com/gogo/protobuf](https://github.com/gogo/protobuf/blob/v1.3.2/LICENSE)
+- [github.com/golang/snappy](https://github.com/golang/snappy/blob/v1.0.0/LICENSE)
+- [github.com/google/go-cmp/cmp](https://github.com/google/go-cmp/blob/v0.7.0/LICENSE)
+- [github.com/google/gopacket/routing](https://github.com/google/gopacket/blob/v1.1.19/LICENSE)
+- [github.com/google/uuid](https://github.com/google/uuid/blob/v1.6.0/LICENSE)
+- [github.com/googleapis/gax-go/v2/internallog](https://github.com/googleapis/gax-go/blob/v2.15.0/v2/LICENSE)
+- [github.com/grafana/regexp](https://github.com/grafana/regexp/blob/f7b3be9d1853/LICENSE)
+- [github.com/hashicorp/golang-lru/v2/simplelru](https://github.com/hashicorp/golang-lru/blob/v2.0.7/simplelru/LICENSE_list)
+- [github.com/klauspost/compress/internal/snapref](https://github.com/klauspost/compress/blob/v1.19.0/internal/snapref/LICENSE)
+- [github.com/klauspost/compress/s2](https://github.com/klauspost/compress/blob/v1.19.0/s2/LICENSE)
+- [github.com/klauspost/compress/snappy](https://github.com/klauspost/compress/blob/v1.19.0/snappy/LICENSE)
+- [github.com/libp2p/go-netroute](https://github.com/libp2p/go-netroute/blob/v0.4.0/LICENSE)
+- [github.com/miekg/dns](https://github.com/miekg/dns/blob/v1.1.69/LICENSE)
+- [github.com/multiformats/go-base32](https://github.com/multiformats/go-base32/blob/v0.1.0/LICENSE)
+- [github.com/munnerz/goautoneg](https://github.com/munnerz/goautoneg/blob/a7dc8b61c822/LICENSE)
+- [github.com/pbnjay/memory](https://github.com/pbnjay/memory/blob/7b4eea64cf58/LICENSE)
+- [github.com/pmezard/go-difflib/difflib](https://github.com/pmezard/go-difflib/blob/5d4384ee4fb2/LICENSE)
+- [github.com/prometheus/client_golang/internal/github.com/golang/gddo/httputil](https://github.com/prometheus/client_golang/blob/v1.23.2/internal/github.com/golang/gddo/LICENSE)
+- [github.com/spaolacci/murmur3](https://github.com/spaolacci/murmur3/blob/v1.1.0/LICENSE)
+- [github.com/wlynxg/anet](https://github.com/wlynxg/anet/blob/v0.0.5/LICENSE)
+- [golang.org/x/crypto](https://cs.opensource.google/go/x/crypto/+/v0.53.0:LICENSE)
+- [golang.org/x/exp](https://cs.opensource.google/go/x/exp/+/74f9aab9:LICENSE)
+- [golang.org/x/net](https://cs.opensource.google/go/x/net/+/v0.56.0:LICENSE)
+- [golang.org/x/oauth2](https://cs.opensource.google/go/x/oauth2/+/v0.36.0:LICENSE)
+- [golang.org/x/sync/errgroup](https://cs.opensource.google/go/x/sync/+/v0.21.0:LICENSE)
+- [golang.org/x/sys](https://cs.opensource.google/go/x/sys/+/v0.46.0:LICENSE)
+- [golang.org/x/text](https://cs.opensource.google/go/x/text/+/v0.39.0:LICENSE)
+- [golang.org/x/time/rate](https://cs.opensource.google/go/x/time/+/v0.14.0:LICENSE)
+- [gonum.org/v1/gonum/mathext](https://github.com/gonum/gonum/blob/v0.17.0/LICENSE)
+- [google.golang.org/api](https://github.com/googleapis/google-api-go-client/blob/v0.257.0/LICENSE)
+- [google.golang.org/protobuf](https://github.com/protocolbuffers/protobuf-go/blob/v1.36.11/LICENSE)
 
 ## BSD-2-Clause
 
-- [github.com/gorilla/websocket](https://github.com/gorilla/websocket/blob/v1.5.3/LICENSE)
+- [github.com/gorilla/websocket](https://github.com/gorilla/websocket/blob/e064f32e3674/LICENSE)
 - [github.com/huin/goupnp](https://github.com/huin/goupnp/blob/v1.3.0/LICENSE)
 - [github.com/marten-seemann/tcp](https://github.com/marten-seemann/tcp/blob/dfbc87cc63fd/LICENSE)
 - [github.com/mikioh/tcpinfo](https://github.com/mikioh/tcpinfo/blob/30a79bb1804b/LICENSE)
 - [github.com/mikioh/tcpopt](https://github.com/mikioh/tcpopt/blob/172688c1accc/LICENSE)
+- [github.com/pkg/browser](https://github.com/pkg/browser/blob/5ac0b6a4141c/LICENSE)
 
 ## ISC
 
 - [filippo.io/keygen](https://github.com/FiloSottile/keygen/blob/8e2790ea4c5b/LICENSE)
+- [github.com/davecgh/go-spew/spew](https://github.com/davecgh/go-spew/blob/d8f796af33cc/LICENSE)
 - [github.com/decred/dcrd/dcrec/secp256k1/v4](https://github.com/decred/dcrd/blob/dcrec/secp256k1/v4.4.0/dcrec/secp256k1/LICENSE)
 - [github.com/libp2p/go-reuseport](https://github.com/libp2p/go-reuseport/blob/v0.4.0/LICENSE)
 
 ## MPL-2.0
 
+- [github.com/hashicorp/go-version](https://github.com/hashicorp/go-version/blob/v1.9.0/LICENSE)
 - [github.com/hashicorp/golang-lru/simplelru](https://github.com/hashicorp/golang-lru/blob/v1.0.2/LICENSE)
 - [github.com/hashicorp/golang-lru/v2](https://github.com/hashicorp/golang-lru/blob/v2.0.7/LICENSE)
 - [github.com/libp2p/go-yamux/v5](https://github.com/libp2p/go-yamux/blob/v5.0.1/LICENSE)
