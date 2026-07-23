@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"net/http"
+	"slices"
 	"time"
 
 	commonnet "github.com/getoptimum/optimum-common/pkg/net"
@@ -11,10 +12,24 @@ import (
 
 const retryAttempts = 3
 
-func RetryPostRequest[T any](ctx context.Context, url string, payload any, headers map[string]string) (res *T, code int, err error) {
+func RetryPostRequest[T any](
+	ctx context.Context,
+	url string,
+	payload any,
+	headers map[string]string,
+	codes ...int,
+) (res *T, code int, err error) {
 	return retryRequest(ctx, func() (*T, int, error) {
 		return commonnet.PostCurl[T](ctx, url, payload, headers)
-	}, IsPostSuccess)
+	}, func(i int) bool {
+		if IsPostSuccess(i) {
+			return true
+		}
+		if len(codes) == 0 {
+			return false
+		}
+		return slices.Contains(codes, i)
+	})
 }
 
 func RetryGetRequest[T any](ctx context.Context, url string, headers map[string]string) (res *T, code int, err error) {
