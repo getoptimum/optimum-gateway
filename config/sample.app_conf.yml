@@ -27,6 +27,7 @@ telemetry_port: 48123
 # remote_push_enable: false
 # remote_push_loki_url: https://v2-loki.getoptimum.io
 # remote_push_mimir_url: https://v2-mimir.getoptimum.io
+# remote_push_wal_dir: /gateway/storage/wal
 
 # ─── Diagnostics ──────────────────────────────────────────────────────────────
 # enable_pprof: false                      # default: false
