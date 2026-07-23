@@ -5562,18 +5562,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+      "bom-ref": "pkg:golang/golang.org/x/text@v0.39.0?type=module",
       "type": "library",
       "name": "golang.org/x/text",
-      "version": "v0.38.0",
+      "version": "v0.39.0",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "b179b0a3d0f03f738af4467b3ea01d6a8a121a8cdf97fddaebfc4971bccf4611"
+          "content": "51b673e292cebe7eb4d03e8e87a186108e950269ddac404bbfcffa0445f3caeb"
         }
       ],
-      "purl": "pkg:golang/golang.org/x/text@v0.38.0?goarch=arm64&goos=darwin&type=module",
+      "purl": "pkg:golang/golang.org/x/text@v0.39.0?goarch=arm64&goos=darwin&type=module",
       "evidence": {
         "licenses": [
           {
@@ -5946,7 +5946,7 @@
         "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
         "pkg:golang/golang.org/x/sync@v0.21.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module",
         "pkg:golang/golang.org/x/time@v0.14.0?type=module",
         "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
         "pkg:golang/google.golang.org/grpc@v1.81.1?type=module",
@@ -5997,7 +5997,7 @@
         "pkg:golang/github.com/pmezard/go-difflib@v1.0.1-0.20181226105442-5d4384ee4fb2?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.11.1?type=module",
         "pkg:golang/golang.org/x/net@v0.56.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
@@ -6017,7 +6017,7 @@
         "pkg:golang/golang.org/x/crypto@v0.53.0?type=module",
         "pkg:golang/golang.org/x/net@v0.56.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
@@ -6037,7 +6037,7 @@
         "pkg:golang/golang.org/x/crypto@v0.53.0?type=module",
         "pkg:golang/golang.org/x/net@v0.56.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
@@ -6347,7 +6347,7 @@
         "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
         "pkg:golang/golang.org/x/sync@v0.21.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module",
         "pkg:golang/golang.org/x/time@v0.14.0?type=module",
         "pkg:golang/google.golang.org/api@v0.257.0?type=module",
         "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
@@ -6473,7 +6473,7 @@
         "pkg:golang/golang.org/x/net@v0.56.0?type=module",
         "pkg:golang/golang.org/x/sync@v0.21.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module",
         "pkg:golang/golang.org/x/time@v0.14.0?type=module",
         "pkg:golang/gonum.org/v1/gonum@v0.17.0?type=module",
         "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
@@ -6489,7 +6489,7 @@
       "dependsOn": [
         "pkg:golang/golang.org/x/net@v0.56.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module",
         "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
         "pkg:golang/google.golang.org/grpc@v1.81.1?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.11?type=module"
@@ -6530,7 +6530,7 @@
         "pkg:golang/golang.org/x/crypto@v0.53.0?type=module",
         "pkg:golang/golang.org/x/net@v0.56.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
@@ -6591,7 +6591,7 @@
         "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
         "pkg:golang/golang.org/x/sync@v0.21.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module",
         "pkg:golang/golang.org/x/time@v0.14.0?type=module",
         "pkg:golang/google.golang.org/api@v0.257.0?type=module",
         "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
@@ -6615,7 +6615,7 @@
         "pkg:golang/github.com/google/go-cmp@v0.7.0?type=module",
         "pkg:golang/golang.org/x/net@v0.56.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module",
         "pkg:golang/google.golang.org/api@v0.257.0?type=module",
         "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
         "pkg:golang/google.golang.org/grpc@v1.81.1?type=module",
@@ -6754,7 +6754,7 @@
         "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
         "pkg:golang/golang.org/x/sync@v0.21.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module",
         "pkg:golang/gonum.org/v1/gonum@v0.17.0?type=module",
         "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
         "pkg:golang/google.golang.org/grpc@v1.81.1?type=module",
@@ -6994,7 +6994,7 @@
         "pkg:golang/golang.org/x/net@v0.56.0?type=module",
         "pkg:golang/golang.org/x/sync@v0.21.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module",
         "pkg:golang/golang.org/x/time@v0.14.0?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.11?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module",
@@ -7111,7 +7111,7 @@
         "pkg:golang/golang.org/x/net@v0.56.0?type=module",
         "pkg:golang/golang.org/x/sync@v0.21.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module",
         "pkg:golang/gonum.org/v1/gonum@v0.17.0?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.11?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module",
@@ -7272,7 +7272,7 @@
         "pkg:golang/golang.org/x/net@v0.56.0?type=module",
         "pkg:golang/golang.org/x/sync@v0.21.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module",
         "pkg:golang/golang.org/x/time@v0.14.0?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.11?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module",
@@ -7914,7 +7914,7 @@
         "pkg:golang/golang.org/x/net@v0.56.0?type=module",
         "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.11?type=module"
       ]
     },
@@ -7956,7 +7956,7 @@
         "pkg:golang/golang.org/x/net@v0.56.0?type=module",
         "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.11?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
@@ -8070,7 +8070,7 @@
         "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
         "pkg:golang/golang.org/x/sync@v0.21.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module",
         "pkg:golang/golang.org/x/time@v0.14.0?type=module",
         "pkg:golang/google.golang.org/api@v0.257.0?type=module",
         "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
@@ -8115,7 +8115,7 @@
         "pkg:golang/golang.org/x/net@v0.56.0?type=module",
         "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.11?type=module",
         "pkg:golang/gopkg.in/yaml.v2@v2.4.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
@@ -8145,7 +8145,7 @@
         "pkg:golang/golang.org/x/net@v0.56.0?type=module",
         "pkg:golang/golang.org/x/sync@v0.21.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
@@ -8161,7 +8161,7 @@
         "pkg:golang/golang.org/x/crypto@v0.53.0?type=module",
         "pkg:golang/golang.org/x/net@v0.56.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
@@ -8194,7 +8194,7 @@
         "pkg:golang/golang.org/x/crypto@v0.53.0?type=module",
         "pkg:golang/golang.org/x/net@v0.56.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module"
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module"
       ]
     },
     {
@@ -8324,7 +8324,7 @@
         "pkg:golang/go.uber.org/multierr@v1.11.0?type=module",
         "pkg:golang/golang.org/x/net@v0.56.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module",
         "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
         "pkg:golang/google.golang.org/grpc@v1.81.1?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.11?type=module",
@@ -8531,7 +8531,7 @@
       "dependsOn": [
         "pkg:golang/golang.org/x/net@v0.56.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module"
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module"
       ]
     },
     {
@@ -8546,7 +8546,7 @@
       "dependsOn": [
         "pkg:golang/golang.org/x/crypto@v0.53.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module"
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module"
       ]
     },
     {
@@ -8562,7 +8562,7 @@
       "ref": "pkg:golang/golang.org/x/sys@v0.46.0?type=module"
     },
     {
-      "ref": "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+      "ref": "pkg:golang/golang.org/x/text@v0.39.0?type=module",
       "dependsOn": [
         "pkg:golang/golang.org/x/sync@v0.21.0?type=module"
       ]
@@ -8576,7 +8576,7 @@
         "pkg:golang/github.com/google/go-cmp@v0.7.0?type=module",
         "pkg:golang/github.com/pmezard/go-difflib@v1.0.1-0.20181226105442-5d4384ee4fb2?type=module",
         "pkg:golang/golang.org/x/sync@v0.21.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module"
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module"
       ]
     },
     {
@@ -8603,7 +8603,7 @@
         "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
         "pkg:golang/golang.org/x/sync@v0.21.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module",
         "pkg:golang/golang.org/x/time@v0.14.0?type=module",
         "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
         "pkg:golang/google.golang.org/grpc@v1.81.1?type=module",
@@ -8633,7 +8633,7 @@
         "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
         "pkg:golang/golang.org/x/sync@v0.21.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module",
         "pkg:golang/gonum.org/v1/gonum@v0.17.0?type=module",
         "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.11?type=module"
@@ -8667,7 +8667,7 @@
         "pkg:golang/go.yaml.in/yaml/v2@v2.4.3?type=module",
         "pkg:golang/go.yaml.in/yaml/v3@v3.0.4?type=module",
         "pkg:golang/golang.org/x/net@v0.56.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module",
         "pkg:golang/golang.org/x/time@v0.14.0?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.11?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module",
@@ -8696,7 +8696,7 @@
         "pkg:golang/golang.org/x/net@v0.56.0?type=module",
         "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.46.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.38.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.39.0?type=module",
         "pkg:golang/golang.org/x/time@v0.14.0?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.11?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module",

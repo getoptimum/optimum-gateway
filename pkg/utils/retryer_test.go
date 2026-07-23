@@ -99,3 +99,62 @@ func newRetryServer(t *testing.T, wantMethod string, statuses []int, body retryR
 
 	return srv, &calls
 }
+
+func TestRetryPostRequest_StopsOnStopCode(t *testing.T) {
+	t.Parallel()
+
+	want := retryResponse{Value: "stop"}
+	srv, calls := newRetryServer(t, http.MethodPost, []int{http.StatusBadGateway, http.StatusBadRequest}, want)
+
+	got, code, err := utils.RetryPostRequest[retryResponse](
+		context.Background(), srv.URL, map[string]string{"hello": "world"}, nil, http.StatusBadRequest,
+	)
+
+	require.NoError(t, err)
+	require.Equal(t, http.StatusBadRequest, code)
+	require.NotNil(t, got)
+	require.Equal(t, want, *got)
+	require.EqualValues(t, 2, calls.Load())
+}
+
+func TestRetryPostRequest_RetriesUntilSuccess_WithUnusedStopCodes(t *testing.T) {
+	t.Parallel()
+
+	want := retryResponse{Value: "created"}
+	srv, calls := newRetryServer(t, http.MethodPost, []int{
+		http.StatusBadGateway,
+		http.StatusInternalServerError,
+		http.StatusCreated,
+	}, want)
+
+	got, code, err := utils.RetryPostRequest[retryResponse](
+		context.Background(), srv.URL, map[string]string{"hello": "world"}, nil, http.StatusUnauthorized, http.StatusForbidden,
+	)
+
+	require.NoError(t, err)
+	require.Equal(t, http.StatusCreated, code)
+	require.NotNil(t, got)
+	require.Equal(t, want, *got)
+	require.EqualValues(t, 3, calls.Load())
+}
+
+func TestRetryPostRequest_DoNotRetry(t *testing.T) {
+	t.Parallel()
+
+	want := retryResponse{Value: "created"}
+	srv, calls := newRetryServer(t, http.MethodPost, []int{
+		http.StatusUnauthorized,
+	}, want)
+
+	got, code, err := utils.RetryPostRequest[retryResponse](
+		context.Background(), srv.URL, map[string]string{"hello": "world"},
+		nil,
+		http.StatusUnauthorized,
+	)
+
+	require.NoError(t, err)
+	require.Equal(t, http.StatusUnauthorized, code)
+	require.NotNil(t, got)
+	require.Equal(t, want, *got)
+	require.EqualValues(t, 1, calls.Load())
+}
