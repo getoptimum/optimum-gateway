@@ -98,6 +98,9 @@ func startMimirRemoteWrite(ctx context.Context, log logger.AppLogger, cfg *confi
 }
 
 func runMimirRemoteWrite(ctx context.Context, log logger.AppLogger, cfg *config.AppConfig) error {
+	if strings.TrimSpace(cfg.RemotePushWALDir) == "" {
+		return fmt.Errorf("remote_push_wal_dir is required")
+	}
 	walDir := filepath.Clean(cfg.RemotePushWALDir)
 	if err := os.MkdirAll(walDir, 0o750); err != nil {
 		return fmt.Errorf("create remote push wal dir %q: %w", walDir, err)
