@@ -33,7 +33,7 @@ var (
 // initMumP2PMetrics uses subsystem "mump2p"
 func initMumP2PMetrics() {
 	mpTotalPeers = commonmetrics.NewGaugeVec("total_peers", "mump2p", "Total number of mumP2P peers", nil)
-	mpPeersPerProtocol = commonmetrics.NewGaugeVec("peers_per_protocol", "mump2p", "Number of mumP2P peers per protocol", []string{"protocol"})
+	mpPeersPerProtocol = commonmetrics.NewGaugeVec("peers_per_protocol", "mump2p", "Number of mumP2P peers per protocol", []string{labelProtocol})
 
 	mpDeliveredMessagesBytes = commonmetrics.NewCounterVec("delivered_messages_bytes", "mump2p", "Delivered payload bytes", []string{labelTopic})
 	mpReceivedMessagesBytes = commonmetrics.NewCounterVec("received_messages_bytes", "mump2p", "Received payload bytes", []string{labelTopic})

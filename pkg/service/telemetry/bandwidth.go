@@ -27,12 +27,12 @@ func initBandwidthMetrics() {
 		"messages_total",
 		"bandwidth",
 		"Messages per protocol",
-		[]string{"protocol", "direction"})
+		[]string{labelProtocol, labelDirection})
 	trafficPerProtocol = commonmetrics.NewCounterVec(
 		"traffic_bytes_total",
 		"bandwidth",
 		"Traffic per protocol",
-		[]string{"protocol", "direction"})
+		[]string{labelProtocol, labelDirection})
 }
 
 type BandwidthCollector struct{}

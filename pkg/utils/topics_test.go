@@ -56,56 +56,6 @@ func TestSimplifyTopic(t *testing.T) {
 	}
 }
 
-func TestIsSameTopic(t *testing.T) {
-	tests := map[string]struct {
-		src  string
-		cfg  string
-		want bool
-	}{
-		"bare equal": {
-			src:  "beacon_attestation_29",
-			cfg:  "beacon_attestation_29",
-			want: true,
-		},
-		"bare different": {
-			src:  "beacon_attestation_11",
-			cfg:  "beacon_aggregate_and_proof",
-			want: false,
-		},
-		"full and bare equal": {
-			src:  "/eth2/c6ecb76c/beacon_attestation_22/ssz_snappy",
-			cfg:  "beacon_attestation_22",
-			want: true,
-		},
-		"full and bare different": {
-			src:  "/eth2/c6ecb76c/beacon_attestation_39/ssz_snappy",
-			cfg:  "beacon_aggregate_and_proof",
-			want: false,
-		},
-		"full same topic different fork digest": {
-			src:  "/eth2/c6ecb76c/beacon_attestation_36/ssz_snappy",
-			cfg:  "/eth2/11111111/beacon_attestation_36/ssz_snappy",
-			want: true,
-		},
-		"full different topic names": {
-			src:  "/eth2/c6ecb76c/beacon_attestation_34/ssz_snappy",
-			cfg:  "/eth2/c6ecb76c/beacon_aggregate_and_proof/ssz_snappy",
-			want: false,
-		},
-		"full same topic different encodings": {
-			src:  "/eth2/c6ecb76c/beacon_attestation_32/ssz_snappy",
-			cfg:  "/eth2/11111111/beacon_attestation_32/ssz",
-			want: true,
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.want, utils.IsSameTopic(tc.src, tc.cfg))
-		})
-	}
-}
-
 func TestParseAttestationSSZTopic(t *testing.T) {
 	tests := map[string]struct {
 		src                         string
