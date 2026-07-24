@@ -51,22 +51,6 @@ func SimplifyTopic(topic string) string {
 	return topic
 }
 
-// IsSameTopic compares two topics and returns true if they describe the same topic.
-// It accepts either a bare topic name or a full eth topic in the form
-// /eth2/<fork_digest>/<topic_name>/<encoding>, ignoring the fork digest and
-// trailing encoding segment.
-func IsSameTopic(srcLibP2PTopic, cfgTopic string) bool {
-	srcTopicData := strings.Split(srcLibP2PTopic, "/")
-	cfgTopicData := strings.Split(cfgTopic, "/")
-	if len(srcTopicData) == 5 {
-		srcLibP2PTopic = srcTopicData[3]
-	}
-	if len(cfgTopicData) == 5 {
-		cfgTopic = cfgTopicData[3]
-	}
-	return srcLibP2PTopic == cfgTopic
-}
-
 // we just extract attester and slot from message. it much faster that decode full message
 // structure is known and fixed, so we can just read bytes from specific offsets
 // decompressed SSZ bytes:

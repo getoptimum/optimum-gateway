@@ -27,12 +27,12 @@ func initConnMetrics() {
 		"streams_current",
 		"conn",
 		"Active streams per protocol",
-		[]string{"protocol"})
+		[]string{labelProtocol})
 	durationHistogram = commonmetrics.NewHistogram(
 		"stream_duration_seconds",
 		"conn",
 		"Duration of streams",
-		[]string{"protocol"})
+		[]string{labelProtocol})
 }
 
 type ConnectionsMeeter struct{}
