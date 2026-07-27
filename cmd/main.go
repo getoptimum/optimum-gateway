@@ -121,12 +121,7 @@ func main() {
 			l.Info("remote_push_enable is true but auth is disabled — remote push disabled")
 		}
 		mimirDone = telemetry.InitMetrics(ctx, l, appConf)
-		if authMgr.IsEnabled() {
-			telemetry.IncAuthMintResult(telemetry.AuthMintResultSuccess)
-			if c := authMgr.OwnClaims(); c != nil && c.ExpiresAt != nil {
-				telemetry.SetAuthTokenExpiresAt(c.ExpiresAt.Unix())
-			}
-		}
+		authMgr.RefreshAuthMetrics()
 	} else {
 		l.Info("telemetry is disabled")
 	}
@@ -184,6 +179,6 @@ func main() {
 		<-lokiDone // wait for final Loki flush to complete
 	}
 	if mimirDone != nil {
-		<-mimirDone // wait for final Mimir push to complete
+		<-mimirDone // wait for Mimir remote-write shutdown to complete
 	}
 }

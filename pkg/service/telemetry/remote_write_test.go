@@ -36,6 +36,8 @@ const (
 	pushEventuallyInterval = time.Second
 
 	doneWaitSlack = 5 * time.Second
+
+	mimirShutdownTimeout = 30 * time.Second
 )
 
 func testTelemetryPort(t *testing.T, metricsBaseURL string) int {
@@ -106,7 +108,7 @@ func TestBuildMimirPromConfig_concurrent(t *testing.T) {
 func TestMimirRemoteWrite_shutdown(t *testing.T) {
 	setTestToken(t)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost && r.URL.Path == mimirPushPath {
+		if r.Method == http.MethodPost && r.URL.Path == mimirRemoteWritePath {
 			_, _ = io.Copy(io.Discard, r.Body)
 			_ = r.Body.Close()
 		}
@@ -149,7 +151,7 @@ func TestMimirRemoteWrite_walReplay(t *testing.T) {
 	mimirDown.Store(true)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost || r.URL.Path != mimirPushPath {
+		if r.Method != http.MethodPost || r.URL.Path != mimirRemoteWritePath {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
@@ -210,7 +212,7 @@ func TestMimirRemoteWrite_processRestart(t *testing.T) {
 
 	var pushCount atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPost && r.URL.Path == mimirPushPath {
+		if r.Method == http.MethodPost && r.URL.Path == mimirRemoteWritePath {
 			_, _ = io.Copy(io.Discard, r.Body)
 			_ = r.Body.Close()
 			pushCount.Add(1)

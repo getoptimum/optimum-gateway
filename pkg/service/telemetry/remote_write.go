@@ -61,7 +61,7 @@ func refreshMimirRemoteWriteHeaders() {
 }
 
 const (
-	mimirPushPath            = "/api/v1/push"
+	mimirRemoteWritePath     = "/api/v1/push"
 	mimirRemoteFlushDeadline = time.Minute
 	mimirScrapeInterval      = 15 * time.Second
 	mimirScrapeTimeout       = 10 * time.Second
@@ -201,7 +201,7 @@ func runMimirRemoteWrite(ctx context.Context, log logger.AppLogger, cfg *config.
 	}
 
 	log.Info("starting mimir remote write",
-		logger.WithString("url", mimirPushURL(cfg)),
+		logger.WithString("url", mimirRemoteWriteURL(cfg)),
 		logger.WithString("wal_dir", walDir),
 		logger.WithInt("telemetry_port", cfg.TelemetryPort),
 		logger.WithBool("bearer_token_set", currentPushToken() != ""),
@@ -247,14 +247,14 @@ func waitForMetricsEndpoint(ctx context.Context, port int) error {
 	}
 }
 
-func mimirPushURL(cfg *config.AppConfig) string {
-	return strings.TrimSuffix(cfg.RemotePushMimirURL, "/") + mimirPushPath
+func mimirRemoteWriteURL(cfg *config.AppConfig) string {
+	return strings.TrimSuffix(cfg.RemotePushMimirURL, "/") + mimirRemoteWritePath
 }
 
 func buildMimirPromConfig(cfg *config.AppConfig, scrapeInterval time.Duration) (*promconfig.Config, error) {
-	pushURL, err := url.Parse(mimirPushURL(cfg))
+	pushURL, err := url.Parse(mimirRemoteWriteURL(cfg))
 	if err != nil {
-		return nil, fmt.Errorf("parse mimir push url: %w", err)
+		return nil, fmt.Errorf("parse mimir remote write url: %w", err)
 	}
 
 	rwCfg := promconfig.DefaultRemoteWriteConfig

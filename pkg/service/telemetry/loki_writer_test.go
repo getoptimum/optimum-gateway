@@ -20,8 +20,7 @@ import (
 )
 
 // setTestToken seeds the package-level push token so flushChunk /
-// pushMetricsToMimir don't bail with errNoBearerToken. Each test that needs
-// a push to succeed calls this in its setup.
+// pushAuthHeaders succeed. Each test that needs a push calls this in setup.
 func setTestToken(t *testing.T) {
 	t.Helper()
 	SetPushToken("test-token")

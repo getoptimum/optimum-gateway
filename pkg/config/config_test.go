@@ -245,7 +245,7 @@ func TestInitRuntime_GatewayIDFromSub(t *testing.T) {
 	require.Equal(t, "hermes", cfg.GatewayType, "empty type must not overwrite existing gateway type")
 }
 
-func TestLoadConfig_FullEth2Topics(t *testing.T) {
+func TestLoadConfig_BasicFieldsFromYAML(t *testing.T) {
 	confYml := `
 log_level: debug
 identity_libp2p_dir: /tmp/libp2p
