@@ -18,7 +18,7 @@ cmd/main.go
 ├── message_router.Service       (Forward/drop decisions by validator & topic)
 ├── gossipsub_gateway.Service    (Main relay; runs two p2p loops)
 │   ├── libp2p host + subscriptions  (CL-side gossipsub)
-│   ├── mum_p2p.Node                 (mump2p-side mesh; internal/service/mum_p2p)
+│   ├── mum_p2p.Node                 (mump2p-side mesh; pkg/service/mum_p2p)
 │   ├── aggregator.Service           (Batch attestations into containers)
 │   └── channels: clMessages, mumP2PMessages
 ├── telemetry service           (Prometheus, Loki, Mimir pushers)
@@ -40,7 +40,7 @@ cmd/main.go
 make build           # Builds into ./bin/optimum-gateway
 make run             # go run cmd/main.go -config config/app_conf.yml
 make test            # Go test suite; coverage is reported here, threshold checked by make coverage
-make lint            # Installs/runs golangci-lint on ./internal and ./cmd
+make lint            # Installs/runs golangci-lint on ./... (see Makefile)
 make proto           # Regenerate Go from .proto files
 make vulcheck        # govulncheck with hardcoded exception list
 ```
@@ -55,9 +55,9 @@ After editing, run `make proto` to regenerate `pkg/service/aggregator/*.pb.go`.
 
 ### Testing Strategy
 
-Use `internal/test_utils/*`:
+Use `pkg/test_utils/*`:
 
-- `mocked_bootstrap.go` — In-process HTTP bootstrap server
+- `local_bootstrap_server.go` — In-process HTTP bootstrap server (`NewLocalBootstrapServerWithRig`)
 - `p2p_node.go` — Spawns libp2p hosts for testing
 - `jwt_auth_claims.go` — Fixtures for JWT mint/verify tests
 
@@ -67,8 +67,9 @@ directory is Docker/manual-test support, not a `go test` package.
 Example:
 
 ```go
-import "github.com/getoptimum/optimum-gateway/internal/test_utils"
-mb := test_utils.NewLocalBootstrapServer(t)
+import "github.com/getoptimum/optimum-gateway/pkg/test_utils"
+rig := test_utils.NewAuthTestRig(t)
+mb := test_utils.NewLocalBootstrapServerWithRig(t, rig)
 node := test_utils.SpawnLocalCLLibP2PNode(ctx, t, remotePeer, port, identityDir)
 ```
 
@@ -126,9 +127,9 @@ Gateway calls `filterAndBuildEthTopics()` to expand shorts into fulls using fork
 | Dependency                           | Purpose                                              | Notes                                           |
 | ------------------------------------ | ---------------------------------------------------- | ----------------------------------------------- |
 | github.com/libp2p/go-libp2p          | libp2p host & gossipsub                              | Local CL peering                                |
-| github.com/getoptimum/optimum-p2p    | mump2p gossipsub (RLNC)                              | Used by `internal/service/mum_p2p`              |
+| github.com/getoptimum/optimum-p2p    | mump2p gossipsub (RLNC)                              | Used by `pkg/service/mum_p2p`              |
 | github.com/getoptimum/optimum-common | Shared types, logger, config                         | Utilities, auth claims                          |
-| github.com/libp2p/go-libp2p-kad-dht  | mump2p peer discovery                                | Used by `internal/service/mum_p2p/dhtdiscovery` |
+| github.com/libp2p/go-libp2p-kad-dht  | mump2p peer discovery                                | Used by `pkg/service/mum_p2p/dhtdiscovery` |
 | github.com/prometheus/client_golang  | Metrics export                                       | Local Prometheus scrape                         |
 | github.com/gofiber/fiber/v3          | HTTP API                                             | `/`, `/api/v1/self_info`, `/metrics`, `/health` |
 
@@ -177,21 +178,23 @@ libp2p messages and mump2p messages both cached via `messagesMap` (TTL map, 30s)
 ## File Structure Essentials
 
 ```sh
-internal/
+pkg/
 ├── config/          AppConfig{}, YAML+env parsing, InitRuntime()
 ├── routes/          Fiber HTTP server (`/`, `/health`, `/api/v1/self_info`, optional `/metrics`)
-├── service/         
+├── service/
 │   ├── gossipsub-gateway/  Main relay loop (setup_*, subscribe_*, handle_*)
 │   ├── message_router/     Forward/drop policies, validator sync
 │   ├── auth_token/         JWT minting & verification
 │   ├── aggregator/         Batch + emit attestation containers
-│   ├── telemetry/          Prometheus, Loki, Mimir pushers
+│   ├── bootstrapper/       Remote bootstrap client, heartbeats, block latency
+│   ├── mum_p2p/            mump2p libp2p node, handshake, topics
+│   ├── telemetry/          Prometheus, Loki, Mimir remote write
 │   └── jwks_verifier/      JWT JWKS caching & verification
+├── protocol/        chain_state, consensus, forks, topics, fastssz_codegen
 ├── entities/        TopicKind, TopicMeta, CLMessage types
-├── chain_state/     Current slot, genesis time calculations
-├── utils/           Topic helpers, bootstrap URL builders, retry helpers, misc shared logic
-└── test_utils/      Mocked bootstrap, p2p spawner, test fixtures
-docs/ADR/            Architecture Decision Records (001, 002, ...)
+├── utils/           Topic helpers, bootstrap URL builders, retry helpers
+└── test_utils/      Local bootstrap stub, p2p spawner, JWT fixtures
+docs/versions/       Operator docs (VitePress; `latest/` tracks main)
 cmd/main.go          Bootstrap flow, service initialization, HTTP server startup
 ```
 
