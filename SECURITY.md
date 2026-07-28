@@ -99,7 +99,7 @@ except the libp2p (`OPT_AGENT_LIB_P2P_PORT`) and Optimum
 On first boot the gateway builds a bootstrap URL via
 `utils.BootstrapExposeNodesURL(...)` and calls
 `GET <bootstrap>/api/v1/expose-nodes?chain_id=<chain>&cluster_id=<cluster>&expose_amount=<n>`
-(see `internal/service/gossipsub-gateway/setup_mump2p_host.go`) for its
+(see `pkg/service/gossipsub-gateway/setup_mump2p_host.go`) for its
 initial mump2p peer set. If that response is non-`200` or the returned
 list is empty, the gateway falls back to a raw GitHub URL on the
 `forkdigest-hub` repo
