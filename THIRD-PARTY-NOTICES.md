@@ -202,7 +202,7 @@ Total distributed third-party packages: 234
 - [go.opentelemetry.io/otel/trace](https://github.com/open-telemetry/opentelemetry-go/blob/trace/v1.43.0/trace/LICENSE)
 - [go.yaml.in/yaml/v2](https://github.com/yaml/go-yaml/blob/v2.4.4/LICENSE)
 - [google.golang.org/genproto/googleapis/rpc/status](https://github.com/googleapis/go-genproto/blob/0a33c5d7ca68/googleapis/rpc/LICENSE)
-- [google.golang.org/grpc](https://github.com/grpc/grpc-go/blob/v1.81.1/LICENSE)
+- [google.golang.org/grpc](https://github.com/grpc/grpc-go/blob/v1.82.1/LICENSE)
 - [gopkg.in/yaml.v2](https://github.com/go-yaml/yaml/blob/v2.4.0/LICENSE)
 - [k8s.io/apimachinery/pkg](https://github.com/kubernetes/apimachinery/blob/v0.35.3/LICENSE)
 - [k8s.io/client-go](https://github.com/kubernetes/client-go/blob/v0.35.3/LICENSE)

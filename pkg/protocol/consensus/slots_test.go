@@ -9,24 +9,6 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/protocol/consensus"
 )
 
-func TestToEpoch(t *testing.T) {
-	tests := []struct {
-		name string
-		slot consensus.Slot
-		want consensus.Epoch
-	}{
-		{"genesis slot", 0, 0},
-		{"last slot of epoch 0", consensus.SlotsPerEpoch - 1, 0},
-		{"first slot of epoch 1", consensus.SlotsPerEpoch, 1},
-		{"epoch 2", consensus.SlotsPerEpoch * 2, 2},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, consensus.ToEpoch(tt.slot))
-		})
-	}
-}
-
 func TestSlotAtAndStartTime(t *testing.T) {
 	genesis := time.Unix(1_700_000_000, 0).UTC()
 

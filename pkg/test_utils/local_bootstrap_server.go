@@ -49,11 +49,6 @@ func NewLocalBootstrapServerWithRig(t *testing.T, rig *AuthTestRig) *LocalBootst
 	return newLocalBootstrapServer(t, rig)
 }
 
-func NewLocalBootstrapServer(t *testing.T) *LocalBootstrapServer {
-	t.Helper()
-	return newLocalBootstrapServer(t, nil)
-}
-
 func newLocalBootstrapServer(t *testing.T, rig *AuthTestRig) *LocalBootstrapServer {
 	t.Helper()
 
