@@ -53,6 +53,32 @@ func TestRecordMumPublishedAt(t *testing.T) {
 	require.Equal(t, int64(444), req.Payload.MumPublishedAtMs)
 }
 
+func TestSendTrackedSlotsEmitsLatestSameSlotValue(t *testing.T) {
+	srv, bootstrap, cfg := getTestSrv(t)
+	cfg.TelemetryEnable = true
+
+	const slot = uint64(128)
+	srv.RecordMumPublishedAt(slot, 100)
+	srv.RecordMumPublishedAt(slot, 200)
+	srv.RecordMumPublishedAt(slot, 300)
+
+	var last int64
+	seen := 0
+	for {
+		req, ok := bootstrap.TryBlockLatencyRequest(500 * time.Millisecond)
+		if !ok {
+			break
+		}
+		require.Equal(t, slot, req.Payload.BlockSlot)
+		require.GreaterOrEqual(t, req.Payload.MumPublishedAtMs, int64(100))
+		require.LessOrEqual(t, req.Payload.MumPublishedAtMs, int64(300))
+		last = req.Payload.MumPublishedAtMs
+		seen++
+	}
+	require.GreaterOrEqual(t, seen, 1, "expected at least one emission")
+	require.Equal(t, int64(300), last, "settled emission must carry the latest same-slot value")
+}
+
 func TestHandleBeaconBlock(t *testing.T) {
 	srv, bootstrap, cfg := getTestSrv(t)
 	srv.SetGatewayPeerIDStr("self-peer")

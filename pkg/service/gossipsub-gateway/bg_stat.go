@@ -65,9 +65,8 @@ func (s *Service) GetMumP2PPeers() (totalPeers int, perTopicPeers map[string]int
 func (s *Service) dumpServiceStat() {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
-	telemetry.SetPropagationState(s.cfg.PropagationEnabled())
 
-	for range ticker.C {
+	for {
 		telemetry.SetPropagationState(s.cfg.PropagationEnabled())
 		totalLibP2PPeers, perLibP2PTopic, _, libP2PTopicPeerIDs := s.GetLibP2PPeers()
 		telemetry.ResetCLPeersPerTopic()
@@ -121,6 +120,8 @@ func (s *Service) dumpServiceStat() {
 		for topic, badMessages := range telemetry.GetMumSSZErrors() {
 			s.log.Info("failed ssz decode from MumP2P", logger.WithTopic(topic), logger.WithUint64("count", badMessages))
 		}
+
+		<-ticker.C
 	}
 }
 

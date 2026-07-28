@@ -56,6 +56,31 @@ func TestSimplifyTopic(t *testing.T) {
 	}
 }
 
+// TestParseAttestationSSZTopicSizeValidation tests that the ParseAttestationSSZTopic function correctly validates the size of the input data. It checks that sizes below 240 bytes and above 240 bytes are rejected, while exactly 240 bytes is accepted.
+func TestParseAttestationSSZTopicSizeValidation(t *testing.T) {
+	cases := []struct {
+		size    int
+		wantErr bool
+	}{
+		{size: 239, wantErr: true},
+		{size: 240, wantErr: false},
+		{size: 241, wantErr: true},
+	}
+	for _, tc := range cases {
+		t.Run(fmt.Sprintf("size_%d", tc.size), func(t *testing.T) {
+			compressed := snappy.Encode(nil, make([]byte, tc.size))
+			attester, slot, err := utils.ParseAttestationSSZTopic(compressed)
+			if tc.wantErr {
+				require.Error(t, err, "off-size payload must be rejected")
+				require.Zero(t, attester, "no field extraction on rejected payload")
+				require.Zero(t, slot, "no field extraction on rejected payload")
+			} else {
+				require.NoError(t, err, "exactly 240-byte payload must be accepted")
+			}
+		})
+	}
+}
+
 func TestParseAttestationSSZTopic(t *testing.T) {
 	tests := map[string]struct {
 		src                         string
