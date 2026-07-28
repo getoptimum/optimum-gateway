@@ -269,7 +269,7 @@ type ErrorResponse struct {
 
 type Dummy struct{}
 
-type Interface any
+type Interface interface{}
 
 type SyncCommittee struct {
 	PubKeys         [][]byte `json:"pubkeys" ssz-size:"var(syncCommitteePubKeys),48"`
