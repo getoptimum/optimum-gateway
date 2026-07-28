@@ -353,10 +353,7 @@ func (m *Service) mint(ctx context.Context) (string, error) {
 		m.servicesClaims.Store(nil)
 	}
 
-	telemetry.IncAuthMintResult(telemetry.AuthMintResultSuccess)
-	if claims.ExpiresAt != nil {
-		telemetry.SetAuthTokenExpiresAt(claims.ExpiresAt.Unix())
-	}
+	m.recordSuccessfulMintMetrics(claims)
 	telemetry.SetPushToken(pushToken)
 
 	m.log.Info("minted gateway JWT",
@@ -388,4 +385,23 @@ func (m *Service) refreshLoop(ctx context.Context) {
 			}
 		}
 	}
+}
+
+func (m *Service) recordSuccessfulMintMetrics(claims *jwks_verifier.Claims) {
+	if claims == nil || !telemetry.MetricsEnabled() {
+		return
+	}
+	telemetry.IncAuthMintResult(telemetry.AuthMintResultSuccess)
+	if claims.ExpiresAt != nil {
+		telemetry.SetAuthTokenExpiresAt(claims.ExpiresAt.Unix())
+	}
+}
+
+// RefreshAuthMetrics syncs auth_token_* metrics after telemetry.InitMetrics when the
+// initial JWT mint completed before metrics registration.
+func (m *Service) RefreshAuthMetrics() {
+	if !m.IsEnabled() {
+		return
+	}
+	m.recordSuccessfulMintMetrics(m.OwnClaims())
 }

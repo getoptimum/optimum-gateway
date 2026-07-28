@@ -7,9 +7,6 @@ const (
 	SlotsPerEpoch  = 32
 )
 
-// ToEpoch returns the epoch that contains the given slot.
-func ToEpoch(s Slot) Epoch { return Epoch(uint64(s) / SlotsPerEpoch) }
-
 // SlotAt returns the slot number at wall-clock time t for a chain with the given genesis time.
 func SlotAt(genesis, t time.Time) Slot {
 	if !t.After(genesis) {
