@@ -65,8 +65,10 @@ func (s *Service) GetMumP2PPeers() (totalPeers int, perTopicPeers map[string]int
 func (s *Service) dumpServiceStat() {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
+	telemetry.SetPropagationState(s.cfg.PropagationEnabled())
 
 	for range ticker.C {
+		telemetry.SetPropagationState(s.cfg.PropagationEnabled())
 		totalLibP2PPeers, perLibP2PTopic, _, libP2PTopicPeerIDs := s.GetLibP2PPeers()
 		telemetry.ResetCLPeersPerTopic()
 		for topic, peers := range perLibP2PTopic {

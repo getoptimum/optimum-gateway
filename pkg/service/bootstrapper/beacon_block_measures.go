@@ -43,7 +43,12 @@ func (s *Service) bgHandleBlockEvents() {
 // also TTL map is sequence change operations, so we may expect that each next call will have latest data.
 func (s *Service) sendTrackedSlots(slot uint64) {
 	l := s.log.With(logger.WithUint64("slot", slot))
-	data, ok := s.trackedSlots.Get(slot)
+	var data entities.LatencyComparator
+	// do and apply is used to get latest data for slot, as we may have multiple updates for same slot.
+	ok := s.trackedSlots.DoAndApply(slot, func(v *entities.LatencyComparator) *entities.LatencyComparator {
+		data = *v
+		return v
+	})
 	if !ok {
 		l.Info("no tracked data for slot")
 		return

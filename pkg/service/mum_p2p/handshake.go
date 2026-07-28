@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -24,6 +25,10 @@ const (
 
 	// interval for checking handshake status
 	interval = 1 * time.Second
+
+	// maxHandshakeBytes caps how much of a handshake stream we will decode.
+	// 64 KiB is more than enough for the current handshake message, and prevents a malicious peer from sending a huge stream to exhaust memory.
+	maxHandshakeBytes = 64 * 1024
 )
 
 // RegisterHandshakeMessageSender registers a notification handler for new peer connections.
@@ -120,7 +125,7 @@ func (n *Node) sendHandshakeForPeer(ctx context.Context, l logger.AppLogger, pID
 	}
 
 	// Wait for the response from the peer and verify handshake
-	if err = n.handshakeHandler(remotePeer, json.NewDecoder(stream)); err != nil {
+	if err = n.handshakeHandler(remotePeer, json.NewDecoder(io.LimitReader(stream, maxHandshakeBytes))); err != nil {
 		n.disconnectPeer(remotePeer)
 		return fmt.Errorf("verifying handshake response: %w", err)
 	}
@@ -145,7 +150,7 @@ func (n *Node) RegisterHandshakeHandler(clusterID string) {
 
 		remotePeer := stream.Conn().RemotePeer()
 		// Read the handshake message from the stream
-		if err := n.handshakeHandler(remotePeer, json.NewDecoder(stream)); err != nil {
+		if err := n.handshakeHandler(remotePeer, json.NewDecoder(io.LimitReader(stream, maxHandshakeBytes))); err != nil {
 			l.Error("handshake verification failed", err)
 			n.disconnectPeer(remotePeer)
 			return
