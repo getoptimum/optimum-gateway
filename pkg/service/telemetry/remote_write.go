@@ -295,10 +295,8 @@ func buildMimirPromConfig(cfg *config.AppConfig, scrapeInterval time.Duration) (
 	if err != nil {
 		return nil, fmt.Errorf("load prometheus config: %w", err)
 	}
-	// Set the bearer token on the parsed config directly. Marshaling it through
-	// YAML would require flipping the process-global commonconfig.MarshalSecretValue,
-	// which races with concurrent token refreshes (SetPushToken) and could leak
-	// secrets from any concurrent Secret marshal.
+	// Bearer token is applied in memory only; marshaling it through YAML races on
+	// commonconfig.MarshalSecretValue and can leak other secrets while flipped.
 	if token := currentPushToken(); token != "" {
 		loaded.RemoteWriteConfigs[0].HTTPClientConfig.Authorization = &commonconfig.Authorization{
 			Type:        "Bearer",

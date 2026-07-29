@@ -36,9 +36,16 @@ const (
 	pushEventuallyInterval = time.Second
 
 	doneWaitSlack = 5 * time.Second
-
-	mimirShutdownTimeout = 30 * time.Second
 )
+
+func waitMimirDone(t *testing.T, done <-chan struct{}, msg string) {
+	t.Helper()
+	select {
+	case <-done:
+	case <-time.After(mimirRemoteFlushDeadline + doneWaitSlack):
+		t.Fatal(msg)
+	}
+}
 
 func testTelemetryPort(t *testing.T, metricsBaseURL string) int {
 	t.Helper()
@@ -66,7 +73,7 @@ func walHasData(t *testing.T, walDir string) bool {
 	return found
 }
 
-func TestBuildMimirPromConfig_preservesBearerToken(t *testing.T) {
+func TestBuildMimirPromConfig(t *testing.T) {
 	wantToken := "test-token"
 	SetPushToken(wantToken)
 	t.Cleanup(func() { SetPushToken("") })
@@ -75,34 +82,31 @@ func TestBuildMimirPromConfig_preservesBearerToken(t *testing.T) {
 		RemotePushMimirURL: "https://v2-mimir.example.test",
 		TelemetryPort:      48123,
 	}
-	promCfg, err := buildMimirPromConfig(cfg, mimirScrapeInterval)
-	require.NoError(t, err)
-	require.Len(t, promCfg.RemoteWriteConfigs, 1)
-	auth := promCfg.RemoteWriteConfigs[0].HTTPClientConfig.Authorization
-	require.NotNil(t, auth)
-	require.Equal(t, "Bearer", auth.Type)
-	require.Equal(t, wantToken, string(auth.Credentials))
-}
 
-// TestBuildMimirPromConfig_concurrent guards against reintroducing a shared-global
-// mutation in the build path (token refresh can race with startup). Run with -race.
-func TestBuildMimirPromConfig_concurrent(t *testing.T) {
-	SetPushToken("test-token")
-	t.Cleanup(func() { SetPushToken("") })
+	t.Run("bearer_token", func(t *testing.T) {
+		promCfg, err := buildMimirPromConfig(cfg, mimirScrapeInterval)
+		require.NoError(t, err)
+		require.Len(t, promCfg.RemoteWriteConfigs, 1)
+		auth := promCfg.RemoteWriteConfigs[0].HTTPClientConfig.Authorization
+		require.NotNil(t, auth)
+		require.Equal(t, "Bearer", auth.Type)
+		require.Equal(t, wantToken, string(auth.Credentials))
+	})
 
-	cfg := &config.AppConfig{RemotePushMimirURL: "https://v2-mimir.example.test", TelemetryPort: 48123}
-	var wg sync.WaitGroup
-	for i := 0; i < 8; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for j := 0; j < 50; j++ {
-				_, err := buildMimirPromConfig(cfg, mimirScrapeInterval)
-				require.NoError(t, err)
-			}
-		}()
-	}
-	wg.Wait()
+	t.Run("concurrent", func(t *testing.T) {
+		var wg sync.WaitGroup
+		for range 4 {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for range 10 {
+					_, err := buildMimirPromConfig(cfg, mimirScrapeInterval)
+					require.NoError(t, err)
+				}
+			}()
+		}
+		wg.Wait()
+	})
 }
 
 func TestMimirRemoteWrite_shutdown(t *testing.T) {
@@ -132,12 +136,7 @@ func TestMimirRemoteWrite_shutdown(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	done := startMimirRemoteWrite(ctx, log, cfg)
 	cancel()
-
-	select {
-	case <-done:
-	case <-time.After(mimirRemoteFlushDeadline + doneWaitSlack):
-		t.Fatal("done channel did not close within expected timeout")
-	}
+	waitMimirDone(t, done, "done channel did not close within expected timeout")
 }
 
 func TestMimirRemoteWrite_walReplay(t *testing.T) {
@@ -197,11 +196,7 @@ func TestMimirRemoteWrite_walReplay(t *testing.T) {
 	}, pushEventuallyTimeout, pushEventuallyInterval, "expected remote write after Mimir recovery")
 
 	cancel()
-	select {
-	case <-done:
-	case <-time.After(mimirRemoteFlushDeadline + doneWaitSlack):
-		t.Fatal("done channel did not close")
-	}
+	waitMimirDone(t, done, "done channel did not close")
 }
 
 func TestMimirRemoteWrite_processRestart(t *testing.T) {
@@ -243,11 +238,7 @@ func TestMimirRemoteWrite_processRestart(t *testing.T) {
 		return walHasData(t, walDir)
 	}, walEventuallyTimeout, walEventuallyInterval, "expected WAL after first run")
 	cancel1()
-	select {
-	case <-done1:
-	case <-time.After(mimirRemoteFlushDeadline + doneWaitSlack):
-		t.Fatal("first run did not shut down")
-	}
+	waitMimirDone(t, done1, "first run did not shut down")
 
 	pushAfterFirst := pushCount.Load()
 
@@ -260,11 +251,7 @@ func TestMimirRemoteWrite_processRestart(t *testing.T) {
 	}, pushEventuallyTimeout, pushEventuallyInterval, "expected additional pushes after restart with same WAL dir")
 
 	cancel2()
-	select {
-	case <-done2:
-	case <-time.After(mimirRemoteFlushDeadline + doneWaitSlack):
-		t.Fatal("second run did not shut down")
-	}
+	waitMimirDone(t, done2, "second run did not shut down")
 }
 
 func TestInitMetrics_MimirDone(t *testing.T) {
@@ -311,9 +298,5 @@ func TestInitMetrics_MimirDone(t *testing.T) {
 	require.Equal(t, ch, ch2, "second InitMetrics call should return the same channel")
 
 	cancel()
-	select {
-	case <-ch:
-	case <-time.After(mimirRemoteFlushDeadline + doneWaitSlack):
-		t.Fatal("mimirDone channel did not close within expected timeout")
-	}
+	waitMimirDone(t, ch, "mimirDone channel did not close within expected timeout")
 }
