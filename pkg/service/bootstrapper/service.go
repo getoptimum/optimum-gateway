@@ -182,7 +182,7 @@ func (s *Service) predictMumP2PAddrInfo() (peerInfo peer.AddrInfo, publicIP stri
 	}
 	return peer.AddrInfo{
 		ID:    identityKey.ID,
-		Addrs: commonnet.MustBuildAdvertisedAddresses(s.log, publicIPV4, publicIPV6, s.cfg.AgentMumP2PPort),
+		Addrs: commonnet.MustBuildAdvertisedQUICAddresses(s.log, publicIPV4, publicIPV6, s.cfg.AgentMumP2PPort),
 	}, publicHost, nil
 }
 
