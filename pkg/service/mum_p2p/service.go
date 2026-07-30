@@ -92,8 +92,8 @@ func NewNode(
 	libP2POpts := []libp2p.Option{
 		libp2p.ConnectionManager(cn),
 		libp2p.ListenAddrStrings(
-			fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", cfg.ListenPort),
-			fmt.Sprintf("/ip6/::/tcp/%d", cfg.ListenPort),
+			fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic-v1", cfg.ListenPort),
+			fmt.Sprintf("/ip6/::/udp/%d/quic-v1", cfg.ListenPort),
 		),
 		libp2p.Ping(false), // Disable Ping Service.
 		libp2p.Transport(quic.NewTransport),
