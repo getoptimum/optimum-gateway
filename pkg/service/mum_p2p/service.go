@@ -8,13 +8,11 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p"
-	mplex "github.com/libp2p/go-libp2p-mplex"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
-	"github.com/libp2p/go-libp2p/p2p/security/noise"
-	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
-	gomplex "github.com/libp2p/go-mplex"
+	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
+	"github.com/libp2p/go-libp2p/p2p/transport/quicreuse"
 	"github.com/multiformats/go-multiaddr"
 
 	commonhash "github.com/getoptimum/optimum-common/pkg/hash"
@@ -87,19 +85,17 @@ func NewNode(
 		return nil, fmt.Errorf("failed to create connection manager: %w", err)
 	}
 
-	cachedAddrs := commonnet.MustBuildAdvertisedAddresses(log, publicIPV4, publicIPV6, cfg.ListenPort)
+	cachedAddrs := commonnet.MustBuildAdvertisedQUICAddresses(log, publicIPV4, publicIPV6, cfg.ListenPort)
 
 	libP2POpts := []libp2p.Option{
 		libp2p.ConnectionManager(cn),
+		libp2p.QUICReuse(quicreuse.NewConnManager),
 		libp2p.ListenAddrStrings(
-			fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", cfg.ListenPort),
-			fmt.Sprintf("/ip6/::/tcp/%d", cfg.ListenPort),
+			fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic-v1", cfg.ListenPort),
+			fmt.Sprintf("/ip6/::/udp/%d/quic-v1", cfg.ListenPort),
 		),
 		libp2p.Ping(false), // Disable Ping Service.
-		libp2p.Transport(tcp.NewTCPTransport),
-		libp2p.DefaultMuxers,
-		libp2p.Muxer("/mplex/6.7.0", mplex.DefaultTransport),
-		libp2p.Security(noise.ID, noise.New),
+		libp2p.Transport(libp2pquic.NewTransport),
 		libp2p.Identity(key),
 		libp2p.AddrsFactory(func([]multiaddr.Multiaddr) []multiaddr.Multiaddr {
 			return cachedAddrs
@@ -114,7 +110,6 @@ func NewNode(
 			libp2p.BandwidthReporter(telemetry.NewBandwidthCollector()),
 		)
 	}
-	gomplex.ResetStreamTimeout = 5 * time.Second // Configures stream timeouts on mplex
 	h, err := libp2p.New(libP2POpts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create optimum libp2p host: %w", err)
