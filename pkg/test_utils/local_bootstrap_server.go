@@ -172,6 +172,15 @@ func (m *LocalBootstrapServer) WaitExposeNodesRequest(t *testing.T, timeout time
 	}
 }
 
+func (m *LocalBootstrapServer) TryBlockLatencyRequest(timeout time.Duration) (BlockLatencyRequest, bool) {
+	select {
+	case req := <-m.latencyReqs:
+		return req, true
+	case <-time.After(timeout):
+		return BlockLatencyRequest{}, false
+	}
+}
+
 func (m *LocalBootstrapServer) AssertNoBlockLatencyRequest(t *testing.T, timeout time.Duration) {
 	t.Helper()
 

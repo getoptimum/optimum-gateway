@@ -291,5 +291,6 @@ func (n *Node) setPeerState(peerID peer.ID, state entities.PeerState) {
 		n.peersApprovedMap.Store(peerID, struct{}{})
 	case entities.PeerStateHandshakeInvalid:
 		n.peersMap.Delete(peerID)
+		n.peersApprovedMap.Delete(peerID)
 	}
 }

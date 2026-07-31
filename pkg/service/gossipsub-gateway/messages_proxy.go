@@ -46,10 +46,6 @@ func (s *Service) processCLBeaconBlock(l logger.AppLogger, msg *entities.CLMessa
 	if s.isDuplicateMessage(msg.Message) {
 		return
 	}
-	telemetry.MumP2PTotalMessagesInc(msg.Topic)
-	s.statSendMum.Upsert(msg.Topic, func(curVal int) int {
-		return curVal + 1
-	}, 1)
 	if s.nodeMumP2P == nil {
 		return
 	}
@@ -57,7 +53,14 @@ func (s *Service) processCLBeaconBlock(l logger.AppLogger, msg *entities.CLMessa
 	if err := s.nodeMumP2P.PublishMessage(s.ctx, msg.Topic, msg.Message); err != nil {
 		telemetry.IncreaseBadMessagesToMum()
 		l.Error("failed to publish message to mump2p node", err)
-	} else if slot > 0 {
+		return
+	}
+	// Count only messages actually published.
+	telemetry.MumP2PTotalMessagesInc(msg.Topic)
+	s.statSendMum.Upsert(msg.Topic, func(curVal int) int {
+		return curVal + 1
+	}, 1)
+	if slot > 0 {
 		s.srvBootstrapper.RecordMumPublishedAt(slot, publishedAt)
 	}
 }

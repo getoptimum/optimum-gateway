@@ -85,7 +85,7 @@ Key config fields:
 - `gateway_id` / `OPT_GATEWAY_ID` — Overridden by JWT's `sub` claim if auth enabled
 - `enable_auth` (default true) — Disables JWT mint/verify when false; logs an Info-level local-dev warning
 - `api_key` / `OPT_API_KEY` — Required for auth-enabled minting; empty value disables auth manager even if `enable_auth=true`
-- `propagation_disabled` — Startup seed only; dynamic config may flip the effective runtime value after `InitRuntime()`
+- `propagation_enabled` — Startup seed only; dynamic config may flip the effective runtime value after `InitRuntime()`
 - `aggregation_interval_ms` — Batch window for attestation aggregation
 - `remote_push_enable` — Requires `telemetry_enable=true` and an enabled auth manager
 
@@ -162,8 +162,8 @@ Always route through `message_router.Service`:
 
 ### Runtime Config Rotation
 
-- `propagation_disabled` and `skip_messages_from_self` are atomics seeded from YAML/env, then updated by the dynamic-config rotator created in `InitRuntime()`
-- Use `cfg.PropagationDisabled()` and `cfg.GetSkipMessagesFromSelf()` for current runtime values instead of reading raw config fields
+- `propagation_enabled` and `skip_messages_from_self` are atomics seeded from YAML/env, then updated by the dynamic-config rotator created in `InitRuntime()`
+- Use `cfg.PropagationEnabled()` and `cfg.GetSkipMessagesFromSelf()` for current runtime values instead of reading raw config fields
 
 ### TTL Cache for Deduplication
 
@@ -203,7 +203,7 @@ cmd/main.go          Bootstrap flow, service initialization, HTTP server startup
 1. **Trace selectively**: `OPT_TRACE_MESH=true`, `OPT_TRACE_SHARD=true` in config (don't enable `OPT_TRACE_RPC` unless debugging handshake).
 2. **Bootstrap fallback**: If bootstrap unreachable, check `remote_bootstrap_url` and GitHub `forkdigest-hub` repo.
 3. **Validator sync failures**: `bgSync()` itself is silent; check auth mint responses / JWT-derived validator indexes and the `known_validators_total` metric.
-4. **Propagation disabled**: The YAML/env flag only seeds startup state. Runtime behavior comes from the dynamic-config rotator (`cfg.GetDCRotator()`), which can flip `PropagationDisabled()` and `GetSkipMessagesFromSelf()`.
+4. **Propagation disabled**: The YAML/env flag only seeds startup state. Runtime behavior comes from the dynamic-config rotator (`cfg.GetDCRotator()`), which can flip `PropagationEnabled()` and `GetSkipMessagesFromSelf()`.
 
 ---
 

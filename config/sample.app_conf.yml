@@ -38,7 +38,7 @@ telemetry_port: 48123
 
 # ─── Advanced / tuning ───────────────────────────────────────────────────────
 # aggregation_interval_ms: 25              # default: 25, max: 600000
-# propagation_disabled: true               # default: true
+# propagation_enabled: true                # default: true
 
 # ─── Dev-mode only (ignored when enable_auth=true) ───────────────────────────
 # chain: hoodi                             # OPT_DEV_CHAIN — overridden by JWT chain_id claim
