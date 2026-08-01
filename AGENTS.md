@@ -18,7 +18,7 @@ cmd/main.go
 ├── message_router.Service       (Forward/drop decisions by validator & topic)
 ├── gossipsub_gateway.Service    (Main relay; runs two p2p loops)
 │   ├── libp2p host + subscriptions  (CL-side gossipsub)
-│   ├── mum_p2p.Node                 (mump2p-side mesh; pkg/service/mum_p2p)
+│   ├── mump2p.Node                  (mump2p-side mesh; pkg/service/mump2p)
 │   ├── aggregator.Service           (Batch attestations into containers)
 │   └── channels: clMessages, mumP2PMessages
 ├── telemetry service           (Prometheus, Loki, Mimir pushers)
@@ -127,9 +127,9 @@ Gateway calls `filterAndBuildEthTopics()` to expand shorts into fulls using fork
 | Dependency                           | Purpose                                              | Notes                                           |
 | ------------------------------------ | ---------------------------------------------------- | ----------------------------------------------- |
 | github.com/libp2p/go-libp2p          | libp2p host & gossipsub                              | Local CL peering                                |
-| github.com/getoptimum/optimum-p2p    | mump2p gossipsub (RLNC)                              | Used by `pkg/service/mum_p2p`              |
+| github.com/getoptimum/mump2p-protocol | mump2p gossipsub (RLNC)                              | Used by `pkg/service/mump2p`                    |
 | github.com/getoptimum/optimum-common | Shared types, logger, config                         | Utilities, auth claims                          |
-| github.com/libp2p/go-libp2p-kad-dht  | mump2p peer discovery                                | Used by `pkg/service/mum_p2p/dhtdiscovery` |
+| github.com/libp2p/go-libp2p-kad-dht  | mump2p peer discovery                                | Used by `pkg/service/mump2p/dhtdiscovery`       |
 | github.com/prometheus/client_golang  | Metrics export                                       | Local Prometheus scrape                         |
 | github.com/gofiber/fiber/v3          | HTTP API                                             | `/`, `/api/v1/self_info`, `/metrics`, `/health` |
 
@@ -187,7 +187,7 @@ pkg/
 │   ├── auth_token/         JWT minting & verification
 │   ├── aggregator/         Batch + emit attestation containers
 │   ├── bootstrapper/       Remote bootstrap client, heartbeats, block latency
-│   ├── mum_p2p/            mump2p libp2p node, handshake, topics
+│   ├── mump2p/             mump2p libp2p node, handshake, topics
 │   ├── telemetry/          Prometheus, Loki, Mimir remote write
 │   └── jwks_verifier/      JWT JWKS caching & verification
 ├── protocol/        chain_state, consensus, forks, topics, fastssz_codegen

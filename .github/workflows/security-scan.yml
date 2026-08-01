@@ -242,7 +242,7 @@ jobs:
           owner: getoptimum
           # Scoped to this repo (push target) plus the private module deps that
           # `go` must fetch to build the branch-tip SBOM, not the whole org.
-          repositories: optimum-gateway,optimum-common,optimum-p2p,rlnc
+          repositories: optimum-gateway,optimum-common,mump2p-protocol,shm,rlnc
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           ref: ${{ github.head_ref }}

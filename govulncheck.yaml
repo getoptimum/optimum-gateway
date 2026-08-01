@@ -13,7 +13,7 @@ accepted_risks:
     fixed_in: N/A (all versions affected, no patch; only removing the dependency clears it)
     reason: |
       Reachable, not theoretical. The gateway runs a permissionless libp2p
-      Kademlia DHT (`internal/service/mum_p2p/dhtdiscovery`, ModeAutoServer) for
+      Kademlia DHT (`pkg/service/mump2p/dhtdiscovery`, ModeAutoServer) for
       ongoing mump2p peer discovery. The rendezvous namespace is derived from the
       public ClusterID, so any host can join the DHT with no credentials and
       flood or eclipse the lookup. This is an availability/censorship vector on
@@ -22,16 +22,24 @@ accepted_risks:
       beacon nodes validate independently). Full write-up and CVSS rationale:
       getoptimum/optimum-gateway#924.
 
-      Accepted because the exploitable impact is bounded at the mesh layer, not
-      because the DHT is unused. Mesh admission is now default-deny and gated on
-      the authenticated handshake (#955, closing #923), and cluster membership is
-      bound by the JWT (#951), so a DHT-discovered Sybil peer cannot join the
-      RLNC mesh or exchange shards. The residual is discovery-layer degradation
-      (wasted dials, slower/partitioned discovery), recoverable and non-persistent.
+      WARNING: this acceptance is currently INCOMPLETE. It rested on two
+      controls. Cluster membership is still bound by the verified JWT (#951), so
+      an unauthenticated peer is disconnected on handshake. Default-deny mesh
+      admission (#955, closing #923) is NOT in place: it lived in the vendored
+      optimum-pubsub fork, and the mump2p engine that replaced it runs on stock
+      upstream go-libp2p-pubsub, which has no AllowPeer/DenyPeer. A replacement
+      is being built in mump2p-protocol. Until it is wired here, a DHT-discovered
+      peer that has not completed the handshake is no longer denied mesh
+      admission by pubsub itself, only disconnected by the handshake path. This
+      branch must not merge before that replacement lands.
+
+      The residual was previously discovery-layer degradation only (wasted dials,
+      slower/partitioned discovery), recoverable and non-persistent; re-assess
+      once mesh admission is restored.
 
       Removing the DHT entirely was explored (#922) and not adopted; the chosen
       path keeps the DHT and hardens the mesh/registry layers. Registry-side
       discovery hardening is tracked in getoptimum/optimum-bootstrap#310.
-    review_date: "2026-07-16"
+    review_date: "2026-08-01"
     next_review: "2027-01-16"
     status: monitoring
