@@ -41,6 +41,38 @@ func NewTestNodeWithCfg(
 ) mump2p.Engine {
 	t.Helper()
 
+	return newNode(ctx, t, log, identityDir, cfg, append(TestNodeOptions(), opts...))
+}
+
+// NewRealCoderNode builds a node on the out-of-process RLNC coder reached over
+// the sidecar's shared memory.
+//
+// It deliberately passes no coder option, so PassthroughCoder is not reachable
+// from here and the Galois-field arithmetic every other test skips is the real
+// one. A node whose sidecar is missing fails to build rather than falling back.
+func NewRealCoderNode(
+	ctx context.Context,
+	t *testing.T,
+	log logger.AppLogger,
+	identityDir string,
+	cfg *mump2p.Config,
+	opts ...mump2p.NodeOption,
+) mump2p.Engine {
+	t.Helper()
+
+	return newNode(ctx, t, log, identityDir, cfg, opts)
+}
+
+func newNode(
+	ctx context.Context,
+	t *testing.T,
+	log logger.AppLogger,
+	identityDir string,
+	cfg *mump2p.Config,
+	opts []mump2p.NodeOption,
+) mump2p.Engine {
+	t.Helper()
+
 	h, err := libp2p.New(
 		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/127.0.0.1/tcp/%d", test_utils.GetFreePortT(t))),
 	)
@@ -52,7 +84,7 @@ func NewTestNodeWithCfg(
 		cfg,
 		h,
 		identityDir,
-		append(TestNodeOptions(), opts...)...,
+		opts...,
 	)
 	require.NoError(t, err)
 

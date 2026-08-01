@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/netip"
 	"sync"
 	"time"
@@ -273,6 +274,33 @@ func (n *Node) datagramCandidates() []netip.AddrPort {
 // while the datagram data plane is disabled.
 func (n *Node) DatagramSessionExpiry(peerID peer.ID) (time.Time, bool) {
 	return n.udp.ExpiresAt(peerID)
+}
+
+// DatagramLocalAddr reports the UDP endpoint the datagram data plane is bound
+// to, and false while it is disabled. It is what an operator, or a test aiming
+// unauthenticated traffic at the ingress, needs to name the socket.
+func (n *Node) DatagramLocalAddr() (netip.AddrPort, bool) {
+	udp, ok := n.dgram.LocalAddr().(*net.UDPAddr)
+	if !ok {
+		return netip.AddrPort{}, false
+	}
+	return udp.AddrPort(), true
+}
+
+// DatagramPathConfirmed reports whether path validation has confirmed an
+// endpoint for peerID. A session alone does not move traffic off the stream
+// path: until an endpoint answers a probe there is nowhere to send it.
+func (n *Node) DatagramPathConfirmed(peerID peer.ID) bool {
+	transport := n.dgram.Transport()
+	if transport == nil {
+		return false
+	}
+	sess, ok := transport.Sessions().Lookup(peerID)
+	if !ok {
+		return false
+	}
+	_, confirmed := sess.ConfirmedEndpoint()
+	return confirmed
 }
 
 // resolveOptions applies the caller's options over the defaults, which carry the
