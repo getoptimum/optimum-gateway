@@ -9,7 +9,7 @@ import (
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	"github.com/getoptimum/optimum-gateway/pkg/config"
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
-	"github.com/getoptimum/optimum-gateway/pkg/service/mum_p2p"
+	"github.com/getoptimum/optimum-gateway/pkg/service/mump2p"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry/tracer"
 )
@@ -17,9 +17,9 @@ import (
 // buildMumP2PConfig assembles the mump2p node config. The RLNC and mesh parameters
 // come from the dynamic config rotator so operator changes reach the constructed node;
 // the package defaults stand only until the rotator has a configuration to serve.
-func buildMumP2PConfig(appCfg *config.AppConfig, bootstrapPeers []string) *mum_p2p.Config {
+func buildMumP2PConfig(appCfg *config.AppConfig, bootstrapPeers []string) *mump2p.Config {
 	rotator := appCfg.GetDCRotator()
-	optCfg := &mum_p2p.Config{
+	optCfg := &mump2p.Config{
 		ListenPort:               appCfg.AgentMumP2PPort,
 		MaxMessageSize:           config.DefaultMaxMessageSize,
 		RandomMessageSize:        config.DefaultRandomMessageSize,
@@ -66,13 +66,17 @@ func (s *Service) setupMumP2PHost() error {
 		optCfg.CustomConnectionGater = s.customMumP2PConnectionGater
 	}
 
-	s.nodeMumP2P, err = mum_p2p.NewNode(
+	nodeOpts := append([]mump2p.NodeOption{
+		mump2p.WithCustomHandshakeBuilder(s.handshakeBuilder),
+		mump2p.WithCustomHandshakeHandler(s.handshakeHandler),
+	}, s.mumP2PNodeOptions...)
+
+	s.nodeMumP2P, err = mump2p.NewNode(
 		s.ctx,
 		s.log.With(logger.WithService("mump2p")),
 		optCfg,
 		s.cfg.IdentityMumP2PDir,
-		mum_p2p.WithCustomHandshakeBuilder(s.handshakeBuilder),
-		mum_p2p.WithCustomHandshakeHandler(s.handshakeHandler),
+		nodeOpts...,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to setup mump2p host: %w", err)

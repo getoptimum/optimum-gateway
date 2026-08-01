@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	discovery "github.com/getoptimum/optimum-gateway/pkg/service/mum_p2p/dhtdiscovery"
+	discovery "github.com/getoptimum/optimum-gateway/pkg/service/mump2p/dhtdiscovery"
 )
 
 func TestGetSuffix(t *testing.T) {

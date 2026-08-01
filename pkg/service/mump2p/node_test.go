@@ -1,4 +1,4 @@
-package mum_p2p_test
+package mump2p_test
 
 import (
 	"encoding/json"
@@ -15,16 +15,27 @@ import (
 
 	commontest "github.com/getoptimum/optimum-common/pkg/test_utils"
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
-	"github.com/getoptimum/optimum-gateway/pkg/service/mum_p2p"
+	"github.com/getoptimum/optimum-gateway/pkg/service/mump2p"
 	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
 )
 
 func TestNewNodeStartsWithQUIC(t *testing.T) {
 	cnt := test_utils.GetClean(t)
 	cfg := test_utils.NewTestConfig(cnt.Ctx, cnt.Log, "optimum_quic_smoke", commontest.GetFreePortT(t), nil)
-	node, err := mum_p2p.NewNode(cnt.Ctx, cnt.Log, cfg, t.TempDir())
+	node, err := mump2p.NewNode(cnt.Ctx, cnt.Log, cfg, t.TempDir(), test_utils.TestNodeOptions()...)
 	require.NoError(t, err)
 	t.Cleanup(node.Stop)
+}
+
+// The coder runs out of process, so a node that cannot reach it must not start:
+// it would come up and then drop every publish it was asked to encode.
+func TestNewNodeFailsWithoutCoderSidecar(t *testing.T) {
+	cnt := test_utils.GetClean(t)
+	cfg := test_utils.NewTestConfig(cnt.Ctx, cnt.Log, "optimum_no_sidecar", commontest.GetFreePortT(t), nil)
+	cfg.SHMName = "optimum-gateway-absent-coder"
+
+	_, err := mump2p.NewNode(cnt.Ctx, cnt.Log, cfg, t.TempDir())
+	require.ErrorContains(t, err, "attach RLNC coder shared memory")
 }
 
 func TestNodePublishMessageAutoSubscribes(t *testing.T) {
@@ -106,7 +117,7 @@ func TestNodeDisconnectsPeerOnOversizedHandshake(t *testing.T) {
 	victim := test_utils.NewTestNode(cnt.Ctx, t, cnt.Log, clusterID, t.TempDir())
 	// Same cluster ID, so only the payload size can make this handshake fail.
 	flooder := test_utils.NewTestNode(cnt.Ctx, t, cnt.Log, clusterID, t.TempDir(),
-		mum_p2p.WithCustomHandshakeBuilder(func() any {
+		mump2p.WithCustomHandshakeBuilder(func() any {
 			return struct {
 				ClusterID string `json:"cluster_id"`
 				Padding   string `json:"padding"`
@@ -157,16 +168,16 @@ func TestNodeUsesCustomHandshakeHooks(t *testing.T) {
 	}, 10*time.Second, 100*time.Millisecond)
 }
 
-func customHandshakeOptions(counter *atomic.Int32) []mum_p2p.NodeOption {
+func customHandshakeOptions(counter *atomic.Int32) []mump2p.NodeOption {
 	type customHandshake struct {
 		Kind string `json:"kind"`
 	}
 
-	return []mum_p2p.NodeOption{
-		mum_p2p.WithCustomHandshakeBuilder(func() any {
+	return []mump2p.NodeOption{
+		mump2p.WithCustomHandshakeBuilder(func() any {
 			return customHandshake{Kind: "custom"}
 		}),
-		mum_p2p.WithCustomHandshakeHandler(func(_ peer.ID, decoder *json.Decoder) error {
+		mump2p.WithCustomHandshakeHandler(func(_ peer.ID, decoder *json.Decoder) error {
 			var handshake customHandshake
 			if err := decoder.Decode(&handshake); err != nil {
 				return err

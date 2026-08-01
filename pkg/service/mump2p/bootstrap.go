@@ -1,4 +1,4 @@
-package mum_p2p
+package mump2p
 
 import (
 	"context"

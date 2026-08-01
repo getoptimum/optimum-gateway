@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	commonio "github.com/getoptimum/optimum-common/pkg/io"
-	"github.com/getoptimum/optimum-gateway/pkg/service/mum_p2p/topics_keeper"
+	"github.com/getoptimum/optimum-gateway/pkg/service/mump2p/topics_keeper"
 	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
 )
 
@@ -70,10 +70,10 @@ func TestDumpDataWritesCurrentTopics(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(cnt.Ctx)
 	t.Cleanup(cancel)
+	cancel() // stop async persist before it starts; this test exercises DumpData directly
 
 	dir := t.TempDir()
 	svc := topics_keeper.NewService(ctx, cnt.Log, dir)
-	cancel() // stop async persist; this test exercises DumpData directly
 
 	svc.AddTopic("topic-g")
 	svc.AddTopic("topic-h")

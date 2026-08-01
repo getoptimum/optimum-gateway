@@ -3,12 +3,11 @@ package telemetry
 import (
 	"testing"
 
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
-
-	pubsub "github.com/getoptimum/optimum-p2p/optimum-pubsub"
-	pb "github.com/getoptimum/optimum-p2p/optimum-pubsub/pb"
 )
 
 func mumMsg(topic string, data []byte) *pubsub.Message {
@@ -84,6 +83,8 @@ func TestMumP2PCollector(t *testing.T) {
 		c.SendRPC(nil, peerA)
 		c.DropRPC(nil, peerA)
 		c.UndeliverableMessage(nil)
+		c.OnNewOutboundStream(peerA, proto)
+		c.OnClosedOutboundStream(peerA)
 	})
 
 	AddTotalShardCount()

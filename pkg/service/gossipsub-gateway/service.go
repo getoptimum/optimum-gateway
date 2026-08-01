@@ -23,7 +23,7 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/service/auth_token"
 	"github.com/getoptimum/optimum-gateway/pkg/service/bootstrapper"
 	"github.com/getoptimum/optimum-gateway/pkg/service/message_router"
-	"github.com/getoptimum/optimum-gateway/pkg/service/mum_p2p"
+	"github.com/getoptimum/optimum-gateway/pkg/service/mump2p"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry/tracer"
 )
 
@@ -45,7 +45,7 @@ type Service struct {
 	libP2PDirectPeers      *syncx.RWMap[string, peer.AddrInfo]
 	directCLPeersAllowlist map[peer.ID]struct{} // allowlist of CL peers that can connect to the gateway host (libp2p)
 
-	nodeMumP2P      mum_p2p.Engine
+	nodeMumP2P      mump2p.Engine
 	nodeMumP2PBytes []byte
 	nodeMumP2PStr   string
 
@@ -57,6 +57,7 @@ type Service struct {
 	clMessages                  chan *entities.CLMessage        // messages from CL clients pass to mump2p nodes
 	mumP2PMessages              chan *commonentities.P2PMessage // messages from mump2p nodes we're passing to CL client
 	customMumP2PConnectionGater connmgr.ConnectionGater         // helper to reject connections from wrong networks, mostly used in tests
+	mumP2PNodeOptions           []mump2p.NodeOption             // extra node options, used by tests to supply an in-process RLNC coder
 	aggregatorMessages          *aggregator.Service
 	srvMsgRouter                *message_router.Service
 	authMgr                     *auth_token.Service // always non-nil; degrades to no-op when auth is disabled. Used for Bearer on outbound bootstrap calls and JWT in peer handshake.
@@ -91,6 +92,14 @@ type Option func(*Service)
 func WithCustomMumP2PConnectionGater(gater connmgr.ConnectionGater) func(*Service) {
 	return func(s *Service) {
 		s.customMumP2PConnectionGater = gater
+	}
+}
+
+// WithMumP2PNodeOptions injects extra mump2p node options; used by tests to
+// supply an in-process RLNC coder in place of the out-of-process one.
+func WithMumP2PNodeOptions(opts ...mump2p.NodeOption) func(*Service) {
+	return func(s *Service) {
+		s.mumP2PNodeOptions = append(s.mumP2PNodeOptions, opts...)
 	}
 }
 

@@ -38,6 +38,7 @@ func TestAppRouter(t *testing.T) {
 		cfg,
 		srvMessageRouter,
 		srvAuth,
+		gateway.WithMumP2PNodeOptions(test_utils.TestNodeOptions()...),
 	)
 	require.NoError(t, err)
 	require.NoError(t, srvGateway.Run())

@@ -5,77 +5,76 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	pboptimum "github.com/getoptimum/optimum-p2p/optimum-pubsub/pb"
+	tracepb "github.com/getoptimum/mump2p-protocol/pkg/pb"
 )
 
-func TestTraceCategories_AreDisjoint(t *testing.T) {
-	seen := make(map[pboptimum.TraceEvent_Type]string)
-	for name, set := range map[string]map[pboptimum.TraceEvent_Type]struct{}{
-		"mesh":  TraceEventsMeshTopology,
-		"rpc":   TraceEventsRPC,
-		"shard": TraceEventsShard,
-	} {
-		for ev := range set {
-			other, dup := seen[ev]
-			require.Falsef(t, dup, "event %s is in both %s and %s categories", ev, other, name)
-			seen[ev] = name
-		}
+func TestTraceCategoriesEnabled(t *testing.T) {
+	mesh := &tracepb.TraceEvent{Event: &tracepb.TraceEvent_Graft{Graft: &tracepb.Graft{}}}
+	rpc := &tracepb.TraceEvent{Event: &tracepb.TraceEvent_RecvRpc{RecvRpc: &tracepb.RecvRPC{}}}
+	shard := &tracepb.TraceEvent{
+		Event: &tracepb.TraceEvent_HelpfulSymbol{HelpfulSymbol: &tracepb.SymbolContainer{}},
 	}
-}
 
-func TestOptimumTraceEventSet(t *testing.T) {
 	tests := []struct {
-		name             string
-		mesh, rpc, shard bool
-		wantLen          int
-		wantContains     []pboptimum.TraceEvent_Type
-		wantExcludes     []pboptimum.TraceEvent_Type
+		name                       string
+		cats                       TraceCategories
+		wantMesh, wantRPC, wantSha bool
 	}{
+		{name: "all disabled", cats: NewTraceCategories(false, false, false)},
+		{name: "mesh only", cats: NewTraceCategories(true, false, false), wantMesh: true},
+		{name: "rpc only", cats: NewTraceCategories(false, true, false), wantRPC: true},
+		{name: "shard only", cats: NewTraceCategories(false, false, true), wantSha: true},
 		{
-			name:    "all disabled -> empty",
-			wantLen: 0,
-		},
-		{
-			name:         "mesh only",
-			mesh:         true,
-			wantLen:      len(TraceEventsMeshTopology),
-			wantContains: []pboptimum.TraceEvent_Type{pboptimum.TraceEvent_GRAFT, pboptimum.TraceEvent_ADD_PEER},
-			wantExcludes: []pboptimum.TraceEvent_Type{pboptimum.TraceEvent_RECV_RPC, pboptimum.TraceEvent_NEW_SHARD},
-		},
-		{
-			name:         "rpc only excludes the firehose from mesh/shard",
-			rpc:          true,
-			wantLen:      len(TraceEventsRPC),
-			wantContains: []pboptimum.TraceEvent_Type{pboptimum.TraceEvent_RECV_RPC, pboptimum.TraceEvent_SEND_RPC},
-			wantExcludes: []pboptimum.TraceEvent_Type{pboptimum.TraceEvent_GRAFT, pboptimum.TraceEvent_NEW_SHARD},
-		},
-		{
-			name:         "shard only",
-			shard:        true,
-			wantLen:      len(TraceEventsShard),
-			wantContains: []pboptimum.TraceEvent_Type{pboptimum.TraceEvent_NEW_SHARD, pboptimum.TraceEvent_PUBLISH_MESSAGE},
-			wantExcludes: []pboptimum.TraceEvent_Type{pboptimum.TraceEvent_GRAFT, pboptimum.TraceEvent_RECV_RPC},
-		},
-		{
-			name:    "all enabled -> union of all three",
-			mesh:    true,
-			rpc:     true,
-			shard:   true,
-			wantLen: len(TraceEventsMeshTopology) + len(TraceEventsRPC) + len(TraceEventsShard),
+			name:     "all enabled",
+			cats:     NewTraceCategories(true, true, true),
+			wantMesh: true, wantRPC: true, wantSha: true,
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			set := OptimumTraceEventSet(tc.mesh, tc.rpc, tc.shard)
-			require.Len(t, set, tc.wantLen)
-			for _, ev := range tc.wantContains {
-				_, ok := set[ev]
-				require.Truef(t, ok, "expected set to contain %s", ev)
-			}
-			for _, ev := range tc.wantExcludes {
-				_, ok := set[ev]
-				require.Falsef(t, ok, "expected set to NOT contain %s", ev)
-			}
+			require.Equal(t, tc.wantMesh, tc.cats.Enabled(mesh))
+			require.Equal(t, tc.wantRPC, tc.cats.Enabled(rpc))
+			require.Equal(t, tc.wantSha, tc.cats.Enabled(shard))
+			require.Equal(t, tc.wantMesh || tc.wantRPC || tc.wantSha, tc.cats.Any())
 		})
+	}
+}
+
+func TestTraceCategoriesIgnoresUnclassifiableEvents(t *testing.T) {
+	all := NewTraceCategories(true, true, true)
+
+	require.False(t, all.Enabled(nil))
+	require.False(t, all.Enabled(&tracepb.TraceEvent{}))
+}
+
+func TestTraceCategoriesCoversEveryEventKind(t *testing.T) {
+	all := NewTraceCategories(true, true, true)
+
+	// Any oneof variant the protocol emits must land in exactly one category;
+	// an unmapped variant would silently stop being fanned out.
+	events := []*tracepb.TraceEvent{
+		{Event: &tracepb.TraceEvent_PublishMessage{PublishMessage: &tracepb.PublishMessage{}}},
+		{Event: &tracepb.TraceEvent_RejectMessage{RejectMessage: &tracepb.RejectMessage{}}},
+		{Event: &tracepb.TraceEvent_DuplicateMessage{DuplicateMessage: &tracepb.DuplicateMessage{}}},
+		{Event: &tracepb.TraceEvent_DeliverMessage{DeliverMessage: &tracepb.DeliverMessage{}}},
+		{Event: &tracepb.TraceEvent_AddPeer{AddPeer: &tracepb.AddPeer{}}},
+		{Event: &tracepb.TraceEvent_RemovePeer{RemovePeer: &tracepb.RemovePeer{}}},
+		{Event: &tracepb.TraceEvent_RecvRpc{RecvRpc: &tracepb.RecvRPC{}}},
+		{Event: &tracepb.TraceEvent_SendRpc{SendRpc: &tracepb.SendRPC{}}},
+		{Event: &tracepb.TraceEvent_DropRpc{DropRpc: &tracepb.DropRPC{}}},
+		{Event: &tracepb.TraceEvent_Join{Join: &tracepb.Join{}}},
+		{Event: &tracepb.TraceEvent_Leave{Leave: &tracepb.Leave{}}},
+		{Event: &tracepb.TraceEvent_Graft{Graft: &tracepb.Graft{}}},
+		{Event: &tracepb.TraceEvent_Prune{Prune: &tracepb.Prune{}}},
+		{Event: &tracepb.TraceEvent_HelpfulSymbol{HelpfulSymbol: &tracepb.SymbolContainer{}}},
+		{Event: &tracepb.TraceEvent_RedundantSymbol{RedundantSymbol: &tracepb.SymbolContainer{}}},
+		{Event: &tracepb.TraceEvent_InconsistentSymbol{InconsistentSymbol: &tracepb.SymbolContainer{}}},
+		{Event: &tracepb.TraceEvent_UnnecessarySymbol{UnnecessarySymbol: &tracepb.SymbolContainer{}}},
+		{Event: &tracepb.TraceEvent_EncodeError{EncodeError: &tracepb.EncodeError{}}},
+		{Event: &tracepb.TraceEvent_Recode{Recode: &tracepb.Recode{}}},
+		{Event: &tracepb.TraceEvent_ChunkDecoded{ChunkDecoded: &tracepb.ChunkDecoded{}}},
+	}
+	for _, evt := range events {
+		require.Truef(t, all.Enabled(evt), "event %T is not mapped to any category", evt.GetEvent())
 	}
 }

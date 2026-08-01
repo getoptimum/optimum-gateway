@@ -45,6 +45,11 @@ func (tk *Service) persist() {
 		case <-tk.ctx.Done():
 			return
 		case <-tk.topicsChan:
+			// select picks at random among ready cases, so re-check: a canceled
+			// keeper must not write the dump again after shutdown.
+			if tk.ctx.Err() != nil {
+				return
+			}
 			tk.DumpData()
 		}
 	}

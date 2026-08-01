@@ -1,13 +1,13 @@
 package telemetry
 
 import (
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/getoptimum/optimum-common/pkg/syncx"
 	commonmetrics "github.com/getoptimum/optimum-common/pkg/telemetry"
-	pubsub "github.com/getoptimum/optimum-p2p/optimum-pubsub"
 )
 
 var (
@@ -50,7 +50,7 @@ func initMumP2PMetrics() {
 	unhelpfulShardCount = commonmetrics.NewCounterVec("shards_unhelpful_total", "mump2p", "Unhelpful shards", nil)
 }
 
-// MumP2PCollector implements pubsub.RawTracer for Optimum's mump2p pubsub.
+// MumP2PCollector implements pubsub.RawTracer for the mump2p pubsub.
 type MumP2PCollector struct {
 	peers *syncx.RWMap[peer.ID, protocol.ID]
 }
@@ -121,11 +121,15 @@ func (g *MumP2PCollector) DuplicateMessage(msg *pubsub.Message) {
 	mpReceivedMessagesCount.WithLabelValues(*msg.Topic).Inc()
 }
 
-func (g *MumP2PCollector) ThrottlePeer(peer.ID)                 {}
-func (g *MumP2PCollector) RecvRPC(*pubsub.RPC)                  {}
-func (g *MumP2PCollector) SendRPC(*pubsub.RPC, peer.ID)         {}
-func (g *MumP2PCollector) DropRPC(*pubsub.RPC, peer.ID)         {}
-func (g *MumP2PCollector) UndeliverableMessage(*pubsub.Message) {}
+func (g *MumP2PCollector) ThrottlePeer(peer.ID)                     {}
+func (g *MumP2PCollector) OnNewOutboundStream(peer.ID, protocol.ID) {}
+func (g *MumP2PCollector) OnClosedOutboundStream(peer.ID)           {}
+func (g *MumP2PCollector) RecvRPC(*pubsub.RPC)                      {}
+func (g *MumP2PCollector) SendRPC(*pubsub.RPC, peer.ID)             {}
+func (g *MumP2PCollector) DropRPC(*pubsub.RPC, peer.ID)             {}
+func (g *MumP2PCollector) UndeliverableMessage(*pubsub.Message)     {}
+
+var _ pubsub.RawTracer = (*MumP2PCollector)(nil)
 
 // Shard helpers
 func AddTotalShardCount() {

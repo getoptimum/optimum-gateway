@@ -351,6 +351,7 @@ func spawnGateway(
 		cfg,
 		srvMessageRouter,
 		srvAuth,
+		gateway.WithMumP2PNodeOptions(test_utils.TestNodeOptions()...),
 	)
 	require.NoError(t, err)
 	telemetry.InitMetrics(ctx, l, cfg)

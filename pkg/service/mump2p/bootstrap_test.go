@@ -1,4 +1,4 @@
-package mum_p2p_test
+package mump2p_test
 
 import (
 	"fmt"

@@ -1,65 +1,65 @@
 package entities
 
 import (
-	commonmaps "github.com/getoptimum/optimum-common/pkg/maps"
-	pboptimum "github.com/getoptimum/optimum-p2p/optimum-pubsub/pb"
+	tracepb "github.com/getoptimum/mump2p-protocol/pkg/pb"
 )
 
-var (
-	// TraceEventsMeshTopology are mesh-topology events from mump2p: peer and topic
-	// membership plus mesh grafting. Moderate frequency. Opt-in via Config.TraceMesh.
-	TraceEventsMeshTopology = map[pboptimum.TraceEvent_Type]struct{}{
-		pboptimum.TraceEvent_ADD_PEER:    {},
-		pboptimum.TraceEvent_REMOVE_PEER: {},
-		pboptimum.TraceEvent_JOIN:        {},
-		pboptimum.TraceEvent_LEAVE:       {},
-		pboptimum.TraceEvent_GRAFT:       {},
-		pboptimum.TraceEvent_PRUNE:       {},
-	}
+// TraceCategories selects which mump2p trace events are fanned out to
+// RegisterListener consumers. Shard metrics always run regardless of these; the
+// categories only gate the raw fan-out. All default false (no fan-out at all).
+type TraceCategories struct {
+	// Mesh covers peer and topic membership plus mesh grafting. Moderate frequency.
+	Mesh bool
+	// RPC covers RPC traffic (recv/send/drop). HIGH FREQUENCY firehose.
+	RPC bool
+	// Shard covers the message lifecycle plus the RLNC symbol coding/decoding events.
+	Shard bool
+}
 
-	// TraceEventsRPC are the RPC traffic events from optimum p2p. These are the FIREHOSE
-	// (RECV_RPC/SEND_RPC fire on every RPC), kept as their own category so topology can be
-	// observed without the RPC volume. Opt-in via Config.TraceRPC.
-	TraceEventsRPC = map[pboptimum.TraceEvent_Type]struct{}{
-		pboptimum.TraceEvent_RECV_RPC: {},
-		pboptimum.TraceEvent_SEND_RPC: {},
-		pboptimum.TraceEvent_DROP_RPC: {},
-	}
+// NewTraceCategories builds the category selection from the three config flags.
+func NewTraceCategories(mesh, rpc, shard bool) TraceCategories {
+	return TraceCategories{Mesh: mesh, RPC: rpc, Shard: shard}
+}
 
-	// TraceEventsShard are shard/RLNC-behavior events from optimum p2p. Message-dependent:
-	// the message lifecycle (publish/deliver/reject/duplicate) plus the RLNC shard
-	// coding/decoding efficiency events. Opt-in via Config.TraceShard.
-	TraceEventsShard = map[pboptimum.TraceEvent_Type]struct{}{
-		pboptimum.TraceEvent_PUBLISH_MESSAGE:   {},
-		pboptimum.TraceEvent_DELIVER_MESSAGE:   {},
-		pboptimum.TraceEvent_REJECT_MESSAGE:    {},
-		pboptimum.TraceEvent_DUPLICATE_MESSAGE: {},
-		pboptimum.TraceEvent_NEW_SHARD:         {},
-		pboptimum.TraceEvent_DUPLICATE_SHARD:   {},
-		pboptimum.TraceEvent_UNHELPFUL_SHARD:   {},
-		pboptimum.TraceEvent_UNNECESSARY_SHARD: {},
-	}
-)
+// Any reports whether at least one category is enabled.
+func (c TraceCategories) Any() bool {
+	return c.Mesh || c.RPC || c.Shard
+}
 
-// OptimumTraceEventSet returns the set of optimum p2p trace events to broadcast to
-// listeners given the enabled categories. Shard metrics always run regardless of this
-// set; it only controls which raw events are fanned out over the broadcaster. With all
-// categories disabled the set is empty and no raw trace events are broadcast.
-func OptimumTraceEventSet(mesh, rpc, shard bool) map[pboptimum.TraceEvent_Type]struct{} {
-	set := make(map[pboptimum.TraceEvent_Type]struct{})
-	add := func(events map[pboptimum.TraceEvent_Type]struct{}) {
-		for _, t := range commonmaps.MapKeys(events) {
-			set[t] = struct{}{}
-		}
+// Enabled reports whether evt belongs to an enabled category. Events whose
+// category cannot be determined (nil event, unset oneof) are never fanned out.
+func (c TraceCategories) Enabled(evt *tracepb.TraceEvent) bool {
+	if evt == nil {
+		return false
 	}
-	if mesh {
-		add(TraceEventsMeshTopology)
+	switch evt.GetEvent().(type) {
+	case *tracepb.TraceEvent_AddPeer,
+		*tracepb.TraceEvent_RemovePeer,
+		*tracepb.TraceEvent_Join,
+		*tracepb.TraceEvent_Leave,
+		*tracepb.TraceEvent_Graft,
+		*tracepb.TraceEvent_Prune:
+		return c.Mesh
+
+	case *tracepb.TraceEvent_RecvRpc,
+		*tracepb.TraceEvent_SendRpc,
+		*tracepb.TraceEvent_DropRpc:
+		return c.RPC
+
+	case *tracepb.TraceEvent_PublishMessage,
+		*tracepb.TraceEvent_DeliverMessage,
+		*tracepb.TraceEvent_RejectMessage,
+		*tracepb.TraceEvent_DuplicateMessage,
+		*tracepb.TraceEvent_HelpfulSymbol,
+		*tracepb.TraceEvent_RedundantSymbol,
+		*tracepb.TraceEvent_InconsistentSymbol,
+		*tracepb.TraceEvent_UnnecessarySymbol,
+		*tracepb.TraceEvent_EncodeError,
+		*tracepb.TraceEvent_Recode,
+		*tracepb.TraceEvent_ChunkDecoded:
+		return c.Shard
+
+	default:
+		return false
 	}
-	if rpc {
-		add(TraceEventsRPC)
-	}
-	if shard {
-		add(TraceEventsShard)
-	}
-	return set
 }

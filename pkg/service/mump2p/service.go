@@ -1,13 +1,15 @@
-package mum_p2p
+package mump2p
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
 	"github.com/libp2p/go-libp2p"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
@@ -15,7 +17,9 @@ import (
 	"github.com/libp2p/go-libp2p/p2p/transport/quicreuse"
 	"github.com/multiformats/go-multiaddr"
 
-	commonhash "github.com/getoptimum/optimum-common/pkg/hash"
+	mp2pconfig "github.com/getoptimum/mump2p-protocol/pkg/config"
+	rlncps "github.com/getoptimum/mump2p-protocol/pkg/pubsub"
+	rlncrouter "github.com/getoptimum/mump2p-protocol/pkg/router"
 	"github.com/getoptimum/optimum-common/pkg/identity"
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	commonnet "github.com/getoptimum/optimum-common/pkg/net"
@@ -23,10 +27,9 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
 	discovery "github.com/getoptimum/optimum-gateway/pkg/service/mump2p/dhtdiscovery"
 	"github.com/getoptimum/optimum-gateway/pkg/service/mump2p/topics_keeper"
+	"github.com/getoptimum/optimum-gateway/pkg/service/mump2p/tracer"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
 	"github.com/getoptimum/optimum-gateway/pkg/utils"
-	pubsub "github.com/getoptimum/optimum-p2p/optimum-pubsub"
-	pboptimum "github.com/getoptimum/optimum-p2p/optimum-pubsub/pb"
 )
 
 type Node struct {
@@ -34,15 +37,17 @@ type Node struct {
 	log  logger.AppLogger
 	cfg  *Config
 	host host.Host      // The libp2p host managing network connections and identity
-	ps   *pubsub.PubSub // The Optimum pub-sub instance
+	ps   *pubsub.PubSub // The mump2p RLNC pub-sub instance
+
+	router *rlncrouter.RLNCRouter // owns the RLNC decode state; closed on Stop
+	dgram  *rlncps.Datagram       // nil unless the datagram data plane is enabled
 
 	bootstrapNodes []peer.AddrInfo                            // Optional bootstrap peers for initial connectivity
 	topics         *syncx.RWMap[string, *pubsub.Topic]        // Active topics
 	subscriptions  *syncx.RWMap[string, *pubsub.Subscription] // Active topic subscriptions
 	broadcaster    *syncx.Broadcaster[*entities.MumP2PResponse]
 
-	peersMap         *syncx.TTLMap[peer.ID, entities.PeerState]
-	peersApprovedMap *syncx.RWMap[peer.ID, struct{}] // list of peers which can be used for message publish
+	peersMap *syncx.TTLMap[peer.ID, entities.PeerState]
 
 	tk *topics_keeper.Service // Topics keeper for persisting subscribed topics. Using on node startup.
 
@@ -53,7 +58,7 @@ type Node struct {
 }
 
 // NewNode creates a new P2P node instance using the provided config.
-// It sets up the libp2p host with a listen address and initializes Optimum pub-sub.
+// It sets up the libp2p host with a listen address and initializes mump2p pub-sub.
 func NewNode(
 	ctx context.Context,
 	log logger.AppLogger,
@@ -119,7 +124,7 @@ func NewNode(
 }
 
 // NewNodeWithHost creates a new node instance using a custom libp2p host.
-// It initializes the Optimum pub-sub instance and sets up the node with the provided configuration.
+// It initializes the mump2p pub-sub instance and sets up the node with the provided configuration.
 func NewNodeWithHost(
 	ctx context.Context,
 	log logger.AppLogger,
@@ -127,11 +132,13 @@ func NewNodeWithHost(
 	h host.Host,
 	identityDir string,
 	opts ...NodeOption,
-) (ret *Node, err error) {
-	if err = cfg.Validate(); err != nil {
+) (*Node, error) {
+	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("failed to validate config: %w", err)
 	}
-	ret = &Node{
+	resolved := resolveOptions(cfg, opts)
+
+	ret := &Node{
 		ctx:              ctx,
 		host:             h,
 		log:              log,
@@ -140,9 +147,85 @@ func NewNodeWithHost(
 		subscriptions:    syncx.NewRWMap[string, *pubsub.Subscription](),
 		broadcaster:      syncx.NewBroadcaster[*entities.MumP2PResponse](),
 		peersMap:         syncx.NewTTLMap[peer.ID, entities.PeerState](15*time.Second, 15*time.Second),
-		peersApprovedMap: syncx.NewRWMap[peer.ID, struct{}](), // list of peers which can be used for message publish
 		tk:               topics_keeper.NewService(ctx, log.With(logger.WithService("topic_keeper")), identityDir),
+		handshakeBuilder: resolved.handshakeBuilder,
+		handshakeHandler: resolved.handshakeHandler,
+	}
 
+	log.Info("initializing mump2p gossipsub")
+	if _, err := utils.CalculateMaxSize(cfg.MaxMessageSize); err != nil {
+		return nil, fmt.Errorf("failed to calculate max message size: %w", err)
+	}
+
+	nodeCfg, cfgErr := toNodeConfig(cfg)
+	if cfgErr != nil {
+		log.Error("failed to apply dynamic mump2p config", cfgErr)
+	}
+	slogger := nodeLogger(cfg.ClusterID)
+
+	coder := resolved.coder
+	if coder == nil {
+		var err error
+		if coder, err = newSHMCoder(nodeCfg, slogger); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := ret.startPubSub(ctx, nodeCfg, slogger, h, coder); err != nil {
+		return nil, err
+	}
+
+	ret.RegisterHandshakeMessageSender(cfg.ClusterID)
+	ret.RegisterHandshakeHandler(cfg.ClusterID)
+	go ret.DumpState(cfg.ClusterID)
+	if len(cfg.BootstrapPeers) > 0 {
+		var err error
+		if ret.bootstrapNodes, err = utils.PeersFromStrings(cfg.BootstrapPeers); err != nil {
+			return nil, fmt.Errorf("failed to parse bootstrap peers: %w", err)
+		}
+	}
+
+	for _, topic := range ret.tk.GetAllTopics() {
+		if err := ret.SubscribeTopic(topic); err != nil {
+			log.Error("failed to subscribe to topic from topics keeper", err, logger.WithTopic(topic))
+			continue
+		}
+		log.Info("subscribed to topic from topics keeper", logger.WithTopic(topic))
+	}
+	return ret, nil
+}
+
+// startPubSub builds the RLNC pubsub and retains the router and datagram handles
+// the node has to close on Stop.
+func (n *Node) startPubSub(
+	ctx context.Context,
+	nodeCfg *mp2pconfig.Config,
+	slogger *slog.Logger,
+	h host.Host,
+	coder Coder,
+) error {
+	cats := entities.NewTraceCategories(n.cfg.TraceMesh, n.cfg.TraceRPC, n.cfg.TraceShard)
+
+	psOpts := []rlncps.RLNCOption{
+		rlncps.WithRLNCTracer(tracer.NewTracerMumP2P(n.broadcaster, cats)),
+		rlncps.WithRawTracer(tracer.NewRawTracerMumP2P(n.broadcaster, cats)),
+	}
+	if telemetry.MetricsEnabled() {
+		psOpts = append(psOpts, rlncps.WithRawTracer(telemetry.NewMumP2PCollector()))
+	}
+
+	ps, router, dgram, err := rlncps.NewRLNCPubSub(ctx, nodeCfg, slogger, h, coder, psOpts...)
+	if err != nil {
+		return fmt.Errorf("failed to create mump2p: %w", err)
+	}
+	n.ps, n.router, n.dgram = ps, router, dgram
+	return nil
+}
+
+// resolveOptions applies the caller's options over the defaults, which carry the
+// gateway's own cluster handshake.
+func resolveOptions(cfg *Config, opts []NodeOption) nodeOptions {
+	resolved := nodeOptions{
 		handshakeBuilder: func() any {
 			return entities.NewHandshake(cfg.ClusterID)
 		},
@@ -157,61 +240,16 @@ func NewNodeWithHost(
 			return nil
 		},
 	}
-	log.Info("initializing optimum gossipsub")
-	maxMessageSize, err := utils.CalculateMaxSize(cfg.MaxMessageSize)
-	if err != nil {
-		return nil, fmt.Errorf("failed to calculate max message size: %w", err)
-	}
-	options := []pubsub.Option{
-		// todo this for some reason not publish message to all mesh peers pubsub.WithMessageSignaturePolicy(pubsub.StrictNoSign),
-		// todo this triggers panics connection manager because of missing peer.ID pubsub.WithNoAuthor(),
-		pubsub.WithMaxMessageSize(maxMessageSize),
-		pubsub.WithOptimumSubParams(toOptimumConfig(cfg)),
-		pubsub.WithConfigRotator(cfg.Rotator),
-		// Default-deny mesh admission (#923): a peer joins the mesh only after its
-		// handshake verifies (AllowPeer in handshake.go), not merely on connect.
-		pubsub.WithPeerAdmissionControl(),
-		pubsub.WithPeerMsgFilter(func(pid peer.ID, _ string) bool {
-			_, ok := ret.peersApprovedMap.Load(pid)
-			return ok
-		}),
-	}
-	// NN: set custom message ID function for optimump2p to use SHA256 hash of the message data
-	options = append(options, pubsub.WithMessageIdFn(func(msg *pboptimum.Message) string {
-		if msg == nil {
-			return ""
-		}
-		return commonhash.SHA256(msg.Data)
-	}))
-
-	// Create pubsub before registering handshake handlers so ps is set when the first
-	// handshake calls AllowPeer (#923); otherwise the peer is deferred for its lifetime.
-	ret.ps, err = pubsub.NewOptimumP2P(ctx, h, options...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create mump2p: %w", err)
-	}
-
-	ret.RegisterHandshakeMessageSender(cfg.ClusterID)
-	ret.RegisterHandshakeHandler(cfg.ClusterID)
-	go ret.DumpState(cfg.ClusterID)
-	if len(cfg.BootstrapPeers) > 0 {
-		ret.bootstrapNodes, err = utils.PeersFromStrings(cfg.BootstrapPeers)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse bootstrap peers: %w", err)
-		}
-	}
-
-	for _, topic := range ret.tk.GetAllTopics() {
-		if err = ret.SubscribeTopic(topic); err != nil {
-			log.Error("failed to subscribe to topic from topics keeper", err, logger.WithTopic(topic))
-			continue
-		}
-		log.Info("subscribed to topic from topics keeper", logger.WithTopic(topic))
-	}
 	for _, opt := range opts {
-		opt(ret)
+		opt(&resolved)
 	}
-	return ret, nil
+	return resolved
+}
+
+// nodeLogger returns the slog logger mump2p logs through. AppLogger does not
+// expose its handler, so the node borrows the process default.
+func nodeLogger(clusterID string) *slog.Logger {
+	return slog.Default().With(slog.String("service", "mump2p"), slog.String("cluster_id", clusterID))
 }
 
 // Start begins the bootstrap process for the node.
@@ -226,9 +264,18 @@ func (n *Node) Start() error {
 	return nil
 }
 
-// Stop stops the topics keeper (waiting for any pending flush) and closes the host.
+// Stop tears the node down: the topics keeper first (waiting for any pending
+// flush), then the RLNC router and datagram transport, then the host.
 func (n *Node) Stop() {
 	n.tk.Stop()
+	if n.router != nil {
+		if err := n.router.Close(); err != nil {
+			n.log.Error("failed to close rlnc router", err)
+		}
+	}
+	if err := n.dgram.Close(); err != nil {
+		n.log.Error("failed to close datagram transport", err)
+	}
 	if err := n.host.Close(); err != nil {
 		n.log.Error("failed to close host", err)
 	}
@@ -238,14 +285,14 @@ func (n *Node) CountConnectedPeers() (totalPeers int, perTopicPeers map[string]i
 	topics := n.ps.GetTopics()
 	perTopicPeers = make(map[string]int, len(topics))
 	for _, t := range topics {
-		perTopicPeers[t] = len(n.ps.GetMeshPeers(t))
+		perTopicPeers[t] = len(n.ps.ListPeers(t))
 	}
 	return len(n.host.Network().Peers()), perTopicPeers
 }
 
-// GetMeshPeers returns the list of peer in the state variable mesh[topic] at the node.
+// GetMeshPeers returns the peers the node exchanges mump2p data with on a topic.
 func (n *Node) GetMeshPeers(topic string) []peer.ID {
-	return n.ps.GetMeshPeers(topic)
+	return n.ps.ListPeers(topic)
 }
 
 // GetTopics returns list of topics the node is subscribed to.
@@ -277,11 +324,7 @@ func (n *Node) getPeerState(peerID peer.ID) (entities.PeerState, bool) {
 
 func (n *Node) setPeerState(peerID peer.ID, state entities.PeerState) {
 	n.peersMap.Put(peerID, state)
-	switch state {
-	case entities.PeerStateHandshakeValid:
-		n.peersApprovedMap.Store(peerID, struct{}{})
-	case entities.PeerStateHandshakeInvalid:
+	if state == entities.PeerStateHandshakeInvalid {
 		n.peersMap.Delete(peerID)
-		n.peersApprovedMap.Delete(peerID)
 	}
 }

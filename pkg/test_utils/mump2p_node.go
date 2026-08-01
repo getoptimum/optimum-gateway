@@ -14,7 +14,7 @@ import (
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	"github.com/getoptimum/optimum-common/pkg/test_utils"
 	cfgpkg "github.com/getoptimum/optimum-gateway/pkg/config"
-	"github.com/getoptimum/optimum-gateway/pkg/service/mum_p2p"
+	"github.com/getoptimum/optimum-gateway/pkg/service/mump2p"
 )
 
 func NewTestNode(
@@ -23,8 +23,8 @@ func NewTestNode(
 	log logger.AppLogger,
 	clusterID string,
 	identityDir string,
-	opts ...mum_p2p.NodeOption,
-) mum_p2p.Engine {
+	opts ...mump2p.NodeOption,
+) mump2p.Engine {
 	t.Helper()
 
 	cfg := NewTestConfig(ctx, log, clusterID, test_utils.GetFreePortT(t), nil)
@@ -36,9 +36,9 @@ func NewTestNodeWithCfg(
 	t *testing.T,
 	log logger.AppLogger,
 	identityDir string,
-	cfg *mum_p2p.Config,
-	opts ...mum_p2p.NodeOption,
-) mum_p2p.Engine {
+	cfg *mump2p.Config,
+	opts ...mump2p.NodeOption,
+) mump2p.Engine {
 	t.Helper()
 
 	h, err := libp2p.New(
@@ -46,13 +46,13 @@ func NewTestNodeWithCfg(
 	)
 	require.NoError(t, err)
 
-	node, err := mum_p2p.NewNodeWithHost(
+	node, err := mump2p.NewNodeWithHost(
 		ctx,
-		log.With(logger.WithService("mum_p2p_test")),
+		log.With(logger.WithService("mump2p_test")),
 		cfg,
 		h,
 		identityDir,
-		opts...,
+		append(TestNodeOptions(), opts...)...,
 	)
 	require.NoError(t, err)
 
@@ -60,8 +60,21 @@ func NewTestNodeWithCfg(
 	return node
 }
 
-func NewTestConfig(ctx context.Context, log logger.AppLogger, clusterID string, listenPort int, boostrapPeers []string) *mum_p2p.Config {
-	cfg := &mum_p2p.Config{
+// TestNodeOptions are the node options every test node needs, ahead of any the
+// caller adds. The coder sidecar is not running under `go test`, so the node gets
+// an in-process one; see PassthroughCoder for why it cannot be the real coder.
+func TestNodeOptions() []mump2p.NodeOption {
+	return []mump2p.NodeOption{mump2p.WithCoder(NewPassthroughCoder())}
+}
+
+func NewTestConfig(
+	ctx context.Context,
+	log logger.AppLogger,
+	clusterID string,
+	listenPort int,
+	boostrapPeers []string,
+) *mump2p.Config {
+	cfg := &mump2p.Config{
 		ClusterID:                clusterID,
 		ListenPort:               listenPort,
 		MaxMessageSize:           cfgpkg.DefaultMaxMessageSize,
@@ -96,7 +109,7 @@ func NewTestConfig(ctx context.Context, log logger.AppLogger, clusterID string, 
 	return cfg
 }
 
-func ConnectNodes(ctx context.Context, t *testing.T, left, right mum_p2p.Engine) {
+func ConnectNodes(ctx context.Context, t *testing.T, left, right mump2p.Engine) {
 	t.Helper()
 
 	require.NoError(t, left.GetHost().Connect(ctx, right.GetHostInfo()))
