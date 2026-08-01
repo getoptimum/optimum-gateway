@@ -2,9 +2,22 @@ package mump2p
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/libp2p/go-libp2p/core/peer"
 )
+
+// HandshakeResult is what a verified handshake reports beyond success.
+type HandshakeResult struct {
+	// TokenExpiry is when the credential that authorized this peer expires, or
+	// the zero time when the handler verified no credential. A datagram session
+	// for this peer is never allowed to outlive it.
+	TokenExpiry time.Time
+}
+
+// HandshakeHandler parses and validates a peer's handshake message. A nil error
+// admits the peer.
+type HandshakeHandler func(peerID peer.ID, decoder *json.Decoder) (HandshakeResult, error)
 
 // NodeOption configures a Node (e.g. WithCustomHandshakeBuilder).
 type NodeOption func(*nodeOptions)
@@ -13,7 +26,7 @@ type NodeOption func(*nodeOptions)
 // the node is built because the coder has to exist before the pubsub does.
 type nodeOptions struct {
 	handshakeBuilder func() any
-	handshakeHandler func(peerID peer.ID, decoder *json.Decoder) error
+	handshakeHandler HandshakeHandler
 	coder            Coder
 }
 
@@ -25,7 +38,7 @@ func WithCustomHandshakeBuilder(handshakeBuilder func() any) NodeOption {
 	}
 }
 
-func WithCustomHandshakeHandler(handshakeHandler func(peerID peer.ID, decoder *json.Decoder) error) NodeOption {
+func WithCustomHandshakeHandler(handshakeHandler HandshakeHandler) NodeOption {
 	return func(o *nodeOptions) {
 		if handshakeHandler != nil {
 			o.handshakeHandler = handshakeHandler

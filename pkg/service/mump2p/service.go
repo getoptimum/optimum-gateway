@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/netip"
 	"sync"
 	"time"
 
@@ -28,6 +29,7 @@ import (
 	discovery "github.com/getoptimum/optimum-gateway/pkg/service/mump2p/dhtdiscovery"
 	"github.com/getoptimum/optimum-gateway/pkg/service/mump2p/topics_keeper"
 	"github.com/getoptimum/optimum-gateway/pkg/service/mump2p/tracer"
+	"github.com/getoptimum/optimum-gateway/pkg/service/mump2p/udpsession"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
 	"github.com/getoptimum/optimum-gateway/pkg/utils"
 )
@@ -41,6 +43,7 @@ type Node struct {
 
 	router *rlncrouter.RLNCRouter // owns the RLNC decode state; closed on Stop
 	dgram  *rlncps.Datagram       // nil unless the datagram data plane is enabled
+	udp    *udpsession.Manager    // nil unless the datagram data plane is enabled
 
 	bootstrapNodes []peer.AddrInfo                            // Optional bootstrap peers for initial connectivity
 	topics         *syncx.RWMap[string, *pubsub.Topic]        // Active topics
@@ -52,13 +55,15 @@ type Node struct {
 	// peersApprovedMap is the mesh allow set: default-deny admission consults it
 	// on every staging, send-target and receive decision. It is connection
 	// scoped, cleared on disconnect, and deliberately not TTL bounded like
-	// peersMap: an expiring entry would silently partition a live peer.
-	peersApprovedMap *syncx.RWMap[peer.ID, struct{}]
+	// peersMap: an expiring entry would silently partition a live peer. The
+	// value is the expiry of the credential that admitted the peer, which is
+	// what caps its datagram session; the zero time means no credential.
+	peersApprovedMap *syncx.RWMap[peer.ID, time.Time]
 
 	tk *topics_keeper.Service // Topics keeper for persisting subscribed topics. Using on node startup.
 
-	handshakeBuilder func() any                                        // function that create handshake message
-	handshakeHandler func(peerID peer.ID, decoder *json.Decoder) error // function that parse and validate handshake message
+	handshakeBuilder func() any       // function that create handshake message
+	handshakeHandler HandshakeHandler // function that parse and validate handshake message
 
 	oncer sync.Once
 }
@@ -153,7 +158,7 @@ func NewNodeWithHost(
 		subscriptions:    syncx.NewRWMap[string, *pubsub.Subscription](),
 		broadcaster:      syncx.NewBroadcaster[*entities.MumP2PResponse](),
 		peersMap:         syncx.NewTTLMap[peer.ID, entities.PeerState](15*time.Second, 15*time.Second),
-		peersApprovedMap: syncx.NewRWMap[peer.ID, struct{}](),
+		peersApprovedMap: syncx.NewRWMap[peer.ID, time.Time](),
 		tk:               topics_keeper.NewService(ctx, log.With(logger.WithService("topic_keeper")), identityDir),
 		handshakeBuilder: resolved.handshakeBuilder,
 		handshakeHandler: resolved.handshakeHandler,
@@ -179,6 +184,12 @@ func NewNodeWithHost(
 	}
 
 	if err := ret.startPubSub(ctx, nodeCfg, slogger, h, coder); err != nil {
+		return nil, err
+	}
+
+	// Before the handshake handlers, so the session protocol is answerable the
+	// moment the first handshake verifies and asks for a session.
+	if err := ret.startDatagramSessions(slogger); err != nil {
 		return nil, err
 	}
 
@@ -232,6 +243,38 @@ func (n *Node) startPubSub(
 	return nil
 }
 
+// startDatagramSessions brings up the UDP session protocol. It is a no-op when
+// the datagram data plane is disabled: the transport handle is nil, so no
+// manager is built and no stream handler is registered.
+func (n *Node) startDatagramSessions(slogger *slog.Logger) error {
+	mgr, err := udpsession.New(&udpsession.Config{
+		Host:       n.host,
+		Transport:  n.dgram.Transport(),
+		Authorize:  n.PeerAuthorization,
+		Candidates: n.datagramCandidates,
+		Logger:     slogger.With(slog.String("module", "udp_session")),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create datagram session manager: %w", err)
+	}
+	n.udp = mgr
+	n.udp.Start()
+	return nil
+}
+
+// datagramCandidates reports the UDP endpoints a peer should probe to reach this
+// node's datagram socket.
+func (n *Node) datagramCandidates() []netip.AddrPort {
+	return udpsession.LocalCandidates(n.dgram.LocalAddr(), n.host.Addrs())
+}
+
+// DatagramSessionExpiry reports when peerID's datagram session is due to be
+// destroyed, and false when the peer holds none. It is false for every peer
+// while the datagram data plane is disabled.
+func (n *Node) DatagramSessionExpiry(peerID peer.ID) (time.Time, bool) {
+	return n.udp.ExpiresAt(peerID)
+}
+
 // resolveOptions applies the caller's options over the defaults, which carry the
 // gateway's own cluster handshake.
 func resolveOptions(cfg *Config, opts []NodeOption) nodeOptions {
@@ -239,15 +282,18 @@ func resolveOptions(cfg *Config, opts []NodeOption) nodeOptions {
 		handshakeBuilder: func() any {
 			return entities.NewHandshake(cfg.ClusterID)
 		},
-		handshakeHandler: func(_ peer.ID, decoder *json.Decoder) error {
+		// The default handshake carries no credential, so it reports no expiry and
+		// a datagram session for such a peer is capped only by the default lifetime.
+		handshakeHandler: func(_ peer.ID, decoder *json.Decoder) (HandshakeResult, error) {
 			var handshake entities.Handshake
 			if errD := decoder.Decode(&handshake); errD != nil {
-				return errD
+				return HandshakeResult{}, errD
 			}
 			if errV := handshake.Validate(cfg.ClusterID); errV != nil {
-				return fmt.Errorf("validating handshake response, remote cluster `%s`: %w", handshake.ClusterID, errV)
+				return HandshakeResult{}, fmt.Errorf(
+					"validating handshake response, remote cluster `%s`: %w", handshake.ClusterID, errV)
 			}
-			return nil
+			return HandshakeResult{}, nil
 		},
 	}
 	for _, opt := range opts {
@@ -278,6 +324,9 @@ func (n *Node) Start() error {
 // flush), then the RLNC router and datagram transport, then the host.
 func (n *Node) Stop() {
 	n.tk.Stop()
+	// Sessions go before the transport that owns their keys, so nothing is
+	// established into a socket that is about to close.
+	n.udp.Close()
 	if n.router != nil {
 		if err := n.router.Close(); err != nil {
 			n.log.Error("failed to close rlnc router", err)

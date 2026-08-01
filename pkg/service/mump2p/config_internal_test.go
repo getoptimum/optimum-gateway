@@ -120,3 +120,36 @@ func TestSharedMemoryOverrides(t *testing.T) {
 	require.Equal(t, "gateway-coder", overridden.SHMName)
 	require.Equal(t, 4, overridden.SHMLanes)
 }
+
+// TestDatagramFlagDefaultsOff pins the feature flag: the datagram data plane
+// binds a UDP socket and moves mesh traffic onto per-peer keys, so a config that
+// says nothing about it must leave it off.
+func TestDatagramFlagDefaultsOff(t *testing.T) {
+	cfg := &Config{ClusterID: "test-cluster", ListenPort: 4321, Rotator: newRotator(t, &commonentities.OptimumConfig{})}
+
+	got, err := toNodeConfig(cfg)
+	require.NoError(t, err)
+	require.False(t, got.Datagram.Enable)
+}
+
+func TestDatagramConfigMapping(t *testing.T) {
+	defaults := mp2pconfig.DefaultDatagramConfig()
+
+	t.Run("UnsetFieldsKeepProtocolDefaults", func(t *testing.T) {
+		got := (&Config{DatagramEnable: true}).datagram()
+		require.True(t, got.Enable)
+		require.Equal(t, defaults.ListenAddr, got.ListenAddr)
+		require.Equal(t, defaults.MaxPayload, got.MaxPayload)
+	})
+
+	t.Run("SetFieldsOverride", func(t *testing.T) {
+		got := (&Config{
+			DatagramEnable:     true,
+			DatagramListenAddr: "127.0.0.1:4444",
+			DatagramMaxPayload: 900,
+		}).datagram()
+		require.True(t, got.Enable)
+		require.Equal(t, "127.0.0.1:4444", got.ListenAddr)
+		require.Equal(t, 900, got.MaxPayload)
+	})
+}

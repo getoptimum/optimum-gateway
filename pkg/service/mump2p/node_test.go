@@ -192,16 +192,16 @@ func customHandshakeOptions(counter *atomic.Int32) []mump2p.NodeOption {
 		mump2p.WithCustomHandshakeBuilder(func() any {
 			return customHandshake{Kind: "custom"}
 		}),
-		mump2p.WithCustomHandshakeHandler(func(_ peer.ID, decoder *json.Decoder) error {
+		mump2p.WithCustomHandshakeHandler(func(_ peer.ID, decoder *json.Decoder) (mump2p.HandshakeResult, error) {
 			var handshake customHandshake
 			if err := decoder.Decode(&handshake); err != nil {
-				return err
+				return mump2p.HandshakeResult{}, err
 			}
 			if handshake.Kind != "custom" {
-				return fmt.Errorf("unexpected handshake kind %q", handshake.Kind)
+				return mump2p.HandshakeResult{}, fmt.Errorf("unexpected handshake kind %q", handshake.Kind)
 			}
 			counter.Add(1)
-			return nil
+			return mump2p.HandshakeResult{}, nil
 		}),
 	}
 }

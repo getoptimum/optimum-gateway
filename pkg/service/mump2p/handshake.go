@@ -132,12 +132,13 @@ func (n *Node) sendHandshakeForPeer(ctx context.Context, l logger.AppLogger, pID
 	}
 
 	// Wait for the response from the peer and verify handshake
-	if err = n.decodeHandshake(remotePeer, stream); err != nil {
+	result, err := n.decodeHandshake(remotePeer, stream)
+	if err != nil {
 		n.disconnectPeer(remotePeer)
 		return fmt.Errorf("verifying handshake response: %w", err)
 	}
 
-	n.markHandshakeValid(remotePeer)
+	n.markHandshakeValid(remotePeer, result)
 	return nil
 }
 
@@ -157,7 +158,8 @@ func (n *Node) RegisterHandshakeHandler(clusterID string) {
 
 		remotePeer := stream.Conn().RemotePeer()
 		// Read the handshake message from the stream
-		if err := n.decodeHandshake(remotePeer, stream); err != nil {
+		result, err := n.decodeHandshake(remotePeer, stream)
+		if err != nil {
 			l.Error("handshake verification failed", err)
 			n.disconnectPeer(remotePeer)
 			return
@@ -168,34 +170,35 @@ func (n *Node) RegisterHandshakeHandler(clusterID string) {
 			n.disconnectPeer(remotePeer)
 			return
 		}
-		n.markHandshakeValid(remotePeer)
+		n.markHandshakeValid(remotePeer, result)
 		l.Info("handshake handled successfully")
 	})
 }
 
 // decodeHandshake bounds the read at maxHandshakeBytes before the handler decodes it, so a
 // peer that has not been authenticated yet cannot grow the decoder's buffer without limit.
-func (n *Node) decodeHandshake(peerID peer.ID, r io.Reader) error {
+func (n *Node) decodeHandshake(peerID peer.ID, r io.Reader) (HandshakeResult, error) {
 	// One byte of slack: an exhausted N then means the peer went over the cap, not that it
 	// happened to send exactly maxHandshakeBytes.
 	limited := &io.LimitedReader{R: r, N: maxHandshakeBytes + 1}
-	err := n.handshakeHandler(peerID, json.NewDecoder(limited))
+	result, err := n.handshakeHandler(peerID, json.NewDecoder(limited))
 	if err != nil && limited.N <= 0 {
 		// Truncation surfaces as "unexpected EOF", which hides the real cause during triage.
-		return fmt.Errorf("handshake payload exceeds %d byte limit: %w", maxHandshakeBytes, err)
+		return HandshakeResult{}, fmt.Errorf("handshake payload exceeds %d byte limit: %w", maxHandshakeBytes, err)
 	}
-	return err
+	return result, err
 }
 
 // markHandshakeValid records a verified handshake and admits the peer to the
 // mesh (#923).
-func (n *Node) markHandshakeValid(peerID peer.ID) {
+func (n *Node) markHandshakeValid(peerID peer.ID, result HandshakeResult) {
 	n.setPeerState(peerID, entities.PeerStateHandshakeValid)
-	n.peersApprovedMap.Store(peerID, struct{}{})
+	n.peersApprovedMap.Store(peerID, result.TokenExpiry)
 	// Admission is only consulted while a peer is being staged, and this peer was
 	// skipped when it connected unauthorized. Nothing else re-queues it, so
 	// without this it stays out of the peer set for the life of the connection.
 	rlncps.RestagePeer(n.ps, peerID)
+	n.establishDatagramSession(peerID)
 }
 
 // HandshakeVerified reports whether peerID currently holds a verified handshake
@@ -205,6 +208,27 @@ func (n *Node) markHandshakeValid(peerID peer.ID) {
 func (n *Node) HandshakeVerified(peerID peer.ID) bool {
 	_, ok := n.peersApprovedMap.Load(peerID)
 	return ok
+}
+
+// PeerAuthorization reports whether peerID is admitted and when the credential
+// that admitted it expires. A zero expiry means the handshake verified no
+// credential, so there is nothing for a session to be capped against.
+func (n *Node) PeerAuthorization(peerID peer.ID) (time.Time, bool) {
+	return n.peersApprovedMap.Load(peerID)
+}
+
+// establishDatagramSession opens the peer's datagram keys off the handshake
+// goroutine: establishment dials a second stream, and on the inbound path the
+// handshake response has not been written yet.
+func (n *Node) establishDatagramSession(peerID peer.ID) {
+	if n.udp == nil {
+		return
+	}
+	go func() {
+		if err := n.udp.Establish(n.ctx, peerID); err != nil {
+			n.log.Error("failed to establish datagram session", err, logger.WithPeerID(peerID))
+		}
+	}()
 }
 
 // revokeAdmission drops a peer from the mesh allow set.
@@ -218,6 +242,9 @@ func (n *Node) revokeAdmission(peerID peer.ID) {
 	if state, ok := n.getPeerState(peerID); ok && state == entities.PeerStateHandshakeValid {
 		n.peersMap.Delete(peerID)
 	}
+	// Sessions are never resumed across a connection, so the keys go with the
+	// connection rather than waiting for a reconnect that might reuse them.
+	n.udp.Destroy(peerID)
 }
 
 func (n *Node) disconnectPeer(peerID peer.ID) {
@@ -226,6 +253,10 @@ func (n *Node) disconnectPeer(peerID peer.ID) {
 	// explicit, permanent denial only for a peer the predicate still admits, and
 	// such an entry would survive a later successful handshake.
 	n.peersApprovedMap.Delete(peerID)
+	// A peer denied mid-session loses its datagram keys here, not when the
+	// connection finishes closing: the key ids leave the receive table, so the
+	// very next datagram it sends is dropped without being decrypted.
+	n.udp.Destroy(peerID)
 	// Evict from the peer set, mesh and topic state; ClosePeer alone leaves
 	// pubsub-side state to be torn down by its own notifiee, later.
 	if n.ps != nil {

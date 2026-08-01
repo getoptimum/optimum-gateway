@@ -37,6 +37,9 @@ func buildMumP2PConfig(appCfg *config.AppConfig, bootstrapPeers []string) *mump2
 		TraceMesh:                appCfg.TraceMesh,
 		TraceRPC:                 appCfg.TraceRPC,
 		TraceShard:               appCfg.TraceShard,
+		DatagramEnable:           appCfg.DatagramEnable,
+		DatagramListenAddr:       appCfg.DatagramListenAddr,
+		DatagramMaxPayload:       appCfg.DatagramMaxPayload,
 	}
 	if rotator == nil {
 		return optCfg

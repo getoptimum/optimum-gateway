@@ -90,3 +90,19 @@ func TestBuildMumP2PConfigCarriesTheCoderSHMHandle(t *testing.T) {
 	require.Equal(t, "gateway-coder", optCfg.SHMName)
 	require.Equal(t, 4, optCfg.SHMLanes)
 }
+
+// TestBuildMumP2PConfigDatagramFlag proves the data plane is off unless the
+// operator turns it on, and that the settings reach the node when they do.
+func TestBuildMumP2PConfigDatagramFlag(t *testing.T) {
+	cfg := &config.AppConfig{GatewayClusterID: "cluster", AgentMumP2PPort: 33213}
+	require.False(t, buildMumP2PConfig(cfg, nil).DatagramEnable)
+
+	cfg.DatagramEnable = true
+	cfg.DatagramListenAddr = "127.0.0.1:4444"
+	cfg.DatagramMaxPayload = 900
+
+	got := buildMumP2PConfig(cfg, nil)
+	require.True(t, got.DatagramEnable)
+	require.Equal(t, "127.0.0.1:4444", got.DatagramListenAddr)
+	require.Equal(t, 900, got.DatagramMaxPayload)
+}

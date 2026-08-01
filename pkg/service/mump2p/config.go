@@ -45,6 +45,12 @@ type Config struct {
 
 	BootstrapPeers []string `yaml:"bootstrap_peers"`
 
+	// Datagram data plane. Off by default: enabling it binds a UDP socket and
+	// moves mesh traffic onto keys negotiated per peer, so it is opt in.
+	DatagramEnable     bool   `yaml:"datagram_enable"`
+	DatagramListenAddr string `yaml:"datagram_listen_addr"`
+	DatagramMaxPayload int    `yaml:"datagram_max_payload"`
+
 	// Trace event categories to broadcast to RegisterListener consumers. Shard metrics
 	// always run regardless of these; they only gate which raw trace events are fanned
 	// out over the broadcaster. All default false (no raw trace fan-out).
@@ -113,7 +119,22 @@ func baseNodeConfig(cfg *Config) *mp2pconfig.Config {
 	res.HistoryLength = historyLength
 	res.HistoryGossip = historyGossip
 	res.SharedMemoryConfig = cfg.sharedMemory()
+	res.Datagram = cfg.datagram()
 	return res
+}
+
+// datagram maps the gateway's datagram settings onto the protocol's. An unset
+// section leaves the data plane disabled, which is the protocol default too.
+func (cfg *Config) datagram() mp2pconfig.DatagramConfig {
+	dg := mp2pconfig.DefaultDatagramConfig()
+	dg.Enable = cfg.DatagramEnable
+	if cfg.DatagramListenAddr != "" {
+		dg.ListenAddr = cfg.DatagramListenAddr
+	}
+	if cfg.DatagramMaxPayload > 0 {
+		dg.MaxPayload = cfg.DatagramMaxPayload
+	}
+	return dg
 }
 
 // applyServedConfig overlays the dynamic config. A zero means "not served" and

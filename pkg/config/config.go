@@ -63,6 +63,12 @@ type AppConfig struct {
 	AggregationIntervalMs int64  `yaml:"aggregation_interval_ms" env:"OPT_AGGREGATION_INTERVAL_MS" default:"25"`
 	PropagationEnabledRaw bool   `yaml:"propagation_enabled" env:"OPT_PROPAGATION_ENABLED" default:"true"`
 	RemoteBootstrapURL    string `yaml:"remote_bootstrap_url" env:"OPT_REMOTE_BOOTSTRAP_URL" default:"https://bootstrap.getoptimum.io"`
+	// Datagram data plane. Off by default: enabling it binds a second UDP socket
+	// and moves mesh traffic onto keys negotiated per peer over the handshake
+	// connection. An empty listen address takes the protocol's own default.
+	DatagramEnable     bool   `yaml:"datagram_enable"      env:"OPT_DATAGRAM_ENABLE"      default:"false"`
+	DatagramListenAddr string `yaml:"datagram_listen_addr" env:"OPT_DATAGRAM_LISTEN_ADDR" default:""`
+	DatagramMaxPayload int    `yaml:"datagram_max_payload" env:"OPT_DATAGRAM_MAX_PAYLOAD" default:"0"`
 	//
 	// AUTH Related Configs and dynamic values.
 	//
