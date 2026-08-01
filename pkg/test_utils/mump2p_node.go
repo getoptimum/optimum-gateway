@@ -24,7 +24,7 @@ func NewTestNode(
 	clusterID string,
 	identityDir string,
 	opts ...mum_p2p.NodeOption,
-) *mum_p2p.Node {
+) mum_p2p.Engine {
 	t.Helper()
 
 	cfg := NewTestConfig(ctx, log, clusterID, test_utils.GetFreePortT(t), nil)
@@ -38,7 +38,7 @@ func NewTestNodeWithCfg(
 	identityDir string,
 	cfg *mum_p2p.Config,
 	opts ...mum_p2p.NodeOption,
-) *mum_p2p.Node {
+) mum_p2p.Engine {
 	t.Helper()
 
 	h, err := libp2p.New(
@@ -96,7 +96,7 @@ func NewTestConfig(ctx context.Context, log logger.AppLogger, clusterID string, 
 	return cfg
 }
 
-func ConnectNodes(ctx context.Context, t *testing.T, left, right *mum_p2p.Node) {
+func ConnectNodes(ctx context.Context, t *testing.T, left, right mum_p2p.Engine) {
 	t.Helper()
 
 	require.NoError(t, left.GetHost().Connect(ctx, right.GetHostInfo()))

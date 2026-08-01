@@ -45,7 +45,7 @@ type Service struct {
 	libP2PDirectPeers      *syncx.RWMap[string, peer.AddrInfo]
 	directCLPeersAllowlist map[peer.ID]struct{} // allowlist of CL peers that can connect to the gateway host (libp2p)
 
-	nodeMumP2P      *mum_p2p.Node
+	nodeMumP2P      mum_p2p.Engine
 	nodeMumP2PBytes []byte
 	nodeMumP2PStr   string
 
