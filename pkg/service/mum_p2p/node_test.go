@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -95,6 +96,31 @@ func TestNodeDisconnectsPeerOnClusterMismatch(t *testing.T) {
 
 	require.Eventually(t, func() bool {
 		return len(nodeA.GetPeers()) == 0 && len(nodeB.GetPeers()) == 0
+	}, 10*time.Second, 100*time.Millisecond)
+}
+
+func TestNodeDisconnectsPeerOnOversizedHandshake(t *testing.T) {
+	cnt := test_utils.GetClean(t)
+	clusterID := "optimum_oversized_handshake"
+
+	victim := test_utils.NewTestNode(cnt.Ctx, t, cnt.Log, clusterID, t.TempDir())
+	// Same cluster ID, so only the payload size can make this handshake fail.
+	flooder := test_utils.NewTestNode(cnt.Ctx, t, cnt.Log, clusterID, t.TempDir(),
+		mum_p2p.WithCustomHandshakeBuilder(func() any {
+			return struct {
+				ClusterID string `json:"cluster_id"`
+				Padding   string `json:"padding"`
+			}{
+				ClusterID: clusterID,
+				Padding:   strings.Repeat("A", 1<<20),
+			}
+		}),
+	)
+
+	require.NoError(t, flooder.GetHost().Connect(cnt.Ctx, victim.GetHostInfo()))
+
+	require.Eventually(t, func() bool {
+		return len(victim.GetPeers()) == 0 && len(flooder.GetPeers()) == 0
 	}, 10*time.Second, 100*time.Millisecond)
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -24,6 +25,12 @@ const (
 
 	// interval for checking handshake status
 	interval = 1 * time.Second
+
+	// maxHandshakeBytes caps the pre-auth handshake read. The payload is a small JSON
+	// object (cluster_id, jwt_token, commit_hash) whose only growing field is the JWT,
+	// which stays under 2 KiB, so 8 KiB leaves ample headroom while keeping a peer whose
+	// token is not yet verified from streaming unbounded data into the decoder.
+	maxHandshakeBytes = 8 << 10
 )
 
 // RegisterHandshakeMessageSender registers a notification handler for new peer connections.
@@ -120,7 +127,7 @@ func (n *Node) sendHandshakeForPeer(ctx context.Context, l logger.AppLogger, pID
 	}
 
 	// Wait for the response from the peer and verify handshake
-	if err = n.handshakeHandler(remotePeer, json.NewDecoder(stream)); err != nil {
+	if err = n.decodeHandshake(remotePeer, stream); err != nil {
 		n.disconnectPeer(remotePeer)
 		return fmt.Errorf("verifying handshake response: %w", err)
 	}
@@ -145,7 +152,7 @@ func (n *Node) RegisterHandshakeHandler(clusterID string) {
 
 		remotePeer := stream.Conn().RemotePeer()
 		// Read the handshake message from the stream
-		if err := n.handshakeHandler(remotePeer, json.NewDecoder(stream)); err != nil {
+		if err := n.decodeHandshake(remotePeer, stream); err != nil {
 			l.Error("handshake verification failed", err)
 			n.disconnectPeer(remotePeer)
 			return
@@ -159,6 +166,20 @@ func (n *Node) RegisterHandshakeHandler(clusterID string) {
 		n.markHandshakeValid(remotePeer)
 		l.Info("handshake handled successfully")
 	})
+}
+
+// decodeHandshake bounds the read at maxHandshakeBytes before the handler decodes it, so a
+// peer that has not been authenticated yet cannot grow the decoder's buffer without limit.
+func (n *Node) decodeHandshake(peerID peer.ID, r io.Reader) error {
+	// One byte of slack: an exhausted N then means the peer went over the cap, not that it
+	// happened to send exactly maxHandshakeBytes.
+	limited := &io.LimitedReader{R: r, N: maxHandshakeBytes + 1}
+	err := n.handshakeHandler(peerID, json.NewDecoder(limited))
+	if err != nil && limited.N <= 0 {
+		// Truncation surfaces as "unexpected EOF", which hides the real cause during triage.
+		return fmt.Errorf("handshake payload exceeds %d byte limit: %w", maxHandshakeBytes, err)
+	}
+	return err
 }
 
 // markHandshakeValid records a verified handshake and admits the peer to the pubsub mesh (#923).
