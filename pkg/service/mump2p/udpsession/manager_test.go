@@ -32,16 +32,10 @@ func TestEstablishInstallsCrosswiseKeys(t *testing.T) {
 	connect(ctx, t, left, right)
 	establish(ctx, t, left, right)
 
-	leftSess, ok := left.transport.Sessions().Lookup(right.id())
-	require.True(t, ok)
-
-	require.Eventually(t, func() bool {
-		_, ok := right.transport.Sessions().Lookup(left.id())
-		return ok
-	}, 10*time.Second, 20*time.Millisecond)
-
-	rightSess, ok := right.transport.Sessions().Lookup(left.id())
-	require.True(t, ok)
+	// Both sides are awaited: which of the two dialed depends on the peer ids the
+	// hosts drew, and only the dialer has installed by the time Establish returns.
+	leftSess := awaitSession(t, left, right.id())
+	rightSess := awaitSession(t, right, left.id())
 
 	// The id one side seals with is the id the other side opens with.
 	_, found := right.transport.Sessions().LookupRxKey(leftSess.TxKey().KeyID())
@@ -361,7 +355,8 @@ func TestDestroyIsIdempotentAndFreesTheKeyID(t *testing.T) {
 	connect(ctx, t, left, right)
 	require.NoError(t, dialer.mgr.Establish(ctx, listener.id()))
 
-	rxKeyID := awaitSession(t, listener, dialer.id()).TxKey().KeyID()
+	revoked := awaitSession(t, listener, dialer.id())
+	rxKeyID := revoked.TxKey().KeyID()
 
 	require.True(t, dialer.mgr.Destroy(listener.id()))
 	require.False(t, dialer.mgr.Destroy(listener.id()))
@@ -375,7 +370,7 @@ func TestDestroyIsIdempotentAndFreesTheKeyID(t *testing.T) {
 	require.NoError(t, dialer.mgr.Establish(ctx, listener.id()))
 	require.Equal(t, 1, dialer.transport.Sessions().Len())
 
-	freshRxKeyID := awaitSession(t, listener, dialer.id()).TxKey().KeyID()
+	freshRxKeyID := awaitReplacedSession(t, listener, dialer.id(), revoked).TxKey().KeyID()
 	require.NotEqual(t, rxKeyID, freshRxKeyID)
 
 	_, ok = dialer.transport.Sessions().LookupRxKey(rxKeyID)

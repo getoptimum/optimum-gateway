@@ -216,6 +216,31 @@ func awaitSession(t *testing.T, node *testNode, remote peer.ID) *datagram.Sessio
 	return sess
 }
 
+// awaitReplacedSession waits for the peer to install a session that is not the
+// one it already held.
+//
+// Waiting for merely any session would read the old one: a destroy is local, so
+// the peer keeps its half until its own side of the next exchange lands, and
+// that half carries the key ids of the epoch that was supposedly gone.
+func awaitReplacedSession(t *testing.T, node *testNode, remote peer.ID, old *datagram.Session) *datagram.Session {
+	t.Helper()
+
+	var sess *datagram.Session
+
+	require.Eventually(t, func() bool {
+		found, ok := node.transport.Sessions().Lookup(remote)
+		if !ok || found == old {
+			return false
+		}
+
+		sess = found
+
+		return true
+	}, 10*time.Second, 20*time.Millisecond, "the peer never replaced its session")
+
+	return sess
+}
+
 // awaitConfirmedPath waits until path validation has proven an endpoint, which
 // is what the send side refuses to work without.
 func awaitConfirmedPath(t *testing.T, node *testNode, remote peer.ID) {
