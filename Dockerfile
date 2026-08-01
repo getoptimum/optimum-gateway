@@ -48,6 +48,16 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 
 FROM alpine:3.22
 
+# The RLNC coder runs out of process, so this image is one half of a pair: it will
+# not start unless a getoptimum/rlnc-server container shares its /dev/shm. The
+# coder is deliberately not bundled here, so that the gateway stays a single
+# process under an init-friendly entrypoint and the two can be restarted and
+# rolled independently. Kept in step with RLNC_IMAGE_VERSION in the Makefile.
+ARG RLNC_IMAGE_VERSION=v0.10.0
+LABEL xyz.getoptimum.rlnc-coder.image="getoptimum/rlnc-server:${RLNC_IMAGE_VERSION}" \
+      xyz.getoptimum.rlnc-coder.shm-lanes="20" \
+      xyz.getoptimum.rlnc-coder.shm-bytes-min="335544800"
+
 RUN apk upgrade --no-cache && \
     apk add --no-cache ca-certificates
 

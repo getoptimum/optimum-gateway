@@ -1,8 +1,41 @@
+# Local development stack: the gateway plus the out-of-process RLNC coder it
+# needs. The gateway drops every publish it cannot encode, so it refuses to start
+# without the coder; the two are always deployed together.
 services:
+  # Pinned deliberately: the coder and the gateway's mump2p-protocol share a
+  # shared-memory wire format, so an unpinned coder is a compatibility hazard.
+  # Keep this tag in step with RLNC_IMAGE_VERSION in the Makefile.
+  rlnc-coder:
+    image: getoptimum/rlnc-server:${RLNC_IMAGE_VERSION:-v0.10.0}
+    restart: unless-stopped
+    networks:
+      - gateway_cluster
+    environment:
+      RLNC_SHM_NAME: ${RLNC_SHM_NAME:-mump2p-protocol}
+      RLNC_SHM_LANES: ${RLNC_SHM_LANES:-20}
+    command: >-
+      --name=${RLNC_SHM_NAME:-mump2p-protocol}
+      --lanes=${RLNC_SHM_LANES:-20}
+      --output-reclaim-after=5s
+    volumes:
+      - "coder_shm:/dev/shm"
+    # Lanes are created in order, so the last lane file existing means the whole
+    # lane set is mapped and the gateway can attach.
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - test -f "/dev/shm/go_shm_rlnc_semaphore_$${RLNC_SHM_NAME}_lane_$$((RLNC_SHM_LANES - 1))"
+      interval: 2s
+      timeout: 2s
+      retries: 15
+      start_period: 5s
+
   optimum-gateway:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        RLNC_IMAGE_VERSION: ${RLNC_IMAGE_VERSION:-v0.10.0}
       ssh:
         - default
     restart: unless-stopped
@@ -12,11 +45,29 @@ services:
       - "33212:33212"
       - "33213:33213"
       - "48123:48123"
+    environment:
+      OPT_SHM_NAME: ${RLNC_SHM_NAME:-mump2p-protocol}
+      OPT_SHM_LANES: ${RLNC_SHM_LANES:-20}
     volumes:
       - "./config:/app/config:ro"
       - "./mump2p/data/mump2p/:/tmp/mump2p"
       - "./mump2p/data/libp2p/:/tmp/libp2p"
+      - "coder_shm:/dev/shm"
     command: ["-config=/app/config/app_conf.yml"]
+    depends_on:
+      rlnc-coder:
+        condition: service_healthy
 
 networks:
   gateway_cluster:
+
+volumes:
+  # tmpfs, not a disk-backed volume: these are shared-memory lanes. 20 lanes of
+  # 16777240 bytes need 320 MiB, and the 64 MiB Docker gives /dev/shm by default
+  # is far too small, so the size is set here rather than left to the daemon.
+  coder_shm:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=${RLNC_SHM_SIZE:-512m}

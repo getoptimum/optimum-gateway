@@ -41,23 +41,28 @@ type AppConfig struct {
 	PProfAddr   string `yaml:"pprof_addr" env:"OPT_PPROF_ADDR" default:"127.0.0.1:6060"`
 	// mump2p trace-event categories consumed in-process for analysis (see handleMumP2PTrace).
 	// All default false. TraceRPC is a high-frequency firehose — enable only for deep debugging.
-	TraceMesh             bool     `yaml:"trace_mesh" env:"OPT_TRACE_MESH" default:"false"`
-	TraceRPC              bool     `yaml:"trace_rpc" env:"OPT_TRACE_RPC" default:"false"`
-	TraceShard            bool     `yaml:"trace_shard" env:"OPT_TRACE_SHARD" default:"false"`
-	LogLevel              string   `yaml:"log_level" env:"OPT_LOG_LEVEL" default:"debug"`
-	IdentityLibP2PDir     string   `yaml:"identity_libp2p_dir" env:"OPT_IDENTITY_LIBP2P_DIR" default:"/tmp/libp2p"`
-	IdentityMumP2PDir     string   `yaml:"identity_mump2p_dir" env:"OPT_IDENTITY_MUMP2P_DIR" default:"/tmp/mump2p"`
-	AgentLibP2PPort       int      `yaml:"agent_lib_p2p_port" env:"OPT_AGENT_LIB_P2P_PORT" default:"33212"`
-	AgentMumP2PPort       int      `yaml:"agent_mump2p_port" env:"OPT_AGENT_MUMP2P_PORT" default:"33213"`
-	DirectCLPeers         []string `yaml:"direct_cl_peers" env:"OPT_DIRECT_CL_PEERS"`
-	TelemetryEnable       bool     `yaml:"telemetry_enable" env:"OPT_ENABLE_TELEMETRY" default:"false"`
-	TelemetryPort         int      `yaml:"telemetry_port" env:"OPT_TELEMETRY_PORT" default:"48123"`
-	TelemetryNamespace    string   `yaml:"telemetry_namespace" env:"OPT_TELEMETRY_NAMESPACE" default:"mump2p"`
-	TelemetrySubsystem    string   `yaml:"telemetry_subsystem" env:"OPT_TELEMETRY_SUBSYSTEM" default:"gateway"`
-	GatewayClusterID      string   `yaml:"gateway_cluster_id" env:"OPT_GATEWAY_CLUSTER_ID"`
-	AggregationIntervalMs int64    `yaml:"aggregation_interval_ms" env:"OPT_AGGREGATION_INTERVAL_MS" default:"25"`
-	PropagationEnabledRaw bool     `yaml:"propagation_enabled" env:"OPT_PROPAGATION_ENABLED" default:"true"`
-	RemoteBootstrapURL    string   `yaml:"remote_bootstrap_url" env:"OPT_REMOTE_BOOTSTRAP_URL" default:"https://bootstrap.getoptimum.io"`
+	TraceMesh          bool     `yaml:"trace_mesh" env:"OPT_TRACE_MESH" default:"false"`
+	TraceRPC           bool     `yaml:"trace_rpc" env:"OPT_TRACE_RPC" default:"false"`
+	TraceShard         bool     `yaml:"trace_shard" env:"OPT_TRACE_SHARD" default:"false"`
+	LogLevel           string   `yaml:"log_level" env:"OPT_LOG_LEVEL" default:"debug"`
+	IdentityLibP2PDir  string   `yaml:"identity_libp2p_dir" env:"OPT_IDENTITY_LIBP2P_DIR" default:"/tmp/libp2p"`
+	IdentityMumP2PDir  string   `yaml:"identity_mump2p_dir" env:"OPT_IDENTITY_MUMP2P_DIR" default:"/tmp/mump2p"`
+	AgentLibP2PPort    int      `yaml:"agent_lib_p2p_port" env:"OPT_AGENT_LIB_P2P_PORT" default:"33212"`
+	AgentMumP2PPort    int      `yaml:"agent_mump2p_port" env:"OPT_AGENT_MUMP2P_PORT" default:"33213"`
+	DirectCLPeers      []string `yaml:"direct_cl_peers" env:"OPT_DIRECT_CL_PEERS"`
+	TelemetryEnable    bool     `yaml:"telemetry_enable" env:"OPT_ENABLE_TELEMETRY" default:"false"`
+	TelemetryPort      int      `yaml:"telemetry_port" env:"OPT_TELEMETRY_PORT" default:"48123"`
+	TelemetryNamespace string   `yaml:"telemetry_namespace" env:"OPT_TELEMETRY_NAMESPACE" default:"mump2p"`
+	TelemetrySubsystem string   `yaml:"telemetry_subsystem" env:"OPT_TELEMETRY_SUBSYSTEM" default:"gateway"`
+	GatewayClusterID   string   `yaml:"gateway_cluster_id" env:"OPT_GATEWAY_CLUSTER_ID"`
+	// Handle of the out-of-process RLNC coder (the rlnc-server sidecar). Both must
+	// match the sidecar's own --name and --lanes. Empty/zero keeps the mump2p
+	// protocol defaults, which are what the sidecar defaults to as well.
+	SHMName               string `yaml:"shm_name" env:"OPT_SHM_NAME"`
+	SHMLanes              int    `yaml:"shm_lanes" env:"OPT_SHM_LANES"`
+	AggregationIntervalMs int64  `yaml:"aggregation_interval_ms" env:"OPT_AGGREGATION_INTERVAL_MS" default:"25"`
+	PropagationEnabledRaw bool   `yaml:"propagation_enabled" env:"OPT_PROPAGATION_ENABLED" default:"true"`
+	RemoteBootstrapURL    string `yaml:"remote_bootstrap_url" env:"OPT_REMOTE_BOOTSTRAP_URL" default:"https://bootstrap.getoptimum.io"`
 	//
 	// AUTH Related Configs and dynamic values.
 	//

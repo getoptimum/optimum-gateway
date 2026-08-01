@@ -74,3 +74,19 @@ func TestBuildMumP2PConfigDefaultsWhenNothingServed(t *testing.T) {
 	require.Equal(t, int(config.DefaultMeshDegreeMin), optCfg.MeshDegreeMin)
 	require.Equal(t, int(config.DefaultMeshDegreeMax), optCfg.MeshDegreeMax)
 }
+
+// The coder is out of process, so its shared-memory handle has to reach the node:
+// an unset handle here would attach to the wrong sidecar rather than fail loudly.
+func TestBuildMumP2PConfigCarriesTheCoderSHMHandle(t *testing.T) {
+	cfg := &config.AppConfig{
+		AgentMumP2PPort:  33213,
+		GatewayClusterID: "test-cluster",
+		SHMName:          "gateway-coder",
+		SHMLanes:         4,
+	}
+
+	optCfg := buildMumP2PConfig(cfg, nil)
+
+	require.Equal(t, "gateway-coder", optCfg.SHMName)
+	require.Equal(t, 4, optCfg.SHMLanes)
+}

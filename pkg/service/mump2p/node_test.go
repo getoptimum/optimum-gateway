@@ -36,6 +36,10 @@ func TestNewNodeFailsWithoutCoderSidecar(t *testing.T) {
 
 	_, err := mump2p.NewNode(cnt.Ctx, cnt.Log, cfg, t.TempDir())
 	require.ErrorContains(t, err, "attach RLNC coder shared memory")
+	// The operator has to be told which sidecar to start, not just that an attach failed.
+	t.Log(err)
+	require.ErrorContains(t, err, "getoptimum/rlnc-server:"+mump2p.CoderImageVersion)
+	require.ErrorContains(t, err, "--name=optimum-gateway-absent-coder")
 }
 
 func TestNodePublishMessageAutoSubscribes(t *testing.T) {

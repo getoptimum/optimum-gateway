@@ -12,6 +12,21 @@ COVERAGE_PASS_THRESHOLD := $(shell echo "$(COVERAGE_TOTAL) $(COVERAGE_THRESHOLD)
 # and the merge blocker are in govulncheck.yaml and #924.
 VULN_EXCEPTION_NAMES := ["GO-2024-3218"]
 
+# The RLNC coder runs out of process in the getoptimum/rlnc-server sidecar, and the
+# gateway refuses to start without it. The tag is pinned deliberately: coder and
+# gateway share a shared-memory wire format, so an unpinned coder against a pinned
+# protocol is a compatibility hazard. This is the canonical pin; the same tag is
+# repeated as the compose default in docker-compose-local.yml and
+# docker-compose-sidecar.yml, and in CoderImageVersion for operator diagnostics.
+RLNC_IMAGE_VERSION ?= v0.10.0
+RLNC_SHM_NAME ?= mump2p-protocol
+RLNC_SHM_LANES ?= 20
+RLNC_SHM_SIZE ?= 512m
+RLNC_SHM_HOST_PATH ?= /dev/shm
+RLNC_CONTAINER_NAME ?= optimum-gateway-rlnc-coder
+RLNC_COMPOSE_ENV := RLNC_IMAGE_VERSION=$(RLNC_IMAGE_VERSION) RLNC_SHM_NAME=$(RLNC_SHM_NAME) \
+	RLNC_SHM_LANES=$(RLNC_SHM_LANES) RLNC_SHM_SIZE=$(RLNC_SHM_SIZE)
+
 help: ## Show help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
@@ -37,14 +52,44 @@ run_cl: ## local run cl dependency
 	docker compose -f docker-compose-ci.yml down -v --remove-orphans
 	docker compose -f docker-compose-ci.yml up -d
 
-run_gateway_with_sidecar: ## Run gateway with Hermes as sidecar
-	docker compose -f docker-compose-sidecar.yml down -v --remove-orphans
-	docker compose -f docker-compose-sidecar.yml up --build
+run_gateway_with_sidecar: ## Run gateway with Hermes and the RLNC coder as sidecars
+	$(RLNC_COMPOSE_ENV) docker compose -f docker-compose-sidecar.yml down -v --remove-orphans
+	$(RLNC_COMPOSE_ENV) docker compose -f docker-compose-sidecar.yml up --build
+
+run_local: ## Run gateway and the RLNC coder locally via compose
+	$(RLNC_COMPOSE_ENV) docker compose -f docker-compose-local.yml down -v --remove-orphans
+	$(RLNC_COMPOSE_ENV) docker compose -f docker-compose-local.yml up --build
 
 logs_prysm: ## Show logs of prysm service
 	docker logs -f prysm-beacon
 
-run:
+# Runs the coder against the host /dev/shm so a gateway started with `make run`
+# can attach to it. Only for host-side development; compose owns the deployed pair.
+rlnc_start: rlnc_stop ## Start the RLNC coder sidecar against the host /dev/shm
+	@docker run -d \
+		--name $(RLNC_CONTAINER_NAME) \
+		--user "$$(id -u):$$(id -g)" \
+		-v $(RLNC_SHM_HOST_PATH):/dev/shm \
+		getoptimum/rlnc-server:$(RLNC_IMAGE_VERSION) \
+		--name=$(RLNC_SHM_NAME) \
+		--lanes=$(RLNC_SHM_LANES) \
+		--output-reclaim-after=5s
+	@echo "Waiting for the RLNC coder's lane files..."; \
+	last=$$(($(RLNC_SHM_LANES) - 1)); \
+	for i in $$(seq 1 30); do \
+		if [ -f "$(RLNC_SHM_HOST_PATH)/go_shm_rlnc_semaphore_$(RLNC_SHM_NAME)_lane_$$last" ]; then \
+			echo "RLNC coder ready ($(RLNC_SHM_LANES) lanes as $(RLNC_SHM_NAME))"; exit 0; \
+		fi; \
+		sleep 1; \
+	done; \
+	echo "RLNC coder failed to start (lane files not created)"; \
+	docker logs $(RLNC_CONTAINER_NAME) || true; \
+	exit 1
+
+rlnc_stop: ## Stop the RLNC coder sidecar
+	@docker rm -f $(RLNC_CONTAINER_NAME) >/dev/null 2>&1 || true
+
+run: ## Run the gateway from source (needs `make rlnc_start` first)
 	go run cmd/main.go -config config/app_conf.yml
 
 test: ## Runs tests (unit tests and integration tests)
@@ -133,5 +178,5 @@ fastssz-generate: ## Vendor fastssz spectests SSZ types into pkg/protocol/fastss
 	@echo "fastssz code vendored at pkg/protocol/fastssz_codegen/"
 
 .PHONY: fastssz-generate
-.PHONY: help test lint coverage vulcheck build deps proto run run_cl build_hermes_image run_gateway_with_sidecar license-check license-check-test notices sbom sbom-binary sbom-full
+.PHONY: help test lint coverage vulcheck build deps proto run run_cl run_local rlnc_start rlnc_stop build_hermes_image run_gateway_with_sidecar license-check license-check-test notices sbom sbom-binary sbom-full
 .DEFAULT_GOAL := help

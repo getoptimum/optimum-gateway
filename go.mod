@@ -12,6 +12,7 @@ require (
 	github.com/ferranbt/fastssz v1.0.1-0.20251203093649-0b1f38e43198
 	github.com/getoptimum/mump2p-protocol v0.0.1-rc1.0.20260803161903-44378e6bd9c2
 	github.com/getoptimum/optimum-common v0.1.3
+	github.com/getoptimum/shm v0.5.0
 	github.com/gofiber/fiber/v3 v3.4.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/golang/snappy v1.0.0
@@ -167,7 +168,6 @@ require (
 	github.com/fxamacker/cbor/v2 v2.9.2 // indirect
 	github.com/fzipp/gocyclo v0.6.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
-	github.com/getoptimum/shm v0.5.0 // indirect
 	github.com/ghostiam/protogetter v0.3.20 // indirect
 	github.com/go-critic/go-critic v0.14.3 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect

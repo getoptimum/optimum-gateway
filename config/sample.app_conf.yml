@@ -7,6 +7,14 @@ agent_mump2p_port: 43213
 gateway_cluster_id: optimum_hoodi_v0_2
 api_key: your-api-key # or set OPT_API_KEY env var
 
+# ─── RLNC coder sidecar ───────────────────────────────────────────────────────
+# The coder runs out of process in getoptimum/rlnc-server and the gateway will not
+# start without it. These must match the sidecar's --name and --lanes; leaving them
+# unset keeps the protocol defaults, which are what the sidecar defaults to too.
+# 20 lanes need a shared /dev/shm of at least 320 MiB. See the README.
+# shm_name: mump2p-protocol                # default: mump2p-protocol
+# shm_lanes: 20                            # default: 20
+
 # ─── Telemetry ────────────────────────────────────────────────────────────────
 telemetry_enable: true
 telemetry_port: 48123

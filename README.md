@@ -74,23 +74,70 @@ flowchart LR
 2. If its hash is already in the TTL cache, it is ignored; otherwise it is SSZ-decoded.
 3. It is re-encoded and published to the local libp2p network for CL propagation, and telemetry is recorded.
 
+## The RLNC coder sidecar
+
+The gateway does not encode RLNC in process. The coder runs in a separate
+`getoptimum/rlnc-server` container and the two talk over shared-memory lanes in
+`/dev/shm`. This is structural, not a deployment preference: `getoptimum/rlnc` and
+the vendored `pkg/rlncpb` both register protobuf descriptors under
+`getoptimum/rlnc/types/v1/`, and the protobuf registry keys on file path, so linking
+both panics at init. There is no in-process option.
+
+**The sidecar is a hard runtime requirement.** The router drops every publish whose
+encode fails, so a gateway without a coder is a silently dead publisher. Node
+construction therefore fails rather than starting in that state:
+
+```
+attach RLNC coder shared memory "mump2p-protocol": no lane file at
+/dev/shm/go_shm_rlnc_semaphore_mump2p-protocol_lane_0, so no rlnc-server is serving
+"mump2p-protocol" with 20 lanes; run getoptimum/rlnc-server:v0.10.0 with
+--name=mump2p-protocol --lanes=20 and share its /dev/shm with the gateway: ...
+```
+
+A lane file that exists but is the wrong size, or one owned by another user, gets
+its own message naming the cause.
+
+| Setting | Value | Why |
+| --- | --- | --- |
+| Coder image | `getoptimum/rlnc-server:v0.10.0` | Pinned in the `Makefile` (`RLNC_IMAGE_VERSION`) and repeated as the compose default. Coder and `mump2p-protocol` share a shared-memory wire format, so an unpinned coder against a pinned protocol is a compatibility hazard. |
+| Lanes | `20` | The `mump2p-protocol` default the gateway uses. Override with `shm_lanes` / `OPT_SHM_LANES` and the sidecar's `--lanes` together. |
+| Shared-memory name | `mump2p-protocol` | The sidecar's `--name` and the gateway's `shm_name` / `OPT_SHM_NAME` must match. |
+| `/dev/shm` size | **320 MiB minimum, 512 MiB configured** | Each lane is one file of `24 + 2 x 8 MiB = 16777240` bytes, so 20 lanes need 335,544,800 bytes. Docker's default `/dev/shm` is 64 MiB, which is not close to enough. |
+
+The compose files give the pair a shared `tmpfs` volume mounted at `/dev/shm`, sized
+via `RLNC_SHM_SIZE` (default `512m`). The gateway waits on the sidecar's healthcheck,
+which watches for the last lane file.
+
 ## Quick start
 
 ### Run with Docker
 
-The simplest path is the bundled Compose file, which starts both:
+The simplest path is the bundled Compose file, which starts the gateway and its
+RLNC coder together:
 
 ```sh
+make run_local
+# or, with the pin taken from the compose defaults:
 docker compose -f docker-compose-local.yml up
 ```
 
-To run the gateway image directly:
+To run the gateway image directly, the coder has to be started first and both have
+to see the same `/dev/shm`:
 
 ```sh
+docker volume create --driver local \
+  --opt type=tmpfs --opt device=tmpfs --opt o=size=512m coder_shm
+
+docker run --name optimum-rlnc-coder -d \
+  -v coder_shm:/dev/shm \
+  getoptimum/rlnc-server:v0.10.0 \
+  --name=mump2p-protocol --lanes=20 --output-reclaim-after=5s
+
 docker run --name optimum-gateway --rm \
   -p 33212:33212/tcp \
   -p 33213:33213/tcp \
   -p 48123:48123/tcp \
+  -v coder_shm:/dev/shm \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data/libp2p:/tmp/libp2p \
   -v $(pwd)/data/mump2p:/tmp/mump2p \
@@ -108,8 +155,10 @@ Requires **Go 1.26+**.
 git clone https://github.com/getoptimum/optimum-gateway
 cd optimum-gateway
 cp config/sample.app_conf.yml config/app_conf.yml
-make build      # builds ./bin/optimum-gateway
-make run        # go run cmd/main.go -config config/app_conf.yml
+make build       # builds ./bin/optimum-gateway
+make rlnc_start  # RLNC coder sidecar against the host /dev/shm; required before `make run`
+make run         # go run cmd/main.go -config config/app_conf.yml
+make rlnc_stop   # tears the coder down again
 ```
 
 ### Connect your CL client

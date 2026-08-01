@@ -1,6 +1,37 @@
 version: "3.8"
 
 services:
+  # Out-of-process RLNC coder. The gateway attaches to its shared-memory lanes and
+  # refuses to start without them, so it is a hard runtime dependency, not an
+  # optional extra. Pinned deliberately: the coder and the gateway's
+  # mump2p-protocol share a shared-memory wire format, so an unpinned coder is a
+  # compatibility hazard. Keep this tag in step with RLNC_IMAGE_VERSION in the
+  # Makefile.
+  rlnc-coder:
+    image: getoptimum/rlnc-server:${RLNC_IMAGE_VERSION:-v0.10.0}
+    restart: unless-stopped
+    networks:
+      - mump2p_cluster
+    environment:
+      RLNC_SHM_NAME: ${RLNC_SHM_NAME:-mump2p-protocol}
+      RLNC_SHM_LANES: ${RLNC_SHM_LANES:-20}
+    command: >-
+      --name=${RLNC_SHM_NAME:-mump2p-protocol}
+      --lanes=${RLNC_SHM_LANES:-20}
+      --output-reclaim-after=5s
+    volumes:
+      - "coder_shm:/dev/shm"
+    # Lanes are created in order, so the last lane file existing means the whole
+    # lane set is mapped and the gateway can attach.
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - test -f "/dev/shm/go_shm_rlnc_semaphore_$${RLNC_SHM_NAME}_lane_$$((RLNC_SHM_LANES - 1))"
+      interval: 2s
+      timeout: 2s
+      retries: 15
+      start_period: 5s
+
   hermes:
     image: getoptimum/hermes-gateway-sidecar:latest
     networks:
@@ -55,11 +86,18 @@ services:
       - "33212:33212" # libp2p port
       - "33213:33213" # opt port
       - "48123:48123" # telemetry + API
+    environment:
+      OPT_SHM_NAME: ${RLNC_SHM_NAME:-mump2p-protocol}
+      OPT_SHM_LANES: ${RLNC_SHM_LANES:-20}
     volumes:
       - "./config:/app/config:ro"
       - "./mump2p/data/mump2p/:/tmp/mump2p" # identity_mump2p_dir in app_conf.yml must match container path
       - "./mump2p/data/libp2p/:/tmp/libp2p" # BE SURE THAT IN app_conf.yml identity_libp2p_dir is /tmp/libp2p
+      - "coder_shm:/dev/shm"
     command: -config=/app/config/app_conf.yml
+    depends_on:
+      rlnc-coder:
+        condition: service_healthy
     healthcheck:
       test:
         ["CMD", "curl", "-f", "http://mump2p_gateway:48123/api/v1/self_info"]
@@ -69,3 +107,14 @@ services:
 
 networks:
   mump2p_cluster:
+
+volumes:
+  # tmpfs, not a disk-backed volume: these are shared-memory lanes. 20 lanes of
+  # 16777240 bytes need 320 MiB, and the 64 MiB Docker gives /dev/shm by default
+  # is far too small, so the size is set here rather than left to the daemon.
+  coder_shm:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=${RLNC_SHM_SIZE:-512m}
