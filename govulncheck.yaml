@@ -22,20 +22,33 @@ accepted_risks:
       beacon nodes validate independently). Full write-up and CVSS rationale:
       getoptimum/optimum-gateway#924.
 
-      WARNING: this acceptance is currently INCOMPLETE. It rested on two
-      controls. Cluster membership is still bound by the verified JWT (#951), so
-      an unauthenticated peer is disconnected on handshake. Default-deny mesh
-      admission (#955, closing #923) is NOT in place: it lived in the vendored
-      optimum-pubsub fork, and the mump2p engine that replaced it runs on stock
-      upstream go-libp2p-pubsub, which has no AllowPeer/DenyPeer. A replacement
-      is being built in mump2p-protocol. Until it is wired here, a DHT-discovered
-      peer that has not completed the handshake is no longer denied mesh
-      admission by pubsub itself, only disconnected by the handshake path. This
-      branch must not merge before that replacement lands.
+      Both mitigating controls this acceptance rests on are in place. Cluster
+      membership is bound by the verified JWT (#951): a peer whose token fails
+      to verify, is not bound to its peer ID, or does not carry this cluster in
+      its cluster_ids claim is disconnected during the handshake. Default-deny
+      mesh admission (#955, closing #923) is wired again: mump2p-protocol's
+      pubsub.WithPeerAdmission is fed Node.HandshakeVerified, so a peer is
+      staged into the pubsub peer set, chosen as a send target, and accepted as
+      an RPC sender only after its handshake verified on its current connection.
+      A failed or revoked handshake clears admission and evicts the peer from
+      the peer set, meshes and topic state via BlacklistPeer before the
+      connection is closed. The allow set is connection scoped: it is cleared
+      from the disconnect notifiee, so a reconnecting peer must handshake again
+      to regain admission. This restores the mesh-layer control the vendored
+      optimum-pubsub fork provided through AllowPeer/DenyPeer, on stock upstream
+      go-libp2p-pubsub.
 
-      The residual was previously discovery-layer degradation only (wasted dials,
-      slower/partitioned discovery), recoverable and non-persistent; re-assess
-      once mesh admission is restored.
+      What admission does NOT do, and is not claimed here: it does not gate the
+      DHT itself, which stays permissionless, so a Sybil can still join it and
+      degrade or eclipse discovery, which is exactly this CVE. It also does not
+      gate relay of forwarded RLNC symbols whose origin this gateway is not
+      connected to; admission decides who we peer with, not whose messages we
+      relay.
+
+      The residual is therefore discovery-layer degradation only (wasted dials,
+      slower/partitioned discovery), recoverable and non-persistent: a
+      DHT-discovered peer that cannot present a valid cluster JWT gets no mesh
+      admission, no traffic, and no persistent foothold.
 
       Removing the DHT entirely was explored (#922) and not adopted; the chosen
       path keeps the DHT and hardens the mesh/registry layers. Registry-side

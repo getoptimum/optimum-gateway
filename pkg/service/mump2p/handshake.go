@@ -13,6 +13,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
 
+	rlncps "github.com/getoptimum/mump2p-protocol/pkg/pubsub"
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
 )
@@ -42,14 +43,23 @@ func (n *Node) RegisterHandshakeMessageSender(clusterID string) {
 			ConnectedF: func(_ network.Network, conn network.Conn) {
 				go n.handleNewConnection(clusterID, conn)
 			},
-			DisconnectedF: func(_ network.Network, conn network.Conn) {
+			DisconnectedF: func(net network.Network, conn network.Conn) {
+				peerID := conn.RemotePeer()
 				n.log.With(
 					logger.WithString("flow", "notify_disconnected"),
-					logger.WithPeerID(conn.RemotePeer()),
+					logger.WithPeerID(peerID),
 					logger.WithString("addr", conn.RemoteMultiaddr().String()),
 					logger.WithString("direction", conn.Stat().Direction.String()),
 					logger.WithString("opened", conn.Stat().Opened.Format(time.DateTime)),
 				).Debug("disconnected from peer")
+
+				// A disconnect for a closed connection can land after the peer is
+				// already back on a new one. Revoking then would deny a peer that
+				// will not handshake again, partitioning it for that connection.
+				if net.Connectedness(peerID) != network.NotConnected {
+					return
+				}
+				n.revokeAdmission(peerID)
 			},
 		},
 	)
@@ -177,22 +187,50 @@ func (n *Node) decodeHandshake(peerID peer.ID, r io.Reader) error {
 	return err
 }
 
-// markHandshakeValid records a verified handshake.
+// markHandshakeValid records a verified handshake and admits the peer to the
+// mesh (#923).
 func (n *Node) markHandshakeValid(peerID peer.ID) {
 	n.setPeerState(peerID, entities.PeerStateHandshakeValid)
+	n.peersApprovedMap.Store(peerID, struct{}{})
+	// Admission is only consulted while a peer is being staged, and this peer was
+	// skipped when it connected unauthorized. Nothing else re-queues it, so
+	// without this it stays out of the peer set for the life of the connection.
+	rlncps.RestagePeer(n.ps, peerID)
 }
 
-// HandshakeVerified reports whether peerID currently holds a verified handshake.
-// This is the predicate shape mump2p's mesh admission control will take once the
-// replacement for the removed default-deny admission lands (#923); nothing in the
-// data path consumes it yet.
+// HandshakeVerified reports whether peerID currently holds a verified handshake
+// on its live connection. It is the default-deny mesh admission predicate
+// (#923), so it is consulted on the pubsub processLoop and on the receive path:
+// it must stay a plain map read.
 func (n *Node) HandshakeVerified(peerID peer.ID) bool {
-	state, ok := n.getPeerState(peerID)
-	return ok && state == entities.PeerStateHandshakeValid
+	_, ok := n.peersApprovedMap.Load(peerID)
+	return ok
+}
+
+// revokeAdmission drops a peer from the mesh allow set.
+//
+// The cached valid handshake goes with it, so the next connection runs a fresh
+// handshake instead of short-circuiting it and never re-admitting. An invalid
+// marker is deliberately left in place: it still short-circuits a reconnect
+// from a peer that has already been rejected.
+func (n *Node) revokeAdmission(peerID peer.ID) {
+	n.peersApprovedMap.Delete(peerID)
+	if state, ok := n.getPeerState(peerID); ok && state == entities.PeerStateHandshakeValid {
+		n.peersMap.Delete(peerID)
+	}
 }
 
 func (n *Node) disconnectPeer(peerID peer.ID) {
 	n.setPeerState(peerID, entities.PeerStateHandshakeInvalid)
+	// Clearing the allow set before blacklisting matters: the gate records an
+	// explicit, permanent denial only for a peer the predicate still admits, and
+	// such an entry would survive a later successful handshake.
+	n.peersApprovedMap.Delete(peerID)
+	// Evict from the peer set, mesh and topic state; ClosePeer alone leaves
+	// pubsub-side state to be torn down by its own notifiee, later.
+	if n.ps != nil {
+		n.ps.BlacklistPeer(peerID)
+	}
 	if n.host.Network().Connectedness(peerID) == network.NotConnected {
 		return
 	}

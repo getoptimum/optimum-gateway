@@ -7,9 +7,9 @@ COVERAGE_TOTAL := $(shell go tool cover -func=cover.out | grep total | grep -Eo 
 COVERAGE_PASS_THRESHOLD := $(shell echo "$(COVERAGE_TOTAL) $(COVERAGE_THRESHOLD)" | awk '{print ($$1 >= $$2)}')
 # Known vulns with no release-level fix or temporary accepted risk (ignored by govulncheck filter)
 # GO-2024-3218: reachable (gateway runs a permissionless kad-dht for mump2p discovery),
-# no patched version exists. The acceptance is currently incomplete: default-deny mesh
-# admission is gone with the v1 engine and its replacement is not wired yet. Rationale
-# and the merge blocker are in govulncheck.yaml and #924.
+# no patched version exists. Accepted: cluster membership is JWT-bound and default-deny
+# mesh admission is wired, so the residual is discovery-layer degradation only.
+# Rationale in govulncheck.yaml and #924.
 VULN_EXCEPTION_NAMES := ["GO-2024-3218"]
 
 # The RLNC coder runs out of process in the getoptimum/rlnc-server sidecar, and the

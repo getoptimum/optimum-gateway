@@ -49,6 +49,12 @@ type Node struct {
 
 	peersMap *syncx.TTLMap[peer.ID, entities.PeerState]
 
+	// peersApprovedMap is the mesh allow set: default-deny admission consults it
+	// on every staging, send-target and receive decision. It is connection
+	// scoped, cleared on disconnect, and deliberately not TTL bounded like
+	// peersMap: an expiring entry would silently partition a live peer.
+	peersApprovedMap *syncx.RWMap[peer.ID, struct{}]
+
 	tk *topics_keeper.Service // Topics keeper for persisting subscribed topics. Using on node startup.
 
 	handshakeBuilder func() any                                        // function that create handshake message
@@ -147,6 +153,7 @@ func NewNodeWithHost(
 		subscriptions:    syncx.NewRWMap[string, *pubsub.Subscription](),
 		broadcaster:      syncx.NewBroadcaster[*entities.MumP2PResponse](),
 		peersMap:         syncx.NewTTLMap[peer.ID, entities.PeerState](15*time.Second, 15*time.Second),
+		peersApprovedMap: syncx.NewRWMap[peer.ID, struct{}](),
 		tk:               topics_keeper.NewService(ctx, log.With(logger.WithService("topic_keeper")), identityDir),
 		handshakeBuilder: resolved.handshakeBuilder,
 		handshakeHandler: resolved.handshakeHandler,
@@ -209,6 +216,9 @@ func (n *Node) startPubSub(
 	psOpts := []rlncps.RLNCOption{
 		rlncps.WithRLNCTracer(tracer.NewTracerMumP2P(n.broadcaster, cats)),
 		rlncps.WithRawTracer(tracer.NewRawTracerMumP2P(n.broadcaster, cats)),
+		// Default-deny mesh admission (#923): only a peer whose handshake verified
+		// on this connection is staged, sent to, or accepted from.
+		rlncps.WithPeerAdmission(n.HandshakeVerified),
 	}
 	if telemetry.MetricsEnabled() {
 		psOpts = append(psOpts, rlncps.WithRawTracer(telemetry.NewMumP2PCollector()))

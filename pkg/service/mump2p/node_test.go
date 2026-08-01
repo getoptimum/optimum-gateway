@@ -101,17 +101,28 @@ func TestNodeHandshakeAndTopicLifecycle(t *testing.T) {
 	require.NoError(t, nodeB.UnsubscribeTopic(topic))
 }
 
+const clusterMismatchTopic = "beacon_attestation_7"
+
 func TestNodeDisconnectsPeerOnClusterMismatch(t *testing.T) {
 	cnt := test_utils.GetClean(t)
 
 	nodeA := test_utils.NewTestNode(cnt.Ctx, t, cnt.Log, "optimum_cluster_a", t.TempDir())
 	nodeB := test_utils.NewTestNode(cnt.Ctx, t, cnt.Log, "optimum_cluster_b", t.TempDir())
+	require.NoError(t, nodeA.SubscribeTopic(clusterMismatchTopic))
+	require.NoError(t, nodeB.SubscribeTopic(clusterMismatchTopic))
 
 	require.NoError(t, nodeA.GetHost().Connect(cnt.Ctx, nodeB.GetHostInfo()))
 
 	require.Eventually(t, func() bool {
 		return len(nodeA.GetPeers()) == 0 && len(nodeB.GetPeers()) == 0
 	}, 10*time.Second, 100*time.Millisecond)
+
+	// Denied, so never staged: admission is the only thing that puts a peer into
+	// the pubsub peer set, and a rejected handshake never grants it.
+	require.False(t, asNode(t, nodeA).HandshakeVerified(nodeB.GetHostInfo().ID))
+	require.False(t, asNode(t, nodeB).HandshakeVerified(nodeA.GetHostInfo().ID))
+	require.Empty(t, nodeA.GetMeshPeers(clusterMismatchTopic))
+	require.Empty(t, nodeB.GetMeshPeers(clusterMismatchTopic))
 }
 
 func TestNodeDisconnectsPeerOnOversizedHandshake(t *testing.T) {
