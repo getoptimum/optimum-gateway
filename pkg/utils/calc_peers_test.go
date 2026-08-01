@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -81,9 +82,15 @@ func TestRetryGetRequestStopsWhenContextIsCanceled(t *testing.T) {
 	defer cancel()
 
 	var calls atomic.Int32
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls.Add(1)
 		cancel()
+		// Withhold the response until the canceled request tears the connection down, otherwise
+		// the caller may race a complete 500 in and never observe the cancellation.
+		select {
+		case <-r.Context().Done():
+		case <-time.After(10 * time.Second):
+		}
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = w.Write([]byte(`{"value":"retry-me"}`))
 	}))
@@ -91,8 +98,8 @@ func TestRetryGetRequestStopsWhenContextIsCanceled(t *testing.T) {
 
 	got, code, err := utils.RetryGetRequest[retryResponse](ctx, srv.URL, nil)
 
-	require.ErrorContains(t, err, "context canceled")
+	require.ErrorIs(t, err, context.Canceled)
 	require.Zero(t, code)
 	require.Nil(t, got)
-	require.LessOrEqual(t, calls.Load(), int32(1))
+	require.EqualValues(t, 1, calls.Load())
 }
