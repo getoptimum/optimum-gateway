@@ -14,14 +14,13 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry/tracer"
 )
 
-func (s *Service) setupMumP2PHost() error {
-	filtered, err := s.srvBootstrapper.RegisterAndGetMumP2PPeers()
-	if err != nil {
-		return fmt.Errorf("failed register mump2p peer: %w", err)
-	}
-	s.log.Info("setting mump2p host")
+// buildMumP2PConfig assembles the mump2p node config. The RLNC and mesh parameters
+// come from the dynamic config rotator so operator changes reach the constructed node;
+// the package defaults stand only until the rotator has a configuration to serve.
+func buildMumP2PConfig(appCfg *config.AppConfig, bootstrapPeers []string) *mum_p2p.Config {
+	rotator := appCfg.GetDCRotator()
 	optCfg := &mum_p2p.Config{
-		ListenPort:               s.cfg.AgentMumP2PPort,
+		ListenPort:               appCfg.AgentMumP2PPort,
 		MaxMessageSize:           config.DefaultMaxMessageSize,
 		RandomMessageSize:        config.DefaultRandomMessageSize,
 		ShardFactor:              int(config.DefaultShardFactor),
@@ -30,13 +29,39 @@ func (s *Service) setupMumP2PHost() error {
 		MeshDegreeTarget:         int(config.DefaultMeshDegreeTarget),
 		MeshDegreeMin:            int(config.DefaultMeshDegreeMin),
 		MeshDegreeMax:            int(config.DefaultMeshDegreeMax),
-		BootstrapPeers:           filtered,
-		ClusterID:                s.cfg.GatewayClusterID,
-		Rotator:                  s.cfg.GetDCRotator(),
-		TraceMesh:                s.cfg.TraceMesh,
-		TraceRPC:                 s.cfg.TraceRPC,
-		TraceShard:               s.cfg.TraceShard,
+		BootstrapPeers:           bootstrapPeers,
+		ClusterID:                appCfg.GatewayClusterID,
+		Rotator:                  rotator,
+		TraceMesh:                appCfg.TraceMesh,
+		TraceRPC:                 appCfg.TraceRPC,
+		TraceShard:               appCfg.TraceShard,
 	}
+	if rotator == nil {
+		return optCfg
+	}
+	served := rotator.Get()
+	if served == nil {
+		return optCfg
+	}
+	// Served values are copied wholesale, zeros included: 0 is a legitimate setting
+	// for these knobs, so it must not be mistaken for "unset" and replaced by a default.
+	optCfg.RandomMessageSize = served.RandomMessageSize
+	optCfg.ShardFactor = int(served.ShardFactor)
+	optCfg.PublisherShardMultiplier = served.PublisherShardMultiplier
+	optCfg.ForwardShardThreshold = served.ForwardShardThreshold
+	optCfg.MeshDegreeTarget = int(served.MeshDegreeTarget)
+	optCfg.MeshDegreeMin = int(served.MeshDegreeMin)
+	optCfg.MeshDegreeMax = int(served.MeshDegreeMax)
+	return optCfg
+}
+
+func (s *Service) setupMumP2PHost() error {
+	filtered, err := s.srvBootstrapper.RegisterAndGetMumP2PPeers()
+	if err != nil {
+		return fmt.Errorf("failed register mump2p peer: %w", err)
+	}
+	s.log.Info("setting mump2p host")
+	optCfg := buildMumP2PConfig(s.cfg, filtered)
 	if s.customMumP2PConnectionGater != nil {
 		optCfg.CustomConnectionGater = s.customMumP2PConnectionGater
 	}
