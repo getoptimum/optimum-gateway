@@ -163,10 +163,18 @@ func handleMessage(t *testing.T, messages *syncx.RWMap[string, struct{}], messag
 	messages.Store(key.String(), struct{}{})
 }
 
-// TestGatewayReal lists topics and connected peers/scores (Prysm). Run locally; skipped in CI.
+// envRunGatewayReal opts into TestGatewayReal. It stays unset everywhere by default,
+// including locally, because the test needs a hand-built rig that no plain checkout has.
+const envRunGatewayReal = "OPT_RUN_GATEWAY_REAL_TEST"
+
+// TestGatewayReal lists topics and connected peers/scores (Prysm). Debug aid for manual local
+// runs only: it attaches to an already provisioned gateway data dir and stays up for hours.
 func TestGatewayReal(t *testing.T) {
-	if test_utils.IsCIRun(t) {
-		t.Skip("debug test for local use only, runs for hours")
+	if os.Getenv(envRunGatewayReal) == "" {
+		t.Skipf(
+			"set %s=1 to run; also needs OPT_API_KEY, a local consensus client and ~/local_cl/.gateway_data",
+			envRunGatewayReal,
+		)
 	}
 	l := logger.NewAppSLogger(logger.Debug)
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Hour)
@@ -197,7 +205,8 @@ func TestGatewayReal(t *testing.T) {
 		require.NoError(t, appRouter.Run(ctx))
 	}()
 
-	time.Sleep(10 * time.Hour) // wait for the gateway node to start
+	// Keeps the node up for observation; shorten a run with `go test -timeout`, which caps it anyway.
+	time.Sleep(10 * time.Hour)
 }
 
 func publishMessages(
