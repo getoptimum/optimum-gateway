@@ -31,6 +31,7 @@ func buildMumP2PConfig(appCfg *config.AppConfig, bootstrapPeers []string) *mump2
 		MeshDegreeMax:            int(config.DefaultMeshDegreeMax),
 		BootstrapPeers:           bootstrapPeers,
 		ClusterID:                appCfg.GatewayClusterID,
+		GatewayID:                appCfg.GatewayID,
 		SHMName:                  appCfg.SHMName,
 		SHMLanes:                 appCfg.SHMLanes,
 		Rotator:                  rotator,

@@ -154,6 +154,11 @@ func (s *Service) GetForkDigestManager() *forks.Service {
 	return s.srvForkMgr
 }
 
+// GetMumP2PEngine returns the mump2p engine, or nil before the host is set up.
+func (s *Service) GetMumP2PEngine() mump2p.Engine {
+	return s.nodeMumP2P
+}
+
 // Run initializes the service by setting up the host and pubsub service.
 // subscribes local node to the topics defined in the configuration,
 // and establishes connections to mump2p nodes from the gateway hosts.

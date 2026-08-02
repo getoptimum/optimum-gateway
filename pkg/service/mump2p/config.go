@@ -24,7 +24,11 @@ const (
 )
 
 type Config struct {
-	ClusterID      string `yaml:"cluster_id"`
+	ClusterID string `yaml:"cluster_id"`
+	// GatewayID identifies this gateway within the cluster. It becomes the
+	// protocol node ID and so the mump2p.node_id span attribute, which analysis
+	// keys per-node results on, so it has to be unique across the fleet.
+	GatewayID      string `yaml:"gateway_id"`
 	ListenPort     int    `yaml:"listen_port"`
 	MaxMessageSize int64  `yaml:"max_message_size_bytes"`
 
@@ -50,6 +54,12 @@ type Config struct {
 	DatagramEnable     bool   `yaml:"datagram_enable"`
 	DatagramListenAddr string `yaml:"datagram_listen_addr"`
 	DatagramMaxPayload int    `yaml:"datagram_max_payload"`
+
+	// OpenTelemetry span export for RLNC trace events. Off by default.
+	OTelEnable      bool    `yaml:"otel_enable"`
+	OTelEndpoint    string  `yaml:"otel_endpoint"`
+	OTelInsecure    bool    `yaml:"otel_insecure"`
+	OTelSampleRatio float64 `yaml:"otel_sample_ratio"`
 
 	// Trace event categories to broadcast to RegisterListener consumers. Shard metrics
 	// always run regardless of these; they only gate which raw trace events are fanned
@@ -109,7 +119,12 @@ func toNodeConfig(cfg *Config) (*mp2pconfig.Config, error) {
 // the dynamic config does not serve.
 func baseNodeConfig(cfg *Config) *mp2pconfig.Config {
 	res := mp2pconfig.DefaultGossipSubConfig()
-	if cfg.ClusterID != "" {
+	// res.ID is the mump2p.node_id span attribute, so it must identify this
+	// gateway alone. ClusterID is fleet-wide and only a last resort.
+	switch {
+	case cfg.GatewayID != "":
+		res.ID = cfg.GatewayID
+	case cfg.ClusterID != "":
 		res.ID = cfg.ClusterID
 	}
 	res.ClusterID = cfg.ClusterID
@@ -120,7 +135,20 @@ func baseNodeConfig(cfg *Config) *mp2pconfig.Config {
 	res.HistoryGossip = historyGossip
 	res.SharedMemoryConfig = cfg.sharedMemory()
 	res.Datagram = cfg.datagram()
+	res.OTelConfig = cfg.otel()
 	return res
+}
+
+// otel maps the gateway's tracing settings onto the protocol's.
+func (cfg *Config) otel() mp2pconfig.OTelConfig {
+	ot := mp2pconfig.DefaultOTelConfig()
+	ot.Enable = cfg.OTelEnable
+	ot.Endpoint = cfg.OTelEndpoint
+	ot.Insecure = cfg.OTelInsecure
+	if cfg.OTelSampleRatio > 0 {
+		ot.SampleRatio = cfg.OTelSampleRatio
+	}
+	return ot
 }
 
 // datagram maps the gateway's datagram settings onto the protocol's. An unset

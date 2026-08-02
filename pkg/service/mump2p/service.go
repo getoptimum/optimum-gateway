@@ -22,6 +22,8 @@ import (
 	mp2pconfig "github.com/getoptimum/mump2p-protocol/pkg/config"
 	rlncps "github.com/getoptimum/mump2p-protocol/pkg/pubsub"
 	rlncrouter "github.com/getoptimum/mump2p-protocol/pkg/router"
+	oteltracer "github.com/getoptimum/mump2p-protocol/pkg/telemetry/otel_tracer"
+	"github.com/getoptimum/mump2p-protocol/pkg/telemetry/rlnctrace"
 	"github.com/getoptimum/optimum-common/pkg/identity"
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	commonnet "github.com/getoptimum/optimum-common/pkg/net"
@@ -35,6 +37,9 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/utils"
 )
 
+// otelShutdownTimeout bounds the final span flush on Stop.
+const otelShutdownTimeout = 5 * time.Second
+
 type Node struct {
 	ctx  context.Context
 	log  logger.AppLogger
@@ -45,6 +50,9 @@ type Node struct {
 	router *rlncrouter.RLNCRouter // owns the RLNC decode state; closed on Stop
 	dgram  *rlncps.Datagram       // nil unless the datagram data plane is enabled
 	udp    *udpsession.Manager    // nil unless the datagram data plane is enabled
+
+	// otelShutdown flushes the span exporter; a no-op when tracing is disabled.
+	otelShutdown oteltracer.ShutdownFunc
 
 	bootstrapNodes []peer.AddrInfo                            // Optional bootstrap peers for initial connectivity
 	topics         *syncx.RWMap[string, *pubsub.Topic]        // Active topics
@@ -225,15 +233,31 @@ func (n *Node) startPubSub(
 ) error {
 	cats := entities.NewTraceCategories(n.cfg.TraceMesh, n.cfg.TraceRPC, n.cfg.TraceShard)
 
+	n.resolveNodeID(nodeCfg, h)
+	otelTracer, err := n.startOTelTracer(ctx, nodeCfg, h)
+	if err != nil {
+		return err
+	}
+
+	// WithRLNCTracer overwrites rather than appends, so the gateway's own tracer
+	// and the OTel one have to be combined into a single tracer.
+	tracers := []rlnctrace.RLNCTracer{tracer.NewTracerMumP2P(n.broadcaster, cats)}
+	if otelTracer != nil {
+		tracers = append(tracers, otelTracer)
+	}
+
 	psOpts := []rlncps.RLNCOption{
-		rlncps.WithRLNCTracer(tracer.NewTracerMumP2P(n.broadcaster, cats)),
+		rlncps.WithRLNCTracer(rlnctrace.NewMultiTracer(tracers...)),
 		rlncps.WithRawTracer(tracer.NewRawTracerMumP2P(n.broadcaster, cats)),
 		// Default-deny mesh admission (#923): only a peer whose handshake verified
 		// on this connection is staged, sent to, or accepted from.
 		rlncps.WithPeerAdmission(n.HandshakeVerified),
 	}
 	if telemetry.MetricsEnabled() {
-		psOpts = append(psOpts, rlncps.WithRawTracer(telemetry.NewMumP2PCollector()))
+		psOpts = append(psOpts,
+			rlncps.WithRawTracer(telemetry.NewMumP2PCollector()),
+			rlncps.WithMetricsRegisterer(telemetry.CustomRegistry),
+		)
 	}
 
 	ps, router, dgram, err := rlncps.NewRLNCPubSub(ctx, nodeCfg, slogger, h, coder, psOpts...)
@@ -242,6 +266,39 @@ func (n *Node) startPubSub(
 	}
 	n.ps, n.router, n.dgram = ps, router, dgram
 	return nil
+}
+
+// resolveNodeID guarantees the protocol node ID, exported as the mump2p.node_id
+// span attribute, identifies this gateway alone. Per-node analysis keys on it, so
+// a value shared across the fleet silently collapses every gateway into one. The
+// configured gateway ID is unique only by convention; the peer ID is unique by
+// construction, so it backs it up.
+func (n *Node) resolveNodeID(nodeCfg *mp2pconfig.Config, h host.Host) {
+	if nodeCfg.ID == "" || nodeCfg.ID == nodeCfg.ClusterID {
+		nodeCfg.ID = h.ID().String()
+	}
+	n.log.Info("mump2p node identity",
+		logger.WithString("node_id", nodeCfg.ID),
+		logger.WithClusterID(nodeCfg.ClusterID),
+	)
+}
+
+// startOTelTracer builds the OTel span exporter and retains its shutdown hook.
+// It returns a nil tracer when tracing is disabled, and fails startup when it is
+// enabled but misconfigured: silently unexported spans are worse than no boot.
+func (n *Node) startOTelTracer(ctx context.Context, nodeCfg *mp2pconfig.Config, h host.Host) (*oteltracer.Tracer, error) {
+	otelTracer, shutdown, err := oteltracer.NewProvider(ctx, nodeCfg, h.ID().String())
+	if err != nil {
+		return nil, fmt.Errorf("failed to set up otel tracing: %w", err)
+	}
+	n.otelShutdown = shutdown
+	if otelTracer != nil {
+		n.log.Info("otel tracing enabled",
+			logger.WithString("endpoint", nodeCfg.Endpoint),
+			logger.WithString("node_id", nodeCfg.ID),
+		)
+	}
+	return otelTracer, nil
 }
 
 // startDatagramSessions brings up the UDP session protocol. It is a no-op when
@@ -358,6 +415,15 @@ func (n *Node) Stop() {
 	if n.router != nil {
 		if err := n.router.Close(); err != nil {
 			n.log.Error("failed to close rlnc router", err)
+		}
+	}
+	// After the router, which is the last thing that can emit trace events.
+	// Without this flush every run loses the tail of its spans.
+	if n.otelShutdown != nil {
+		shCtx, cancel := context.WithTimeout(context.Background(), otelShutdownTimeout)
+		defer cancel()
+		if err := n.otelShutdown(shCtx); err != nil {
+			n.log.Error("failed to shut down otel tracer", err)
 		}
 	}
 	if err := n.dgram.Close(); err != nil {

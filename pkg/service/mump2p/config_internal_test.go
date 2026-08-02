@@ -109,6 +109,62 @@ func TestToNodeConfigFallsBackOnRejectedServedValues(t *testing.T) {
 	require.NoError(t, got.Validate())
 }
 
+// The protocol node ID becomes the mump2p.node_id span attribute, which per-node
+// analysis keys on, so it has to distinguish gateways. The cluster ID is
+// identical across the fleet and would collapse all of them into one node.
+func TestBaseNodeConfigNodeIDIsPerGateway(t *testing.T) {
+	const clusterID = "bench-cluster"
+
+	first := baseNodeConfig(&Config{ClusterID: clusterID, GatewayID: "bench-gw-0", ListenPort: 4321})
+	second := baseNodeConfig(&Config{ClusterID: clusterID, GatewayID: "bench-gw-1", ListenPort: 4321})
+
+	require.Equal(t, "bench-gw-0", first.ID)
+	require.Equal(t, "bench-gw-1", second.ID)
+	require.NotEqual(t, first.ID, second.ID)
+	require.Equal(t, clusterID, first.ClusterID, "the cluster id still travels as the cluster id")
+	require.NoError(t, first.Validate())
+
+	// Without a gateway id there is nothing better than the cluster id here; the
+	// node resolves it to its peer id at startup instead.
+	fallback := baseNodeConfig(&Config{ClusterID: clusterID, ListenPort: 4321})
+	require.Equal(t, clusterID, fallback.ID)
+}
+
+// Role and ProtocolVersion are validate:"required" and the gateway never sets
+// them, so the protocol defaults are what keeps the dynamic-config path valid and
+// the mump2p.role span attribute meaningful.
+func TestBaseNodeConfigKeepsRequiredIdentityDefaults(t *testing.T) {
+	got := baseNodeConfig(&Config{ClusterID: "bench-cluster", GatewayID: "bench-gw-0", ListenPort: 4321})
+
+	require.Equal(t, mp2pconfig.RoleBoth, got.Role)
+	require.Equal(t, "v2", got.ProtocolVersion)
+	require.NoError(t, got.Validate())
+}
+
+func TestOTelConfigMapping(t *testing.T) {
+	defaults := mp2pconfig.DefaultOTelConfig()
+
+	t.Run("DefaultsOff", func(t *testing.T) {
+		got := (&Config{}).otel()
+		require.False(t, got.Enable)
+		require.Empty(t, got.Endpoint)
+		require.InEpsilon(t, defaults.SampleRatio, got.SampleRatio, 1e-6)
+	})
+
+	t.Run("SetFieldsOverride", func(t *testing.T) {
+		got := (&Config{
+			OTelEnable:      true,
+			OTelEndpoint:    "otel-collector:4318",
+			OTelInsecure:    true,
+			OTelSampleRatio: 0.25,
+		}).otel()
+		require.True(t, got.Enable)
+		require.Equal(t, "otel-collector:4318", got.Endpoint)
+		require.True(t, got.Insecure)
+		require.InEpsilon(t, 0.25, got.SampleRatio, 1e-6)
+	})
+}
+
 func TestSharedMemoryOverrides(t *testing.T) {
 	defaults := mp2pconfig.DefaultSharedMemoryConfig()
 

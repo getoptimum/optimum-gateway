@@ -2,6 +2,8 @@ package mump2p
 
 import (
 	"context"
+	"net/netip"
+	"time"
 
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -30,6 +32,12 @@ type Engine interface {
 
 	GetHost() host.Host
 	GetHostInfo() peer.AddrInfo
+
+	// Datagram data plane state. Reported because the send path falls back to
+	// streams silently: without a confirmed path nothing else says so.
+	DatagramSessionExpiry(peerID peer.ID) (time.Time, bool)
+	DatagramLocalAddr() (netip.AddrPort, bool)
+	DatagramPathConfirmed(peerID peer.ID) bool
 }
 
 var _ Engine = (*Node)(nil)

@@ -69,6 +69,12 @@ type AppConfig struct {
 	DatagramEnable     bool   `yaml:"datagram_enable"      env:"OPT_DATAGRAM_ENABLE"      default:"false"`
 	DatagramListenAddr string `yaml:"datagram_listen_addr" env:"OPT_DATAGRAM_LISTEN_ADDR" default:""`
 	DatagramMaxPayload int    `yaml:"datagram_max_payload" env:"OPT_DATAGRAM_MAX_PAYLOAD" default:"0"`
+	// OpenTelemetry span export for RLNC trace events. Off by default. The
+	// endpoint is an OTLP/HTTP host:port with no scheme; insecure selects http.
+	OTelEnable      bool    `yaml:"otel_enable"       env:"OPT_OTEL_ENABLE"       default:"false"`
+	OTelEndpoint    string  `yaml:"otel_endpoint"     env:"OPT_OTEL_ENDPOINT"     default:""`
+	OTelInsecure    bool    `yaml:"otel_insecure"     env:"OPT_OTEL_INSECURE"     default:"false"`
+	OTelSampleRatio float64 `yaml:"otel_sample_ratio" env:"OPT_OTEL_SAMPLE_RATIO" default:"1.0"`
 	//
 	// AUTH Related Configs and dynamic values.
 	//
@@ -254,6 +260,14 @@ func (c *AppConfig) Validate() error {
 	}
 	if c.GatewayClusterID == "" {
 		return fmt.Errorf("OPT_GATEWAY_CLUSTER_ID is required")
+	}
+	if c.OTelEnable && strings.TrimSpace(c.OTelEndpoint) == "" {
+		return fmt.Errorf("OPT_OTEL_ENDPOINT is required when OPT_OTEL_ENABLE is true")
+	}
+	// Mirrors the protocol's own gte=0,lte=1 bound, so a bad value fails here
+	// rather than being silently clamped by the sampler.
+	if c.OTelSampleRatio < 0 || c.OTelSampleRatio > 1 {
+		return fmt.Errorf("OPT_OTEL_SAMPLE_RATIO must be between 0 and 1, got %v", c.OTelSampleRatio)
 	}
 
 	if c.AggregationIntervalMs < 0 {

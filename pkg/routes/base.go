@@ -115,7 +115,52 @@ func (s *Server) handleSelfInfo(ctx fiber.Ctx) error {
 			"peer_ids":           mumP2PPeerIDs,
 			"peer_ids_per_topic": mumP2PPeerIDsPerTopic,
 		},
+		"datagram": s.datagramInfo(),
 	})
+}
+
+// datagramInfo reports whether the datagram data plane actually carries traffic.
+// A send with no confirmed path takes the stream fallback silently, so a run that
+// never validated one is otherwise indistinguishable from a working one.
+func (s *Server) datagramInfo() map[string]any {
+	info := map[string]any{
+		"enabled":         s.cfg.DatagramEnable,
+		"local_addr":      "",
+		"paths_confirmed": 0,
+		"peers_total":     0,
+		"peers":           map[string]any{},
+	}
+
+	engine := s.srvGateway.GetMumP2PEngine()
+	if !s.cfg.DatagramEnable || engine == nil {
+		return info
+	}
+	if addr, ok := engine.DatagramLocalAddr(); ok {
+		info["local_addr"] = addr.String()
+	}
+
+	peers := engine.GetPeers()
+	perPeer := make(map[string]any, len(peers))
+	confirmed := 0
+	for _, p := range peers {
+		pathOK := engine.DatagramPathConfirmed(p)
+		if pathOK {
+			confirmed++
+		}
+		expiresAt := ""
+		if at, ok := engine.DatagramSessionExpiry(p); ok {
+			expiresAt = at.UTC().Format(time.RFC3339)
+		}
+		perPeer[p.String()] = map[string]any{
+			"path_confirmed":     pathOK,
+			"session_expires_at": expiresAt,
+		}
+	}
+
+	info["paths_confirmed"] = confirmed
+	info["peers_total"] = len(peers)
+	info["peers"] = perPeer
+	return info
 }
 
 // Run starts the HTTP Server. ctx is used to bound the lifetime of the
