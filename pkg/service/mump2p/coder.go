@@ -47,6 +47,9 @@ func newSHMCoder(cfg *mp2pconfig.Config, log *slog.Logger) (Coder, error) {
 		return nil, fmt.Errorf("attach RLNC coder shared memory %q: %s: %w",
 			shmCfg.SHMName, coderAttachHint(shmCfg, err), err)
 	}
+	// cfg.RLNCConfig arrives resolved from toNodeConfig, which is what puts the
+	// datagram path's shard size in front of the coder as well as the router.
+	// Deriving anything here instead would let the two drift apart.
 	coder, err := mp2pengine.NewEngine(cfg.RLNCConfig, log, svc)
 	if err != nil {
 		return nil, fmt.Errorf("create RLNC coder: %w", err)

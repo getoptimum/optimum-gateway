@@ -7,6 +7,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/connmgr"
 
 	mp2pconfig "github.com/getoptimum/mump2p-protocol/pkg/config"
+	rlncps "github.com/getoptimum/mump2p-protocol/pkg/pubsub"
 	commonconfig "github.com/getoptimum/optimum-common/pkg/config"
 	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
 )
@@ -106,12 +107,20 @@ func (cfg *Config) sharedMemory() mp2pconfig.SharedMemoryConfig {
 // values come from the dynamic config rotator so operator changes reach the node.
 // A served combination the protocol rejects falls back to protocol defaults and is
 // reported, since those values arrive at runtime and must not brick a restart.
+//
+// The datagram path's coding parameters are folded in last, after the served
+// values, so the node reports and codes at the same numbers: the coder is built
+// from the returned config before the pubsub is, and a coder sized for the
+// stream path shards every message for a transport the node is not sending on.
 func toNodeConfig(cfg *Config) (*mp2pconfig.Config, error) {
 	res := baseNodeConfig(cfg)
 	applyServedConfig(res, cfg.Get())
 	if err := res.Validate(); err != nil {
-		return baseNodeConfig(cfg), fmt.Errorf("dynamic mump2p config rejected, using defaults: %w", err)
+		fallback := baseNodeConfig(cfg)
+		rlncps.ResolveRLNCConfig(fallback)
+		return fallback, fmt.Errorf("dynamic mump2p config rejected, using defaults: %w", err)
 	}
+	rlncps.ResolveRLNCConfig(res)
 	return res, nil
 }
 

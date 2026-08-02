@@ -188,6 +188,47 @@ func TestDatagramFlagDefaultsOff(t *testing.T) {
 	require.False(t, got.Datagram.Enable)
 }
 
+// TestToNodeConfigSizesTheCoderForTheDatagramPath pins the shard size the coder
+// is built with, which is the one field of the resolved config no other test
+// covers and the one a datagram deployment cannot be wrong about.
+//
+// The coder and the router are built from this same config, so the stream-path
+// default reaching the coder means every symbol is sized for a transport the
+// node is not using: a payload splits into an order of magnitude more chunks
+// than the datagram budget calls for, and a message only reassembles once every
+// chunk independently reaches full rank.
+func TestToNodeConfigSizesTheCoderForTheDatagramPath(t *testing.T) {
+	cfg := &Config{
+		ClusterID:      "test-cluster",
+		ListenPort:     4321,
+		DatagramEnable: true,
+		Rotator:        newRotator(t, &commonentities.OptimumConfig{}),
+	}
+
+	got, err := toNodeConfig(cfg)
+	require.NoError(t, err)
+	require.NoError(t, got.Validate())
+
+	require.NotEqual(t, uint32(mp2pconfig.DefaultMaxShardSize), got.MaxShardSize,
+		"the coder is still sharding at the stream-path default with the datagram path enabled")
+	require.Greater(t, got.MaxShardSize, uint32(mp2pconfig.DefaultMaxShardSize))
+}
+
+// The stream path must be untouched by all of this: a deployment that does not
+// enable the datagram transport has to code exactly as it did before.
+func TestToNodeConfigLeavesTheStreamPathShardSizeAlone(t *testing.T) {
+	cfg := &Config{
+		ClusterID:  "test-cluster",
+		ListenPort: 4321,
+		Rotator:    newRotator(t, &commonentities.OptimumConfig{}),
+	}
+
+	got, err := toNodeConfig(cfg)
+	require.NoError(t, err)
+
+	require.Equal(t, uint32(mp2pconfig.DefaultMaxShardSize), got.MaxShardSize)
+}
+
 func TestDatagramConfigMapping(t *testing.T) {
 	defaults := mp2pconfig.DefaultDatagramConfig()
 

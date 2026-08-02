@@ -100,7 +100,8 @@ func TestAppRouter(t *testing.T) {
 	require.InDelta(t, float64(served.PublisherShardMultiplier), res.RLNCConfig["publisher_shard_multiplier"], 1e-6)
 	require.InDelta(t, float64(served.ForwardShardThreshold), res.RLNCConfig["forward_shard_threshold"], 1e-6)
 
-	// 64 is the protocol default and nothing in the gateway sets MaxShardSize, so
-	// this pins the value a run codes at until someone deliberately changes it.
+	// 64 is the protocol stream-path default, which is what this node runs on:
+	// the datagram transport is off here and derives its own shard size when it
+	// is not. Pinning it keeps the reported value tied to the coder's.
 	require.InDelta(t, 64, res.RLNCConfig["max_shard_size"], 0)
 }
