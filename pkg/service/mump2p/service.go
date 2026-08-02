@@ -47,6 +47,10 @@ type Node struct {
 	host host.Host      // The libp2p host managing network connections and identity
 	ps   *pubsub.PubSub // The mump2p RLNC pub-sub instance
 
+	// the resolved protocol config the coder and the pubsub were built from, kept
+	// so the node can report the parameters it actually ran at
+	nodeCfg *mp2pconfig.Config
+
 	router *rlncrouter.RLNCRouter // owns the RLNC decode state; closed on Stop
 	dgram  *rlncps.Datagram       // nil unless the datagram data plane is enabled
 	udp    *udpsession.Manager    // nil unless the datagram data plane is enabled
@@ -182,6 +186,7 @@ func NewNodeWithHost(
 	if cfgErr != nil {
 		log.Error("failed to apply dynamic mump2p config", cfgErr)
 	}
+	ret.nodeCfg = nodeCfg
 	slogger := nodeLogger(cfg.ClusterID)
 
 	coder := resolved.coder
@@ -469,6 +474,18 @@ func (n *Node) GetHostInfo() peer.AddrInfo {
 		ID:    n.host.ID(),
 		Addrs: n.host.Addrs(),
 	}
+}
+
+// EffectiveMaxShardSize reports the shard size cap, in bytes, that the node's
+// RLNC coder was built with; 0 before it resolved a config. No gateway setting
+// reaches it, so a run has no other record of the value it coded at. The
+// receiver is checked because a *Node held as an Engine is a non-nil interface
+// even before the host is set up.
+func (n *Node) EffectiveMaxShardSize() uint32 {
+	if n == nil || n.nodeCfg == nil {
+		return 0
+	}
+	return n.nodeCfg.MaxShardSize
 }
 
 func (n *Node) getPeerState(peerID peer.ID) (entities.PeerState, bool) {

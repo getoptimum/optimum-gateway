@@ -99,6 +99,7 @@ func (s *Server) handleSelfInfo(ctx fiber.Ctx) error {
 			"rlnc_shard_factor":          rlncCfg.ShardFactor,
 			"publisher_shard_multiplier": rlncCfg.PublisherShardMultiplier,
 			"forward_shard_threshold":    rlncCfg.ForwardShardThreshold,
+			"max_shard_size":             s.maxShardSize(),
 		},
 		"chain": s.srvGateway.GetForkDigestManager().AppChain().String(),
 		"libp2p": map[string]any{
@@ -117,6 +118,17 @@ func (s *Server) handleSelfInfo(ctx fiber.Ctx) error {
 		},
 		"datagram": s.datagramInfo(),
 	})
+}
+
+// maxShardSize reports the RLNC shard size cap the running node coded at, and 0
+// before the mump2p node exists. Unlike the other rlnc_config entries it is not
+// served by the dynamic config, so it has to come from the node itself.
+func (s *Server) maxShardSize() uint32 {
+	engine := s.srvGateway.GetMumP2PEngine()
+	if engine == nil {
+		return 0
+	}
+	return engine.EffectiveMaxShardSize()
 }
 
 // datagramInfo reports whether the datagram data plane actually carries traffic.

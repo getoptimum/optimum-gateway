@@ -2,7 +2,9 @@ package routes_test
 
 import (
 	"fmt"
+	"maps"
 	"net/http"
+	"slices"
 	"testing"
 	"time"
 
@@ -62,13 +64,14 @@ func TestAppRouter(t *testing.T) {
 
 	// then
 	type testResp struct {
-		PeerID           string `json:"peer_id"`
-		CLHealth         int64  `json:"cl_health"`
-		MumP2PHealth     int64  `json:"mump2p_health"`
-		Version          string `json:"version"`
-		CommitHash       string `json:"commit_hash"`
-		GatewayID        string `json:"gateway_id"`
-		GatewayClusterID string `json:"gateway_cluster_id"`
+		PeerID           string         `json:"peer_id"`
+		CLHealth         int64          `json:"cl_health"`
+		MumP2PHealth     int64          `json:"mump2p_health"`
+		Version          string         `json:"version"`
+		CommitHash       string         `json:"commit_hash"`
+		GatewayID        string         `json:"gateway_id"`
+		GatewayClusterID string         `json:"gateway_cluster_id"`
+		RLNCConfig       map[string]any `json:"rlnc_config"`
 	}
 	res, code, errR := net.GetCurl[testResp](cnt.Ctx, fmt.Sprintf("http://%s/api/v1/self_info", addr), nil)
 	require.NoError(t, errR)
@@ -80,4 +83,24 @@ func TestAppRouter(t *testing.T) {
 	id, err := identity.ExtractIdentityFromDir(cfg.IdentityLibP2PDir)
 	require.NoError(t, err)
 	require.Equal(t, id.ID.String(), res.PeerID)
+
+	// The benchmark harness hashes rlnc_config whole to decide whether the fleet
+	// agrees on its configuration, so the key set is part of the contract.
+	require.Equal(t, []string{
+		"forward_shard_threshold",
+		"max_shard_size",
+		"publisher_shard_multiplier",
+		"random_message_size_bytes",
+		"rlnc_shard_factor",
+	}, slices.Sorted(maps.Keys(res.RLNCConfig)))
+
+	served := cfg.GetDCRotator().Get()
+	require.InDelta(t, float64(served.RandomMessageSize), res.RLNCConfig["random_message_size_bytes"], 0)
+	require.InDelta(t, float64(served.ShardFactor), res.RLNCConfig["rlnc_shard_factor"], 0)
+	require.InDelta(t, float64(served.PublisherShardMultiplier), res.RLNCConfig["publisher_shard_multiplier"], 1e-6)
+	require.InDelta(t, float64(served.ForwardShardThreshold), res.RLNCConfig["forward_shard_threshold"], 1e-6)
+
+	// 64 is the protocol default and nothing in the gateway sets MaxShardSize, so
+	// this pins the value a run codes at until someone deliberately changes it.
+	require.InDelta(t, 64, res.RLNCConfig["max_shard_size"], 0)
 }

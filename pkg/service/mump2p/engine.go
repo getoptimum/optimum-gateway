@@ -33,6 +33,10 @@ type Engine interface {
 	GetHost() host.Host
 	GetHostInfo() peer.AddrInfo
 
+	// Effective RLNC parameters the node resolved at construction. Reported
+	// because nothing in the gateway config sets them.
+	EffectiveMaxShardSize() uint32
+
 	// Datagram data plane state. Reported because the send path falls back to
 	// streams silently: without a confirmed path nothing else says so.
 	DatagramSessionExpiry(peerID peer.ID) (time.Time, bool)
