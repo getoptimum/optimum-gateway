@@ -34,27 +34,32 @@ import urllib.request
 # The datagram path derives its shard size from the transport's plaintext
 # budget, so this number is a property of the run and not a knob:
 #
-#   1422 transport default MaxPayload  (OPT_DATAGRAM_MAX_PAYLOAD left unset)
+#   1382 transport default MaxPayload  (OPT_DATAGRAM_MAX_PAYLOAD left unset)
 #   -192 engine.SymbolFramingOverhead
 #   - 38 len("/eth2/<8 hex digest>/beacon_block/ssz_snappy"), the longest topic
 #        the gateway declares it publishes on
 #   - 16 k coefficient bytes           (= rlnc_shard_factor)
-#   = 1176
+#   = 1136
+#
+# The 1382 is datagram.DefaultPathMTU (1460) less a 40 byte IPv6 header, an 8
+# byte UDP header and the sealed datagram's own 30 bytes of framing. IPv6 is the
+# case to size against because the transport's socket is dual stack.
 #
 # Asserting it is the regression test this demo exists for: a derived shard size
 # that never reaches the RLNC engine leaves the node coding at the 64 byte
 # protocol default. It also catches a config-proxy 404, which is otherwise
-# invisible: the gateway keeps its built-in k=4 and lands on 1188 instead.
-EXPECTED_MAX_SHARD_SIZE = 1176
+# invisible: the gateway keeps its built-in k=4 and lands on 1148 instead.
+EXPECTED_MAX_SHARD_SIZE = 1136
 EXPECTED_SHARD_FACTOR = 16
 EXPECTED_PUBLISHER_MULTIPLIER = 2.5
 EXPECTED_CLUSTER_ID = "datagram-demo"
 EXPECTED_CHAIN = "hoodi"
 
 SHARD_SIZE_DERIVATION = (
-    "1422 (transport default MaxPayload, sized for a 1500 byte Ethernet MTU) "
+    "1382 (transport default MaxPayload: a 1460 byte path MTU, less a 40 byte "
+    "IPv6 header, an 8 byte UDP header and 30 bytes of sealed framing) "
     "- 192 (SymbolFramingOverhead) - 38 (longest declared publish topic) "
-    "- 16 (k) = 1176"
+    "- 16 (k) = 1136"
 )
 
 BEACON_BLOCK_TOPIC_RE = re.compile(r"^/eth2/[0-9a-f]+/beacon_block/ssz_snappy$")
@@ -229,7 +234,7 @@ def check_config(gateways):
                 f"{gw.name}: derived max_shard_size is {r.get('max_shard_size')}, expected "
                 f"{EXPECTED_MAX_SHARD_SIZE} ({SHARD_SIZE_DERIVATION}). Either the MTU-derived size did "
                 f"not reach the RLNC engine, or max_shard_size was pinned somewhere, or the config "
-                f"proxy 404'd and left k at the built-in 4 (which lands on 1188)"
+                f"proxy 404'd and left k at the built-in 4 (which lands on 1148)"
             )
         if not gw.info.get("propagation_enabled"):
             raise Failure(
