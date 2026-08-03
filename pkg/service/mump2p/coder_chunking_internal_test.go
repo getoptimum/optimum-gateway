@@ -28,14 +28,14 @@ const (
 	// reaches full rank, so delivery falls off as p^chunks. The count is pinned
 	// here because a shard-size regression is otherwise invisible: nothing fails,
 	// messages just stop arriving.
-	wantChunksAtDatagramShardSize = 4
+	wantChunksAtDatagramShardSize = 3
 )
 
 // TestCoderChunkCountForARepresentativePayload pins how many chunks the coder
 // splits a real payload into on the datagram path.
 func TestCoderChunkCountForARepresentativePayload(t *testing.T) {
 	cfg := &Config{
-		ClusterID:      "test-cluster",
+		ClusterID:      testClusterID,
 		ListenPort:     4321,
 		DatagramEnable: true,
 		Rotator:        newRotator(t, &commonentities.OptimumConfig{}),

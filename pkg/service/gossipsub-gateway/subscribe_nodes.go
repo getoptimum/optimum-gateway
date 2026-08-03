@@ -18,9 +18,10 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/utils"
 )
 
-const (
-	mumP2PAggregatedMessagesTopic = "mump2p_aggregated_messages"
-)
+// The topic name lives in pkg/protocol/topics so that the datagram shard sizing,
+// which has to reserve room for it, is derived from the same string this
+// publishes on.
+const mumP2PAggregatedMessagesTopic = topics.MumP2PAggregatedMessages
 
 // filterAndBuildEthTopics returns full eth2 topics built from descriptors (using forkDigest) and, for mump2p nodes, also appends the internal aggregated-messages topic.
 func (s *Service) filterAndBuildEthTopics(forkDigest string, mumP2PNode bool) []string {

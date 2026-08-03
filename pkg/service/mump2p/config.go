@@ -10,6 +10,7 @@ import (
 	rlncps "github.com/getoptimum/mump2p-protocol/pkg/pubsub"
 	commonconfig "github.com/getoptimum/optimum-common/pkg/config"
 	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
+	"github.com/getoptimum/optimum-gateway/pkg/protocol/topics"
 )
 
 const (
@@ -137,6 +138,11 @@ func baseNodeConfig(cfg *Config) *mp2pconfig.Config {
 		res.ID = cfg.ClusterID
 	}
 	res.ClusterID = cfg.ClusterID
+	// Sizing input for the coded symbols: the gateway joins its topics once the
+	// consensus layer reports a fork digest, long after this config is built, so
+	// the node is told their shape here rather than left to reserve for any topic
+	// at all. See mp2pconfig.Config.PublishTopics.
+	res.PublishTopics = topics.MumP2PPublishTopics()
 	res.Port = cfg.ListenPort
 	res.Transport = mp2pconfig.TransportQUIC
 	res.HeartbeatMS = heartbeatMS

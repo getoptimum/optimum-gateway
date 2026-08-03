@@ -12,6 +12,9 @@ import (
 	cfgpkg "github.com/getoptimum/optimum-gateway/pkg/config"
 )
 
+// testClusterID is the cluster every config test builds against.
+const testClusterID = "test-cluster"
+
 func newRotator(t *testing.T, served *commonentities.OptimumConfig) *commonconfig.Rotator {
 	t.Helper()
 
@@ -20,14 +23,14 @@ func newRotator(t *testing.T, served *commonentities.OptimumConfig) *commonconfi
 		logger.NewAppSLogger(logger.Debug),
 		served,
 		"hoodi",
-		"test-cluster",
+		testClusterID,
 		func(*commonentities.DynamicConfig) {},
 	)
 }
 
 func TestToNodeConfigMapsServedValues(t *testing.T) {
 	cfg := &Config{
-		ClusterID:  "test-cluster",
+		ClusterID:  testClusterID,
 		ListenPort: 4321,
 		Rotator: newRotator(t, &commonentities.OptimumConfig{
 			MeshDegreeTarget:         cfgpkg.DefaultMeshDegreeTarget,
@@ -42,7 +45,7 @@ func TestToNodeConfigMapsServedValues(t *testing.T) {
 	got, err := toNodeConfig(cfg)
 	require.NoError(t, err)
 
-	require.Equal(t, "test-cluster", got.ClusterID)
+	require.Equal(t, testClusterID, got.ClusterID)
 	require.Equal(t, 4321, got.Port)
 	require.Equal(t, mp2pconfig.TransportQUIC, got.Transport)
 	require.Equal(t, heartbeatMS, got.HeartbeatMS)
@@ -96,7 +99,7 @@ func TestToNodeConfigKeepsDefaultsForUnservedValues(t *testing.T) {
 // back to the defaults and reports why.
 func TestToNodeConfigFallsBackOnRejectedServedValues(t *testing.T) {
 	cfg := &Config{
-		ClusterID:  "test-cluster",
+		ClusterID:  testClusterID,
 		ListenPort: 4321,
 		Rotator:    newRotator(t, &commonentities.OptimumConfig{MeshDegreeMin: 40}),
 	}
@@ -181,7 +184,7 @@ func TestSharedMemoryOverrides(t *testing.T) {
 // binds a UDP socket and moves mesh traffic onto per-peer keys, so a config that
 // says nothing about it must leave it off.
 func TestDatagramFlagDefaultsOff(t *testing.T) {
-	cfg := &Config{ClusterID: "test-cluster", ListenPort: 4321, Rotator: newRotator(t, &commonentities.OptimumConfig{})}
+	cfg := &Config{ClusterID: testClusterID, ListenPort: 4321, Rotator: newRotator(t, &commonentities.OptimumConfig{})}
 
 	got, err := toNodeConfig(cfg)
 	require.NoError(t, err)
@@ -199,7 +202,7 @@ func TestDatagramFlagDefaultsOff(t *testing.T) {
 // chunk independently reaches full rank.
 func TestToNodeConfigSizesTheCoderForTheDatagramPath(t *testing.T) {
 	cfg := &Config{
-		ClusterID:      "test-cluster",
+		ClusterID:      testClusterID,
 		ListenPort:     4321,
 		DatagramEnable: true,
 		Rotator:        newRotator(t, &commonentities.OptimumConfig{}),
@@ -218,7 +221,7 @@ func TestToNodeConfigSizesTheCoderForTheDatagramPath(t *testing.T) {
 // enable the datagram transport has to code exactly as it did before.
 func TestToNodeConfigLeavesTheStreamPathShardSizeAlone(t *testing.T) {
 	cfg := &Config{
-		ClusterID:  "test-cluster",
+		ClusterID:  testClusterID,
 		ListenPort: 4321,
 		Rotator:    newRotator(t, &commonentities.OptimumConfig{}),
 	}

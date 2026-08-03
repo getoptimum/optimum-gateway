@@ -110,3 +110,29 @@ func TestBuildFullTopic(t *testing.T) {
 		})
 	}
 }
+
+// TestMumP2PPublishTopicsMeasureLikeRealTopics proves the declared set is the
+// right length, which is the only property of it that matters. It is used to
+// reserve room for a topic inside a coded symbol before the fork digest that
+// completes the real topic is known, so a placeholder that measures differently
+// from the real thing would size the reservation wrong.
+func TestMumP2PPublishTopicsMeasureLikeRealTopics(t *testing.T) {
+	declared := topics.MumP2PPublishTopics()
+
+	require.Contains(t, declared, topics.MumP2PAggregatedMessages)
+	require.Len(t, declared, 2)
+
+	// Any real digest, and every digest, measures the same as the placeholder.
+	for _, digest := range []string{"c6ecb76c", "00000000", "ffffffff"} {
+		full := topics.BuildFullTopic(digest, "beacon_block")
+		require.True(t, topics.IsFullEth2Topic(full))
+
+		var matched bool
+		for _, topic := range declared {
+			if len(topic) == len(full) {
+				matched = true
+			}
+		}
+		require.Truef(t, matched, "no declared topic measures like %q (%d bytes)", full, len(full))
+	}
+}
