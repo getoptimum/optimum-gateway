@@ -12,6 +12,9 @@ import (
 const (
 	BeaconBlockBase       = "beacon_block"
 	BeaconAttestationBase = "beacon_attestation"
+	// singleAttestationSSZSize is the fixed SSZ size of an Electra SingleAttestation:
+	// committee_index(8) + attester_index(8) + AttestationData(128) + signature(96).
+	singleAttestationSSZSize = 240
 )
 
 func IsBeaconBlockTopic(topic string) bool {
@@ -62,8 +65,9 @@ func ParseAttestationSSZTopic(buf []byte) (attesterIndex, slot uint64, err error
 	if err != nil {
 		return 0, 0, fmt.Errorf("ssz decompressing failed: %w", err)
 	}
-	if len(msg) < 24 {
-		return 0, 0, fmt.Errorf("ssz decompressing failed: message too short")
+	// check that we have a valid SingleAttestation SSZ size
+	if len(msg) != singleAttestationSSZSize {
+		return 0, 0, fmt.Errorf("unexpected attestation ssz size: got %d, want %d", len(msg), singleAttestationSSZSize)
 	}
 	attesterIndex = binary.LittleEndian.Uint64(msg[8:16])
 	slot = binary.LittleEndian.Uint64(msg[16:24])

@@ -260,12 +260,6 @@ func buildMimirPromConfig(cfg *config.AppConfig, scrapeInterval time.Duration) (
 	rwCfg := promconfig.DefaultRemoteWriteConfig
 	rwCfg.URL = &commonconfig.URL{URL: pushURL}
 	rwCfg.Name = "mimir"
-	if token := currentPushToken(); token != "" {
-		rwCfg.HTTPClientConfig.Authorization = &commonconfig.Authorization{
-			Type:        "Bearer",
-			Credentials: commonconfig.Secret(token),
-		}
-	}
 
 	target := fmt.Sprintf("127.0.0.1:%d", cfg.TelemetryPort)
 	scrapeCfg := &promconfig.ScrapeConfig{
@@ -293,16 +287,21 @@ func buildMimirPromConfig(cfg *config.AppConfig, scrapeInterval time.Duration) (
 		ScrapeConfigs:      []*promconfig.ScrapeConfig{scrapeCfg},
 		RemoteWriteConfigs: []*promconfig.RemoteWriteConfig{&rwCfg},
 	}
-	prevMarshalSecrets := commonconfig.MarshalSecretValue
-	commonconfig.MarshalSecretValue = true
 	yml, err := promyaml.Marshal(raw)
-	commonconfig.MarshalSecretValue = prevMarshalSecrets
 	if err != nil {
 		return nil, fmt.Errorf("marshal prometheus config: %w", err)
 	}
 	loaded, err := promconfig.Load(string(yml), promslog.NewNopLogger())
 	if err != nil {
 		return nil, fmt.Errorf("load prometheus config: %w", err)
+	}
+	// Bearer token is applied in memory only; marshaling it through YAML races on
+	// commonconfig.MarshalSecretValue and can leak other secrets while flipped.
+	if token := currentPushToken(); token != "" {
+		loaded.RemoteWriteConfigs[0].HTTPClientConfig.Authorization = &commonconfig.Authorization{
+			Type:        "Bearer",
+			Credentials: commonconfig.Secret(token),
+		}
 	}
 	return loaded, nil
 }
