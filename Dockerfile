@@ -67,6 +67,6 @@ COPY --from=builder /optimum-gateway/LICENSE /optimum-gateway/NOTICE /optimum-ga
 
 # USER gateway
 
-EXPOSE 33212 33213 48123
+EXPOSE 33212/tcp 33213/udp 48123/tcp
 
 ENTRYPOINT ["/optimum-gateway"]

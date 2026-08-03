@@ -9,9 +9,9 @@ services:
     networks:
       - gateway_cluster
     ports:
-      - "33212:33212"
-      - "33213:33213"
-      - "48123:48123"
+      - "33212:33212/tcp"
+      - "33213:33213/udp"
+      - "48123:48123/tcp"
     volumes:
       - "./config:/app/config:ro"
       - "./mump2p/data/mump2p/:/tmp/mump2p"

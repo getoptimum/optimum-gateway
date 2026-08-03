@@ -9,9 +9,9 @@ services:
     restart: unless-stopped
     profiles: ["lite", "full", "geth", "nethermind", "teku", "prysm", "lighthouse", "nimbus", "lodestar"]
     ports:
-      - "33212:33212"         # libp2p port (CL clients connect here)
-      - "43213:43213"         # mump2p agent port
-      - "48123:48123"         # Telemetry/metrics port
+      - "33212:33212/tcp"     # libp2p (CL clients connect here)
+      - "43213:43213/udp"     # mump2p QUIC
+      - "48123:48123/tcp"     # telemetry/metrics
     volumes:
       - ./config:/app/config  # Config directory (must contain app_conf.yml)
       - ./identity/libp2p:/tmp/libp2p   # Persistent libp2p identity

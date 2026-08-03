@@ -52,9 +52,9 @@ services:
     networks:
       - mump2p_cluster
     ports:
-      - "33212:33212" # libp2p port
-      - "33213:33213" # opt port
-      - "48123:48123" # telemetry + API
+      - "33212:33212/tcp" # libp2p
+      - "33213:33213/udp" # mump2p QUIC
+      - "48123:48123/tcp" # telemetry + API
     volumes:
       - "./config:/app/config:ro"
       - "./mump2p/data/mump2p/:/tmp/mump2p" # identity_mump2p_dir in app_conf.yml must match container path
