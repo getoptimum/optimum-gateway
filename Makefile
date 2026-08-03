@@ -69,6 +69,13 @@ logs_prysm: ## Show logs of prysm service
 datagram-demo: ## Run the encrypted UDP datagram data-plane demo (5 gateways end to end)
 	deploy/datagram-demo/run.sh
 
+# The same data plane at a peer count where dissemination stalls. Reports
+# delivery and per-chunk rank rather than passing or failing; pass flags through
+# with ARGS, e.g. `make datagram-scale ARGS="--gateways 10"`. Needs the same
+# sibling optimum-bench-v2 checkout; see deploy/datagram-scale/README.md.
+datagram-scale: ## Run the mid-scale dissemination tier (12 gateways, reports delivery and rank)
+	deploy/datagram-scale/run.sh $(ARGS)
+
 # Runs the coder against the host /dev/shm so a gateway started with `make run`
 # can attach to it. Only for host-side development; compose owns the deployed pair.
 rlnc_start: rlnc_stop ## Start the RLNC coder sidecar against the host /dev/shm
@@ -184,5 +191,5 @@ fastssz-generate: ## Vendor fastssz spectests SSZ types into pkg/protocol/fastss
 	@echo "fastssz code vendored at pkg/protocol/fastssz_codegen/"
 
 .PHONY: fastssz-generate
-.PHONY: help test lint coverage vulcheck build deps proto run run_cl run_local rlnc_start rlnc_stop build_hermes_image run_gateway_with_sidecar license-check license-check-test notices sbom sbom-binary sbom-full datagram-demo
+.PHONY: help test lint coverage vulcheck build deps proto run run_cl run_local rlnc_start rlnc_stop build_hermes_image run_gateway_with_sidecar license-check license-check-test notices sbom sbom-binary sbom-full datagram-demo datagram-scale
 .DEFAULT_GOAL := help

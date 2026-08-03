@@ -1,0 +1,14 @@
+{
+  "chain_id": "hoodi",
+  "cluster_id": "datagram-scale",
+  "service_version": "datagram-scale",
+  "propagation_enabled": true,
+  "exclude_self_messages": false,
+  "random_message_size_bytes": 20004,
+  "rlnc_shard_factor": 16,
+  "publisher_shard_multiplier": 2.5,
+  "forward_shard_threshold": 0.75,
+  "mesh_degree_target": 6,
+  "mesh_degree_min": 4,
+  "mesh_degree_max": 12
+}

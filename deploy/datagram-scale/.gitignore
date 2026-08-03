@@ -1,0 +1,7 @@
+# Built by run.sh from the gateway repo and optimum-bench-v2.
+bin/
+# Generated per run by gen-stack.py.
+stack.yml
+served-config.json
+# Run artifacts: captured spans, per-run report, sweep summaries.
+out/
