@@ -76,7 +76,7 @@ func TestPeerTopicTracerHandleMumP2PTrace(t *testing.T) {
 			},
 		},
 		{
-			name: "reject message with empty reason",
+			name: "reject message with an unenumerated reason",
 			raw: &tracepb.TraceEvent{
 				Event: &tracepb.TraceEvent_RejectMessage{
 					RejectMessage: &tracepb.RejectMessage{Topic: attTopic},
@@ -84,7 +84,9 @@ func TestPeerTopicTracerHandleMumP2PTrace(t *testing.T) {
 			},
 			checks: []metricExpectation{
 				{name: metricMessage, labels: map[string]string{labelEvent: "reject", labelTopic: classAtt}, value: 1},
-				{name: "testns_mump2p_trace_message_rejects_total", labels: map[string]string{labelTopic: classAtt, "reason": "unknown"}, value: 1},
+				// An empty or unrecognized reason is folded into one bucket rather
+				// than becoming a label value of its own.
+				{name: "testns_mump2p_trace_message_rejects_total", labels: map[string]string{labelTopic: classAtt, "reason": "other"}, value: 1},
 			},
 		},
 		{

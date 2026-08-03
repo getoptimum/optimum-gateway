@@ -256,7 +256,7 @@ func TestTraceHelpers(t *testing.T) {
 	).GetCounter().GetValue())
 	require.Equal(t, float64(1), metricByLabels(t, reg,
 		testMetricsNamespace+"_"+testMetricsSubsystem+"_mump2p_trace_message_rejects_total",
-		map[string]string{labelTopic: "beacon_block", "reason": "unknown"},
+		map[string]string{labelTopic: "beacon_block", labelReason: rejectReasonOther},
 	).GetCounter().GetValue())
 	require.Equal(t, float64(1), metricByLabels(t, reg,
 		testMetricsNamespace+"_"+testMetricsSubsystem+"_mump2p_trace_shards_total",

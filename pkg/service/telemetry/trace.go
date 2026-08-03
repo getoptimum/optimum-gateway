@@ -39,7 +39,7 @@ func initMump2pTraceMetrics() {
 	traceMessageRejectsTotal = commonmetrics.NewCounterVec(
 		"mump2p_trace_message_rejects_total", subsystem,
 		"mump2p rejected messages by topic class and validation reason.",
-		[]string{labelTopic, "reason"},
+		[]string{labelTopic, labelReason},
 	)
 	traceShardsTotal = commonmetrics.NewCounterVec(
 		"mump2p_trace_shards_total", subsystem,
@@ -77,14 +77,15 @@ func TraceMessage(event, topic string) {
 }
 
 // TraceMessageReject records a rejected message with its validation reason.
+//
+// The reason is mapped onto the bounded label set rather than used verbatim: it
+// arrives as a bare string, and a label value taken straight from one grows the
+// metric's cardinality with every value that ever reaches this call.
 func TraceMessageReject(topic, reason string) {
 	if !enabledMetrics {
 		return
 	}
-	if reason == "" {
-		reason = "unknown"
-	}
-	traceMessageRejectsTotal.WithLabelValues(topicClass(topic), reason).Inc()
+	traceMessageRejectsTotal.WithLabelValues(topicClass(topic), RejectReasonLabel(reason)).Inc()
 }
 
 // TraceShard records an RLNC shard event and its coefficient byte size.

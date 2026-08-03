@@ -27,6 +27,7 @@ const (
 	labelDirection = "direction"
 	labelTopic     = "topic"
 	labelProtocol  = "protocol"
+	labelReason    = "reason"
 )
 
 var (

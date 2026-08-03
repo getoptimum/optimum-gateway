@@ -66,12 +66,14 @@ func TestMumP2PCollector(t *testing.T) {
 	rejectMsg := mumMsg(attTopic, nil)
 	c.RejectMessage(rejectMsg, pubsub.RejectValidationThrottled)
 	c.RejectMessage(rejectMsg, pubsub.RejectValidationQueueFull)
-	c.RejectMessage(rejectMsg, "other")
-	c.RejectMessage(mumMsg("", nil), "other")
+	c.RejectMessage(rejectMsg, pubsub.RejectValidationFailed)
+	c.RejectMessage(mumMsg("", nil), pubsub.RejectValidationFailed)
 	require.Equal(t, float64(1), counterVal(t, reg, mump2pMetric("dropped_throttled_total"), attLabels))
 	require.Equal(t, float64(1), counterVal(t, reg, mump2pMetric("dropped_queue_full_total"), attLabels))
-	require.Equal(t, float64(1), counterVal(t, reg, mump2pMetric("dropped_rejected_total"), attLabels))
-	require.Equal(t, float64(1), counterVal(t, reg, mump2pMetric("dropped_rejected_total"), map[string]string{labelTopic: ""}))
+	require.Equal(t, float64(1), counterVal(t, reg, mump2pMetric("dropped_rejected_total"),
+		map[string]string{labelTopic: attTopic, labelReason: rejectReasonValidationFailed}))
+	require.Equal(t, float64(1), counterVal(t, reg, mump2pMetric("dropped_rejected_total"),
+		map[string]string{labelTopic: "", labelReason: rejectReasonValidationFailed}))
 
 	require.NotPanics(t, func() {
 		c.Join("t")
@@ -96,4 +98,46 @@ func TestMumP2PCollector(t *testing.T) {
 	} {
 		require.Equal(t, float64(1), counterVal(t, reg, mump2pMetric(name), map[string]string{}))
 	}
+}
+
+// TestRejectMessageKeepsTheReason proves the counter distinguishes the reasons a
+// message can be rejected for. Bucketing them together loses the only thing
+// that says whether the node is dropping forgeries, its own echoes or traffic
+// it simply could not keep up with, and those call for opposite responses.
+func TestRejectMessageKeepsTheReason(t *testing.T) {
+	reg := initTestMetricsRegistry(t, initMumP2PMetrics)
+	c := NewMumP2PCollector()
+
+	const topic = "beacon_block"
+	msg := mumMsg(topic, nil)
+
+	distinct := map[string]string{
+		pubsub.RejectValidationFailed:  rejectReasonValidationFailed,
+		pubsub.RejectValidationIgnored: rejectReasonValidationIgnored,
+		pubsub.RejectSelfOrigin:        rejectReasonSelfOrigin,
+		pubsub.RejectBlacklistedSource: rejectReasonBlacklistedSource,
+		pubsub.RejectBlacklstedPeer:    rejectReasonBlacklistedPeer,
+		pubsub.RejectMissingSignature:  rejectReasonMissingSignature,
+		pubsub.RejectInvalidSignature:  rejectReasonInvalidSignature,
+	}
+
+	for reason := range distinct {
+		c.RejectMessage(msg, reason)
+	}
+
+	for reason, want := range distinct {
+		require.Equalf(t, float64(1),
+			counterVal(t, reg, mump2pMetric("dropped_rejected_total"),
+				map[string]string{labelTopic: topic, labelReason: want}),
+			"reject reason %q must be counted under its own label", reason)
+	}
+
+	// An unrecognized reason is folded into one bucket rather than becoming a
+	// label value of its own: the label space has to stay bounded by the set the
+	// pubsub library defines, not by whatever string reaches this call.
+	c.RejectMessage(msg, "something nobody enumerated")
+	c.RejectMessage(msg, "something else nobody enumerated")
+	require.Equal(t, float64(2),
+		counterVal(t, reg, mump2pMetric("dropped_rejected_total"),
+			map[string]string{labelTopic: topic, labelReason: rejectReasonOther}))
 }

@@ -41,13 +41,62 @@ func initMumP2PMetrics() {
 	mpReceivedMessagesCount = commonmetrics.NewCounterVec("received_messages_count", "mump2p", "Received messages", []string{labelTopic})
 	mpQueueFullCount = commonmetrics.NewCounterVec("dropped_queue_full_total", "mump2p", "Dropped messages (queue full)", []string{labelTopic})
 	mpThrottledCount = commonmetrics.NewCounterVec("dropped_throttled_total", "mump2p", "Dropped messages (throttled)", []string{labelTopic})
-	mpRejectedCount = commonmetrics.NewCounterVec("dropped_rejected_total", "mump2p", "Dropped messages (other)", []string{labelTopic})
+	mpRejectedCount = commonmetrics.NewCounterVec("dropped_rejected_total", "mump2p", "Dropped messages by rejection reason", []string{labelTopic, labelReason})
 
 	// Shard-level counters (unlabeled)
 	totalShardsCount = commonmetrics.NewCounterVec("shards_total", "mump2p", "Total shards processed", nil)
 	duplicateShardsCount = commonmetrics.NewCounterVec("shards_duplicate_total", "mump2p", "Duplicate shards", nil)
 	unnecessaryShardCount = commonmetrics.NewCounterVec("shards_unnecessary_total", "mump2p", "Unnecessary shards", nil)
 	unhelpfulShardCount = commonmetrics.NewCounterVec("shards_unhelpful_total", "mump2p", "Unhelpful shards", nil)
+}
+
+// The reject reasons, as label values. They are short forms of the reason
+// strings go-libp2p-pubsub reports, which are prose and would read poorly in a
+// query.
+const (
+	rejectReasonBlacklistedPeer   = "blacklisted_peer"
+	rejectReasonBlacklistedSource = "blacklisted_source"
+	rejectReasonMissingSignature  = "missing_signature"
+	rejectReasonUnexpectedSig     = "unexpected_signature"
+	rejectReasonUnexpectedAuth    = "unexpected_auth_info"
+	rejectReasonInvalidSignature  = "invalid_signature"
+	rejectReasonQueueFull         = "queue_full"
+	rejectReasonThrottled         = "throttled"
+	rejectReasonValidationFailed  = "validation_failed"
+	rejectReasonValidationIgnored = "validation_ignored"
+	rejectReasonSelfOrigin        = "self_origin"
+
+	// rejectReasonOther absorbs anything not in the set above. The reason
+	// reaches this package as a bare string, so without a fixed mapping a future
+	// reason, or a caller passing something else entirely, would mint a new label
+	// value and grow the metric's cardinality without bound.
+	rejectReasonOther = "other"
+)
+
+// rejectReasonLabels maps every reason go-libp2p-pubsub defines onto its label
+// value. It is exhaustive over that set by construction, and anything outside
+// it is folded into rejectReasonOther rather than passed through.
+var rejectReasonLabels = map[string]string{
+	pubsub.RejectBlacklstedPeer:      rejectReasonBlacklistedPeer,
+	pubsub.RejectBlacklistedSource:   rejectReasonBlacklistedSource,
+	pubsub.RejectMissingSignature:    rejectReasonMissingSignature,
+	pubsub.RejectUnexpectedSignature: rejectReasonUnexpectedSig,
+	pubsub.RejectUnexpectedAuthInfo:  rejectReasonUnexpectedAuth,
+	pubsub.RejectInvalidSignature:    rejectReasonInvalidSignature,
+	pubsub.RejectValidationQueueFull: rejectReasonQueueFull,
+	pubsub.RejectValidationThrottled: rejectReasonThrottled,
+	pubsub.RejectValidationFailed:    rejectReasonValidationFailed,
+	pubsub.RejectValidationIgnored:   rejectReasonValidationIgnored,
+	pubsub.RejectSelfOrigin:          rejectReasonSelfOrigin,
+}
+
+// RejectReasonLabel returns the bounded label value for a pubsub reject reason.
+func RejectReasonLabel(reason string) string {
+	if label, ok := rejectReasonLabels[reason]; ok {
+		return label
+	}
+
+	return rejectReasonOther
 }
 
 // MumP2PCollector implements pubsub.RawTracer for the mump2p pubsub.
@@ -109,7 +158,7 @@ func (g *MumP2PCollector) RejectMessage(msg *pubsub.Message, reason string) {
 	case pubsub.RejectValidationQueueFull:
 		mpQueueFullCount.WithLabelValues(topic).Inc()
 	default:
-		mpRejectedCount.WithLabelValues(topic).Inc()
+		mpRejectedCount.WithLabelValues(topic, RejectReasonLabel(reason)).Inc()
 	}
 }
 
