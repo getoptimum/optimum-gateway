@@ -28,9 +28,9 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
 )
 
-// nodeIDAttr is the resource attribute the netsim span parser keys every
-// per-node result on. Two gateways sharing one value silently collapse into a
-// single node in every downstream delivery and latency number.
+// nodeIDAttr is the resource attribute span consumers key every per-node result
+// on. Two gateways sharing one value silently collapse into a single node in
+// every downstream delivery and latency number.
 const nodeIDAttr = "mump2p.node_id"
 
 // TestOTelSpansCarryAUniqueNodeIDPerGateway drives a real publish between two
@@ -75,8 +75,8 @@ func TestOTelSpansCarryAUniqueNodeIDPerGateway(t *testing.T) {
 	requireIntChunkID(t, batches)
 }
 
-// TestOTelExportedSpanShape covers the span names and attribute types the netsim
-// parser matches on, including rlnc.symbol.recode, which two nodes on the
+// TestOTelExportedSpanShape covers the span names and attribute types span
+// consumers match on, including rlnc.symbol.recode, which two nodes on the
 // passthrough coder cannot produce (recoding needs rank >= 2).
 func TestOTelExportedSpanShape(t *testing.T) {
 	sink := newOTelSink(t)
