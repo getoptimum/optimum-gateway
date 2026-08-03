@@ -106,3 +106,23 @@ func TestBuildMumP2PConfigDatagramFlag(t *testing.T) {
 	require.Equal(t, "127.0.0.1:4444", got.DatagramListenAddr)
 	require.Equal(t, 900, got.DatagramMaxPayload)
 }
+
+// TestBuildMumP2PConfigOTelSettings pins the tracing settings to the node
+// config. AppConfig validates the endpoint whenever tracing is enabled, so a
+// gateway that drops these here starts cleanly, logs nothing and exports no
+// spans: the only symptom is an empty collector.
+func TestBuildMumP2PConfigOTelSettings(t *testing.T) {
+	cfg := &config.AppConfig{GatewayClusterID: "cluster", AgentMumP2PPort: 33213}
+	require.False(t, buildMumP2PConfig(cfg, nil).OTelEnable)
+
+	cfg.OTelEnable = true
+	cfg.OTelEndpoint = "otel-collector:4318"
+	cfg.OTelInsecure = true
+	cfg.OTelSampleRatio = 1.0
+
+	got := buildMumP2PConfig(cfg, nil)
+	require.True(t, got.OTelEnable)
+	require.Equal(t, "otel-collector:4318", got.OTelEndpoint)
+	require.True(t, got.OTelInsecure)
+	require.InDelta(t, 1.0, got.OTelSampleRatio, 1e-9)
+}

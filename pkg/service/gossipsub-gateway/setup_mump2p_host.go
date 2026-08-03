@@ -41,6 +41,10 @@ func buildMumP2PConfig(appCfg *config.AppConfig, bootstrapPeers []string) *mump2
 		DatagramEnable:           appCfg.DatagramEnable,
 		DatagramListenAddr:       appCfg.DatagramListenAddr,
 		DatagramMaxPayload:       appCfg.DatagramMaxPayload,
+		OTelEnable:               appCfg.OTelEnable,
+		OTelEndpoint:             appCfg.OTelEndpoint,
+		OTelInsecure:             appCfg.OTelInsecure,
+		OTelSampleRatio:          appCfg.OTelSampleRatio,
 	}
 	if rotator == nil {
 		return optCfg
