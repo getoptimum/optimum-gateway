@@ -34,25 +34,27 @@ import urllib.request
 # The datagram path derives its shard size from the transport's plaintext
 # budget, so this number is a property of the run and not a knob:
 #
-#   1200 transport default MaxPayload  (OPT_DATAGRAM_MAX_PAYLOAD left unset)
+#   1422 transport default MaxPayload  (OPT_DATAGRAM_MAX_PAYLOAD left unset)
 #   -192 engine.SymbolFramingOverhead
-#   -128 engine.MaxSizedTopicLen
+#   - 38 len("/eth2/<8 hex digest>/beacon_block/ssz_snappy"), the longest topic
+#        the gateway declares it publishes on
 #   - 16 k coefficient bytes           (= rlnc_shard_factor)
-#   = 864
+#   = 1176
 #
 # Asserting it is the regression test this demo exists for: a derived shard size
 # that never reaches the RLNC engine leaves the node coding at the 64 byte
 # protocol default. It also catches a config-proxy 404, which is otherwise
-# invisible: the gateway keeps its built-in k=4 and lands on 876 instead.
-EXPECTED_MAX_SHARD_SIZE = 864
+# invisible: the gateway keeps its built-in k=4 and lands on 1188 instead.
+EXPECTED_MAX_SHARD_SIZE = 1176
 EXPECTED_SHARD_FACTOR = 16
 EXPECTED_PUBLISHER_MULTIPLIER = 2.5
 EXPECTED_CLUSTER_ID = "datagram-demo"
 EXPECTED_CHAIN = "hoodi"
 
 SHARD_SIZE_DERIVATION = (
-    "1200 (transport default MaxPayload) - 192 (SymbolFramingOverhead) "
-    "- 128 (MaxSizedTopicLen) - 16 (k) = 864"
+    "1422 (transport default MaxPayload, sized for a 1500 byte Ethernet MTU) "
+    "- 192 (SymbolFramingOverhead) - 38 (longest declared publish topic) "
+    "- 16 (k) = 1176"
 )
 
 BEACON_BLOCK_TOPIC_RE = re.compile(r"^/eth2/[0-9a-f]+/beacon_block/ssz_snappy$")
@@ -227,7 +229,7 @@ def check_config(gateways):
                 f"{gw.name}: derived max_shard_size is {r.get('max_shard_size')}, expected "
                 f"{EXPECTED_MAX_SHARD_SIZE} ({SHARD_SIZE_DERIVATION}). Either the MTU-derived size did "
                 f"not reach the RLNC engine, or max_shard_size was pinned somewhere, or the config "
-                f"proxy 404'd and left k at the built-in 4 (which lands on 876)"
+                f"proxy 404'd and left k at the built-in 4 (which lands on 1188)"
             )
         if not gw.info.get("propagation_enabled"):
             raise Failure(

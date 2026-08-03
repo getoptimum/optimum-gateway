@@ -63,34 +63,44 @@ INFO datagram session installed module=udp_session peer_id=16Uiu2H... initiator=
      rx_key_id=468987952 tx_key_id=1263427275 expires_at=2026-08-03T03:44:20.000Z
 ```
 
-## Why `max_shard_size` is not set anywhere, and why 864 is asserted
+## Why `max_shard_size` is not set anywhere, and why 1176 is asserted
 
 `OPT_DATAGRAM_MAX_PAYLOAD` and any shard-size override are deliberately left
 unset. With the datagram path on, the shard size is *derived* from the transport's
-plaintext budget:
+plaintext budget and from the topics the gateway declares it publishes on:
 
 ```
- 1200  transport default MaxPayload
+ 1422  transport default MaxPayload (a 1500 byte Ethernet MTU, less the
+       IPv6 and UDP headers and the sealed datagram's own framing)
  -192  engine.SymbolFramingOverhead
- -128  engine.MaxSizedTopicLen
- -  16  k coefficient bytes (= rlnc_shard_factor)
- = 864
+ - 38  len("/eth2/<8 hex digest>/beacon_block/ssz_snappy"), the longest of
+       topics.MumP2PPublishTopics()
+ - 16  k coefficient bytes (= rlnc_shard_factor)
+ = 1176
 ```
 
-`verify.py` asserts `rlnc_config.max_shard_size == 864` read back from
+`verify.py` asserts `rlnc_config.max_shard_size == 1176` read back from
 `/api/v1/self_info`, which is the value the RLNC engine is actually coding at.
 That single assertion catches three distinct silent failures:
 
 - **the derived size never reaching the engine.** A datagram node whose engine was
   built from the undecorated config shards at the 64-byte protocol default instead
-  of 864. The demo's own negative control shows the shape of it: 20 chunks per
+  of 1176. The demo's own negative control shows the shape of it: 20 chunks per
   message instead of 2, ~2065 symbols per delivered node instead of ~205, and
   end-to-end p50 of 76ms instead of 8ms.
 - **an accidental override.** Anything that pins a shard size wins over the
   derivation and the number moves.
 - **a config-proxy 404.** A failed config fetch is *not* an error the gateway
   reports: it keeps its built-in defaults, so k stays 4, the derivation lands on
-  876 rather than 864, and the run looks healthy until delivery is measured.
+  1188 rather than 1176, and the run looks healthy until delivery is measured.
+
+The 1422 assumes a 1500 byte path MTU. A path whose true MTU is the 1280 bytes
+IPv6 guarantees will fragment at that size, and losing one fragment loses the
+whole symbol; `datagram.ConservativeMaxPayload` is the value for such a path, set
+through `OPT_DATAGRAM_MAX_PAYLOAD`. Sender and receiver must be moved together:
+the receive bound comes from each node's own `max_payload` and nothing on the
+wire negotiates it, so a one-sided change costs the node every symbol its peers
+send at full size.
 
 Do not pin `max_shard_size` to make a run pass. If the number is wrong, the number
 is the finding.
