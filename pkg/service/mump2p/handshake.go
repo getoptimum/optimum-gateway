@@ -27,6 +27,13 @@ const (
 	// interval for checking handshake status
 	interval = 1 * time.Second
 
+	// datagramEstablishAttempts and datagramEstablishRetryDelay bound the retry of
+	// the datagram session handshake. The window being covered is the remote's own
+	// admission, which is one stream read away, so a couple of seconds is generous;
+	// a peer that has still not admitted us by then is not going to.
+	datagramEstablishAttempts   = 5
+	datagramEstablishRetryDelay = 500 * time.Millisecond
+
 	// maxHandshakeBytes caps the pre-auth handshake read. The payload is a small JSON
 	// object (cluster_id, jwt_token, commit_hash) whose only growing field is the JWT,
 	// which stays under 2 KiB, so 8 KiB leaves ample headroom while keeping a peer whose
@@ -220,13 +227,36 @@ func (n *Node) PeerAuthorization(peerID peer.ID) (time.Time, bool) {
 // establishDatagramSession opens the peer's datagram keys off the handshake
 // goroutine: establishment dials a second stream, and on the inbound path the
 // handshake response has not been written yet.
+//
+// It retries because the two sides do not admit each other at the same instant.
+// Which side dials the session is decided by peer ID, not by who ran the cluster
+// handshake, so the dialing side is often the handshake RESPONDER, which admits
+// as soon as it has written its response, while the handshake initiator only
+// admits once it has read that response back. In that window the responder's
+// dial lands on a peer that has not admitted it yet and is refused. A single
+// attempt then leaves the pair with no session at all, and nothing fails: every
+// send between them silently takes the stream fallback for the life of the
+// connection.
 func (n *Node) establishDatagramSession(peerID peer.ID) {
 	if n.udp == nil {
 		return
 	}
 	go func() {
-		if err := n.udp.Establish(n.ctx, peerID); err != nil {
-			n.log.Error("failed to establish datagram session", err, logger.WithPeerID(peerID))
+		for attempt := 1; ; attempt++ {
+			err := n.udp.Establish(n.ctx, peerID)
+			if err == nil {
+				return
+			}
+			if attempt >= datagramEstablishAttempts {
+				n.log.Error("failed to establish datagram session", err,
+					logger.WithPeerID(peerID), logger.WithInt("attempts", attempt))
+				return
+			}
+			select {
+			case <-n.ctx.Done():
+				return
+			case <-time.After(datagramEstablishRetryDelay):
+			}
 		}
 	}()
 }
