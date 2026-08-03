@@ -476,16 +476,32 @@ func (n *Node) GetHostInfo() peer.AddrInfo {
 	}
 }
 
-// EffectiveMaxShardSize reports the shard size cap, in bytes, that the node's
-// RLNC coder was built with; 0 before it resolved a config. No gateway setting
-// reaches it, so a run has no other record of the value it coded at. The
+// EffectiveRLNCParams reports the coding and mesh parameters this node resolved
+// at construction, and false before it has a router to resolve them from. The
 // receiver is checked because a *Node held as an Engine is a non-nil interface
 // even before the host is set up.
-func (n *Node) EffectiveMaxShardSize() uint32 {
-	if n == nil || n.nodeCfg == nil {
-		return 0
+//
+// The coding values are read back through the router rather than recomputed
+// from the node config, so what is reported is what the forwarding path uses. A
+// second derivation here would be a second thing to drift, which is exactly the
+// failure this reports on.
+func (n *Node) EffectiveRLNCParams() (entities.RLNCParams, bool) {
+	if n == nil || n.nodeCfg == nil || n.router == nil {
+		return entities.RLNCParams{}, false
 	}
-	return n.nodeCfg.MaxShardSize
+	// The builder installs a single wildcard entry, so every topic resolves to
+	// the same config and the configured one is as good a key as any.
+	rlnc := n.router.EffectiveRLNCConfig(n.nodeCfg.Topic)
+	return entities.RLNCParams{
+		ShardFactor:          rlnc.K,
+		MaxShardSize:         rlnc.MaxShardSize,
+		RedundancyFraction:   rlnc.RedundancyFraction,
+		ForwardThreshold:     rlnc.ForwardingThresholdFraction,
+		ForwardRankThreshold: rlnc.ForwardingRankThreshold(int(rlnc.K)),
+		MeshDegreeTarget:     n.nodeCfg.MeshD,
+		MeshDegreeMin:        n.nodeCfg.MeshDlo,
+		MeshDegreeMax:        rlnc.MeshDegreeMax,
+	}, true
 }
 
 func (n *Node) getPeerState(peerID peer.ID) (entities.PeerState, bool) {

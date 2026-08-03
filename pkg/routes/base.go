@@ -13,6 +13,7 @@ import (
 
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	"github.com/getoptimum/optimum-gateway/pkg/config"
+	"github.com/getoptimum/optimum-gateway/pkg/entities"
 	gateway "github.com/getoptimum/optimum-gateway/pkg/service/gossipsub-gateway"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
 	"github.com/getoptimum/optimum-gateway/pkg/utils"
@@ -76,7 +77,6 @@ func (s *Server) handleSelfInfo(ctx fiber.Ctx) error {
 	info := s.srvGateway.GetHostInfo()
 	totalLibP2PPeers, libP2PPeersPerTopic, libP2PPeerIDs, libP2PPeerIDsPerTopic := s.srvGateway.GetLibP2PPeers()
 	totalMumP2PPeers, mumP2PPeersPerTopic, mumP2PPeerIDs, mumP2PPeerIDsPerTopic := s.srvGateway.GetMumP2PPeers()
-	rlncCfg := s.cfg.GetDCRotator().Get()
 	pairedWith := ""
 	if c := s.srvGateway.GetAuthManager().OwnClaims(); c != nil {
 		pairedWith = c.Type.String()
@@ -94,14 +94,8 @@ func (s *Server) handleSelfInfo(ctx fiber.Ctx) error {
 		"propagation_enabled":     s.cfg.PropagationEnabled(),
 		"fork_digest":             s.srvGateway.GetForkDigestManager().ActiveDigest(),
 		"skip_messages_from_self": s.cfg.GetSkipMessagesFromSelf(),
-		"rlnc_config": map[string]any{
-			"random_message_size_bytes":  rlncCfg.RandomMessageSize,
-			"rlnc_shard_factor":          rlncCfg.ShardFactor,
-			"publisher_shard_multiplier": rlncCfg.PublisherShardMultiplier,
-			"forward_shard_threshold":    rlncCfg.ForwardShardThreshold,
-			"max_shard_size":             s.maxShardSize(),
-		},
-		"chain": s.srvGateway.GetForkDigestManager().AppChain().String(),
+		"rlnc_config":             s.rlncInfo(),
+		"chain":                   s.srvGateway.GetForkDigestManager().AppChain().String(),
 		"libp2p": map[string]any{
 			"total_peers":        totalLibP2PPeers,
 			"peers_per_topic":    libP2PPeersPerTopic,
@@ -120,15 +114,47 @@ func (s *Server) handleSelfInfo(ctx fiber.Ctx) error {
 	})
 }
 
-// maxShardSize reports the RLNC shard size cap the running node coded at, and 0
-// before the mump2p node exists. Unlike the other rlnc_config entries it is not
-// served by the dynamic config, so it has to come from the node itself.
-func (s *Server) maxShardSize() uint32 {
+// rlncInfo reports the RLNC parameters and, in `source`, where they came from.
+//
+// A running node is the authority. It resolves its parameters once, at
+// construction, so anything the dynamic config served afterwards is what an
+// operator asked for and not what the mesh is coding and forwarding at.
+// Reporting the served view unqualified is what let a node running at one
+// generation size read as a node running at another. Before the node exists
+// there is nothing to report but the served view, marked as such.
+func (s *Server) rlncInfo() map[string]any {
+	info := map[string]any{"source": entities.RLNCParamsSourceDynamicConfig}
+	if rotator := s.cfg.GetDCRotator(); rotator != nil {
+		if served := rotator.Get(); served != nil {
+			info["random_message_size_bytes"] = served.RandomMessageSize
+			info["rlnc_shard_factor"] = served.ShardFactor
+			info["publisher_shard_multiplier"] = served.PublisherShardMultiplier
+			info["forward_shard_threshold"] = served.ForwardShardThreshold
+			info["mesh_degree_target"] = served.MeshDegreeTarget
+			info["mesh_degree_min"] = served.MeshDegreeMin
+			info["mesh_degree_max"] = served.MeshDegreeMax
+		}
+	}
+
 	engine := s.srvGateway.GetMumP2PEngine()
 	if engine == nil {
-		return 0
+		return info
 	}
-	return engine.EffectiveMaxShardSize()
+	params, ok := engine.EffectiveRLNCParams()
+	if !ok {
+		return info
+	}
+
+	info["source"] = entities.RLNCParamsSourceNode
+	info["rlnc_shard_factor"] = params.ShardFactor
+	info["publisher_shard_multiplier"] = params.RedundancyFraction
+	info["forward_shard_threshold"] = params.ForwardThreshold
+	info["forward_rank_threshold"] = params.ForwardRankThreshold
+	info["max_shard_size"] = params.MaxShardSize
+	info["mesh_degree_target"] = params.MeshDegreeTarget
+	info["mesh_degree_min"] = params.MeshDegreeMin
+	info["mesh_degree_max"] = params.MeshDegreeMax
+	return info
 }
 
 // datagramInfo reports whether the datagram data plane actually carries traffic.

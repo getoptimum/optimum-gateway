@@ -95,6 +95,10 @@ func (s *Service) setupMumP2PHost() error {
 	if err = s.nodeMumP2P.Start(); err != nil {
 		return fmt.Errorf("failed starting mump2p node: %w", err)
 	}
+	// From here the node, not the rotator, is what the config state reports: a
+	// value served after this point does not reach the node it describes.
+	s.cfg.SetEffectiveRLNCSource(s.nodeMumP2P.EffectiveRLNCParams)
+	s.cfg.LogConfigState()
 	s.nodeMumP2PStr = s.nodeMumP2P.GetHostInfo().ID.String()
 	s.srvBootstrapper.SetGatewayPeerIDStr(s.nodeMumP2PStr)
 	s.nodeMumP2PBytes, err = s.nodeMumP2P.GetHost().ID().Marshal()

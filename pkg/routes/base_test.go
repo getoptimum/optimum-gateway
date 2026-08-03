@@ -12,6 +12,7 @@ import (
 
 	"github.com/getoptimum/optimum-common/pkg/identity"
 	"github.com/getoptimum/optimum-common/pkg/net"
+	"github.com/getoptimum/optimum-gateway/pkg/entities"
 	"github.com/getoptimum/optimum-gateway/pkg/routes"
 	"github.com/getoptimum/optimum-gateway/pkg/service/auth_token"
 	gateway "github.com/getoptimum/optimum-gateway/pkg/service/gossipsub-gateway"
@@ -87,17 +88,36 @@ func TestAppRouter(t *testing.T) {
 	// The benchmark harness hashes rlnc_config whole to decide whether the fleet
 	// agrees on its configuration, so the key set is part of the contract.
 	require.Equal(t, []string{
+		"forward_rank_threshold",
 		"forward_shard_threshold",
 		"max_shard_size",
+		"mesh_degree_max",
+		"mesh_degree_min",
+		"mesh_degree_target",
 		"publisher_shard_multiplier",
 		"random_message_size_bytes",
 		"rlnc_shard_factor",
+		"source",
 	}, slices.Sorted(maps.Keys(res.RLNCConfig)))
+
+	// The node is up, so the reported values are read back off it and not off the
+	// dynamic config. They agree here because nothing has been served since the
+	// node was built; where the two do differ, `source` says which one this is.
+	require.Equal(t, entities.RLNCParamsSourceNode, res.RLNCConfig["source"])
+
+	params, ok := srvGateway.GetMumP2PEngine().EffectiveRLNCParams()
+	require.True(t, ok)
+	require.InDelta(t, float64(params.ShardFactor), res.RLNCConfig["rlnc_shard_factor"], 0)
+	require.InDelta(t, params.RedundancyFraction, res.RLNCConfig["publisher_shard_multiplier"], 1e-6)
+	require.InDelta(t, params.ForwardThreshold, res.RLNCConfig["forward_shard_threshold"], 1e-6)
+	require.InDelta(t, float64(params.ForwardRankThreshold), res.RLNCConfig["forward_rank_threshold"], 0)
+	require.InDelta(t, float64(params.MeshDegreeTarget), res.RLNCConfig["mesh_degree_target"], 0)
+	require.InDelta(t, float64(params.MeshDegreeMin), res.RLNCConfig["mesh_degree_min"], 0)
+	require.InDelta(t, float64(params.MeshDegreeMax), res.RLNCConfig["mesh_degree_max"], 0)
 
 	served := cfg.GetDCRotator().Get()
 	require.InDelta(t, float64(served.RandomMessageSize), res.RLNCConfig["random_message_size_bytes"], 0)
 	require.InDelta(t, float64(served.ShardFactor), res.RLNCConfig["rlnc_shard_factor"], 0)
-	require.InDelta(t, float64(served.PublisherShardMultiplier), res.RLNCConfig["publisher_shard_multiplier"], 1e-6)
 	require.InDelta(t, float64(served.ForwardShardThreshold), res.RLNCConfig["forward_shard_threshold"], 1e-6)
 
 	// 64 is the protocol stream-path default, which is what this node runs on:

@@ -33,9 +33,10 @@ type Engine interface {
 	GetHost() host.Host
 	GetHostInfo() peer.AddrInfo
 
-	// Effective RLNC parameters the node resolved at construction. Reported
-	// because nothing in the gateway config sets them.
-	EffectiveMaxShardSize() uint32
+	// Effective RLNC and mesh parameters the node resolved at construction, and
+	// false before it has any. Reported because the dynamic config's current view
+	// is not what a node built earlier is running.
+	EffectiveRLNCParams() (entities.RLNCParams, bool)
 
 	// Datagram data plane state. Reported because the send path falls back to
 	// streams silently: without a confirmed path nothing else says so.

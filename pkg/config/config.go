@@ -14,6 +14,7 @@ import (
 	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	"github.com/getoptimum/optimum-common/pkg/version"
+	"github.com/getoptimum/optimum-gateway/pkg/entities"
 )
 
 const (
@@ -118,6 +119,23 @@ type AppConfig struct {
 	skipMessageFromSelf   atomic.Bool
 	aggregationIntervalMs atomic.Int64
 	logger                logger.AppLogger
+	// effectiveRLNC is the running node's own parameters, installed once the node
+	// exists and read by the periodic logging goroutine, hence the atomic.
+	effectiveRLNC atomic.Pointer[func() (entities.RLNCParams, bool)]
+}
+
+// SetEffectiveRLNCSource installs the running mump2p node as the authority for
+// the RLNC and mesh values LogConfigState reports.
+//
+// Until it is installed there is no node, and the log falls back to the dynamic
+// config's current view. That view is not what any node is running: the rotator
+// is seeded with the built-in defaults and fetches in the background, so a log
+// line emitted at startup reports the defaults whatever the operator served.
+func (c *AppConfig) SetEffectiveRLNCSource(fn func() (entities.RLNCParams, bool)) {
+	if fn == nil {
+		return
+	}
+	c.effectiveRLNC.Store(&fn)
 }
 
 func LoadConfig(confFile string) (*AppConfig, error) {
@@ -332,14 +350,47 @@ func (c *AppConfig) LogConfigState() {
 		logger.WithBool("propagation_enabled", c.PropagationEnabled()),
 		logger.WithBool("skip_messages_from_self", c.GetSkipMessagesFromSelf()),
 	)
-	if c.rotator != nil && c.rotator.Get() != nil {
-		optCfg := c.rotator.Get()
-		c.logger.Info("mump2p mesh config",
-			logger.WithInt64("mesh_degree_target", optCfg.MeshDegreeTarget),
-			logger.WithInt64("mesh_degree_min", optCfg.MeshDegreeMin),
-			logger.WithInt64("mesh_degree_max", optCfg.MeshDegreeMax),
-			logger.WithInt64("shard_factor", optCfg.ShardFactor),
-			logger.WithInt64("aggregation_interval_ms", c.aggregationIntervalMs.Load()),
-		)
+	c.logMumP2PMeshConfig()
+}
+
+// logMumP2PMeshConfig reports the mesh and RLNC parameters, and in `source`
+// where they came from, matching what /api/v1/self_info reports so the two
+// cannot tell an operator different stories.
+//
+// The running node is the authority. It resolves these once, at construction,
+// so the dynamic config's current view is only ever what was asked for. The
+// distinction is not academic at startup: the rotator is seeded with the
+// built-in defaults and fetches in the background, so this line ran before the
+// first fetch landed and reported the defaults as though they were the node's.
+func (c *AppConfig) logMumP2PMeshConfig() {
+	if fn := c.effectiveRLNC.Load(); fn != nil {
+		if params, ok := (*fn)(); ok {
+			c.logger.Info("mump2p mesh config",
+				logger.WithString("source", entities.RLNCParamsSourceNode),
+				logger.WithInt("mesh_degree_target", params.MeshDegreeTarget),
+				logger.WithInt("mesh_degree_min", params.MeshDegreeMin),
+				logger.WithInt("mesh_degree_max", params.MeshDegreeMax),
+				logger.WithInt("shard_factor", int(params.ShardFactor)),
+				logger.WithInt("max_shard_size", int(params.MaxShardSize)),
+				logger.WithFloat64("redundancy_fraction", params.RedundancyFraction),
+				logger.WithFloat64("forward_shard_threshold", params.ForwardThreshold),
+				logger.WithInt("forward_rank_threshold", params.ForwardRankThreshold),
+				logger.WithInt64("aggregation_interval_ms", c.aggregationIntervalMs.Load()),
+			)
+			return
+		}
 	}
+
+	if c.rotator == nil || c.rotator.Get() == nil {
+		return
+	}
+	optCfg := c.rotator.Get()
+	c.logger.Info("mump2p mesh config",
+		logger.WithString("source", entities.RLNCParamsSourceDynamicConfig),
+		logger.WithInt64("mesh_degree_target", optCfg.MeshDegreeTarget),
+		logger.WithInt64("mesh_degree_min", optCfg.MeshDegreeMin),
+		logger.WithInt64("mesh_degree_max", optCfg.MeshDegreeMax),
+		logger.WithInt64("shard_factor", optCfg.ShardFactor),
+		logger.WithInt64("aggregation_interval_ms", c.aggregationIntervalMs.Load()),
+	)
 }
