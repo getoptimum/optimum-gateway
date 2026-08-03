@@ -10,7 +10,7 @@ tool (
 
 require (
 	github.com/ferranbt/fastssz v1.0.1-0.20251203093649-0b1f38e43198
-	github.com/getoptimum/mump2p-protocol v0.0.1-rc1
+	github.com/getoptimum/mump2p-protocol v0.0.1-rc1.0.20260803161903-44378e6bd9c2
 	github.com/getoptimum/optimum-common v0.1.3
 	github.com/gofiber/fiber/v3 v3.4.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
@@ -23,7 +23,7 @@ require (
 	github.com/libp2p/go-libp2p-pubsub v0.17.0
 	github.com/libp2p/go-libp2p-record v0.3.1
 	github.com/libp2p/go-mplex v0.7.0
-	github.com/montanaflynn/stats v0.7.1
+	github.com/montanaflynn/stats v0.9.0
 	github.com/multiformats/go-multiaddr v0.16.1
 	github.com/prometheus/client_golang v1.24.1
 	github.com/prometheus/client_model v0.6.2
@@ -481,10 +481,6 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
-
-// TEMPORARY: local path replace for in-flight mump2p-protocol changes. This
-// cannot ship: a path outside the repo does not resolve in CI or Docker.
-replace github.com/getoptimum/mump2p-protocol => /home/cryptofewka/github/.wt-udp-m5
 
 // The receive path needs PubSub.InjectInboundRPC, which exists only in our fork.
 // The fork declares the upstream module path, so no import strings change.
