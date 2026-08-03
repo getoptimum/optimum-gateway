@@ -4,6 +4,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+[[ -f "${SCRIPT_DIR}/../.env" ]] && set -a && source "${SCRIPT_DIR}/../.env" && set +a
+
 CONFIG_DIR="${SCRIPT_DIR}/config"
 SAMPLE="${CONFIG_DIR}/sample.app_conf.yml"
 TARGET="${CONFIG_DIR}/app_conf.yml"
