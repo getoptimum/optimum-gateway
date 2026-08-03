@@ -8,11 +8,9 @@ Partner install, API keys, and gateway config reference: [Gateway documentation 
 
 ## How it connects
 
-```text
-mump2p mesh -> optimum-gateway -> CL beacon node -> charon -> VC
-```
+![Obol CDVN + Optimum Gateway architecture](./obol_integration.png)
 
-The gateway sits upstream of the beacon node's block source. It does not touch validator keys, charon, or the VC.
+The gateway is an opt-in overlay: it receives early blocks from the Optimum mump2p mesh and forwards them to the consensus (beacon) client over libp2p. The Obol CDVN stack (execution client → consensus client → charon → validator client → DV keys) is partner-configured and unchanged. EL/CL/VC choice and charon cluster size are agnostic within supported CDVN clients.
 
 ## Prerequisites
 
@@ -90,6 +88,7 @@ integration/obol/
 ├── config/
 │   └── sample.app_conf.yml  # Template; init writes app_conf.yml
 ├── init-optimum.sh          # Discover CL peer id, write config
+├── obol_integration.png     # Architecture diagram
 ├── .env.optimum.sample      # Vars to add to CDVN .env
 ├── .gitignore
 └── README.md
