@@ -490,4 +490,4 @@ require (
 
 // The receive path needs PubSub.InjectInboundRPC, which exists only in our fork.
 // The fork declares the upstream module path, so no import strings change.
-replace github.com/libp2p/go-libp2p-pubsub => github.com/CryptoFewka/go-libp2p-pubsub v0.17.0-optimum.2
+replace github.com/libp2p/go-libp2p-pubsub => github.com/getoptimum/go-libp2p-pubsub v0.17.0-optimum.2

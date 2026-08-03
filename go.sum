@@ -96,8 +96,6 @@ github.com/ClickHouse/clickhouse-go-linter v1.2.0 h1:zbm174up3hTKjp0wKZVnTzRiG7t
 github.com/ClickHouse/clickhouse-go-linter v1.2.0/go.mod h1:pLorS7ffPTfuUV9M0SJgfHA/h/WQPQUk2FWG9x74cQ4=
 github.com/Code-Hex/go-generics-cache v1.5.1 h1:6vhZGc5M7Y/YD8cIUcY8kcuQLB4cHR7U+0KMqAA0KcU=
 github.com/Code-Hex/go-generics-cache v1.5.1/go.mod h1:qxcC9kRVrct9rHeiYpFWSoW1vxyillCVzX13KZG8dl4=
-github.com/CryptoFewka/go-libp2p-pubsub v0.17.0-optimum.2 h1:9c2Qlzxxnj7zw/2Up1ekiRyYzw6XSOoazGDil0Z55SI=
-github.com/CryptoFewka/go-libp2p-pubsub v0.17.0-optimum.2/go.mod h1:F0oKCGLFJNy9b0TyRi04b+LchEzq0t2eZyJuxwAIyDE=
 github.com/Djarvur/go-err113 v0.1.1 h1:eHfopDqXRwAi+YmCUas75ZE0+hoBHJ2GQNLYRSxao4g=
 github.com/Djarvur/go-err113 v0.1.1/go.mod h1:IaWJdYFLg76t2ihfflPZnM1LIQszWOsFDh2hhhAVF6k=
 github.com/Masterminds/semver/v3 v3.5.0 h1:kQceYJfbupGfZOKZQg0kou0DgAKhzDg2NZPAwZ/2OOE=
@@ -335,6 +333,8 @@ github.com/gabriel-vasile/mimetype v1.4.13 h1:46nXokslUBsAJE/wMsp5gtO500a4F3Nkz9
 github.com/gabriel-vasile/mimetype v1.4.13/go.mod h1:d+9Oxyo1wTzWdyVUPMmXFvp4F9tea18J8ufA774AB3s=
 github.com/getoptimum/mump2p-protocol v0.0.1-rc1.0.20260803161903-44378e6bd9c2 h1:7Xe9UuC7ufr4HYAxGXfdTOlsTJzpdvWeZjdK2PWSjWc=
 github.com/getoptimum/mump2p-protocol v0.0.1-rc1.0.20260803161903-44378e6bd9c2/go.mod h1:boTGRWym5wD7OatjPjUnfiBtwWiXxS4rfoCmHixjhYM=
+github.com/getoptimum/go-libp2p-pubsub v0.17.0-optimum.2 h1:wTzrZ3lCABncAWA3KOLSvz8XDIJ7YWDtzw1jkCi1rKg=
+github.com/getoptimum/go-libp2p-pubsub v0.17.0-optimum.2/go.mod h1:F0oKCGLFJNy9b0TyRi04b+LchEzq0t2eZyJuxwAIyDE=
 github.com/getoptimum/optimum-common v0.1.3 h1:QEjuVKXw4RdcEDP1ddrsf0M0AEbIfgmB9eDWQS7lW6E=
 github.com/getoptimum/optimum-common v0.1.3/go.mod h1:gOX2MYQQ7zqciRiybcVqIoCsV/tvw8cJdQfbmj4FSxc=
 github.com/getoptimum/shm v0.5.0 h1:JKAFD2Gavx/vVWvHyEoUCyZ1ZzRJIk0WxciPATJlaz8=
