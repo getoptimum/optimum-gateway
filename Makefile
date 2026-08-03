@@ -63,6 +63,12 @@ run_local: ## Run gateway and the RLNC coder locally via compose
 logs_prysm: ## Show logs of prysm service
 	docker logs -f prysm-beacon
 
+# Builds its own images, brings the stack up in stages, publishes, verifies and
+# stops. Everything it needs beyond this repo is a sibling optimum-bench-v2
+# checkout; see deploy/datagram-demo/README.md.
+datagram-demo: ## Run the encrypted UDP datagram data-plane demo (5 gateways end to end)
+	deploy/datagram-demo/run.sh
+
 # Runs the coder against the host /dev/shm so a gateway started with `make run`
 # can attach to it. Only for host-side development; compose owns the deployed pair.
 rlnc_start: rlnc_stop ## Start the RLNC coder sidecar against the host /dev/shm
@@ -178,5 +184,5 @@ fastssz-generate: ## Vendor fastssz spectests SSZ types into pkg/protocol/fastss
 	@echo "fastssz code vendored at pkg/protocol/fastssz_codegen/"
 
 .PHONY: fastssz-generate
-.PHONY: help test lint coverage vulcheck build deps proto run run_cl run_local rlnc_start rlnc_stop build_hermes_image run_gateway_with_sidecar license-check license-check-test notices sbom sbom-binary sbom-full
+.PHONY: help test lint coverage vulcheck build deps proto run run_cl run_local rlnc_start rlnc_stop build_hermes_image run_gateway_with_sidecar license-check license-check-test notices sbom sbom-binary sbom-full datagram-demo
 .DEFAULT_GOAL := help

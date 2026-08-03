@@ -1,0 +1,4 @@
+# Built by run.sh from the gateway repo and optimum-bench-v2.
+bin/
+# Run artifacts: captured spans, span summary, verification report.
+out/

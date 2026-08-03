@@ -1,0 +1,25 @@
+# OTLP/HTTP in, debug exporter out. run.sh tails the collector's stdout into
+# out/otel-collector.log and parse_v2_1.py reads the spans from there.
+#
+# The `debug` exporter at verbosity: detailed is load bearing and the `file`
+# exporter is not a substitute: file writes OTLP JSON, which the span parser
+# cannot read. The debug exporter prints through the collector's own logger at
+# Info level, so telemetry.logs.level must stay at info or the dump is silenced.
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+exporters:
+  debug:
+    verbosity: detailed
+
+service:
+  telemetry:
+    logs:
+      level: info
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [debug]

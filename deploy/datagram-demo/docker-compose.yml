@@ -1,0 +1,326 @@
+# Five gateways carrying RLNC traffic over the encrypted UDP datagram data
+# plane, with the per-peer keys bootstrapped over the authenticated libp2p
+# control connection. See README.md for what the run proves and how to read it.
+#
+# Bring this up with run.sh, not `docker compose up`: the gateways dial their
+# peers exactly once at startup and never retry, so they have to be started in
+# order (see README, "Startup order is load bearing").
+
+x-gateway-env: &gateway-env
+  # Pure Go resolver: the C resolver would consult a host nsswitch this image
+  # does not have, and every service address here is a compose DNS name.
+  GODEBUG: netdns=go
+  # Must appear in the mock's OPT_BENCH_AUTH_CLUSTER_IDS and be identical on
+  # every gateway. A mismatch is rejected inside the mump2p handshake and shows
+  # up as a mesh with no edges, never as an auth error.
+  OPT_GATEWAY_CLUSTER_ID: datagram-demo
+  # Bootstrap traffic goes through the config proxy so the run's DynamicConfig
+  # is served on the config path; auth goes direct, because the gateway pins the
+  # JWT issuer to this URL verbatim and the mock mints that exact string.
+  OPT_REMOTE_BOOTSTRAP_URL: http://configproxy:48124
+  OPT_REMOTE_AUTH_URL: http://bootstrap:48124
+  OPT_ENABLE_AUTH: "true"
+  # The mock ignores the value but it must be non-empty: an empty key disables
+  # the auth manager, after which there are no claims, the chain ID is empty and
+  # the gateway fatals in InitRuntime.
+  OPT_API_KEY: datagram-demo-key
+  # Under /tmp because the container runs as uid 10001.
+  OPT_JWKS_CACHE_PATH: /tmp/jwks.json
+  OPT_ENABLE_TELEMETRY: "true"
+  OPT_TELEMETRY_PORT: "48123"
+  OPT_AGENT_LIB_P2P_PORT: "33212"
+  OPT_AGENT_MUMP2P_PORT: "33213"
+  OPT_LOG_LEVEL: info
+  OPT_REMOTE_PUSH_ENABLE: "false"
+  OPT_SHM_LANES: "20"
+  # The data plane under test. DEMO_DATAGRAM_ENABLE=false is the negative
+  # control: the same run with symbols back on the stream path, which must fail
+  # the transport assertion in verify.py.
+  OPT_DATAGRAM_ENABLE: ${DEMO_DATAGRAM_ENABLE:-true}
+  OPT_DATAGRAM_LISTEN_ADDR: 0.0.0.0:4101
+  # OPT_DATAGRAM_MAX_PAYLOAD is deliberately unset: the 1200 byte transport
+  # default is what the shard size is derived from, and verify.py asserts the
+  # derived number.
+  OPT_OTEL_ENABLE: "true"
+  # host:port, no scheme; OTLP over HTTP.
+  OPT_OTEL_ENDPOINT: otel-collector:4318
+  OPT_OTEL_INSECURE: "true"
+  OPT_OTEL_SAMPLE_RATIO: "1.0"
+
+x-gateway: &gateway
+  image: optimum-gateway-datagram-demo:local
+  entrypoint: ["/usr/local/bin/gateway-entrypoint.sh"]
+  # Same uid as the rlnc-server sidecars, so both ends of the shared-memory
+  # lanes are owned by one user.
+  user: "10001:10001"
+  networks: [demo]
+  restart: "no"
+  # The gateway probes public HTTP endpoints to learn the address it registers
+  # with the bootstrap. Pointing them at localhost makes every probe fail
+  # immediately, so it falls back to interface inspection and registers its own
+  # container address, which is the only address its peers can reach it on.
+  # Without this the run's behaviour depends on whether the host has internet.
+  extra_hosts:
+    - "cloudflare.com:127.0.0.1"
+    - "checkip.amazonaws.com:127.0.0.1"
+    - "bootstrap.getoptimum.io:127.0.0.1"
+    - "raw.githubusercontent.com:127.0.0.1"
+
+x-rlnc: &rlnc
+  # Pinned: the coder and the gateway's mump2p-protocol share a shared-memory
+  # wire format. Keep in step with RLNC_IMAGE_VERSION in the repo Makefile.
+  image: getoptimum/rlnc-server:${RLNC_IMAGE_VERSION:-v0.10.0}
+  user: "10001:10001"
+  networks: [demo]
+  restart: "no"
+
+# 20 lanes of 16777240 bytes need 320 MiB, so the size is set here rather than
+# left to the 64 MiB default the daemon gives /dev/shm.
+x-shm: &shm
+  driver: local
+  driver_opts:
+    type: tmpfs
+    device: tmpfs
+    o: size=512m,mode=1777
+
+services:
+  # One binary replacing optimum-auth, optimum-bootstrap and its Postgres:
+  # registration, peer discovery, fork digest, the JWKS document and the JWT
+  # mint. The issuer it stamps is http://bootstrap:48124, which is why this
+  # service is named `bootstrap` and listens on that port.
+  bootstrap:
+    image: optimum-gateway-datagram-demo:local
+    entrypoint: ["/usr/local/bin/mock-bootstrap"]
+    command: ["-addr", ":48124"]
+    user: "10001:10001"
+    networks: [demo]
+    restart: "no"
+    environment:
+      GODEBUG: netdns=go
+      # Must contain every gateway's OPT_GATEWAY_CLUSTER_ID.
+      OPT_BENCH_AUTH_CLUSTER_IDS: datagram-demo
+      # No synthetic seed peer: every gateway here is real and reachable, and a
+      # seed pointing at an address that does not exist only burns dial budget
+      # on nodes that dial exactly once.
+      OPT_BENCH_SEED_DISABLE: "1"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:48124/healthz"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  configproxy:
+    image: nginx:1.27-alpine
+    networks: [demo]
+    restart: "no"
+    # `z` relabels these for SELinux. Without it the container cannot read its
+    # own config on an enforcing host, and the failure looks like a plain
+    # permission bug. It is a no-op where SELinux is not in use.
+    volumes:
+      - "./nginx.conf:/etc/nginx/nginx.conf:ro,z"
+      - "./dynamic-config.json:/srv/dynamic-config.json:ro,z"
+    depends_on:
+      bootstrap: {condition: service_healthy}
+    # Probes the config path itself, not just the port. A config fetch that
+    # 404s is not an error the gateway reports: it keeps its built-in defaults,
+    # silently codes at k=4, and the run looks fine until delivery is measured.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:48124/api/v1/hoodi/datagram-demo/config"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  otel-collector:
+    image: otel/opentelemetry-collector:0.115.0
+    command: ["--config=/etc/otel/config.yaml"]
+    networks: [demo]
+    restart: "no"
+    volumes:
+      - "./otel-collector.yaml:/etc/otel/config.yaml:ro,z"
+    # The debug exporter prints every span, which is tens of MB over a run.
+    # journald (podman's default driver) rate-limits and would silently drop
+    # spans, so pin a file driver with a cap far above the expected volume.
+    logging:
+      driver: json-file
+      options:
+        max-size: "1g"
+        max-file: "2"
+
+  rlnc1:
+    <<: *rlnc
+    command: ["--name=gw1-mump2p", "--lanes=20", "--output-reclaim-after=5s"]
+    volumes: ["shm1:/dev/shm"]
+    # Lanes are created in order, so the last one existing means the whole set
+    # is mapped and the gateway can attach.
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /dev/shm/go_shm_rlnc_semaphore_gw1-mump2p_lane_19"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+  rlnc2:
+    <<: *rlnc
+    command: ["--name=gw2-mump2p", "--lanes=20", "--output-reclaim-after=5s"]
+    volumes: ["shm2:/dev/shm"]
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /dev/shm/go_shm_rlnc_semaphore_gw2-mump2p_lane_19"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+  rlnc3:
+    <<: *rlnc
+    command: ["--name=gw3-mump2p", "--lanes=20", "--output-reclaim-after=5s"]
+    volumes: ["shm3:/dev/shm"]
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /dev/shm/go_shm_rlnc_semaphore_gw3-mump2p_lane_19"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+  rlnc4:
+    <<: *rlnc
+    command: ["--name=gw4-mump2p", "--lanes=20", "--output-reclaim-after=5s"]
+    volumes: ["shm4:/dev/shm"]
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /dev/shm/go_shm_rlnc_semaphore_gw4-mump2p_lane_19"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+  rlnc5:
+    <<: *rlnc
+    command: ["--name=gw5-mump2p", "--lanes=20", "--output-reclaim-after=5s"]
+    volumes: ["shm5:/dev/shm"]
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /dev/shm/go_shm_rlnc_semaphore_gw5-mump2p_lane_19"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  # gateway1 is the publishing ingress: it holds a fixed CL identity so the
+  # publisher can dial it by peer ID, and allowlists that publisher.
+  gateway1:
+    <<: *gateway
+    environment:
+      <<: *gateway-env
+      OPT_GATEWAY_ID: datagram-demo-gw1
+      OPT_IDENTITY_LIBP2P_DIR: /tmp/gw1/libp2p
+      OPT_IDENTITY_MUMP2P_DIR: /tmp/gw1/mump2p
+      OPT_SHM_NAME: gw1-mump2p
+      GW_KEY: gateway1-libp2p.p2p.key
+      OPT_DIRECT_CL_PEERS: /dns4/publisher/tcp/33220/p2p/12D3KooWPDjNxSEBqze1kBvHjwoqFFvmiG7VCq2VVC3X5rgDJRPr
+    volumes: ["shm1:/dev/shm"]
+    # Bound to loopback: the demo is local, and an explicit interface keeps the
+    # publish from colliding with anything listening on another one.
+    ports: ["127.0.0.1:48131:48123"]
+    depends_on:
+      rlnc1: {condition: service_healthy}
+      bootstrap: {condition: service_healthy}
+      configproxy: {condition: service_healthy}
+      otel-collector: {condition: service_started}
+
+  gateway2:
+    <<: *gateway
+    environment:
+      <<: *gateway-env
+      OPT_GATEWAY_ID: datagram-demo-gw2
+      OPT_IDENTITY_LIBP2P_DIR: /tmp/gw2/libp2p
+      OPT_IDENTITY_MUMP2P_DIR: /tmp/gw2/mump2p
+      OPT_SHM_NAME: gw2-mump2p
+    volumes: ["shm2:/dev/shm"]
+    # Bound to loopback: the demo is local, and an explicit interface keeps the
+    # publish from colliding with anything listening on another one.
+    ports: ["127.0.0.1:48132:48123"]
+    depends_on:
+      rlnc2: {condition: service_healthy}
+      bootstrap: {condition: service_healthy}
+      configproxy: {condition: service_healthy}
+      otel-collector: {condition: service_started}
+
+  gateway3:
+    <<: *gateway
+    environment:
+      <<: *gateway-env
+      OPT_GATEWAY_ID: datagram-demo-gw3
+      OPT_IDENTITY_LIBP2P_DIR: /tmp/gw3/libp2p
+      OPT_IDENTITY_MUMP2P_DIR: /tmp/gw3/mump2p
+      OPT_SHM_NAME: gw3-mump2p
+    volumes: ["shm3:/dev/shm"]
+    # Bound to loopback: the demo is local, and an explicit interface keeps the
+    # publish from colliding with anything listening on another one.
+    ports: ["127.0.0.1:48133:48123"]
+    depends_on:
+      rlnc3: {condition: service_healthy}
+      bootstrap: {condition: service_healthy}
+      configproxy: {condition: service_healthy}
+      otel-collector: {condition: service_started}
+
+  gateway4:
+    <<: *gateway
+    environment:
+      <<: *gateway-env
+      OPT_GATEWAY_ID: datagram-demo-gw4
+      OPT_IDENTITY_LIBP2P_DIR: /tmp/gw4/libp2p
+      OPT_IDENTITY_MUMP2P_DIR: /tmp/gw4/mump2p
+      OPT_SHM_NAME: gw4-mump2p
+    volumes: ["shm4:/dev/shm"]
+    # Bound to loopback: the demo is local, and an explicit interface keeps the
+    # publish from colliding with anything listening on another one.
+    ports: ["127.0.0.1:48134:48123"]
+    depends_on:
+      rlnc4: {condition: service_healthy}
+      bootstrap: {condition: service_healthy}
+      configproxy: {condition: service_healthy}
+      otel-collector: {condition: service_started}
+
+  gateway5:
+    <<: *gateway
+    environment:
+      <<: *gateway-env
+      OPT_GATEWAY_ID: datagram-demo-gw5
+      OPT_IDENTITY_LIBP2P_DIR: /tmp/gw5/libp2p
+      OPT_IDENTITY_MUMP2P_DIR: /tmp/gw5/mump2p
+      OPT_SHM_NAME: gw5-mump2p
+    volumes: ["shm5:/dev/shm"]
+    # Bound to loopback: the demo is local, and an explicit interface keeps the
+    # publish from colliding with anything listening on another one.
+    ports: ["127.0.0.1:48135:48123"]
+    depends_on:
+      rlnc5: {condition: service_healthy}
+      bootstrap: {condition: service_healthy}
+      configproxy: {condition: service_healthy}
+      otel-collector: {condition: service_started}
+
+  # Real consensus-layer ingress: a libp2p gossipsub peer that completes the
+  # eth2 status handshake with gateway1 and then publishes valid hoodi
+  # beacon_block messages, exactly the way a production CL sidecar feeds the
+  # gateway. Started last, by run.sh, once the mesh has formed.
+  publisher:
+    image: optimum-gateway-datagram-demo:local
+    entrypoint: ["/usr/local/bin/bench-traffic"]
+    user: "10001:10001"
+    networks: [demo]
+    restart: "no"
+    command:
+      - "-count=${DEMO_MSG_COUNT:-8}"
+      # >= 12s: the gateway keys block tracking by slot and drops a block whose
+      # slot is more than 3 slots from its own, so one block per slot it is.
+      - "-rate=12s"
+      - "-warmup=${DEMO_WARMUP:-20s}"
+      - "-listen-port=33220"
+      - "-msg-size=0"
+    environment:
+      GODEBUG: netdns=go
+      OPT_BENCH_TARGET_ADDR: /dns4/gateway1/tcp/33212/p2p/12D3KooWEDTWcWiackMyvjvAUut5kk9acyZUnNEuoALFrs7fWH41
+      OPT_BENCH_IDENTITY: /keys/publisher-cl.p2p.key
+      # The gateway ignores any genesis override and always uses hoodi's, so the
+      # publisher must stamp this exact epoch or every block it produces is
+      # rejected as stale.
+      OPT_GENESIS_TIME: "1742213400"
+
+networks:
+  demo:
+
+volumes:
+  shm1: {<<: *shm}
+  shm2: {<<: *shm}
+  shm3: {<<: *shm}
+  shm4: {<<: *shm}
+  shm5: {<<: *shm}
