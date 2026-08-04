@@ -10,7 +10,7 @@ tool (
 
 require (
 	github.com/ferranbt/fastssz v1.0.1-0.20251203093649-0b1f38e43198
-	github.com/getoptimum/mump2p-protocol v0.0.1-rc1.0.20260803161903-44378e6bd9c2
+	github.com/getoptimum/mump2p-protocol v0.0.1-rc1.0.20260804134519-a9582533ab49
 	github.com/getoptimum/optimum-common v0.1.3
 	github.com/getoptimum/shm v0.5.0
 	github.com/gofiber/fiber/v3 v3.4.0
