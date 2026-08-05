@@ -152,6 +152,7 @@ func (s *Service) publishToCLTopic(data []byte, topic string) error {
 	if err := tp.Publish(s.ctx, data); err != nil {
 		return err
 	}
+	telemetry.RecordCLMessageAt()
 	telemetry.CLTotalMessagesInc(topic)
 	s.statSendLib.Upsert(topic, func(curVal int) int {
 		return curVal + 1
