@@ -94,7 +94,7 @@ docker run --name optimum-gateway --rm \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data/libp2p:/tmp/libp2p \
   -v $(pwd)/data/mump2p:/tmp/mump2p \
-  getoptimum/gateway:latest \
+  getoptimum/gateway:v1.1.1 \
   -config=/app/config/app_conf.yml
 ```
 
@@ -125,7 +125,7 @@ curl -s http://localhost:48123/api/v1/self_info | jq '{peer_id, multiaddrs: .lib
 --peer=/ip4/<YOUR_GATEWAY_IP>/tcp/33212/p2p/<YOUR_GATEWAY_PEER_ID>
 ```
 
-A full validator-facing walkthrough lives in [`guide.md`](guide.md).
+See [`config/sample.app_conf.yml`](config/sample.app_conf.yml) for the full reference.
 
 ## Configuration
 
@@ -146,8 +146,7 @@ telemetry_port: 48123
 
 ```
 
-See [`config/sample.app_conf.yml`](config/sample.app_conf.yml) and the
-[versioned documentation](docs/versions/) for the full reference.
+See [`config/sample.app_conf.yml`](config/sample.app_conf.yml) and [`guide.md`](guide.md) for the full reference.
 
 ## APIs
 
@@ -203,7 +202,6 @@ make vulcheck    # govulncheck (with documented exception list)
 ## Documentation
 
 - [Integration guide for validators](guide.md)
-- [Versioned docs & release notes](docs/versions/)
 - [Changelog](docs/CHANGELOG.md)
 - [Security model](SECURITY.md)
 
