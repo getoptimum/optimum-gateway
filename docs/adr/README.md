@@ -21,3 +21,5 @@ numbered and immutable once `Accepted` — supersede rather than rewrite.
 | [0010](./0010-attestation-synchronization.md)          | Deterministic attestation synchronization for partner clusters | Approved (implementation pending) | 2026-06-10 |
 | [0011](./0011-gateway-consumer-block-stream.md)        | Gateway consumer block-stream API (WebSocket + gRPC)           | Approved (implementation pending) | 2026-08-05 |
 
+> **Note:** ADRs 0001–0010 were migrated from the pre-open-source gateway and record design history — several contain **historical or superseded** implementation details (symbols, metrics, and config that were later renamed, replaced, or never shipped). Where known, each such point is flagged in-document; treat the code as the source of truth.
+

@@ -64,12 +64,22 @@ Required upgrade that replaces all earlier releases.
 
 ### Required Action
 
-Move to the current release:
+Move to the current release. `docker restart` alone keeps the old image, so
+recreate the container:
 
 ```bash
 export OPT_API_KEY=ogw_live_xxx
 docker pull getoptimum/gateway:v1.1.1
-docker restart optimum-gateway
+docker rm -f optimum-gateway
+docker run --name optimum-gateway --rm \
+  -p 33212:33212/tcp \
+  -p 127.0.0.1:48123:48123/tcp \
+  -e OPT_API_KEY=$OPT_API_KEY \
+  -v $(pwd)/config:/app/config \
+  -v $(pwd)/data/libp2p:/tmp/libp2p \
+  -v $(pwd)/data/mump2p:/tmp/mump2p \
+  getoptimum/gateway:v1.1.1 \
+  -config=/app/config/app_conf.yml
 ```
 
 ## Support

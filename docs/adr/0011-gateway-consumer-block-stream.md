@@ -5,7 +5,7 @@
 
 ## Context
 
-The gateway decodes every beacon block once in `processBeaconBlockArrival()`
+The gateway decodes each beacon-block arrival in `processBeaconBlockArrival()`
 (`pkg/service/gossipsub-gateway/beacon_block_measures.go`), fed by the
 `clMessages` and `mumP2PMessages` channels. We want operators to expose that
 already-decoded stream to their own downstream consumers over WebSocket or gRPC,
@@ -32,11 +32,25 @@ the Obol overlay). Four parts.
 
 ### 1. Broadcast hub (`pkg/service/streamhub`)
 
-`processBeaconBlockArrival` emits one `BlockEvent` per fresh block into a fan-out
-hub. Each subscriber has a bounded ring buffer (default 64). On overflow the hub
-drops the oldest event, bumps a `dropped` counter, and sends the client a
+`processBeaconBlockArrival` runs **once per source observation** — before the
+gateway's cross-path XXHash dedup (`isDuplicateMessage`) — so a block seen via
+both libp2p and mump2p yields two events, one per `source`. The hub emits one
+`BlockEvent` per observation into a fan-out. Event identity is
+`(slot, proposer_index)`; consumers correlate the libp2p and mump2p views of the
+same block by that identity and tell them apart by `source`.
+
+The stream carries a small transport-neutral frame union, encoded per transport
+(JSON/text over WS, proto over gRPC):
+
+* `BlockEvent` — a block observation (metadata or raw; see Data model).
+* `lagged` — a control frame sent after ring-buffer overflow, carrying the
+  connection's cumulative `dropped` count so the consumer knows it missed events.
+
+Each subscriber has a bounded ring buffer (default 64). On overflow the hub drops
+the oldest event, increments the per-connection `dropped` counter, and sends a
 `lagged` frame. The emit from ingest is a non-blocking send — it never waits on a
-consumer. At-most-once, no replay (see Non-goals).
+consumer, so a slow/stalled subscriber cannot backpressure ingest. At-most-once,
+no replay (see Non-goals).
 
 ### 2. Two transports, one hub
 
@@ -56,8 +70,14 @@ Consumers present a JWT minted by `auth.getoptimum.io` for a new audience
 (`OPT_REMOTE_AUTH_URL`) via `pkg/service/jwks_verifier`. Add
 `AudStream = "stream"` next to `AudP2P` / `AudServices`.
 
-* Token in `Authorization: Bearer` (WS header or `Sec-WebSocket-Protocol`; gRPC
-  metadata), verified **before** the WS upgrade / first stream frame.
+* Token in `Authorization: Bearer <jwt>` for gRPC metadata and non-browser WS.
+  Browsers cannot set WS request headers, so the token rides
+  `Sec-WebSocket-Protocol`: the client offers two subprotocol values — a marker
+  (`optimum.stream.v1`) and `bearer.<jwt>` — and the server authenticates from
+  the `bearer.` value, selects **only the marker** as the negotiated subprotocol,
+  and **never** echoes the token back as the selected subprotocol. Auth is
+  verified **before** the subscriber is created / the WS upgrade completes;
+  unauthenticated connections are rejected, never subscribed.
 * No scope claim in v1 — `aud=stream` is the authorization. There is one topic
   (`beacon_block`), so a valid stream token grants read of the whole stream. The
   gateway still caps connections per `sub` and globally and rate-limits events
@@ -75,11 +95,19 @@ Consumers present a JWT minted by `auth.getoptimum.io` for a new audience
 | `OPT_STREAM_ADDR` / `stream_addr` | `0.0.0.0:9600` | WebSocket/HTTP listener. |
 | `OPT_STREAM_GRPC_ADDR` / `stream_grpc_addr` | `0.0.0.0:9601` | gRPC listener. |
 | `OPT_STREAM_REQUIRE_AUTH` / `stream_require_auth` | `true` | Verify consumer JWTs; `false` only for local dev. |
-| `OPT_STREAM_MAX_CONNS` | `256` | Global connection cap. |
-| `OPT_STREAM_MAX_CONNS_PER_SUB` | `8` | Per-subject connection cap. |
-| `OPT_STREAM_BUFFER_SIZE` | `64` | Per-connection ring buffer depth (drop-on-overflow). |
+| `OPT_STREAM_MAX_CONNS` / `stream_max_conns` | `256` | Global connection cap. |
+| `OPT_STREAM_MAX_CONNS_PER_SUB` / `stream_max_conns_per_sub` | `8` | Per-subject connection cap. |
+| `OPT_STREAM_BUFFER_SIZE` / `stream_buffer_size` | `64` | Per-connection ring buffer depth (drop-on-overflow). |
 
 `OPT_REMOTE_AUTH_URL` (already present) supplies the JWKS/issuer.
+
+**Exposure requirement.** Any non-loopback bind (`stream_addr` / `stream_grpc_addr`
+beyond `127.0.0.1`) requires TLS — native or a trusted TLS-terminating proxy.
+Startup validation must **reject** a non-loopback listener when
+`stream_require_auth=false`; disabling auth is allowed only on a loopback bind for
+local dev. (Read/idle timeouts, max frame size, and the per-connection event-rate
+cap are the other DoS mitigations — see Consequences — with concrete values fixed
+in the implementation.)
 
 ### Data model — `BlockEvent`
 
