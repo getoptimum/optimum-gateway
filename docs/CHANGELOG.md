@@ -10,10 +10,10 @@
 | v1.1.1  | CURRENT — recommended | `getoptimum/gateway:v1.1.1` |
 | v1.0.2  | Previous — supported  | `getoptimum/gateway:v1.0.2` |
 
-Release notes for each version are in the docs sidebar under **Release Notes**, or here:
+Release notes:
 
-* [v1.1.1 release notes](./versions/v1.1.1/release_notes.md)
-* [v1.0.2 release notes](./versions/v1.0.2/release_notes.md)
+* [v1.1.1](./versions/v1.1.1/release_notes.md)
+* [v1.0.2](./versions/v1.0.2/release_notes.md)
 
 ## Important: Deprecated Versions
 
