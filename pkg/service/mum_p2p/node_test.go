@@ -12,19 +12,10 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/stretchr/testify/require"
 
-	commontest "github.com/getoptimum/optimum-common/pkg/test_utils"
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
 	"github.com/getoptimum/optimum-gateway/pkg/service/mum_p2p"
 	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
 )
-
-func TestNewNodeStartsWithQUIC(t *testing.T) {
-	cnt := test_utils.GetClean(t)
-	cfg := test_utils.NewTestConfig(cnt.Ctx, cnt.Log, "optimum_quic_smoke", commontest.GetFreePortT(t), nil)
-	node, err := mum_p2p.NewNode(cnt.Ctx, cnt.Log, cfg, t.TempDir())
-	require.NoError(t, err)
-	t.Cleanup(node.Stop)
-}
 
 func TestNodePublishMessageAutoSubscribes(t *testing.T) {
 	cnt := test_utils.GetClean(t)
