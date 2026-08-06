@@ -10,7 +10,7 @@
 [![Coverage](https://img.shields.io/badge/coverage-%E2%89%A571%25-green)](Makefile)
 [![Docker image](https://img.shields.io/docker/v/getoptimum/gateway?label=docker&sort=semver)](https://hub.docker.com/r/getoptimum/gateway)
 [![Kurtosis Readiness](https://github.com/getoptimum/optimum-gateway/actions/workflows/optimum-package.yml/badge.svg)](https://github.com/getoptimum/optimum-gateway/actions/workflows/optimum-package.yml)
-[![License](https://img.shields.io/badge/License-Ms--RSL-blue)](./LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-blue)](./LICENSE)
 
 # Optimum Gateway
 
@@ -213,4 +213,12 @@ See [`docs/contributing.md`](docs/contributing.md). Please run `make lint` and
 
 ## License
 
-Source is provided under the **Microsoft Reference Source License (Ms-RSL)** for reference use only: see [`LICENSE`](./LICENSE).
+Source is provided under the **MIT License**: see [`LICENSE`](./LICENSE).
+
+The MIT License grants copyright permissions only and grants no rights under any
+patent. [`PATENTS`](./PATENTS) lists patents and patent applications licensed to
+Spice Solutions Inc. by CodeOn; operating this software may involve practicing
+patented technology, and any patent rights you require must be obtained from the
+relevant patent holder directly. Third-party dependencies are inventoried in
+[`THIRD-PARTY-NOTICES.md`](./THIRD-PARTY-NOTICES.md) with attributions in
+[`NOTICE`](./NOTICE).
