@@ -75,7 +75,7 @@ export default defineConfigWithTheme<ThemeConfig>({
 
   // Published site is only `versions/`
   srcExclude: [
-    'ADR/**',
+    'adr/**',
     'README.md',
     'application-level-alerting.md',
     'security-hooks.md',
