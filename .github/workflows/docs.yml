@@ -39,7 +39,7 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: Remove ADR folder from docs
-        run: rm -rf ADR
+        run: rm -rf adr
 
       - name: Lint
         run: make lint

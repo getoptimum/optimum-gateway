@@ -5,7 +5,7 @@
     "docs:build": "yarn docs:update-latest && vitepress build",
     "docs:preview": "vitepress preview",
     "lint": "eslint --fix",
-    "lint:md": "markdownlint '**/*.md' --ignore 'security-hooks.md'",
+    "lint:md": "markdownlint '**/*.md' --ignore 'security-hooks.md' --ignore 'adr/**'",
     "format": "prettier --write '**/*.{js,jsx,ts,tsx,json,css,scss}'",
     "vercel-build": "yarn docs:update-latest && vitepress build"
   },
