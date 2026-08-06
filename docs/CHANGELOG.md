@@ -1,11 +1,23 @@
 # Optimum Gateway - Version History & Changelog
 
-**Latest Release:** [v1.0.2](./versions/v1.0.2/release_notes.md)  
-**Latest Docs:** [v1.0.2 Documentation](./versions/v1.0.2/index.md)
+**Latest Release:** [v1.1.1](./versions/v1.1.1/release_notes.md)  
+**Latest Docs:** [v1.1.1 Documentation](./versions/v1.1.1/index.md)
+
+## Supported Versions
+
+| Version | Status                | Docker Image                |
+| ------- | --------------------- | --------------------------- |
+| v1.1.1  | CURRENT — recommended | `getoptimum/gateway:v1.1.1` |
+| v1.0.2  | Previous — supported  | `getoptimum/gateway:v1.0.2` |
+
+Release notes:
+
+* [v1.1.1](./versions/v1.1.1/release_notes.md)
+* [v1.0.2](./versions/v1.0.2/release_notes.md)
 
 ## Important: Deprecated Versions
 
-**The following versions are deprecated and no longer supported:**
+**The following versions are deprecated and no longer supported. Upgrade to v1.1.1.**
 
 | Version     | Status     |
 | ----------- | ---------- |
@@ -24,38 +36,9 @@
 
 ### Required Action
 
-**All users on RC10 or earlier must upgrade to RC11 or RC12.**
+Partners on **v1.0.2** or **v1.1.1**: pull the new image and restart — same ports, volumes, and config. See [v1.1.1 release notes](./versions/v1.1.1/release_notes.md#upgrade-from-v102).
 
-```bash
-docker pull getoptimum/gateway:v0.0.1-rc12
-docker restart optimum-gateway
-```
-
-## v0.0.1-rc12 (Deprecated)
-
-**Docker Image:** `getoptimum/gateway:v0.0.1-rc12`
-
-### Highlights
-
-**Attestation subnet support** – Subscribes to all 64 attestation subnets, aggregates and propagates via mump2p.  
-**Health endpoint** – `GET /health` returns structured health checks with 200/503 for load balancer integration.  
-**Attestation performance metrics** – New histograms for arrival timing, first-seen race, and propagation latency.  
-**Gateway pairing mode** – `paired_with` field controls inbound block re-forwarding to the local CL.
-
-Full Release Notes (release notes not published) · Documentation (not published)
-
-## v0.0.1-rc11 (Deprecated)
-
-**Docker Image:** `getoptimum/gateway:v0.0.1-rc11`
-
-### Highlights
-
-**Bootstrap-driven peer discovery** – No proxy hosts. Gateway uses Bootstrap for peers and fork digest.  
-**Simplified topic config** – Short topic names (e.g. `beacon_block`); fork digest from Bootstrap.  
-**Stricter validation** – Messages from unsupported forks rejected early.  
-**Config migration required** – Remove `proxy_host`, use new structure.
-
-Full Release Notes (release notes not published) · Documentation (not published)
+**Deprecated RC releases:** upgrade to v1.1.1 via the [Quick Start](./versions/v1.1.1/01_quick_start.md) (API key, config, and volume layout changed in v1.0.2).
 
 ## Support
 
