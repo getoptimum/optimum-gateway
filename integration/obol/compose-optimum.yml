@@ -3,7 +3,7 @@
 
 services:
   optimum-gateway:
-    image: getoptimum/gateway:${GATEWAY_VERSION:-v1.0.2}
+    image: getoptimum/gateway:${GATEWAY_VERSION:-v1.1.1}
     container_name: optimum-gateway
     restart: unless-stopped
     ports:
