@@ -1,6 +1,6 @@
 # Optimum Gateway Integration Guide (for Validators)
 
-> **Partner docs:** For API keys, Docker quick start, CL peering, and troubleshooting, use the [versioned documentation](https://getoptimum.github.io/optimum-gateway/versions/latest/) (current release: **v1.1.1**). This guide is a short technical overview.
+Short technical overview for validator operators integrating the gateway with their CL client.
 
 ## Overview
 
@@ -23,7 +23,7 @@ It listens to `gossipsub` traffic from your CL client, forwards it into the mump
 
 ## Minimal Configuration
 
-See [Configuration](https://getoptimum.github.io/optimum-gateway/versions/latest/02_configuration) for the full partner config. Minimal `config/app_conf.yml`:
+Minimal `config/app_conf.yml`:
 
 ```yaml
 log_level: info
@@ -107,7 +107,7 @@ Example Prysm flag:
 --peer=/ip4/YOUR_GATEWAY_IP/tcp/33212/p2p/YOUR_GATEWAY_PEER_ID
 ```
 
-See [Quick Start — Connect CL Client](https://getoptimum.github.io/optimum-gateway/versions/latest/01_quick_start#connect-cl-client) for Teku, Lighthouse, Nimbus, and Lodestar.
+For Teku, Lighthouse, Nimbus, and Lodestar, configure a direct/trusted peer to the gateway multiaddr and add the CL node to the gateway's `direct_cl_peers` where needed (Lighthouse and Nimbus).
 
 ## Verify
 
@@ -118,4 +118,4 @@ curl -s http://localhost:48123/api/v1/self_info | jq '.mump2p.total_peers'
 
 ## Metrics
 
-When `telemetry_enable: true`, metrics are at `http://localhost:48123/metrics` (prefix `mump2p_gateway_`). See [Metrics & Grafana](https://getoptimum.github.io/optimum-gateway/versions/latest/03_telemetry).
+When `telemetry_enable: true`, metrics are at `http://localhost:48123/metrics` (prefix `mump2p_gateway_`).

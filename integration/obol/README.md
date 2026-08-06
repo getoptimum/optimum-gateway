@@ -14,20 +14,25 @@ The gateway is an opt-in overlay: it receives early blocks from the Optimum mump
 
 ## Prerequisites
 
-- Running CDVN on Hoodi (or mainnet) with a CL beacon node (start with Lighthouse: `CL=cl-lighthouse`).
-- Optimum API key (`ogw_live_...`) for your assigned `gateway_cluster_id` (Hoodi sample uses `optimum_hoodi_v0_2`).
-- `curl` and `jq` on the host (for `init-optimum.sh`).
+* Running CDVN on Hoodi (or mainnet) with a CL beacon node (start with Lighthouse: `CL=cl-lighthouse`).
+* Optimum API key (`ogw_live_...`) for your assigned `gateway_cluster_id` (Hoodi sample uses `optimum_hoodi_v0_2`).
+* `curl` and `jq` on the host (for `init-optimum.sh`).
 
 ## Setup
+
+Overlay sources (browse / copy from here):
+[github.com/getoptimum/optimum-hop/tree/main/integration/obol](https://github.com/getoptimum/optimum-hop/tree/main/integration/obol)
 
 From your CDVN root directory:
 
 ```bash
 # 1. Copy overlay files into the CDVN tree
 mkdir -p optimum
-cp -R /path/to/integration/obol/* optimum/
+git clone --depth 1 https://github.com/getoptimum/optimum-hop.git /tmp/optimum-hop
+cp -R /tmp/optimum-hop/integration/obol/. ./optimum/
+rm -rf /tmp/optimum-hop
 
-# 2. Add Optimum vars to .env (see optimum/.env.optimum.sample)
+# 2. Add Optimum vars to .env (see optimum/.env.optimum.sample in that folder)
 echo 'OPT_API_KEY=ogw_live_...' >> .env
 echo 'GATEWAY_VERSION=v1.1.1' >> .env
 
@@ -82,16 +87,13 @@ If Hoodi validation shows the CL must explicitly trust the gateway (e.g. Lightho
 
 ## Files
 
-```text
-integration/obol/
-├── compose-optimum.yml      # Append to CDVN COMPOSE_FILE
-├── config/
-│   └── sample.app_conf.yml  # Template; init writes app_conf.yml
-├── init-optimum.sh          # Discover CL peer id, write config
-├── obol_integration.png     # Architecture diagram
-├── .env.optimum.sample      # Vars to add to CDVN .env
-├── .gitignore
-└── README.md
-```
+All under [`integration/obol/`](https://github.com/getoptimum/optimum-hop/tree/main/integration/obol) in this repo:
+
+| File | Purpose |
+| ---- | ------- |
+| [`compose-optimum.yml`](https://github.com/getoptimum/optimum-hop/blob/main/integration/obol/compose-optimum.yml) | Append to CDVN `COMPOSE_FILE` |
+| [`init-optimum.sh`](https://github.com/getoptimum/optimum-hop/blob/main/integration/obol/init-optimum.sh) | Discover CL peer id, write `app_conf.yml` |
+| [`config/sample.app_conf.yml`](https://github.com/getoptimum/optimum-hop/blob/main/integration/obol/config/sample.app_conf.yml) | Gateway config template |
+| [`.env.optimum.sample`](https://github.com/getoptimum/optimum-hop/blob/main/integration/obol/.env.optimum.sample) | Vars to add to CDVN `.env` |
 
 When copied into a CDVN, paths in `compose-optimum.yml` expect `./optimum/config` and `./optimum/identity/` relative to the CDVN root.
