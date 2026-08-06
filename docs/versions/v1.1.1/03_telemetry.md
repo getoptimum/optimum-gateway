@@ -1,3 +1,290 @@
+# Telemetry & Monitoring
+
+> **Prerequisites:** [Quick Start](01_quick_start.md) with `telemetry_enable: true`.
+
+## Endpoints
+
+| Endpoint                | Description                                       |
+| ----------------------- | ------------------------------------------------- |
+| `GET /health`           | Structured health check with 200/503 status       |
+| `GET /api/v1/self_info` | Gateway identity, peers, config, and pairing mode |
+| `GET /metrics`          | Prometheus metrics                                |
+
+**`/api/v1/version` is removed.** Version info is available in `/health` and `/api/v1/self_info`.
+
+## Health Endpoint
+
+`GET /health` returns 200 (healthy) or 503 (degraded) based on four checks:
+
+```json
+{
+  "status": "healthy",
+  "gateway_id": "optimum-dev-hoodi-kubernetes-validator-lighthouse",
+  "version": "v1.1.1",
+  "commit_hash": "a0b2bc1",
+  "uptime_seconds": 1639,
+  "checks": {
+    "cl_peers": {"status": "ok", "value": 1},
+    "last_block_age_sec": {"status": "ok", "value": 1},
+    "mump2p_peers": {"status": "ok", "value": 13},
+    "subscribed_topics": {"status": "ok", "value": 65}
+  }
+}
+```
+
+| Check                | Passes when                   |
+| -------------------- | ----------------------------- |
+| `cl_peers`           | ≥ 1 CL peer connected         |
+| `mump2p_peers`       | ≥ 1 mump2p peer connected     |
+| `subscribed_topics`  | ≥ 1 topic subscribed          |
+| `last_block_age_sec` | Last block received < 60s ago |
+
+If any check fails, `status` becomes `"degraded"` and the failing checks are listed in `"failing"`.
+
+**Propagation:** `mump2p_gateway_propagation_state` reports whether the gateway is relaying mump2p traffic to your CL (`1` = on, `0` = disabled via Optimum dynamic config). The same state appears as `propagation_enabled` in `/api/v1/self_info`.
+
+## Self Info
+
+`GET /api/v1/self_info` returns gateway identity and peer information for CL client connection and operational visibility.
+
+**Example response:**
+
+```json
+{
+  "propagation_enabled": true,
+  "chain": "hoodi",
+  "commit_hash": "a0b2bc1",
+  "fork_digest": "c6ecb76c",
+  "gateway_cluster_id": "optimum_hoodi_v0_2",
+  "gateway_id": "optimum-dev-hoodi-kubernetes-validator-lighthouse",
+  "paired_with": "partner",
+  "remote_url": "bootstrap.getoptimum.io",
+  "version": "v1.1.1",
+  "skip_messages_from_self": true,
+  "peer_id": "12D3KooWNKZuPvVw5Sfnbq3nvyukxmhBBPZUXHeqzwcehmmwnKcR",
+  "libp2p": {
+    "direct_peers": {
+      "16Uiu2HAmDv5wLBz48dbi7atvUhcF7sefwQjwKLSrMPqLCYZceYCV": {
+        "ID": "16Uiu2HAmDv5wLBz48dbi7atvUhcF7sefwQjwKLSrMPqLCYZceYCV",
+        "Addrs": ["/ip4/10.0.0.2/tcp/9000"]
+      }
+    },
+    "multiaddrs": ["/ip4/10.0.0.10/tcp/33212", "/ip4/203.0.113.7/tcp/33212"],
+    "peer_ids": ["16Uiu2HAmDv5wLBz48dbi7atvUhcF7sefwQjwKLSrMPqLCYZceYCV"],
+    "peers_per_topic": {
+      "/eth2/c6ecb76c/beacon_block/ssz_snappy": 1,
+      "/eth2/c6ecb76c/beacon_attestation_0/ssz_snappy": 1
+    },
+    "total_peers": 1
+  },
+  "mump2p": {
+    "peer_ids": ["12D3KooWQKjdLGDYu1b2p4NJ39iuFsVArXmkrA77co7a2gDD94uv", "..."],
+    "peers_per_topic": {
+      "/eth2/c6ecb76c/beacon_block/ssz_snappy": 5,
+      "mump2p_aggregated_messages": 5
+    },
+    "total_peers": 13
+  },
+  "rlnc_config": {
+    "forward_shard_threshold": 0.75,
+    "publisher_shard_multiplier": 1.2,
+    "random_message_size_bytes": 512,
+    "rlnc_shard_factor": 4
+  }
+}
+```
+
+Use a multiaddr from `libp2p.multiaddrs` that is reachable from your CL host and `peer_id` when configuring your CL client: `--peer=/ip4/YOUR_IP/tcp/33212/p2p/YOUR_PEER_ID`.
+
+## Gateway Metrics
+
+**Endpoint:** `GET /metrics`
+
+Metrics are labeled with `gateway_id` and `gateway_cluster_id`. See [Metrics Reference](metrics.md) for the full list.
+
+**CL connected:** When a CL client connects, `mump2p_gateway_cl_peers` goes from 0 to >=1. Messages flow on both block and attestation topics.
+
+## Logs
+
+Gateway logs are JSON lines. Use `docker logs optimum-gateway` to inspect them. Key fields: `fork_digest` (e.g. `c6ecb76c` for hoodi) appears in startup, bootstrap update, and topic names.
+
+
+## Setting Up the Monitoring Dashboard
+
+This section walks through deploying a local Prometheus + Grafana stack that scrapes your gateway and loads the Partner Dashboard automatically.
+
+### Prerequisites
+
+* Docker and Docker Compose installed
+* Optimum Gateway running with `telemetry_enable: true`
+* Ports 3000 (Grafana) and 9090 (Prometheus) available
+
+### Step 1: Create Monitoring Directory
+
+```bash
+mkdir -p optimum-monitoring/{prometheus,grafana-provisioning/datasources,grafana-provisioning/dashboards,grafana-dashboards}
+cd optimum-monitoring
+```
+
+Your final structure:
+
+```text
+optimum-monitoring/
+├── docker-compose.yml
+├── prometheus/
+│   ├── prometheus.yml
+│   └── targets.json
+├── grafana-provisioning/
+│   ├── datasources/
+│   │   └── prometheus.yaml
+│   └── dashboards/
+│       └── dashboards.yml
+└── grafana-dashboards/
+    └── partner-dashboard.json
+```
+
+### Step 2: Docker Compose
+
+Create `docker-compose.yml`:
+
+```yaml
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=1h"
+      - "--storage.tsdb.retention.size=2GB"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana-provisioning:/etc/grafana/provisioning:ro
+      - ./grafana-dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  prometheus-data:
+  grafana-data:
+```
+
+### Step 3: Prometheus Configuration
+
+Create `prometheus/prometheus.yml`:
+
+```yaml
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'gateway'
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/targets.json
+```
+
+Create `prometheus/targets.json` (choose your platform):
+
+**Docker Desktop (macOS / Windows):**
+
+```json
+[
+  {
+    "targets": ["host.docker.internal:48123"],
+    "labels": { "job": "gateway" }
+  }
+]
+```
+
+**Linux Docker:**
+
+```json
+[
+  {
+    "targets": ["172.17.0.1:48123"],
+    "labels": { "job": "gateway" }
+  }
+]
+```
+
+If you run Hoodi and Mainnet gateways at the same time, add one scrape entry per gateway in `targets.json` (different ports); use the dashboard **Network** dropdown to switch between them.
+
+### Step 4: Grafana Provisioning
+
+Create `grafana-provisioning/datasources/prometheus.yaml`:
+
+```yaml
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    url: http://prometheus:9090
+    access: proxy
+    isDefault: true
+```
+
+Create `grafana-provisioning/dashboards/dashboards.yml`:
+
+```yaml
+apiVersion: 1
+
+providers:
+  - name: 'optimum-gateway'
+    orgId: 1
+    folder: 'Default'
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 10
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: true
+```
+
+### Step 5: Add the Partner Dashboard
+
+Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
+
+<details>
+<summary><strong>Click to expand: Partner Dashboard JSON (v1.1.1)</strong></summary>
+
+```json
 {
   "annotations": {
     "list": [
@@ -1478,7 +1765,7 @@
   "tags": [
     "optimum",
     "partner",
-    "v1.0.1"
+    "v1.1.1"
   ],
   "templating": {
     "list": [
@@ -1559,6 +1846,80 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Optimum Gateway - Partner Dashboard (v1.0.1)",
+  "title": "Optimum Gateway - Partner Dashboard (v1.1.1)",
   "uid": "partner-gateway-v1"
 }
+```
+
+</details>
+
+### Step 6: Start the Stack
+
+```bash
+docker compose up -d
+docker compose ps
+```
+
+You should see both `prometheus` and `grafana` with status `Up`.
+
+### Step 7: Access Grafana
+
+1. Open `http://localhost:3000`
+2. Login: `admin` / `admin` (skip password change)
+3. Go to **Dashboards** > **Default** > select the partner dashboard
+
+The dashboard auto-selects your Prometheus datasource and discovers gateway(s) via the `gateway_id` label.
+
+
+## Dashboard Panels
+
+The Partner Dashboard includes the following sections:
+
+### Gateway Info
+
+* **Status** - ON/OFF based on CL + mump2p peer connectivity
+* **CL Peers** / **mump2p Peers** - current peer counts
+* **Hoodi Slot** - live slot number from Hoodi genesis
+* **Hoodi Epoch** - epoch index (32 slots per epoch)
+* **Build Info** - version, commit, Go, public IP
+* **Subscribed Topics** - number of subscribed topics
+
+### Block Arrival Performance
+
+* **Arrival via mump2p (median)** - median block arrival time via mump2p from slot start
+* **Accelerated slots** - percentage of slots where mump2p delivered the block strictly before libp2p
+* **Accelerated slots over time** - heatmap of accelerated slot percentage over time
+* **mump2p arrival over time (median)** - arrival time trend
+
+### Attestation Performance
+
+* **Accelerated attestations** - percentage of attestations where mump2p delivered first
+* **Accelerated attestations over time** - trend of attestation race wins
+* **Attestations delivered before 8s deadline** - percentage of mump2p attestations arriving within the 8-second slot deadline
+
+
+## Prometheus Queries (Quick Reference)
+
+All queries use gateway-local metrics from the `/metrics` endpoint.
+
+| What                               | PromQL                                                                                                                                                |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CL peers                           | `mump2p_gateway_cl_peers{gateway_id="$gateway"}`                                                                                      |
+| mump2p peers                       | `mump2p_gateway_mump2p_peers{gateway_id="$gateway"}`                                                                                  |
+| Block arrival p50 via mump2p       | `histogram_quantile(0.50, sum by(le) (rate(mump2p_gateway_block_arrival_mump2p_ms_bucket{gateway_id="$gateway"}[5m])))`               |
+| Accelerated slots %                | `rate(mump2p_gateway_blocks_first_seen_mump2p_total[5m]) / (rate(mump2p_gateway_blocks_first_seen_mump2p_total[5m]) + rate(mump2p_gateway_blocks_first_seen_libp2p_total[5m])) * 100`              |
+
+
+## Stopping the Stack
+
+```bash
+docker compose down        # stop, keep data
+docker compose down -v     # stop, delete all data
+```
+
+## References
+
+* [Metrics Reference](metrics.md) - metric names and types
+* [Metrics Methodology](metrics_methodology.md) - why and how we measure
+* [Configuration](02_configuration.md) - gateway settings
+* [Troubleshooting](04_troubleshoot.md) - fixing dashboard / gateway issues

@@ -29,7 +29,7 @@ cp -R /path/to/integration/obol/* optimum/
 
 # 2. Add Optimum vars to .env (see optimum/.env.optimum.sample)
 echo 'OPT_API_KEY=ogw_live_...' >> .env
-echo 'GATEWAY_VERSION=v1.0.2' >> .env
+echo 'GATEWAY_VERSION=v1.1.1' >> .env
 
 # 3. Enable the overlay (append to existing COMPOSE_FILE)
 # Example:

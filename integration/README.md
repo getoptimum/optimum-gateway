@@ -157,7 +157,7 @@ integration/
     ├── prometheus/
     ├── grafana-provisioning/
     └── grafana-dashboards/
-        └── partner-dashboard.json   # mump2p_gateway_* metrics (v1.0.2+)
+        └── partner-dashboard.json   # mump2p_gateway_* metrics (v1.1.1+)
 ```
 
 ## Important Notes

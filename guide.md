@@ -1,5 +1,7 @@
 # Optimum Gateway Integration Guide (for Validators)
 
+> **Partner docs:** For API keys, Docker quick start, CL peering, and troubleshooting, use the [versioned documentation](https://getoptimum.github.io/optimum-gateway/versions/latest/) (current release: **v1.1.1**). This guide is a short technical overview.
+
 ## Overview
 
 Optimum Gateway connects your Ethereum Consensus Layer (CL) client to the **mump2p mesh** — a high-speed, RLNC-enhanced libp2p cluster optimized for data propagation.
@@ -21,57 +23,36 @@ It listens to `gossipsub` traffic from your CL client, forwards it into the mump
 
 ## Minimal Configuration
 
+See [Configuration](https://getoptimum.github.io/optimum-gateway/versions/latest/02_configuration) for the full partner config. Minimal `config/app_conf.yml`:
+
 ```yaml
-log_level: debug
-gateway_cluster_id: optimum_hoodi_v0_3
-gateway_id: yourorg-prod-hoodi-us-east-gw-1
+log_level: info
+gateway_cluster_id: optimum_ethereum_hoodi_v0_1   # assigned by Optimum
 
 identity_libp2p_dir: /tmp/libp2p
 identity_mump2p_dir: /tmp/mump2p
 agent_lib_p2p_port: 33212
-agent_mump2p_port: 33213
+agent_mump2p_port: 43213
 telemetry_enable: true
 telemetry_port: 48123
-
-# Optional Bootstrap override
-# remote_bootstrap_url: bootstrap.getoptimum.io
 ```
 
-Short topic names are recommended. The gateway fetches the current fork digest from Bootstrap and builds the full `/eth2/<fork_digest>/.../ssz_snappy` topic internally. Full topic strings are also accepted.
+Set **`OPT_API_KEY=ogw_live_...`** in the environment (not YAML). Chain, gateway ID, and validator scope come from the key.
 
 ## Environment Variables
 
 The gateway accepts configuration through environment variables as well. Environment variables override values from `config/app_conf.yml`.
 
+- `OPT_API_KEY`: Gateway API key (`ogw_live_...`) — **required for partners**
 - `OPT_LOG_LEVEL`: Log level: `debug`, `info`, `warn`, `error`
-- `OPT_GATEWAY_CLUSTER_ID`: Optimum cluster to join, for example `optimum_hoodi_v0_3`
-- `OPT_GATEWAY_ID`: Gateway identifier in `org-env-chain-region-service-suffix` form
-- `OPT_CHAIN`: Chain name, for example `hoodi` or `mainnet`
+- `OPT_GATEWAY_CLUSTER_ID`: Optimum cluster to join (assigned during onboarding)
 - `OPT_IDENTITY_LIBP2P_DIR`: Directory for the CL-facing libp2p identity
 - `OPT_IDENTITY_MUMP2P_DIR`: Directory for the mump2p mesh identity
 - `OPT_AGENT_LIB_P2P_PORT`: TCP port used for the CL-facing libp2p listener
 - `OPT_AGENT_MUMP2P_PORT`: TCP port used for the gateway-to-gateway mesh
 - `OPT_ENABLE_TELEMETRY`: Enable local API and Prometheus metrics
-- `OPT_TELEMETRY_PORT`: HTTP port for `/api/v1/*` and `/metrics`
-- `OPT_REMOTE_BOOTSTRAP_URL`: Optional Bootstrap override
-
-Example `.env`:
-
-```sh
-OPT_LOG_LEVEL=info
-OPT_GATEWAY_CLUSTER_ID=optimum_hoodi_v0_3
-OPT_GATEWAY_ID=yourorg-prod-hoodi-us-east-gw-1
-OPT_CHAIN=hoodi
-OPT_IDENTITY_LIBP2P_DIR=/opt/optimum/libp2p
-OPT_IDENTITY_MUMP2P_DIR=/opt/optimum/mump2p
-OPT_AGENT_LIB_P2P_PORT=33212
-OPT_AGENT_MUMP2P_PORT=33213
-OPT_ENABLE_TELEMETRY=true
-OPT_TELEMETRY_PORT=48123
-
-# Optional overrides
-# OPT_REMOTE_BOOTSTRAP_URL=bootstrap.getoptimum.io
-```
+- `OPT_TELEMETRY_PORT`: HTTP port for `/health`, `/metrics`, `/api/v1/self_info`
+- `OPT_REMOTE_PUSH_ENABLE`: Push metrics/logs to Optimum (requires telemetry + API key)
 
 ## Startup Flow
 
@@ -96,16 +77,16 @@ make run
 ```sh
 docker run --name optimum-gateway --rm \
   -p 33212:33212/tcp \
-  -p 33213:33213/tcp \
-  -p 48123:48123/tcp \
+  -p 127.0.0.1:48123:48123/tcp \
+  -e OPT_API_KEY=ogw_live_xxx \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data/libp2p:/tmp/libp2p \
   -v $(pwd)/data/mump2p:/tmp/mump2p \
-  getoptimum/gateway:v0.0.1-rc11 \
+  getoptimum/gateway:v1.1.1 \
   -config=/app/config/app_conf.yml
 ```
 
-`agent_mump2p_port` must be reachable by other gateways in the mesh. It is no longer an outbound-only path.
+`agent_mump2p_port` (sample `43213`) is used for gateway-to-gateway mesh egress.
 
 ## Connect Your CL Client
 
@@ -126,23 +107,15 @@ Example Prysm flag:
 --peer=/ip4/YOUR_GATEWAY_IP/tcp/33212/p2p/YOUR_GATEWAY_PEER_ID
 ```
 
-## Verify the Mesh
+See [Quick Start — Connect CL Client](https://getoptimum.github.io/optimum-gateway/versions/latest/01_quick_start#connect-cl-client) for Teku, Lighthouse, Nimbus, and Lodestar.
 
-Check version:
-
-```sh
-curl -s http://localhost:48123/api/v1/version
-```
-
-Check mesh peers:
+## Verify
 
 ```sh
+curl -s http://localhost:48123/health | jq
 curl -s http://localhost:48123/api/v1/self_info | jq '.mump2p.total_peers'
 ```
 
-Check startup logs:
+## Metrics
 
-```sh
-docker logs optimum-gateway | grep -E "fork digest updated from bootstrap|registered gateway to bootstrap server|got mump2p peers from bootstrap server"
-```
-
+When `telemetry_enable: true`, metrics are at `http://localhost:48123/metrics` (prefix `mump2p_gateway_`). See [Metrics & Grafana](https://getoptimum.github.io/optimum-gateway/versions/latest/03_telemetry).

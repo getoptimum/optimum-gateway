@@ -94,7 +94,7 @@ docker run --name optimum-gateway --rm \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data/libp2p:/tmp/libp2p \
   -v $(pwd)/data/mump2p:/tmp/mump2p \
-  getoptimum/gateway:latest \
+  getoptimum/gateway:v1.1.1 \
   -config=/app/config/app_conf.yml
 ```
 
@@ -125,7 +125,7 @@ curl -s http://localhost:48123/api/v1/self_info | jq '{peer_id, multiaddrs: .lib
 --peer=/ip4/<YOUR_GATEWAY_IP>/tcp/33212/p2p/<YOUR_GATEWAY_PEER_ID>
 ```
 
-A full validator-facing walkthrough lives in [`guide.md`](guide.md).
+A full validator-facing walkthrough lives in the [versioned docs](https://getoptimum.github.io/optimum-gateway/versions/latest/) and [`guide.md`](guide.md).
 
 ## Configuration
 
