@@ -32,7 +32,16 @@
           "url": "https://github.com/getoptimum/optimum-gateway",
           "type": "vcs"
         }
-      ]
+      ],
+      "evidence": {
+        "licenses": [
+          {
+            "license": {
+              "id": "MIT"
+            }
+          }
+        ]
+      }
     }
   },
   "components": [
