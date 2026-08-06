@@ -90,7 +90,7 @@ via `sendTrackedSlots`.
 > * `block_arrival_libp2p_ms` / `block_arrival_mump2p_ms` — arrival latency (`receivedAt - SlotStartTime(slot)`) for a block first seen via libp2p (CL) vs mump2p, recorded by `ObserveLibP2PArrivalLatency` / `ObserveMumP2PArrivalLatency`.
 > * `blocks_first_seen_libp2p_total` / `blocks_first_seen_mump2p_total` — first-seen-by-source counters.
 >
-> There is no single `block_arrival_latency_ms`, `eth_block_latency_ms`, or `beacon_block_propagation_ms{source}` metric, and no `ObserveBlockArrival` / `ObserveEthLatency` / `ObserveBlockPropagation` helper. The original text is kept below for historical context.
+> There is no single `block_arrival_latency_ms`, `eth_block_latency_ms`, or `beacon_block_propagation_ms{source}` metric, and no `ObserveBlockArrival` / `ObserveEthLatency` / `ObserveBlockPropagation` helper.
 
 `pkg/service/telemetry` provides:
 
