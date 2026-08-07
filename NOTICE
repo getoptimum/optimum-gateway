@@ -6,6 +6,9 @@ dependencies and their licenses is in THIRD-PARTY-NOTICES.md. The attribution
 notices required by those dependencies (Apache-2.0 §4(d) and the NOTICE files
 it references) are reproduced below.
 
+Patents applicable to this software are listed in the accompanying PATENTS file.
+This software is licensed under the MIT License, which grants no patent rights.
+
 ================================================================================
 github.com/prometheus/client_golang (Apache-2.0)
 ================================================================================

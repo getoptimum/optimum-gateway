@@ -129,6 +129,7 @@ export default defineConfigWithTheme<ThemeConfig>({
 
   themeConfig: {
     nav: [
+      { text: 'Changelog', link: '/CHANGELOG' },
       { text: 'GitHub', link: 'https://github.com/getoptimum/optimum-gateway' }
     ],
     // Exposed at runtime via useData().theme — consumed by the dropdown.

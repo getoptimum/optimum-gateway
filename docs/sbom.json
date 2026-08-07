@@ -46,7 +46,16 @@
           "name": "cdx:gomod:build:env:GOOS",
           "value": "linux"
         }
-      ]
+      ],
+      "evidence": {
+        "licenses": [
+          {
+            "license": {
+              "id": "MIT"
+            }
+          }
+        ]
+      }
     }
   },
   "components": [
