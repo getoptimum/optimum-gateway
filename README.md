@@ -202,6 +202,7 @@ make vulcheck    # govulncheck (with documented exception list)
 ## Documentation
 
 - [Integration guide for validators](guide.md)
+- [Architecture Decision Records (ADRs)](docs/adr/README.md)
 - [Changelog](docs/CHANGELOG.md)
 - [Security model](SECURITY.md)
 

@@ -281,9 +281,10 @@ If `t_mum_seen(g,b)=0`, then:
 Bootstrap produces KPIs aggregated over a time window.
 
 > **Implementation note (verified against code):** The metric names in the groups below are *design-time* names, and they conflate two different layers. In the current bootstrap code:
-> - The **JSON snapshot** struct (`internal/entities`) uses percentile-suffixed keys: `opt_gateway_gap_to_best_ms_{50,95,99}`, `opt_gateway_mum_spread_ms_{50,95,99}`, `opt_mum_spread_coverage_{200,500,1000}`, `opt_mum_publish_rate`, `opt_missing_eth_rate`, `opt_missing_mum_rate` (partner-scoped `mum_seen_rate` is **un-prefixed**).
-> - The **Prometheus** layer (namespace `optp2p_bootstrap` / subsystem `optimum_bootstrap`) uses **un-prefixed base names**: `gap_to_best_ms`, `mum_spread_ms`, `mum_spread_coverage_{200,500,1000}`, `missing_eth_rate`, `missing_mum_rate`, `mum_publish_rate`, `gap_to_best_ms_max`. The `opt_`/`opt_gateway_` prefix and the `_50/_95/_99` split exist only in the JSON snapshot, not at the Prometheus layer.
-> - Names below that appear in **neither** layer (e.g. `opt_gateway_gap_to_best_p95_ms`, `opt_gateway_gap_to_best_within_ms`, `opt_gateway_event_missing_rate`, and the clock-drift group `opt_gateway_clock_offset_ms` / `opt_gateway_clock_rtt_ms`) are **proposed, not yet implemented**.
+>
+> * The **JSON snapshot** struct (`internal/entities`) uses percentile-suffixed keys: `opt_gateway_gap_to_best_ms_{50,95,99}`, `opt_gateway_mum_spread_ms_{50,95,99}`, `opt_mum_spread_coverage_{200,500,1000}`, `opt_mum_publish_rate`, `opt_missing_eth_rate`, `opt_missing_mum_rate` (partner-scoped `mum_seen_rate` is **un-prefixed**).
+> * The **Prometheus** layer (namespace `optp2p_bootstrap` / subsystem `optimum_bootstrap`) uses **un-prefixed base names**: `gap_to_best_ms`, `mum_spread_ms`, `mum_spread_coverage_{200,500,1000}`, `missing_eth_rate`, `missing_mum_rate`, `mum_publish_rate`, `gap_to_best_ms_max`. The `opt_`/`opt_gateway_` prefix and the `_50/_95/_99` split exist only in the JSON snapshot, not at the Prometheus layer.
+> * Names below that appear in **neither** layer (e.g. `opt_gateway_gap_to_best_p95_ms`, `opt_gateway_gap_to_best_within_ms`, `opt_gateway_event_missing_rate`, and the clock-drift group `opt_gateway_clock_offset_ms` / `opt_gateway_clock_rtt_ms`) are **proposed, not yet implemented**.
 
 #### KPI group A — Gateway competitiveness vs best (per gateway)
 

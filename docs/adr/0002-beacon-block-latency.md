@@ -85,29 +85,12 @@ via `sendTrackedSlots`.
 
 ### 1.2. Gateway-level Prometheus metrics
 
-`pkg/service/telemetry` provides:
+`pkg/service/telemetry/gossipsub.go` records per-source beacon-block arrival (see [ADR-0007](./0007-slot-based-block-arrival-tracking.md)):
 
-* `block_arrival_latency_ms` and `eth_block_latency_ms` in
-  `validator.go` via:
+* `block_arrival_libp2p_ms` / `block_arrival_mump2p_ms` — arrival latency (`receivedAt - SlotStartTime(slot)`) for a block first seen via libp2p (CL) vs mump2p, recorded by `ObserveLibP2PArrivalLatency` / `ObserveMumP2PArrivalLatency`.
+* `blocks_first_seen_libp2p_total` / `blocks_first_seen_mump2p_total` — first-seen-by-source counters.
 
-  ```go
-  ObserveBlockArrival(latencyMs int64)
-  ObserveEthLatency(topic string, latencyMs int64)
-  ```
-
-  These are invoked from `recordMessageFetchedAt` in
-  `pkg/service/gossipsub-gateway/gateway_exchanges.go` when a
-  beacon block is first fetched from CL.
-
-* `beacon_block_propagation_ms{source="ethp2p"|"mump2p"}` via:
-
-  ```go
-  ObserveBlockPropagation(source string, latencyMs int64)
-  ```
-
-  This is called from `calculateBlockDelay` in
-  `pkg/service/gossipsub-gateway/beacon_block_measures.go` when a
-  block is seen via ethp2p or mump2p.
+> Historical note: the original (2025) design used single `block_arrival_latency_ms` / `eth_block_latency_ms` / `beacon_block_propagation_ms{source}` metrics with `ObserveBlockArrival` / `ObserveEthLatency` / `ObserveBlockPropagation` helpers. None of those exist in the current code — they were replaced by the per-source metrics above.
 
 ### 1.3. Integration points
 
@@ -189,7 +172,7 @@ The objective is to:
 
 ## Where timestamps should be taken
 
-### Destination arrival timestamps (already implemented)
+### Destination arrival timestamps
 
 **Eth path (CL → gateway)**:
 
@@ -532,13 +515,11 @@ side-channel or embedded), our dashboards and remote analytics can show:
         * Negative values ⇒ Mum faster by `abs(value)` ms.
         * Positive values ⇒ Eth faster by `value` ms.
 
-On the Prometheus side, `blockPropagation` already gives:
-
-* `beacon_block_propagation_ms{source="ethp2p"}` and
-* `beacon_block_propagation_ms{source="mump2p"}`,
-
-which are effectively `L_eth_dest` and `L_mum_dest`. Option 2 allows us
-to add a dedicated histogram:
+On the Prometheus side, the original design exposed
+`beacon_block_propagation_ms{source="ethp2p"|"mump2p"}` (effectively `L_eth_dest`
+and `L_mum_dest`). In the current code this is instead the per-source
+`block_arrival_libp2p_ms` / `block_arrival_mump2p_ms` (see §1.2 and ADR-0007).
+Option 2 would have added a dedicated histogram:
 
 ```go
 mumPropagation = NewHistogramWithBuckets(

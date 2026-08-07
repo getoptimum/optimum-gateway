@@ -92,8 +92,8 @@ high‑level structure:
      * Health at `/health`,
      * Prometheus metrics (`/metrics`) when enabled.
    * The gateway does not currently expose a consumer-facing gRPC service; a
-     read-only streaming API (WebSocket + gRPC) is proposed separately in a
-     forthcoming consumer block-stream ADR (ADR-0011, planned in a later PR).
+     read-only streaming API (WebSocket + gRPC) is proposed separately in
+     [ADR-0011](./0011-gateway-consumer-block-stream.md).
 
 7. **AB testing**
    * Slot‑level AB testing is supported via `cfg.PropagationEnabled()` (dynamic-config rotator):
