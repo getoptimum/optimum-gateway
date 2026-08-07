@@ -70,7 +70,7 @@ Consumers present a JWT minted by `auth.getoptimum.io` for a new audience
 (`OPT_REMOTE_AUTH_URL`) via `pkg/service/jwks_verifier`. Add
 `AudStream = "stream"` next to `AudP2P` / `AudServices`.
 
-* Token in `Authorization: Bearer <jwt>` for gRPC metadata and non-browser WS.
+* Token in the `Authorization` header for gRPC metadata and non-browser WS.
   Browsers cannot set WS request headers, so the token rides
   `Sec-WebSocket-Protocol`: the client offers two subprotocol values — a marker
   (`optimum.stream.v1`) and `bearer.<jwt>` — and the server authenticates from
