@@ -85,31 +85,12 @@ via `sendTrackedSlots`.
 
 ### 1.2. Gateway-level Prometheus metrics
 
-> The metric and helper names in this subsection are the **original (2025)** ones and no longer exist. The current per-source arrival metrics live in `pkg/service/telemetry/gossipsub.go` (see [ADR-0007](./0007-slot-based-block-arrival-tracking.md)):
->
-> * `block_arrival_libp2p_ms` / `block_arrival_mump2p_ms` — arrival latency (`receivedAt - SlotStartTime(slot)`) for a block first seen via libp2p (CL) vs mump2p, recorded by `ObserveLibP2PArrivalLatency` / `ObserveMumP2PArrivalLatency`.
-> * `blocks_first_seen_libp2p_total` / `blocks_first_seen_mump2p_total` — first-seen-by-source counters.
->
-> There is no single `block_arrival_latency_ms`, `eth_block_latency_ms`, or `beacon_block_propagation_ms{source}` metric, and no `ObserveBlockArrival` / `ObserveEthLatency` / `ObserveBlockPropagation` helper.
+`pkg/service/telemetry/gossipsub.go` records per-source beacon-block arrival (see [ADR-0007](./0007-slot-based-block-arrival-tracking.md)):
 
-`pkg/service/telemetry` provides:
+* `block_arrival_libp2p_ms` / `block_arrival_mump2p_ms` — arrival latency (`receivedAt - SlotStartTime(slot)`) for a block first seen via libp2p (CL) vs mump2p, recorded by `ObserveLibP2PArrivalLatency` / `ObserveMumP2PArrivalLatency`.
+* `blocks_first_seen_libp2p_total` / `blocks_first_seen_mump2p_total` — first-seen-by-source counters.
 
-* `block_arrival_latency_ms` and `eth_block_latency_ms` via:
-
-  ```go
-  ObserveBlockArrival(latencyMs int64)
-  ObserveEthLatency(topic string, latencyMs int64)
-  ```
-
-  invoked when a beacon block is first fetched from CL.
-
-* `beacon_block_propagation_ms{source="ethp2p"|"mump2p"}` via:
-
-  ```go
-  ObserveBlockPropagation(source string, latencyMs int64)
-  ```
-
-  called when a block is seen via ethp2p or mump2p.
+> Historical note: the original (2025) design used single `block_arrival_latency_ms` / `eth_block_latency_ms` / `beacon_block_propagation_ms{source}` metrics with `ObserveBlockArrival` / `ObserveEthLatency` / `ObserveBlockPropagation` helpers. None of those exist in the current code — they were replaced by the per-source metrics above.
 
 ### 1.3. Integration points
 
@@ -191,7 +172,7 @@ The objective is to:
 
 ## Where timestamps should be taken
 
-### Destination arrival timestamps (already implemented)
+### Destination arrival timestamps
 
 **Eth path (CL → gateway)**:
 
