@@ -16,15 +16,13 @@ When reporting, include:
 
 ## Security research safe harbor
 
-We welcome good-faith security research. The source in this repository is
-licensed under the Microsoft Reference Source License (Ms-RSL), which by itself
-grants only reference (read-only) use. This section adds a separate, limited
-permission so that security testing is clearly authorized.
+We welcome good-faith security research. The [`LICENSE`](./LICENSE) already
+permits you to build, run and modify this software, so no extra permission is
+needed for that. What this section does is define what we treat as good-faith
+research, so the assurance below is unambiguous.
 
-Notwithstanding the terms of the [`LICENSE`](./LICENSE), Spice Solutions Inc.
-("Optimum") grants any person a non-exclusive, revocable permission to access,
-reproduce, build, run, and test the software solely to identify and responsibly
-report security vulnerabilities, provided that you:
+We will treat security testing as authorized access, and Spice Solutions Inc.
+("Optimum") will not pursue legal action for it, provided that you:
 
 - act in good faith and avoid privacy violations, data destruction, and
   degradation of others' services;
@@ -36,11 +34,9 @@ report security vulnerabilities, provided that you:
 - give us a reasonable opportunity to remediate before any public disclosure
   (see below), and do not exploit a finding beyond what is needed to prove it.
 
-This permission is limited to security research. It grants no right to
-distribute the software, create or distribute derivative works, or use the
-software in production, all of which remain governed by the `LICENSE` and any
-commercial agreement with Optimum. Optimum may revoke this permission for
-conduct outside its scope.
+This assurance concerns security research only. It is not a waiver of any other
+right, and Optimum may withdraw it for conduct outside the scope above. Your
+rights in the software itself are governed by the [`LICENSE`](./LICENSE).
 
 ### Coordinated disclosure
 
