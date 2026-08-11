@@ -1,14 +1,11 @@
-// Package streamhub fans decoded beacon-block observations out to downstream
-// consumers (ADR-0011). Emit is non-blocking: a slow consumer's oldest events
-// are dropped rather than backpressuring the ingest goroutines.
+// Package streamhub fans decoded beacon-block observations to consumers without backpressure.
+// It drops the oldest event for a slow consumer (ADR-0011).
 package streamhub
 
 import "github.com/getoptimum/optimum-gateway/pkg/entities"
 
-// BlockEvent is one beacon-block observation. It is produced once per source,
-// so (Slot, ProposerIndex) is the block identity and Source tells the libp2p
-// and mump2p views apart. Raw holds the verbatim ssz_snappy bytes for raw-mode
-// consumers; metadata-mode transports omit it.
+// BlockEvent identifies an observation by Slot, ProposerIndex, and Source (ADR-0011).
+// Raw contains verbatim SSZ-Snappy data in raw mode and is omitted in metadata mode.
 type BlockEvent struct {
 	Slot           uint64
 	ProposerIndex  uint64
