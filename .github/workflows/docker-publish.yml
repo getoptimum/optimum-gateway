@@ -96,11 +96,19 @@ jobs:
         run: |
           MANIFEST_DIR=gitops/clusters/optimum-infrastructure/manifest/optimum
           NEW_IMG="${{ env.DOCKER_ORG }}/gateway@${{ steps.build.outputs.digest }}"
+          # gateway-prysm-canary is NOT in this list. Its workload moved to the
+          # optimum-gateway Helm chart, so gateway-prysm-canary/deployment.yaml
+          # no longer exists in gitops. Leaving it here fails the whole step:
+          # `run:` executes under `bash -e`, so sed on a missing path aborts
+          # before any other flavour is written.
+          #
+          # The canary's digest now lives in the chart's
+          # values/internal-prysm-canary.yaml and is NOT auto-bumped. Bump it
+          # there when promoting an image to the canary.
           for FILE in \
             "$MANIFEST_DIR"/gateway-lighthouse/deployment.yaml \
             "$MANIFEST_DIR"/gateway-nimbus/deployment.yaml \
-            "$MANIFEST_DIR"/gateway-prysm/deployment.yaml \
-            "$MANIFEST_DIR"/gateway-prysm-canary/deployment.yaml; do
+            "$MANIFEST_DIR"/gateway-prysm/deployment.yaml; do
             sed -i.bak "s|getoptimum/gateway[@:][^ ]*|${NEW_IMG}|" "$FILE" && rm -f "${FILE}.bak"
           done
 
@@ -112,7 +120,6 @@ jobs:
           git add clusters/optimum-infrastructure/manifest/optimum/gateway-lighthouse/deployment.yaml
           git add clusters/optimum-infrastructure/manifest/optimum/gateway-nimbus/deployment.yaml
           git add clusters/optimum-infrastructure/manifest/optimum/gateway-prysm/deployment.yaml
-          git add clusters/optimum-infrastructure/manifest/optimum/gateway-prysm-canary/deployment.yaml
           if [ -n "$(git status --porcelain)" ]; then
             git commit -m "gateway: update image to ${{ steps.meta.outputs.tag }}"
             git push origin main
