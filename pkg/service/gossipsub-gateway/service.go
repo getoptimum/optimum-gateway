@@ -78,7 +78,7 @@ type Service struct {
 	lastBlockReceivedAt atomic.Int64 // Unix ms — stamped on every beacon block from any source
 	startedAt           time.Time    // wall-clock time the service was created
 
-	streamHub *streamhub.Hub // consumer block-stream fan-out (ADR-0011); nil disables it
+	streamHub *streamhub.Service // consumer block-stream fan-out (ADR-0011); nil disables it
 }
 
 // LastBlockReceivedMs returns Unix ms of the last beacon block seen (0 if none).
@@ -99,7 +99,7 @@ func WithCustomMumP2PConnectionGater(gater connmgr.ConnectionGater) func(*Servic
 
 // WithStreamHub wires the consumer block-stream fan-out (ADR-0011); nil (the
 // default) leaves the stream off.
-func WithStreamHub(hub *streamhub.Hub) Option {
+func WithStreamHub(hub *streamhub.Service) Option {
 	return func(s *Service) {
 		s.streamHub = hub
 	}

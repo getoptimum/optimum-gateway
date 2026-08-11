@@ -1,5 +1,5 @@
 // Package streamhub fans decoded beacon-block observations to consumers without backpressure.
-// It drops the oldest event for a slow consumer (ADR-0011).
+// It drops new events when a consumer buffer is full (ADR-0011).
 package streamhub
 
 import "github.com/getoptimum/optimum-gateway/pkg/entities"

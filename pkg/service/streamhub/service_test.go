@@ -8,26 +8,25 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/service/streamhub"
 )
 
-// A full ring must not block Emit; it drops the oldest events and keeps the
-// newest, counting the drops.
-func TestHubDropsOldestWhenFull(t *testing.T) {
-	h := streamhub.New()
-	sub := h.Subscribe(2)
+// A full buffer must not block Emit; it drops new events and keeps buffered ones.
+func TestServiceDropsWhenFull(t *testing.T) {
+	s := streamhub.New()
+	sub := s.Subscribe(2)
 
 	for i := 1; i <= 5; i++ {
-		h.Emit(&streamhub.BlockEvent{Slot: uint64(i)}) // no consumer draining
+		s.Emit(&streamhub.BlockEvent{Slot: uint64(i)}) // no consumer draining
 	}
 
 	require.Equal(t, uint64(3), sub.Dropped())
-	require.Equal(t, []uint64{4, 5}, drainSlots(sub))
+	require.Equal(t, []uint64{1, 2}, drainSlots(sub))
 }
 
 // After Close, buffered events stay readable, the channel then reports closed,
 // and further Emit is a no-op.
-func TestHubCloseStopsSubscription(t *testing.T) {
-	h := streamhub.New()
-	sub := h.Subscribe(2)
-	h.Emit(&streamhub.BlockEvent{Slot: 1})
+func TestServiceCloseStopsSubscription(t *testing.T) {
+	s := streamhub.New()
+	sub := s.Subscribe(2)
+	s.Emit(&streamhub.BlockEvent{Slot: 1})
 
 	sub.Close()
 
@@ -37,7 +36,7 @@ func TestHubCloseStopsSubscription(t *testing.T) {
 	_, ok = <-sub.Events()
 	require.False(t, ok)
 
-	require.NotPanics(t, func() { h.Emit(&streamhub.BlockEvent{Slot: 2}) })
+	require.NotPanics(t, func() { s.Emit(&streamhub.BlockEvent{Slot: 2}) })
 }
 
 func drainSlots(sub *streamhub.Subscription) []uint64 {
