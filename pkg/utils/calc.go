@@ -12,8 +12,12 @@ func CalculateMaxSize(src int64) (int, error) {
 	if src <= 0 {
 		return 0, fmt.Errorf("src must be positive: %d", src)
 	}
+	maxAllowed := int64(math.MaxInt)
+	if src > maxAllowed-maxAllowed/5 {
+		return 0, fmt.Errorf("src is too large, final value not fit: %d", src)
+	}
 	finalVal := src + int64(float64(src)*0.2)
-	if finalVal < 0 || finalVal > math.MaxInt {
+	if finalVal < 0 || finalVal > maxAllowed {
 		return 0, fmt.Errorf("src is too large, final value not fit: %d", src)
 	}
 	return int(finalVal), nil
