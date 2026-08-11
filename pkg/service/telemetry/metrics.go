@@ -168,6 +168,7 @@ func InitMetricsWithRegistry(log logger.AppLogger, pairedWith string) {
 	initConnMetrics()
 	initMumP2PMetrics()
 	initP2PMetrics()
+	initStreamMetrics()
 	publicIP, _, err := commonnet.GetExternalIPs()
 	if err != nil {
 		log.Error("could not get public IP", err)
