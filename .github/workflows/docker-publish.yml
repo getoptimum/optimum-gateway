@@ -8,7 +8,7 @@ env:
 on:
   push:
     branches:
-      - main
+      - development
     tags:
       - v*
 
@@ -173,8 +173,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Generate token for infrastructure dispatch (main)
-        id: infra-dispatch-token-main
+      - name: Generate token for infrastructure dispatch (development)
+        id: infra-dispatch-token-dev
         uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2
         with:
           app-id: ${{ secrets.GH_APP_ID }}
@@ -182,11 +182,11 @@ jobs:
           owner: getoptimum
           repositories: infrastructure
 
-      - name: Trigger Ansible deploy (main)
+      - name: Trigger Ansible deploy (development)
         run: |
           gh api repos/getoptimum/infrastructure/dispatches \
             -f event_type=deploy_gateways \
             -f "client_payload[tag]=dev-latest" \
             -f "client_payload[digest]=${{ needs.docker.outputs.digest }}"
         env:
-          GH_TOKEN: ${{ steps.infra-dispatch-token-main.outputs.token }}
+          GH_TOKEN: ${{ steps.infra-dispatch-token-dev.outputs.token }}
