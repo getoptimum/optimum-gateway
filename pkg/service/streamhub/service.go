@@ -1,9 +1,9 @@
 package streamhub
 
 import (
-	"strconv"
-	"sync"
 	"sync/atomic"
+
+	"github.com/google/uuid"
 
 	"github.com/getoptimum/optimum-common/pkg/syncx"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
@@ -15,16 +15,14 @@ const DefaultBufferSize = 64
 
 // Service broadcasts each BlockEvent to all subscribers.
 type Service struct {
-	bc   *syncx.Broadcaster[*BlockEvent]
-	mu   sync.Mutex
-	subs map[string]*Subscription
-	seq  uint64
+	bc      *syncx.Broadcaster[*BlockEvent]
+	dropped *syncx.RWMap[string, *atomic.Uint64] // listener key -> subscriber drop counter
 }
 
 func New() *Service {
 	return &Service{
-		bc:   syncx.NewBroadcaster[*BlockEvent](),
-		subs: make(map[string]*Subscription),
+		bc:      syncx.NewBroadcaster[*BlockEvent](),
+		dropped: syncx.NewRWMap[string, *atomic.Uint64](),
 	}
 }
 
@@ -34,28 +32,22 @@ func (s *Service) Subscribe(bufSize int) *Subscription {
 	if bufSize <= 0 {
 		bufSize = DefaultBufferSize
 	}
-	s.mu.Lock()
-	s.seq++
-	key := strconv.FormatUint(s.seq, 10)
+	key := uuid.New().String()
 	ch := s.bc.RegisterBufferedListener(key, bufSize)
 	sub := &Subscription{svc: s, key: key, events: ch}
-	s.subs[key] = sub
-	s.mu.Unlock()
+	s.dropped.Store(key, &sub.dropped)
 	return sub
 }
 
-// Emit broadcasts ev without blocking; the event is shared read-only, so
-// callers must not mutate it afterwards.
+// Emit broadcasts ev without blocking; on a full subscriber buffer the event is
+// dropped. ev is shared read-only, so callers must not mutate it afterwards.
 func (s *Service) Emit(ev *BlockEvent) {
 	s.bc.BroadcastTry(ev, func(key string, num uint64) {
-		s.mu.Lock()
-		sub, ok := s.subs[key]
-		s.mu.Unlock()
-		if !ok {
-			return
+		if d, ok := s.dropped.Load(key); ok {
+			d.Add(num)
 		}
 		for range num {
-			sub.recordDrop()
+			telemetry.RecordStreamEventDropped()
 		}
 	})
 }
@@ -77,12 +69,5 @@ func (s *Subscription) Dropped() uint64 { return s.dropped.Load() }
 // Close unregisters the subscriber and closes its channel.
 func (s *Subscription) Close() {
 	s.svc.bc.UnregisterListener(s.key)
-	s.svc.mu.Lock()
-	delete(s.svc.subs, s.key)
-	s.svc.mu.Unlock()
-}
-
-func (s *Subscription) recordDrop() {
-	s.dropped.Add(1)
-	telemetry.RecordStreamEventDropped()
+	s.svc.dropped.Delete(s.key)
 }

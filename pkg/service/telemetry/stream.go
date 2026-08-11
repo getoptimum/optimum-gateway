@@ -12,7 +12,7 @@ func initStreamMetrics() {
 	streamEventsDropped = commonmetrics.NewCounter(
 		"events_dropped_total",
 		"stream",
-		"Consumer block-stream events dropped due to ring-buffer overflow",
+		"Consumer block-stream events dropped due to a full subscriber buffer",
 	)
 }
 
