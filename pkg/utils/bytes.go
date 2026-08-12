@@ -15,8 +15,5 @@ func Uint64ToBytes(i uint64) []byte {
 // to byteSlice will also modify the contents of the string, so it is the caller's responsibility
 // to ensure that the byte slice will not modified after the string is created.
 func UnsafeCastToString(byteSlice []byte) string {
-	if len(byteSlice) == 0 {
-		return ""
-	}
 	return unsafe.String(unsafe.SliceData(byteSlice), len(byteSlice))
 }
