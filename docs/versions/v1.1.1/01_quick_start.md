@@ -2,6 +2,8 @@
 
 Get the Optimum Gateway running with Docker.
 
+> **Running on Kubernetes?** See [Kubernetes (Helm)](05_kubernetes.md) for the official Helm chart.
+
 > **Prerequisites:** [Requirements](index.md#requirements) and [Network Requirements](00_network_requirements.md). You also need an **API key** — see [Generate your API key](#generate-your-api-key) below.
 
 ## Hardware Requirements
@@ -58,7 +60,7 @@ log_level: info
 gateway_cluster_id: optimum_ethereum_hoodi_v0_1   # assigned by Optimum during onboarding
 
 agent_lib_p2p_port: 33212
-agent_mump2p_port: 43213
+agent_mump2p_port: 33213
 telemetry_enable: true
 telemetry_port: 48123
 identity_libp2p_dir: /tmp/libp2p
@@ -78,6 +80,7 @@ mkdir -p config data/libp2p data/mump2p
 
 docker run --name optimum-gateway --rm \
   -p 33212:33212/tcp \
+  -p 33213:33213/tcp \
   -p 127.0.0.1:48123:48123/tcp \
   -e OPT_API_KEY=$OPT_API_KEY \
   -v $(pwd)/config:/app/config \
