@@ -3,7 +3,11 @@ name: Hermes Docker Image Publish
 env:
   DOCKER_ORG: getoptimum
   DOCKER_TOKEN: ${{ secrets.OPT_DOCKER_ACCESS_TOKEN }}
-  HERMES_REPO: probe-lab/hermes
+  HERMES_REPO: getoptimum/hermes
+  # Pin the source commit. Without it the build cloned a moving branch while
+  # tagging the image with this repo's SHA, so an image tag did not identify the
+  # code inside it and could not be rebuilt.
+  HERMES_REF: f528958530bf23fdfa052351977b2028c8153b3b
   GO_VERSION: "1.26.5"
 
 on:
@@ -50,6 +54,8 @@ jobs:
       - name: Clone Hermes repository
         run: |
           git clone https://github.com/${{ env.HERMES_REPO }}.git /tmp/hermes
+          git -C /tmp/hermes checkout --detach ${{ env.HERMES_REF }}
+          echo "built from ${{ env.HERMES_REPO }}@$(git -C /tmp/hermes rev-parse HEAD)"
 
       - name: Fix Dockerfile for multi-platform build
         run: |
@@ -74,6 +80,7 @@ jobs:
           provenance: mode=max
           tags: |
             ${{ env.DOCKER_ORG }}/hermes-gateway-sidecar:${{ steps.meta.outputs.tag }}
+            ${{ env.DOCKER_ORG }}/hermes-gateway-sidecar:hermes-${{ env.HERMES_REF }}
             ${{ steps.meta.outputs.latest == 'true' && format('{0}/hermes-gateway-sidecar:latest', env.DOCKER_ORG) || '' }}
 
       - name: Cleanup
