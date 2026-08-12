@@ -60,6 +60,15 @@ type Server struct {
 // NewServer builds the consumer WebSocket server. It does not start listening;
 // call Run.
 func NewServer(hub *streamhub.Service, auth ConsumerAuthenticator, cfg Config, log logger.AppLogger) *Server {
+	if cfg.MaxConns <= 0 {
+		cfg.MaxConns = 256
+	}
+	if cfg.MaxConnsPerSub <= 0 {
+		cfg.MaxConnsPerSub = 8
+	}
+	if cfg.BufferSize <= 0 {
+		cfg.BufferSize = streamhub.DefaultBufferSize
+	}
 	s := &Server{
 		hub:    hub,
 		auth:   auth,

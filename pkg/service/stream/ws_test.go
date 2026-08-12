@@ -33,15 +33,6 @@ func newWSTestServer(t *testing.T, cfg Config, requireAuth bool) (ts *httptest.S
 	} else {
 		authenticator = NewConsumerAuthenticator(nil, false)
 	}
-	if cfg.MaxConns == 0 {
-		cfg.MaxConns = 256
-	}
-	if cfg.MaxConnsPerSub == 0 {
-		cfg.MaxConnsPerSub = 8
-	}
-	if cfg.BufferSize == 0 {
-		cfg.BufferSize = 64
-	}
 	hub = streamhub.New()
 	s = NewServer(hub, authenticator, cfg, logger.NewAppSLogger(logger.Debug))
 	ts = httptest.NewServer(s.httpSrv.Handler)

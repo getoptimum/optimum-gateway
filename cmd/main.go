@@ -163,9 +163,9 @@ func main() {
 	// Consumer block-stream (ADR-0011), opt-in and off by default. The hub must
 	// exist before the gateway so it can be wired as an emit sink.
 	var streamServer *stream.Server
-	var streamOpts []gateway.Option
+	var hub *streamhub.Service
 	if appConf.StreamEnable {
-		hub := streamhub.New()
+		hub = streamhub.New()
 		authenticator := stream.NewConsumerAuthenticator(authMgr, appConf.StreamRequireAuth)
 		streamServer = stream.NewServer(hub, authenticator, stream.Config{
 			Addr:           appConf.StreamAddr,
@@ -173,10 +173,9 @@ func main() {
 			MaxConnsPerSub: appConf.StreamMaxConnsPerSub,
 			BufferSize:     appConf.StreamBufferSize,
 		}, l)
-		streamOpts = append(streamOpts, gateway.WithStreamHub(hub))
 	}
 
-	srvGateway, err := gateway.NewService(ctx, l, appConf, srvMessageRouter, authMgr, streamOpts...)
+	srvGateway, err := gateway.NewService(ctx, l, appConf, srvMessageRouter, authMgr, gateway.WithStreamHub(hub))
 	if err != nil {
 		l.Fatal("unable to initialize gossipsub gateway", err)
 	}

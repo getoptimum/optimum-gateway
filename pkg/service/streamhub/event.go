@@ -6,7 +6,6 @@ import "github.com/getoptimum/optimum-gateway/pkg/entities"
 
 // BlockEvent identifies an observation by Slot, ProposerIndex, and Source (ADR-0011).
 // Raw contains verbatim SSZ-Snappy data in raw mode and is omitted in metadata mode.
-// JSON tags define the WebSocket wire form; []byte fields marshal as base64.
 type BlockEvent struct {
 	Slot           uint64          `json:"slot"`
 	ProposerIndex  uint64          `json:"proposer_index"`
