@@ -20,6 +20,7 @@ env:
 
 jobs:
   golangci:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     # go-version and golangci-lint version are resolved from go.mod by the
     # reusable workflow. golangci-lint is pinned as a go.mod tool dependency.
     permissions:
@@ -32,6 +33,7 @@ jobs:
       GH_APP_PRIVATE_KEY: ${{ secrets.GH_APP_PRIVATE_KEY }}
 
   proto:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: proto
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -63,6 +65,7 @@ jobs:
           fi
 
   tests:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     name: unit and integration tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
