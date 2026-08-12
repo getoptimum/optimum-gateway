@@ -99,8 +99,7 @@ jobs:
           for FILE in \
             "$MANIFEST_DIR"/gateway-lighthouse/deployment.yaml \
             "$MANIFEST_DIR"/gateway-nimbus/deployment.yaml \
-            "$MANIFEST_DIR"/gateway-prysm/deployment.yaml \
-            "$MANIFEST_DIR"/gateway-prysm-canary/deployment.yaml; do
+            "$MANIFEST_DIR"/gateway-prysm/deployment.yaml; do
             sed -i.bak "s|getoptimum/gateway[@:][^ ]*|${NEW_IMG}|" "$FILE" && rm -f "${FILE}.bak"
           done
 
@@ -112,7 +111,6 @@ jobs:
           git add clusters/optimum-infrastructure/manifest/optimum/gateway-lighthouse/deployment.yaml
           git add clusters/optimum-infrastructure/manifest/optimum/gateway-nimbus/deployment.yaml
           git add clusters/optimum-infrastructure/manifest/optimum/gateway-prysm/deployment.yaml
-          git add clusters/optimum-infrastructure/manifest/optimum/gateway-prysm-canary/deployment.yaml
           if [ -n "$(git status --porcelain)" ]; then
             git commit -m "gateway: update image to ${{ steps.meta.outputs.tag }}"
             git push origin main
