@@ -10,7 +10,7 @@ Optimum network.
 
 ## What you need from Optimum
 
-Three things, issued to you directly — none of them belong in a file you commit:
+Three things — none of them belong in a file you commit:
 
 | | example |
 |---|---|
