@@ -94,25 +94,72 @@ jobs:
 
       - name: Update gateway image in gitops manifests
         run: |
+          set -euo pipefail
           MANIFEST_DIR=gitops/clusters/optimum-infrastructure/manifest/optimum
-          NEW_IMG="${{ env.DOCKER_ORG }}/gateway@${{ steps.build.outputs.digest }}"
-          for FILE in \
-            "$MANIFEST_DIR"/gateway-lighthouse/deployment.yaml \
-            "$MANIFEST_DIR"/gateway-nimbus/deployment.yaml \
-            "$MANIFEST_DIR"/gateway-prysm/deployment.yaml \
-            "$MANIFEST_DIR"/gateway-prysm-canary/deployment.yaml; do
-            sed -i.bak "s|getoptimum/gateway[@:][^ ]*|${NEW_IMG}|" "$FILE" && rm -f "${FILE}.bak"
+          CHART_VALUES=gitops/charts/optimum-gateway/values
+          DIGEST="${{ steps.build.outputs.digest }}"
+          NEW_IMG="${{ env.DOCKER_ORG }}/gateway@${DIGEST}"
+
+          # Gateways exist in one of two forms, and migrate from the first to
+          # the second over time:
+          #
+          #   Kustomize -> clusters/.../optimum/gateway-<flavour>/deployment.yaml
+          #   Helm      -> charts/optimum-gateway/values/internal-<flavour>.yaml
+          #
+          # Write whichever form exists for each flavour. A gateway moving to
+          # Helm therefore needs NO change here: its deployment.yaml disappears,
+          # its values file appears, and the bump follows it.
+          #
+          # Guard every path with -f. `run:` executes under bash -e, so sed on a
+          # missing file would abort this step before the remaining flavours are
+          # written — one migrated gateway would silently stop the others from
+          # being bumped.
+          #
+          # teku is deliberately absent: it is parked at replicas 0 on an older
+          # digest and must not be dragged forward.
+          touched=0
+          for F in lighthouse nimbus prysm prysm-canary; do
+            K="$MANIFEST_DIR/gateway-$F/deployment.yaml"
+            H="$CHART_VALUES/internal-$F.yaml"
+
+            if [ -f "$K" ]; then
+              sed -i.bak "s|${{ env.DOCKER_ORG }}/gateway[@:][^ ]*|${NEW_IMG}|" "$K"
+              rm -f "$K.bak"
+              echo "kustomize  $F"
+              touched=$((touched+1))
+            fi
+
+            # Only the digest: line, so image.repository is never rewritten.
+            if [ -f "$H" ]; then
+              sed -i.bak -E "s|^([[:space:]]*)digest:[[:space:]]*sha256:[0-9a-f]+|\1digest: ${DIGEST}|" "$H"
+              rm -f "$H.bak"
+              echo "helm       $F"
+              touched=$((touched+1))
+            fi
+
+            if [ ! -f "$K" ] && [ ! -f "$H" ]; then
+              echo "::warning::gateway flavour '$F' has neither $K nor $H — not bumped"
+            fi
           done
+
+          # A rename or restructure that silently matches nothing would look
+          # exactly like a successful run, so fail loudly instead.
+          if [ "$touched" -eq 0 ]; then
+            echo "::error::no gateway manifests matched — refusing to report success"
+            exit 1
+          fi
 
       - name: Commit and push to gitops
         working-directory: gitops
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "actions@github.com"
-          git add clusters/optimum-infrastructure/manifest/optimum/gateway-lighthouse/deployment.yaml
-          git add clusters/optimum-infrastructure/manifest/optimum/gateway-nimbus/deployment.yaml
-          git add clusters/optimum-infrastructure/manifest/optimum/gateway-prysm/deployment.yaml
-          git add clusters/optimum-infrastructure/manifest/optimum/gateway-prysm-canary/deployment.yaml
+          # Stage by directory rather than naming files: the set of files
+          # changes as gateways migrate between Kustomize and Helm, and a
+          # `git add` of a path that no longer exists fails the step.
+          git add -A clusters/optimum-infrastructure/manifest/optimum
+          git add -A charts/optimum-gateway/values || true
           if [ -n "$(git status --porcelain)" ]; then
             git commit -m "gateway: update image to ${{ steps.meta.outputs.tag }}"
             git push origin main
