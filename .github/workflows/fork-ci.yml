@@ -1,0 +1,44 @@
+name: Fork CI (ok-to-test)
+
+# Full CI for fork PRs after a maintainer adds ok-to-test (secrets unavailable on
+# fork pull_request). Checkout base first for the trusted action, then the PR head.
+on:
+  pull_request_target:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    if: |
+      github.event.pull_request.head.repo.full_name != github.repository &&
+      contains(github.event.pull_request.labels.*.name, 'ok-to-test')
+    name: fork integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GOPRIVATE: "github.com/getoptimum"
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - name: Go setup with GitHub App token
+        uses: ./.github/actions/go-setup-with-app-token
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: getoptimum
+          go-version: "1.26.5"
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - run: go mod download
+      - run: make lint
+      - run: CI_RUN="true" PROMETHEUS_VALIDATION_SCHEME=legacy make test
+      - run: make coverage
