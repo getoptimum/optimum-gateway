@@ -5,8 +5,9 @@ env:
   HERMES_REPO: getoptimum/hermes
   # Pin the source commit. Without it the build cloned a moving branch while
   # tagging the image with this repo's SHA, so an image tag did not identify the
-  # code inside it and could not be rebuilt.
-  HERMES_REF: af121db4b0b867e5a04575cf2b627ad185285be9
+  # code inside it and could not be rebuilt. Keep this on a commit reachable from
+  # the fork's main: a branch tip stops resolving once the branch is deleted.
+  HERMES_REF: 0c958baad78e6c886fbbec1fc7b28e3db236d113
   GO_VERSION: "1.26.5"
 
 on:
