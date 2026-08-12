@@ -29,6 +29,14 @@ func TestCalculateMaxSize(t *testing.T) {
 		require.Equal(t, 120, size)
 	})
 
+	t.Run("accepts max allowed value without overflow", func(t *testing.T) {
+		maxAllowed := int64(math.MaxInt)
+		src := maxAllowed - maxAllowed/5
+		size, err := utils.CalculateMaxSize(src)
+		require.NoError(t, err)
+		require.Greater(t, size, 0)
+	})
+
 	t.Run("rejects overflow after overhead", func(t *testing.T) {
 		_, err := utils.CalculateMaxSize(int64(math.MaxInt))
 		require.ErrorContains(t, err, "src is too large")
