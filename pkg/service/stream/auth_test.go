@@ -21,11 +21,20 @@ func TestJWKSAuthenticator_AcceptsStreamToken(t *testing.T) {
 	tok := rig.MustSignToken(t, rig.PrivateKey, func(c *jwks_verifier.Claims) {
 		c.Audience = jwt.ClaimStrings{jwks_verifier.AudStream}
 		c.Subject = "as_stream-key-1"
+		c.ChainID = "mainnet" // stream auth is aud-only; no chain gate (ADR-0011)
 	})
 
 	sub, err := auth.Authenticate(tok)
 	require.NoError(t, err)
 	require.Equal(t, "as_stream-key-1", sub)
+}
+
+func TestJWKSAuthenticator_RejectsNilAuthManager(t *testing.T) {
+	auth := stream.NewConsumerAuthenticator(nil, true)
+
+	_, err := auth.Authenticate("any-token")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "verifier unavailable")
 }
 
 func TestJWKSAuthenticator_RejectsWrongAudience(t *testing.T) {

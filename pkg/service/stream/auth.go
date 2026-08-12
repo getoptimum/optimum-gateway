@@ -6,9 +6,8 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/service/auth_token"
 )
 
-// ConsumerAuthenticator validates a consumer JWT and returns the subject used
-// for per-connection caps (ADR-0011). Implementations are selected by
-// stream_require_auth at wiring time.
+// ConsumerAuthenticator validates a consumer JWT and returns the subject
+// used for per-connection caps (ADR-0011).
 type ConsumerAuthenticator interface {
 	Authenticate(token string) (subject string, err error)
 }
@@ -28,6 +27,9 @@ type jwksAuthenticator struct {
 }
 
 func (a jwksAuthenticator) Authenticate(token string) (string, error) {
+	if a.auth == nil {
+		return "", fmt.Errorf("stream auth: verifier unavailable")
+	}
 	claims, err := a.auth.VerifyStreamToken(token)
 	if err != nil {
 		return "", err
