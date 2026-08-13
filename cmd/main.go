@@ -171,17 +171,22 @@ func main() {
 	if appConf.StreamEnable {
 		hub = streamhub.New()
 		authenticator := stream.NewConsumerAuthenticator(authMgr, appConf.StreamRequireAuth)
+		// One limiter across both transports keeps the caps global, not
+		// per-transport; config validation guarantees the caps are > 0.
+		limiter := stream.NewConnLimiter(appConf.StreamMaxConns, appConf.StreamMaxConnsPerSub)
 		streamServer = stream.NewServer(hub, authenticator, stream.Config{
 			Addr:           appConf.StreamAddr,
 			MaxConns:       appConf.StreamMaxConns,
 			MaxConnsPerSub: appConf.StreamMaxConnsPerSub,
 			BufferSize:     appConf.StreamBufferSize,
+			Limiter:        limiter,
 		}, l)
 		streamGRPCServer = stream.NewGRPCServer(hub, authenticator, stream.Config{
 			Addr:           appConf.StreamGRPCAddr,
 			MaxConns:       appConf.StreamMaxConns,
 			MaxConnsPerSub: appConf.StreamMaxConnsPerSub,
 			BufferSize:     appConf.StreamBufferSize,
+			Limiter:        limiter,
 		}, l)
 	}
 

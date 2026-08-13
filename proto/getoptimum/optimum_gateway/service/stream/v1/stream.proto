@@ -13,12 +13,20 @@ service BlockStreamService {
 // SubscribeRequest selects the payload mode and topics for a subscription.
 message SubscribeRequest {
   string mode = 1; // "metadata" (default) or "raw"
-  repeated string topics = 2; // only "beacon_block" is supported in v1
+  repeated string topics = 2; // validated only; v1 has one topic, so nothing is filtered
 }
 
-// BlockEvent is one block observation, or a lagged control signal after
-// buffer overflow (fields mirror the streamhub hub type).
+// BlockEvent is one frame: a block observation or a lag signal (ADR-0011).
 message BlockEvent {
+  // frame tells an observation apart from a control signal.
+  oneof frame {
+    Block block = 1;
+    Lagged lagged = 2;
+  }
+}
+
+// Block is one block observation (fields mirror the streamhub hub type).
+message Block {
   uint64 slot = 1;
   uint64 proposer_index = 2;
   bytes parent_root = 3;
@@ -31,6 +39,9 @@ message BlockEvent {
   string fork_digest = 10;
   bool stale = 11;
   bytes raw = 12; // present only in raw mode
-  bool lagged = 13; // true on a control frame after overflow
-  uint64 dropped = 14; // cumulative dropped count, set when lagged
+}
+
+// Lagged reports the cumulative drop count after a buffer overflow.
+message Lagged {
+  uint64 dropped = 1;
 }

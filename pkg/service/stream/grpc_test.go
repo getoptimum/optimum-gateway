@@ -22,23 +22,23 @@ import (
 
 // newGRPCTestServer starts a GRPCServer over an in-memory bufconn and returns a
 // connected client. Auth is always required; loopback no-auth is covered by WS.
-func newGRPCTestServer(t *testing.T, cfg Config) (client streamv1.BlockStreamServiceClient, hub *streamhub.Service, rig *test_utils.AuthTestRig) {
+func newGRPCTestServer(t *testing.T, cfg Config) (client streamv1.BlockStreamServiceClient, srv *GRPCServer, hub *streamhub.Service, rig *test_utils.AuthTestRig) {
 	t.Helper()
 	var authenticator ConsumerAuthenticator
 	authenticator, rig = testAuth(t, true)
 	hub = streamhub.New()
-	g := NewGRPCServer(hub, authenticator, cfg, logger.NewAppSLogger(logger.Debug))
+	srv = NewGRPCServer(hub, authenticator, cfg, logger.NewAppSLogger(logger.Debug))
 
 	lis := bufconn.Listen(1 << 20)
-	go func() { _ = g.grpcSrv.Serve(lis) }()
-	t.Cleanup(g.grpcSrv.Stop)
+	go func() { _ = srv.grpcSrv.Serve(lis) }()
+	t.Cleanup(srv.grpcSrv.Stop)
 
 	conn, err := grpc.NewClient("passthrough:///bufnet",
 		grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) { return lis.DialContext(ctx) }),
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = conn.Close() })
-	return streamv1.NewBlockStreamServiceClient(conn), hub, rig
+	return streamv1.NewBlockStreamServiceClient(conn), srv, hub, rig
 }
 
 func authCtx(t *testing.T, rig *test_utils.AuthTestRig, subject string) context.Context {
@@ -47,7 +47,7 @@ func authCtx(t *testing.T, rig *test_utils.AuthTestRig, subject string) context.
 }
 
 func TestGRPC_RejectsWithoutToken(t *testing.T) {
-	client, hub, _ := newGRPCTestServer(t, Config{})
+	client, _, hub, _ := newGRPCTestServer(t, Config{})
 
 	sub, err := client.Subscribe(context.Background(), &streamv1.SubscribeRequest{})
 	require.NoError(t, err)
@@ -66,7 +66,7 @@ func TestGRPC_DeliversFraming(t *testing.T) {
 		{"raw includes bytes", "raw", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			client, hub, rig := newGRPCTestServer(t, Config{})
+			client, _, hub, rig := newGRPCTestServer(t, Config{})
 			sub, err := client.Subscribe(authCtx(t, rig, "sub-1"), &streamv1.SubscribeRequest{Mode: tc.mode})
 			require.NoError(t, err)
 
@@ -75,20 +75,23 @@ func TestGRPC_DeliversFraming(t *testing.T) {
 
 			ev, err := sub.Recv()
 			require.NoError(t, err)
-			require.EqualValues(t, 42, ev.GetSlot())
-			require.False(t, ev.GetLagged())
+			require.Nil(t, ev.GetLagged(), "a block frame carries no lagged signal")
+			require.EqualValues(t, 42, ev.GetBlock().GetSlot())
 			if tc.expectRaw {
-				require.Equal(t, []byte("ssz-snappy-bytes"), ev.GetRaw())
+				require.Equal(t, []byte("ssz-snappy-bytes"), ev.GetBlock().GetRaw())
 			} else {
-				require.Empty(t, ev.GetRaw())
+				require.Empty(t, ev.GetBlock().GetRaw())
 			}
 		})
 	}
 }
 
 func TestGRPC_LaggedOnOverflow(t *testing.T) {
-	client, hub, rig := newGRPCTestServer(t, Config{BufferSize: 1})
-	sub, err := client.Subscribe(authCtx(t, rig, "sub-1"), &streamv1.SubscribeRequest{})
+	client, _, hub, rig := newGRPCTestServer(t, Config{BufferSize: 1})
+	// Above the loop deadline below, so a blocked Recv fails instead of hanging.
+	ctx, cancel := context.WithTimeout(authCtx(t, rig, "sub-1"), 5*time.Second)
+	defer cancel()
+	sub, err := client.Subscribe(ctx, &streamv1.SubscribeRequest{})
 	require.NoError(t, err)
 
 	waitSubscribed(t, hub, 1)
@@ -101,8 +104,8 @@ func TestGRPC_LaggedOnOverflow(t *testing.T) {
 	for time.Now().Before(deadline) && !sawLagged {
 		ev, rerr := sub.Recv()
 		require.NoError(t, rerr)
-		if ev.GetLagged() {
-			require.Positive(t, ev.GetDropped())
+		if lag := ev.GetLagged(); lag != nil {
+			require.Positive(t, lag.GetDropped())
 			sawLagged = true
 		}
 	}
@@ -110,7 +113,7 @@ func TestGRPC_LaggedOnOverflow(t *testing.T) {
 }
 
 func TestGRPC_GlobalCapRejects(t *testing.T) {
-	client, hub, rig := newGRPCTestServer(t, Config{MaxConns: 1})
+	client, _, hub, rig := newGRPCTestServer(t, Config{MaxConns: 1})
 
 	first, err := client.Subscribe(authCtx(t, rig, "sub-a"), &streamv1.SubscribeRequest{})
 	require.NoError(t, err)
@@ -125,7 +128,7 @@ func TestGRPC_GlobalCapRejects(t *testing.T) {
 }
 
 func TestGRPC_CleanupOnCancel(t *testing.T) {
-	client, hub, rig := newGRPCTestServer(t, Config{})
+	client, srv, hub, rig := newGRPCTestServer(t, Config{})
 	ctx, cancel := context.WithCancel(authCtx(t, rig, "sub-1"))
 	_, err := client.Subscribe(ctx, &streamv1.SubscribeRequest{})
 	require.NoError(t, err)
@@ -136,4 +139,9 @@ func TestGRPC_CleanupOnCancel(t *testing.T) {
 	// Cancel must unwind the handler, closing the subscriber (drop-counter entry
 	// included) and releasing the cap slot, so nothing leaks.
 	waitSubscribed(t, hub, 0)
+	require.Eventually(t, func() bool {
+		srv.limiter.mu.Lock()
+		defer srv.limiter.mu.Unlock()
+		return srv.limiter.conns == 0 && len(srv.limiter.perSub) == 0
+	}, 2*time.Second, 10*time.Millisecond)
 }

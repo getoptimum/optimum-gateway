@@ -7,6 +7,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
@@ -24,9 +25,13 @@ type GRPCServer struct {
 	auth    ConsumerAuthenticator
 	cfg     Config
 	log     logger.AppLogger
-	limiter *connLimiter
+	limiter *ConnLimiter
 	grpcSrv *grpc.Server
 }
+
+// maxConcurrentStreams bounds Subscribe streams per connection. The caps run
+// after auth, so one unauthenticated socket would otherwise be unbounded.
+const maxConcurrentStreams = 256
 
 // NewGRPCServer builds the consumer gRPC server. It does not start listening;
 // call Run.
@@ -37,8 +42,12 @@ func NewGRPCServer(hub *streamhub.Service, auth ConsumerAuthenticator, cfg Confi
 		auth:    auth,
 		cfg:     cfg,
 		log:     log.With(logger.WithService("stream-grpc")),
-		limiter: newConnLimiter(cfg.MaxConns, cfg.MaxConnsPerSub),
-		grpcSrv: grpc.NewServer(),
+		limiter: cfg.Limiter,
+		grpcSrv: grpc.NewServer(
+			// Reap dead peers on the WS clock; the gRPC default is a 2h ping.
+			grpc.KeepaliveParams(keepalive.ServerParameters{Time: pingPeriod, Timeout: writeWait}),
+			grpc.MaxConcurrentStreams(maxConcurrentStreams),
+		),
 	}
 	streamv1.RegisterBlockStreamServiceServer(g.grpcSrv, g)
 	return g
@@ -96,7 +105,8 @@ func (g *GRPCServer) Subscribe(req *streamv1.SubscribeRequest, stream grpc.Serve
 			}
 			if d := sub.Dropped(); d != lastDropped {
 				lastDropped = d
-				if err := stream.Send(&streamv1.BlockEvent{Lagged: true, Dropped: d}); err != nil {
+				lag := &streamv1.BlockEvent{Frame: &streamv1.BlockEvent_Lagged{Lagged: &streamv1.Lagged{Dropped: d}}}
+				if err := stream.Send(lag); err != nil {
 					return err
 				}
 			}
@@ -109,7 +119,7 @@ func (g *GRPCServer) Subscribe(req *streamv1.SubscribeRequest, stream grpc.Serve
 }
 
 func toProto(ev *streamhub.BlockEvent, raw bool) *streamv1.BlockEvent {
-	pe := &streamv1.BlockEvent{
+	b := &streamv1.Block{
 		Slot:           ev.Slot,
 		ProposerIndex:  ev.ProposerIndex,
 		ParentRoot:     ev.ParentRoot,
@@ -123,9 +133,9 @@ func toProto(ev *streamhub.BlockEvent, raw bool) *streamv1.BlockEvent {
 		Stale:          ev.Stale,
 	}
 	if raw {
-		pe.Raw = ev.Raw
+		b.Raw = ev.Raw
 	}
-	return pe
+	return &streamv1.BlockEvent{Frame: &streamv1.BlockEvent_Block{Block: b}}
 }
 
 // metadataToken reads the consumer JWT from the "authorization" gRPC metadata,

@@ -39,6 +39,9 @@ type Config struct {
 	MaxConns       int
 	MaxConnsPerSub int
 	BufferSize     int
+	// Limiter is shared across transports so caps stay global; withDefaults
+	// creates one if nil.
+	Limiter *ConnLimiter
 }
 
 // Server exposes streamhub over WebSocket on its own listener, keeping the
@@ -48,7 +51,7 @@ type Server struct {
 	auth     ConsumerAuthenticator
 	cfg      Config
 	log      logger.AppLogger
-	limiter  *connLimiter
+	limiter  *ConnLimiter
 	upgrader websocket.Upgrader
 	httpSrv  *http.Server
 }
@@ -62,7 +65,7 @@ func NewServer(hub *streamhub.Service, auth ConsumerAuthenticator, cfg Config, l
 		auth:    auth,
 		cfg:     cfg,
 		log:     log.With(logger.WithService("stream-ws")),
-		limiter: newConnLimiter(cfg.MaxConns, cfg.MaxConnsPerSub),
+		limiter: cfg.Limiter,
 		upgrader: websocket.Upgrader{
 			// JWT gates access (not Origin; TLS/proxy is the exposure control).
 			// Offering only the marker means gorilla never selects bearer.<jwt>.

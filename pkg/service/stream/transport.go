@@ -23,6 +23,9 @@ func withDefaults(cfg Config) Config {
 	if cfg.BufferSize <= 0 {
 		cfg.BufferSize = streamhub.DefaultBufferSize
 	}
+	if cfg.Limiter == nil {
+		cfg.Limiter = NewConnLimiter(cfg.MaxConns, cfg.MaxConnsPerSub)
+	}
 	return cfg
 }
 
@@ -44,9 +47,9 @@ func topicsOK(topics ...string) bool {
 	return true
 }
 
-// connLimiter enforces the global and per-subject connection caps shared by the
-// WS and gRPC transports (ADR-0011).
-type connLimiter struct {
+// ConnLimiter enforces the global and per-subject connection caps. One instance
+// is shared by both transports so the caps stay global, not per-transport (ADR-0011).
+type ConnLimiter struct {
 	maxConns       int
 	maxConnsPerSub int
 
@@ -55,8 +58,9 @@ type connLimiter struct {
 	perSub map[string]int
 }
 
-func newConnLimiter(maxConns, maxConnsPerSub int) *connLimiter {
-	return &connLimiter{
+// NewConnLimiter returns a limiter for the given caps.
+func NewConnLimiter(maxConns, maxConnsPerSub int) *ConnLimiter {
+	return &ConnLimiter{
 		maxConns:       maxConns,
 		maxConnsPerSub: maxConnsPerSub,
 		perSub:         make(map[string]int),
@@ -64,7 +68,7 @@ func newConnLimiter(maxConns, maxConnsPerSub int) *connLimiter {
 }
 
 // acquire admits a connection for subject when both caps allow it.
-func (l *connLimiter) acquire(subject string) bool {
+func (l *ConnLimiter) acquire(subject string) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.conns >= l.maxConns || l.perSub[subject] >= l.maxConnsPerSub {
@@ -76,7 +80,7 @@ func (l *connLimiter) acquire(subject string) bool {
 	return true
 }
 
-func (l *connLimiter) release(subject string) {
+func (l *ConnLimiter) release(subject string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.conns--
