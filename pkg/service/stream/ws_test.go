@@ -20,19 +20,23 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
 )
 
-// newWSTestServer wires a real Server behind httptest so tests exercise the full
-// upgrade + auth path. requireAuth=false uses the allow-all (loopback) backend.
+// testAuth builds the consumer authenticator used by both WS and gRPC tests.
+// requireAuth=false uses the allow-all (loopback) backend.
+func testAuth(t *testing.T, requireAuth bool) (ConsumerAuthenticator, *test_utils.AuthTestRig) {
+	t.Helper()
+	rig := test_utils.NewAuthTestRig(t)
+	if !requireAuth {
+		return NewConsumerAuthenticator(nil, false), rig
+	}
+	m, err := auth_token.New(t.Context(), logger.NewAppSLogger(logger.Debug), rig.AppCfg(t))
+	require.NoError(t, err)
+	return NewConsumerAuthenticator(m, true), rig
+}
+
 func newWSTestServer(t *testing.T, cfg Config, requireAuth bool) (ts *httptest.Server, s *Server, hub *streamhub.Service, rig *test_utils.AuthTestRig) {
 	t.Helper()
-	rig = test_utils.NewAuthTestRig(t)
 	var authenticator ConsumerAuthenticator
-	if requireAuth {
-		m, err := auth_token.New(t.Context(), logger.NewAppSLogger(logger.Debug), rig.AppCfg(t))
-		require.NoError(t, err)
-		authenticator = NewConsumerAuthenticator(m, true)
-	} else {
-		authenticator = NewConsumerAuthenticator(nil, false)
-	}
+	authenticator, rig = testAuth(t, requireAuth)
 	hub = streamhub.New()
 	s = NewServer(hub, authenticator, cfg, logger.NewAppSLogger(logger.Debug))
 	ts = httptest.NewServer(s.httpSrv.Handler)
@@ -230,8 +234,8 @@ func TestWS_CleanupOnClose(t *testing.T) {
 	// release the cap slot, so nothing leaks.
 	waitSubscribed(t, hub, 0)
 	require.Eventually(t, func() bool {
-		s.mu.Lock()
-		defer s.mu.Unlock()
-		return s.conns == 0 && len(s.perSub) == 0
+		s.limiter.mu.Lock()
+		defer s.limiter.mu.Unlock()
+		return s.limiter.conns == 0 && len(s.limiter.perSub) == 0
 	}, 2*time.Second, 10*time.Millisecond)
 }

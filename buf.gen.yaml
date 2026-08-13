@@ -4,3 +4,7 @@ plugins:
     out: .
     opt:
       - module=github.com/getoptimum/optimum-gateway
+  - local: ["go", "tool", "protoc-gen-go-grpc"]
+    out: .
+    opt:
+      - module=github.com/getoptimum/optimum-gateway

@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -49,32 +48,21 @@ type Server struct {
 	auth     ConsumerAuthenticator
 	cfg      Config
 	log      logger.AppLogger
+	limiter  *connLimiter
 	upgrader websocket.Upgrader
 	httpSrv  *http.Server
-
-	mu     sync.Mutex
-	conns  int
-	perSub map[string]int
 }
 
 // NewServer builds the consumer WebSocket server. It does not start listening;
 // call Run.
 func NewServer(hub *streamhub.Service, auth ConsumerAuthenticator, cfg Config, log logger.AppLogger) *Server {
-	if cfg.MaxConns <= 0 {
-		cfg.MaxConns = 256
-	}
-	if cfg.MaxConnsPerSub <= 0 {
-		cfg.MaxConnsPerSub = 8
-	}
-	if cfg.BufferSize <= 0 {
-		cfg.BufferSize = streamhub.DefaultBufferSize
-	}
+	cfg = withDefaults(cfg)
 	s := &Server{
-		hub:    hub,
-		auth:   auth,
-		cfg:    cfg,
-		log:    log.With(logger.WithService("stream-ws")),
-		perSub: make(map[string]int),
+		hub:     hub,
+		auth:    auth,
+		cfg:     cfg,
+		log:     log.With(logger.WithService("stream-ws")),
+		limiter: newConnLimiter(cfg.MaxConns, cfg.MaxConnsPerSub),
 		upgrader: websocket.Upgrader{
 			// JWT gates access (not Origin; TLS/proxy is the exposure control).
 			// Offering only the marker means gorilla never selects bearer.<jwt>.
@@ -105,15 +93,12 @@ func (s *Server) Stop(ctx context.Context) error {
 }
 
 func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
-	mode := r.URL.Query().Get("mode")
-	if mode == "" {
-		mode = modeMetadata
-	}
-	if mode != modeMetadata && mode != modeRaw {
+	mode, ok := normalizeMode(r.URL.Query().Get("mode"))
+	if !ok {
 		http.Error(w, "invalid mode", http.StatusBadRequest)
 		return
 	}
-	if t := r.URL.Query().Get("topics"); t != "" && t != defaultTopic {
+	if !topicsOK(r.URL.Query().Get("topics")) {
 		http.Error(w, "unsupported topics", http.StatusBadRequest)
 		return
 	}
@@ -128,7 +113,7 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 
 	// Enforce caps before the upgrade too, so a rejected connection allocates
 	// no subscriber.
-	if !s.acquire(subject) {
+	if !s.limiter.acquire(subject) {
 		http.Error(w, "too many connections", http.StatusServiceUnavailable)
 		return
 	}
@@ -136,7 +121,7 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		// Upgrade already wrote the error response.
-		s.release(subject)
+		s.limiter.release(subject)
 		return
 	}
 
@@ -150,7 +135,7 @@ func (s *Server) serve(conn *websocket.Conn, sub *streamhub.Subscription, subjec
 	defer func() {
 		_ = conn.Close()
 		sub.Close()
-		s.release(subject)
+		s.limiter.release(subject)
 	}()
 
 	conn.SetReadLimit(maxReadBytes)
@@ -230,30 +215,6 @@ func (s *Server) writeBlock(conn *websocket.Conn, ev *streamhub.BlockEvent, raw 
 func (s *Server) writeJSON(conn *websocket.Conn, v any) error {
 	_ = conn.SetWriteDeadline(time.Now().Add(writeWait))
 	return conn.WriteJSON(v)
-}
-
-// acquire admits a connection if the global and per-subject caps allow it.
-func (s *Server) acquire(subject string) bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.conns >= s.cfg.MaxConns || s.perSub[subject] >= s.cfg.MaxConnsPerSub {
-		return false
-	}
-	s.conns++
-	s.perSub[subject]++
-	telemetry.IncStreamConnections()
-	return true
-}
-
-func (s *Server) release(subject string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.conns--
-	s.perSub[subject]--
-	if s.perSub[subject] <= 0 {
-		delete(s.perSub, subject)
-	}
-	telemetry.DecStreamConnections()
 }
 
 // bearerToken reads the consumer JWT from the Authorization header, or from the
