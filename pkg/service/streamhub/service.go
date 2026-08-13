@@ -39,6 +39,10 @@ func (s *Service) Subscribe(bufSize int) *Subscription {
 	return sub
 }
 
+// SubscriberCount is the number of active subscribers; it drops to zero once
+// every Subscription is Closed.
+func (s *Service) SubscriberCount() int { return s.dropped.Len() }
+
 // Emit broadcasts ev without blocking; on a full subscriber buffer the event is
 // dropped. ev is shared read-only, so callers must not mutate it afterwards.
 func (s *Service) Emit(ev *BlockEvent) {
