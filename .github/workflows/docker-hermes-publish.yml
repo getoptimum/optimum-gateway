@@ -2,8 +2,12 @@ name: Hermes Docker Image Publish
 
 env:
   DOCKER_ORG: getoptimum
-  DOCKER_TOKEN: ${{ secrets.OPT_DOCKER_ACCESS_TOKEN }}
-  HERMES_REPO: probe-lab/hermes
+  HERMES_REPO: getoptimum/hermes
+  # Pin the source commit. Without it the build cloned a moving branch while
+  # tagging the image with this repo's SHA, so an image tag did not identify the
+  # code inside it and could not be rebuilt. Keep this on a commit reachable from
+  # the fork's main: a branch tip stops resolving once the branch is deleted.
+  HERMES_REF: 64797ee4278f6f6f900145896d9293b0f2b921a2
   GO_VERSION: "1.26.5"
 
 on:
@@ -18,6 +22,12 @@ jobs:
   docker-hermes:
     name: Build and Push Hermes Docker Image
     runs-on: ubuntu-latest
+    # Nothing here uses the GITHUB_TOKEN, and the repository default is write.
+    permissions: {}
+    # Scoped to this job so the registry credential is not in the environment of
+    # the sign job's checkout, matching docker-publish.yml.
+    env:
+      DOCKER_TOKEN: ${{ secrets.OPT_DOCKER_ACCESS_TOKEN }}
     outputs:
       digest: ${{ steps.build.outputs.digest }}
 
@@ -38,29 +48,57 @@ jobs:
 
       - name: Set image tag
         id: meta
+        # REF_NAME goes through env rather than direct interpolation: a ref name
+        # can contain shell metacharacters, and this step runs in a job that holds
+        # a registry credential.
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
         run: |
-          if [ "${{ github.ref_type }}" = "tag" ]; then
-            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-            echo "latest=true" >> $GITHUB_OUTPUT
+          if [ "$REF_TYPE" = "tag" ]; then
+            echo "tag=$REF_NAME" >> "$GITHUB_OUTPUT"
+            echo "latest=true" >> "$GITHUB_OUTPUT"
           else
-            echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
-            echo "latest=false" >> $GITHUB_OUTPUT
+            echo "tag=$SHA" >> "$GITHUB_OUTPUT"
+            echo "latest=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Clone Hermes repository
         run: |
           git clone https://github.com/${{ env.HERMES_REPO }}.git /tmp/hermes
+          git -C /tmp/hermes checkout --detach ${{ env.HERMES_REF }}
+          echo "built from ${{ env.HERMES_REPO }}@$(git -C /tmp/hermes rev-parse HEAD)"
 
       - name: Fix Dockerfile for multi-platform build
+        # sed exits 0 when its pattern does not match, so each patch is asserted.
+        # Without that, a change to the upstream Dockerfile silently drops the Go
+        # version pin or the multi-arch build args and still publishes an image.
         run: |
+          set -euo pipefail
+          DF=/tmp/hermes/Dockerfile
+
+          # -F because the expected strings contain ${...}, which grep would
+          # otherwise read as a regex interval and never match.
+          assert_patched() {
+            grep -qF -- "$1" "$DF" || {
+              echo "::error::Dockerfile patch did not apply, expected to find: $1"
+              echo "--- Dockerfile ---"; cat "$DF"; exit 1
+            }
+          }
+
           # Update Go version
-          sed -i 's/FROM golang:[0-9.]\+/FROM golang:${{ env.GO_VERSION }}/' /tmp/hermes/Dockerfile
+          sed -i 's/FROM golang:[0-9.]\+/FROM golang:${{ env.GO_VERSION }}/' "$DF"
+          assert_patched "FROM golang:${{ env.GO_VERSION }}"
           # replacing hardcoded GOARCH=amd64 with TARGETARCH build arg
-          sed -i 's/GOOS=linux GOARCH=amd64/GOOS=linux GOARCH=${TARGETARCH}/' /tmp/hermes/Dockerfile
+          sed -i 's/GOOS=linux GOARCH=amd64/GOOS=linux GOARCH=${TARGETARCH}/' "$DF"
+          assert_patched 'GOARCH=${TARGETARCH}'
           # adding ARG declarations at the top of the builder stage
-          sed -i '/FROM golang:${{ env.GO_VERSION }} AS builder/a ARG TARGETARCH\nARG TARGETOS' /tmp/hermes/Dockerfile
+          sed -i '/FROM golang:${{ env.GO_VERSION }} AS builder/a ARG TARGETARCH\nARG TARGETOS' "$DF"
+          assert_patched 'ARG TARGETARCH'
+
           echo "modified Dockerfile:"
-          cat /tmp/hermes/Dockerfile
+          cat "$DF"
 
       - name: Build and Push Hermes Image
         id: build
@@ -74,6 +112,7 @@ jobs:
           provenance: mode=max
           tags: |
             ${{ env.DOCKER_ORG }}/hermes-gateway-sidecar:${{ steps.meta.outputs.tag }}
+            ${{ env.DOCKER_ORG }}/hermes-gateway-sidecar:hermes-${{ env.HERMES_REF }}
             ${{ steps.meta.outputs.latest == 'true' && format('{0}/hermes-gateway-sidecar:latest', env.DOCKER_ORG) || '' }}
 
       - name: Cleanup
