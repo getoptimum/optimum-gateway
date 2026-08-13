@@ -1,13 +1,13 @@
 package telemetry
 
 import (
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/getoptimum/optimum-common/pkg/syncx"
 	commonmetrics "github.com/getoptimum/optimum-common/pkg/telemetry"
-	pubsub "github.com/getoptimum/optimum-p2p/optimum-pubsub"
 )
 
 var (
@@ -54,6 +54,10 @@ func initMumP2PMetrics() {
 type MumP2PCollector struct {
 	peers *syncx.RWMap[peer.ID, protocol.ID]
 }
+
+func (g *MumP2PCollector) OnNewOutboundStream(_ peer.ID, _ protocol.ID) {}
+
+func (g *MumP2PCollector) OnClosedOutboundStream(_ peer.ID) {}
 
 func NewMumP2PCollector() *MumP2PCollector {
 	return &MumP2PCollector{

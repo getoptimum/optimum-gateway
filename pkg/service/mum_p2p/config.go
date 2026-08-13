@@ -7,21 +7,22 @@ import (
 
 	"github.com/libp2p/go-libp2p/core/connmgr"
 
+	mump2pcfg "github.com/getoptimum/mump2p-protocol/pkg/config"
 	commonconfig "github.com/getoptimum/optimum-common/pkg/config"
 	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
-	pubsub "github.com/getoptimum/optimum-p2p/optimum-pubsub"
 )
 
 type Config struct {
 	ClusterID      string `yaml:"cluster_id"`
 	ListenPort     int    `yaml:"listen_port"`
 	MaxMessageSize int64  `yaml:"max_message_size_bytes"`
+	RLNCServer     string `yaml:"rlnc_server"`
 
 	// RLNC and message settings
-	RandomMessageSize        int64   `yaml:"random_message_size_bytes"`
-	ShardFactor              int     `yaml:"rlnc_shard_factor"`
-	PublisherShardMultiplier float32 `yaml:"publisher_shard_multiplier"`
-	ForwardShardThreshold    float32 `yaml:"forward_shard_threshold"`
+	RandomMessageSize        uint32  `yaml:"random_message_size_bytes"`
+	ShardFactor              uint32  `yaml:"rlnc_shard_factor"`
+	PublisherShardMultiplier float64 `yaml:"publisher_shard_multiplier"`
+	ForwardShardThreshold    float64 `yaml:"forward_shard_threshold"`
 
 	// Mesh topology settings
 	MeshDegreeTarget int `yaml:"mesh_degree_target"`
@@ -58,22 +59,22 @@ func (cfg *Config) Get() *commonentities.OptimumConfig {
 	return cfg.Rotator.Get()
 }
 
-func toOptimumConfig(cfg *Config) *pubsub.OptimumSubParams {
-	res := pubsub.DefaultOptimumSubParams()
+func toMumP2PConfig(cfg *Config) *mump2pcfg.Config {
+	res := mump2pcfg.DefaultConfig()
 	if cfg.Get().MeshDegreeTarget != 0 {
-		res.D = int(cfg.Get().MeshDegreeTarget)
-		res.Dlo = int(cfg.Get().MeshDegreeTarget - 1)
-		res.Dhi = int(cfg.Get().MeshDegreeTarget + 6)
+		res.MeshD = int(cfg.Get().MeshDegreeTarget)
+		res.MeshDlo = int(cfg.Get().MeshDegreeTarget - 1)
+		res.MeshDhi = int(cfg.Get().MeshDegreeTarget + 6)
 	}
 	if cfg.Get().MeshDegreeMin != 0 {
-		res.Dlo = int(cfg.Get().MeshDegreeMin)
+		res.MeshDlo = int(cfg.Get().MeshDegreeMin)
 	}
 	if cfg.Get().MeshDegreeMax != 0 {
-		res.Dhi = int(cfg.Get().MeshDegreeMax)
+		res.MeshDhi = int(cfg.Get().MeshDegreeMax)
 	}
 
-	res.HeartbeatInterval = 700 * time.Millisecond // frequency of heartbeat, milliseconds
-	res.HistoryLength = 6                          // number of windows to retain full messages in cache for `IWANT` responses
-	res.HistoryGossip = 3                          // number of windows to gossip about
-	return &res
+	res.HeartbeatMS = int((700 * time.Millisecond).Milliseconds()) // frequency of heartbeat, milliseconds
+	res.HistoryLength = 6                                          // number of windows to retain full messages in cache for `IWANT` responses
+	res.HistoryGossip = 3                                          // number of windows to gossip about
+	return res
 }

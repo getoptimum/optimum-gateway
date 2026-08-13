@@ -12,6 +12,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/stretchr/testify/require"
 
+	cfgpkg "github.com/getoptimum/optimum-gateway/pkg/config"
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
 	"github.com/getoptimum/optimum-gateway/pkg/service/mum_p2p"
 	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
@@ -53,7 +54,8 @@ func TestNodeHandshakeAndTopicLifecycle(t *testing.T) {
 		nodeB.UnregisterListener("topic-flow")
 	})
 
-	payload := []byte("hello from mump2p")
+	payload := make([]byte, int(cfgpkg.DefaultRandomMessageSize*cfgpkg.DefaultShardFactor))
+	copy(payload, "hello from mump2p")
 	require.NoError(t, nodeA.PublishMessage(cnt.Ctx, topic, payload))
 
 	select {

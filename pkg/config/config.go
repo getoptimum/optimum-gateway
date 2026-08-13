@@ -18,10 +18,10 @@ import (
 
 const (
 	DefaultMaxMessageSize            int64   = 1024 * 1024 // 1MB
-	DefaultRandomMessageSize         int64   = 512
-	DefaultShardFactor               int64   = 4
-	DefaultPublisherShardMultiplier  float32 = 1.2
-	DefaultForwardShardThreshold     float32 = 0.75
+	DefaultRandomMessageSize         uint32  = 512
+	DefaultShardFactor               uint32  = 4
+	DefaultPublisherShardMultiplier  float64 = 1.2
+	DefaultForwardShardThreshold     float64 = 0.75
 	DefaultMeshDegreeTarget          int64   = 6
 	DefaultMeshDegreeMin             int64   = 4
 	DefaultMeshDegreeMax             int64   = 12
@@ -58,6 +58,7 @@ type AppConfig struct {
 	AggregationIntervalMs int64    `yaml:"aggregation_interval_ms" env:"OPT_AGGREGATION_INTERVAL_MS" default:"25"`
 	PropagationEnabledRaw bool     `yaml:"propagation_enabled" env:"OPT_PROPAGATION_ENABLED" default:"true"`
 	RemoteBootstrapURL    string   `yaml:"remote_bootstrap_url" env:"OPT_REMOTE_BOOTSTRAP_URL" default:"https://bootstrap.getoptimum.io"`
+	RLNCServer            string   `yaml:"rlnc_server" env:"OPT_RLNC_SERVER" default:"./bin/rlnc-server"`
 	//
 	// AUTH Related Configs and dynamic values.
 	//
@@ -313,7 +314,7 @@ func (c *AppConfig) LogConfigState() {
 			logger.WithInt64("mesh_degree_target", optCfg.MeshDegreeTarget),
 			logger.WithInt64("mesh_degree_min", optCfg.MeshDegreeMin),
 			logger.WithInt64("mesh_degree_max", optCfg.MeshDegreeMax),
-			logger.WithInt64("shard_factor", optCfg.ShardFactor),
+			logger.WithUint64("shard_factor", uint64(optCfg.ShardFactor)),
 			logger.WithInt64("aggregation_interval_ms", c.aggregationIntervalMs.Load()),
 		)
 	}

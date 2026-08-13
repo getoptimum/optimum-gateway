@@ -1,20 +1,23 @@
 package tracer
 
 import (
+	tracepb "github.com/getoptimum/mump2p-protocol/pkg/pb"
+	"github.com/getoptimum/mump2p-protocol/pkg/telemetry/rlnctrace"
 	"github.com/getoptimum/optimum-common/pkg/syncx"
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
-	pb "github.com/getoptimum/optimum-p2p/optimum-pubsub/pb"
 )
+
+var _ rlnctrace.RLNCTracer = (*MumP2P)(nil)
 
 type MumP2P struct {
 	broadcaster *syncx.Broadcaster[*entities.MumP2PResponse]
-	traceEvents map[pb.TraceEvent_Type]struct{} // event types to fan out over broadcaster
+	traceEvents map[entities.MumP2PTraceEventKind]struct{} // event kinds to fan out over broadcaster
 }
 
 func NewTracerMumP2P(
 	broadcaster *syncx.Broadcaster[*entities.MumP2PResponse],
-	traceEvents map[pb.TraceEvent_Type]struct{},
+	traceEvents map[entities.MumP2PTraceEventKind]struct{},
 ) *MumP2P {
 	return &MumP2P{
 		broadcaster: broadcaster,
@@ -22,13 +25,13 @@ func NewTracerMumP2P(
 	}
 }
 
-func (p *MumP2P) Trace(evt *pb.TraceEvent) {
-	if evt == nil || evt.Type == nil {
+func (p *MumP2P) Trace(evt *tracepb.TraceEvent) {
+	if evt == nil || evt.GetEvent() == nil {
 		return
 	}
-	p.notifyMetrics(evt.Type)
+	p.notifyMetrics(evt)
 
-	if _, ok := p.traceEvents[*evt.Type]; ok {
+	if _, ok := p.traceEvents[entities.MumP2PTraceEventKindOf(evt)]; ok {
 		p.broadcaster.Broadcast(&entities.MumP2PResponse{
 			TraceEvent: evt,
 			Command:    entities.MumP2PCommandTraceMumP2P,
@@ -36,15 +39,21 @@ func (p *MumP2P) Trace(evt *pb.TraceEvent) {
 	}
 }
 
-func (p *MumP2P) notifyMetrics(msgType *pb.TraceEvent_Type) {
-	switch *msgType {
-	case pb.TraceEvent_NEW_SHARD:
+func (p *MumP2P) notifyMetrics(evt *tracepb.TraceEvent) {
+	switch evt.GetEvent().(type) {
+	case *tracepb.TraceEvent_HelpfulSymbol,
+		*tracepb.TraceEvent_RedundantSymbol,
+		*tracepb.TraceEvent_UnnecessarySymbol,
+		*tracepb.TraceEvent_InconsistentSymbol:
 		telemetry.AddTotalShardCount()
-	case pb.TraceEvent_DUPLICATE_SHARD:
+	}
+
+	switch evt.GetEvent().(type) {
+	case *tracepb.TraceEvent_RedundantSymbol:
 		telemetry.AddDuplicateShardCount()
-	case pb.TraceEvent_UNNECESSARY_SHARD:
+	case *tracepb.TraceEvent_UnnecessarySymbol:
 		telemetry.AddUnnecessaryShardCount()
-	case pb.TraceEvent_UNHELPFUL_SHARD:
+	case *tracepb.TraceEvent_InconsistentSymbol:
 		telemetry.AddUnhelpfulShardCount()
 	}
 }

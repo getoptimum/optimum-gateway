@@ -48,7 +48,7 @@ func NewTestNodeWithCfg(
 
 	node, err := mum_p2p.NewNodeWithHost(
 		ctx,
-		log.With(logger.WithService("mum_p2p_test")),
+		log,
 		cfg,
 		h,
 		identityDir,
@@ -66,7 +66,7 @@ func NewTestConfig(ctx context.Context, log logger.AppLogger, clusterID string, 
 		ListenPort:               listenPort,
 		MaxMessageSize:           cfgpkg.DefaultMaxMessageSize,
 		RandomMessageSize:        cfgpkg.DefaultRandomMessageSize,
-		ShardFactor:              int(cfgpkg.DefaultShardFactor),
+		ShardFactor:              cfgpkg.DefaultShardFactor,
 		PublisherShardMultiplier: cfgpkg.DefaultPublisherShardMultiplier,
 		ForwardShardThreshold:    cfgpkg.DefaultForwardShardThreshold,
 		MeshDegreeTarget:         int(cfgpkg.DefaultMeshDegreeTarget),
