@@ -263,6 +263,9 @@ func (c *AppConfig) Validate() error {
 		if err := validateStreamListener("stream_grpc_addr", c.StreamGRPCAddr, c.StreamRequireAuth); err != nil {
 			return err
 		}
+		if strings.TrimSpace(c.StreamAddr) == strings.TrimSpace(c.StreamGRPCAddr) {
+			return fmt.Errorf("stream_addr and stream_grpc_addr must differ, got %q", c.StreamAddr)
+		}
 		if c.StreamMaxConns <= 0 {
 			return fmt.Errorf("stream_max_conns must be > 0")
 		}

@@ -12,6 +12,8 @@ import (
 	"syscall"
 	"time"
 
+	"google.golang.org/grpc"
+
 	commonio "github.com/getoptimum/optimum-common/pkg/io"
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	"github.com/getoptimum/optimum-gateway/pkg/config"
@@ -161,17 +163,30 @@ func main() {
 	}
 
 	// Consumer block-stream (ADR-0011), opt-in and off by default. The hub must
-	// exist before the gateway so it can be wired as an emit sink.
+	// exist before the gateway so it can be wired as an emit sink; WS and gRPC
+	// share the one hub.
 	var streamServer *stream.Server
+	var streamGRPCServer *stream.GRPCServer
 	var hub *streamhub.Service
 	if appConf.StreamEnable {
 		hub = streamhub.New()
 		authenticator := stream.NewConsumerAuthenticator(authMgr, appConf.StreamRequireAuth)
+		// One limiter across both transports keeps the caps global, not
+		// per-transport; config validation guarantees the caps are > 0.
+		limiter := stream.NewConnLimiter(appConf.StreamMaxConns, appConf.StreamMaxConnsPerSub)
 		streamServer = stream.NewServer(hub, authenticator, stream.Config{
 			Addr:           appConf.StreamAddr,
 			MaxConns:       appConf.StreamMaxConns,
 			MaxConnsPerSub: appConf.StreamMaxConnsPerSub,
 			BufferSize:     appConf.StreamBufferSize,
+			Limiter:        limiter,
+		}, l)
+		streamGRPCServer = stream.NewGRPCServer(hub, authenticator, stream.Config{
+			Addr:           appConf.StreamGRPCAddr,
+			MaxConns:       appConf.StreamMaxConns,
+			MaxConnsPerSub: appConf.StreamMaxConnsPerSub,
+			BufferSize:     appConf.StreamBufferSize,
+			Limiter:        limiter,
 		}, l)
 	}
 
@@ -199,6 +214,14 @@ func main() {
 		}()
 	}
 
+	if streamGRPCServer != nil {
+		go func() {
+			if runErr := streamGRPCServer.Run(); runErr != nil && !errors.Is(runErr, grpc.ErrServerStopped) {
+				l.Fatal("failed to run consumer stream grpc server", runErr)
+			}
+		}()
+	}
+
 	<-c // This blocks the main thread until an interrupt is received
 	cancel()
 	_ = appRouter.Stop()
@@ -206,6 +229,9 @@ func main() {
 		shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 5*time.Second)
 		_ = streamServer.Stop(shutdownCtx)
 		cancelShutdown()
+	}
+	if streamGRPCServer != nil {
+		streamGRPCServer.Stop()
 	}
 	srvGateway.Stop()
 	if lokiDone != nil {
