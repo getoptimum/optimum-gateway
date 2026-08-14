@@ -175,7 +175,7 @@ func NewNodeWithHost(
 	shmSvc, err := rlncshm.New(&mump2pcfg.Config{
 		SharedMemory: mump2pcfg.SharedMemoryConfig{
 			SHMName:  entities.RLNCServerName,
-			SHMLanes: 20,
+			SHMLanes: entities.RLNCSHMLanes,
 		},
 	})
 	if err != nil {

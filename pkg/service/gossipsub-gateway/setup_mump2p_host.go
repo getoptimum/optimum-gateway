@@ -36,7 +36,6 @@ func (s *Service) setupMumP2PHost() error {
 		TraceMesh:                s.cfg.TraceMesh,
 		TraceRPC:                 s.cfg.TraceRPC,
 		TraceShard:               s.cfg.TraceShard,
-		RLNCServer:               s.cfg.RLNCServer,
 	}
 	if s.customMumP2PConnectionGater != nil {
 		optCfg.CustomConnectionGater = s.customMumP2PConnectionGater

@@ -58,7 +58,6 @@ type AppConfig struct {
 	AggregationIntervalMs int64    `yaml:"aggregation_interval_ms" env:"OPT_AGGREGATION_INTERVAL_MS" default:"25"`
 	PropagationEnabledRaw bool     `yaml:"propagation_enabled" env:"OPT_PROPAGATION_ENABLED" default:"true"`
 	RemoteBootstrapURL    string   `yaml:"remote_bootstrap_url" env:"OPT_REMOTE_BOOTSTRAP_URL" default:"https://bootstrap.getoptimum.io"`
-	RLNCServer            string   `yaml:"rlnc_server" env:"OPT_RLNC_SERVER" default:"./bin/rlnc-server"`
 	//
 	// AUTH Related Configs and dynamic values.
 	//
