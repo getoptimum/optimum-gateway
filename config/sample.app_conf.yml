@@ -19,6 +19,17 @@ telemetry_port: 48123
 # jwks_refresh_interval_sec: 3600          # bounds revocation-propagation lag
 # jwks_cache_path: /gateway/cache/jwks.json
 
+# ─── Consumer block-stream (ADR-0011, opt-in, off by default) ────────────────
+# Exposes decoded beacon blocks to your own consumers over WebSocket + gRPC.
+# See the "Consumer Block Stream" docs page for token minting and usage.
+# stream_enable: false                     # default: false — master switch
+# stream_addr: 0.0.0.0:9600                # default: 0.0.0.0:9600 — WebSocket listener (own port, off /metrics)
+# stream_grpc_addr: 0.0.0.0:9601           # default: 0.0.0.0:9601 — gRPC listener
+# stream_require_auth: true                # default: true — verify consumer JWTs; false = loopback dev only
+# stream_max_conns: 256                    # default: 256 — global connection cap
+# stream_max_conns_per_sub: 8              # default: 8 — per-consumer-key connection cap
+# stream_buffer_size: 64                   # default: 64 — per-connection ring buffer (drop-on-overflow)
+
 # ─── Bootstrap ────────────────────────────────────────────────────────────────
 # remote_bootstrap_url: bootstrap.getoptimum.io
 
