@@ -173,10 +173,7 @@ func NewNodeWithHost(
 	log.Info("initializing optimum gossipsub")
 
 	shmSvc, err := rlncshm.New(&mump2pcfg.Config{
-		SharedMemory: mump2pcfg.SharedMemoryConfig{
-			SHMName:  entities.RLNCServerName,
-			SHMLanes: entities.RLNCSHMLanes,
-		},
+		SharedMemory: mump2pcfg.DefaultSharedMemoryConfig(),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("initialize RLNC shared memory: %w", err)
