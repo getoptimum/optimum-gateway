@@ -12207,6 +12207,29 @@
       }
     },
     {
+      "bom-ref": "pkg:golang/google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.2?type=module",
+      "type": "library",
+      "name": "google.golang.org/grpc/cmd/protoc-gen-go-grpc",
+      "version": "v1.6.2",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "ae048dbeab1c159d49815ff8c07e463ac645485911d84b9af40b37288af62e53"
+        }
+      ],
+      "purl": "pkg:golang/google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.2?goarch=amd64&goos=linux&type=module",
+      "evidence": {
+        "licenses": [
+          {
+            "license": {
+              "id": "Apache-2.0"
+            }
+          }
+        ]
+      }
+    },
+    {
       "bom-ref": "pkg:golang/google.golang.org/protobuf@v1.36.11?type=module",
       "type": "library",
       "name": "google.golang.org/protobuf",
@@ -12688,6 +12711,7 @@
         "pkg:golang/github.com/prometheus/common@v0.70.1?type=module",
         "pkg:golang/github.com/prometheus/prometheus@v0.311.3?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.11.1?type=module",
+        "pkg:golang/google.golang.org/grpc@v1.82.1?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.11?type=module",
         "pkg:golang/gopkg.in/yaml.v2@v2.4.0?type=module"
       ]
@@ -18069,6 +18093,17 @@
         "pkg:golang/gonum.org/v1/gonum@v0.17.0?type=module",
         "pkg:golang/google.golang.org/genproto/googleapis/api@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
         "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
+        "pkg:golang/google.golang.org/protobuf@v1.36.11?type=module"
+      ]
+    },
+    {
+      "ref": "pkg:golang/google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.2?type=module",
+      "dependsOn": [
+        "pkg:golang/golang.org/x/net@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.40.0?type=module",
+        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
+        "pkg:golang/google.golang.org/grpc@v1.82.1?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.11?type=module"
       ]
     },
