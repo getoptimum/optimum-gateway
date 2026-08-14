@@ -179,7 +179,7 @@ func NewNodeWithHost(
 		},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize optimum gossipsub: %w", err)
+		return nil, fmt.Errorf("initialize RLNC shared memory: %w", err)
 	}
 	rlncEngine, err := engine.NewEngine(mump2pcfg.RLNCConfig{
 		K:                           cfg.ShardFactor,
