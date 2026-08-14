@@ -16,7 +16,6 @@ type Config struct {
 	ClusterID      string `yaml:"cluster_id"`
 	ListenPort     int    `yaml:"listen_port"`
 	MaxMessageSize int64  `yaml:"max_message_size_bytes"`
-	RLNCServer     string `yaml:"rlnc_server"`
 
 	// RLNC and message settings
 	RandomMessageSize        uint32  `yaml:"random_message_size_bytes"`
