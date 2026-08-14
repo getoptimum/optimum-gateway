@@ -3,7 +3,7 @@ name: Docker Bench Image Publish
 env:
   DOCKER_ORG: getoptimum
   IMAGE_NAME: gateway-bench
-  go-version: "1.26.5"
+  go-version: "1.26.6"
 
 on:
   push:

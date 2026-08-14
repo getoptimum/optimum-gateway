@@ -3,7 +3,7 @@ name: Docker Image Publish
 env:
   DOCKER_ORG: getoptimum
   GOPRIVATE: "github.com/getoptimum"
-  go-version: "1.26.5"
+  go-version: "1.26.6"
 
 on:
   push:
