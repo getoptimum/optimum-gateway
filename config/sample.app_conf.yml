@@ -23,6 +23,7 @@ telemetry_port: 48123
 # Exposes decoded beacon blocks to your own consumers over WebSocket + gRPC.
 # See the "Consumer Block Stream" docs page for token minting and usage.
 # stream_enable: false                     # default: false — master switch
+# stream_only: false                       # default: false — stream-only edge node: no CL connection, never publishes (requires stream_enable)
 # stream_addr: 0.0.0.0:9600                # default: 0.0.0.0:9600 — WebSocket listener (own port, off /metrics)
 # stream_grpc_addr: 0.0.0.0:9601           # default: 0.0.0.0:9601 — gRPC listener
 # stream_require_auth: true                # default: true — verify consumer JWTs; false = loopback dev only
