@@ -225,6 +225,9 @@ func (s *Service) ConnectToPeer(ctx context.Context, peerAddr string) error {
 		return fmt.Errorf("failed to parse peer address %s: %w", peerAddr, err)
 	}
 
+	if s.hostLibP2P == nil { // stream-only: no CL host
+		return fmt.Errorf("no CL host")
+	}
 	if err = s.hostLibP2P.Connect(ctx, *addrInfo); err != nil {
 		return fmt.Errorf("failed to connect to peer %s: %w", addrInfo.ID, err)
 	}
