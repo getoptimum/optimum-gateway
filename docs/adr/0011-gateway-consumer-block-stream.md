@@ -92,6 +92,7 @@ Consumers present a JWT minted by `auth.getoptimum.io` for a new audience
 | Env / yaml | Default | Purpose |
 | --- | --- | --- |
 | `OPT_STREAM_ENABLE` / `stream_enable` | `false` | Master switch for the consumer API. |
+| `OPT_STREAM_ONLY` / `stream_only` | `false` | Skip CL host/ingest; never publishes. Requires `stream_enable`. |
 | `OPT_STREAM_ADDR` / `stream_addr` | `0.0.0.0:9600` | WebSocket/HTTP listener. |
 | `OPT_STREAM_GRPC_ADDR` / `stream_grpc_addr` | `0.0.0.0:9601` | gRPC listener. |
 | `OPT_STREAM_REQUIRE_AUTH` / `stream_require_auth` | `true` | Verify consumer JWTs; `false` only for local dev. |

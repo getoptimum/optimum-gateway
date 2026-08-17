@@ -14,6 +14,7 @@ is required; the rest have the defaults shown.
 
 ```yaml
 stream_enable: true            # default: false
+stream_only: false             # default: false — skip CL; never publishes (requires stream_enable)
 stream_addr: 0.0.0.0:9600      # WebSocket listener (own port, off /metrics)
 stream_grpc_addr: 0.0.0.0:9601 # gRPC listener
 stream_require_auth: true      # verify consumer JWTs; false = loopback dev only
@@ -21,6 +22,9 @@ stream_max_conns: 256          # global connection cap
 stream_max_conns_per_sub: 8    # per-consumer-key connection cap
 stream_buffer_size: 64         # per-connection ring buffer (drop-on-overflow)
 ```
+
+Set `stream_only: true` if you only want the stream and do not run a consensus
+client. The gateway still joins the mesh but does not publish.
 
 The gateway verifies consumer tokens against the JWKS at your `remote_auth_url`,
 so it must point at the same auth service that mints the stream tokens.

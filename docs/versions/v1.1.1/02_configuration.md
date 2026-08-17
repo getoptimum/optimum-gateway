@@ -119,6 +119,7 @@ The gateway receives automatic config updates from bootstrap.
 | `log_level` | `OPT_LOG_LEVEL` | debug | `debug` / `info` |
 | `remote_push_enable` | `OPT_REMOTE_PUSH_ENABLE` | false | Optional Loki/Mimir push (requires `telemetry_enable: true`) |
 | `stream_enable` | `OPT_STREAM_ENABLE` | false | Enable the consumer block stream (WebSocket + gRPC) |
+| `stream_only` | `OPT_STREAM_ONLY` | false | Skip CL host/ingest; never publishes. Requires `stream_enable` |
 | `stream_addr` | `OPT_STREAM_ADDR` | 0.0.0.0:9600 | WebSocket listener (own port, off `/metrics`) |
 | `stream_grpc_addr` | `OPT_STREAM_GRPC_ADDR` | 0.0.0.0:9601 | gRPC listener |
 | `stream_require_auth` | `OPT_STREAM_REQUIRE_AUTH` | true | Verify consumer JWTs; `false` only on a loopback bind |
