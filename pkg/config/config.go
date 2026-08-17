@@ -93,7 +93,10 @@ type AppConfig struct {
 
 	// Consumer block-stream (ADR-0011): opt-in read-only fan-out of decoded
 	// beacon blocks over WebSocket/gRPC, off by default.
-	StreamEnable         bool   `yaml:"stream_enable" env:"OPT_STREAM_ENABLE" default:"false"`
+	StreamEnable bool `yaml:"stream_enable" env:"OPT_STREAM_ENABLE" default:"false"`
+	// StreamOnly skips the CL host and ingest: no CL connection, never publishes
+	// into the mesh. Requires stream_enable.
+	StreamOnly           bool   `yaml:"stream_only" env:"OPT_STREAM_ONLY" default:"false"`
 	StreamAddr           string `yaml:"stream_addr" env:"OPT_STREAM_ADDR" default:"0.0.0.0:9600"`
 	StreamGRPCAddr       string `yaml:"stream_grpc_addr" env:"OPT_STREAM_GRPC_ADDR" default:"0.0.0.0:9601"`
 	StreamRequireAuth    bool   `yaml:"stream_require_auth" env:"OPT_STREAM_REQUIRE_AUTH" default:"true"`
@@ -275,6 +278,9 @@ func (c *AppConfig) Validate() error {
 		if c.StreamBufferSize <= 0 {
 			return fmt.Errorf("stream_buffer_size must be > 0")
 		}
+	}
+	if c.StreamOnly && !c.StreamEnable {
+		return fmt.Errorf("stream_only requires stream_enable")
 	}
 
 	if c.AggregationIntervalMs < 0 {

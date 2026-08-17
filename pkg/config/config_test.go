@@ -309,4 +309,20 @@ func TestStreamValidation(t *testing.T) {
 		_, err := config.LoadConfig("")
 		require.ErrorContains(t, err, "stream_require_auth=true")
 	})
+
+	t.Run("stream_only without stream_enable rejected", func(t *testing.T) {
+		base(t)
+		t.Setenv("OPT_STREAM_ONLY", "true")
+		_, err := config.LoadConfig("")
+		require.ErrorContains(t, err, "stream_only requires stream_enable")
+	})
+
+	t.Run("stream_only with stream_enable allowed", func(t *testing.T) {
+		base(t)
+		t.Setenv("OPT_STREAM_ENABLE", "true")
+		t.Setenv("OPT_STREAM_ONLY", "true")
+		cfg, err := config.LoadConfig("")
+		require.NoError(t, err)
+		require.True(t, cfg.StreamOnly)
+	})
 }
