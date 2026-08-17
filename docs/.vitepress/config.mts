@@ -43,6 +43,7 @@ for (const v of versions) {
     { text: 'Quick Start', file: '01_quick_start.md' },
     { text: 'Kubernetes (Helm)', file: '05_kubernetes.md' },
     { text: 'Configuration', file: '02_configuration.md' },
+    { text: 'Consumer Block Stream', file: '06_block_stream.md' },
     { text: 'Metrics & Grafana', file: '03_telemetry.md' },
     { text: 'Troubleshooting', file: '04_troubleshoot.md' },
     { text: 'Metrics', file: 'metrics.md' },

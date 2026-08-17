@@ -24,9 +24,11 @@ const (
 
 // AudP2P is the audience for the peer-visible handshake token used at the libp2p mumP2P handshake.
 // AudServices is the audience for the services token that carries operator_id to centralized services.
+// AudStream is the audience for consumer block-stream JWTs (ADR-0011).
 const (
 	AudP2P      = "p2p"
 	AudServices = "services"
+	AudStream   = "stream"
 )
 
 // maxTokenLifetime caps exp - iat at the value the upstream auth service
@@ -98,7 +100,7 @@ func New(ctx context.Context, log logger.AppLogger, appCfg *config.AppConfig) (*
 //   - alg pinned to ES256
 //   - signature via JWKS kid lookup
 //   - iss matches ExpectedIssuer
-//   - aud matches the expected audience (AudP2P for handshake tokens, AudServices for services tokens)
+//   - aud matches the expected audience (AudP2P, AudServices, or AudStream)
 //   - iat is present and not in the future (with a small clockSkew tolerance)
 //   - exp in future (required, with the same skew tolerance)
 //   - exp - iat <= maxTokenLifetime (6h, plus a tiny skew buffer)

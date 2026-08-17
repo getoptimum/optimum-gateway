@@ -1,6 +1,6 @@
 # ADR-0011: Gateway consumer block-stream API (WebSocket + gRPC)
 
-**Status:** Approved (implementation pending)  
+**Status:** Approved (implemented)  
 **Date:** 2026-08-05  
 
 ## Context
@@ -47,7 +47,7 @@ The stream carries a small transport-neutral frame union, encoded per transport
   connection's cumulative `dropped` count so the consumer knows it missed events.
 
 Each subscriber has a bounded ring buffer (default 64). On overflow the hub drops
-the oldest event, increments the per-connection `dropped` counter, and sends a
+the incoming event, increments the per-connection `dropped` counter, and sends a
 `lagged` frame. The emit from ingest is a non-blocking send — it never waits on a
 consumer, so a slow/stalled subscriber cannot backpressure ingest. At-most-once,
 no replay (see Non-goals).
@@ -59,7 +59,7 @@ Both read-only — consumers cannot publish into the mesh.
 * **WebSocket** — `GET /api/v1/stream/blocks` on its own listener
   (`OPT_STREAM_ADDR`) and Fiber app, so `/metrics` and `/health` stay off the
   exposed port. Params: `mode=metadata|raw`, `topics=beacon_block`.
-* **gRPC** — `BlockStream.Subscribe(SubscribeRequest) returns (stream
+* **gRPC** — `BlockStreamService.Subscribe(SubscribeRequest) returns (stream
   BlockEvent)` on `OPT_STREAM_GRPC_ADDR`, from a new
   `proto/getoptimum/optimum_gateway/service/stream/v1/stream.proto`.
 
@@ -80,9 +80,9 @@ Consumers present a JWT minted by `auth.getoptimum.io` for a new audience
   unauthenticated connections are rejected, never subscribed.
 * No scope claim in v1 — `aud=stream` is the authorization. There is one topic
   (`beacon_block`), so a valid stream token grants read of the whole stream. The
-  gateway still caps connections per `sub` and globally and rate-limits events
-  per connection, but those are config-driven, not per-token. (If topics beyond
-  `beacon_block` are added later, a scope claim can gate them then.)
+  gateway still caps connections per `sub` and globally, but those caps are
+  config-driven, not per-token. (If topics beyond `beacon_block` are added later,
+  a scope claim can gate them then.)
 * The verifier sits behind a `ConsumerAuthenticator` interface so an
   operator-local key mode can replace central auth later without touching the
   transport or hub. Interface now, local impl later.
@@ -92,6 +92,7 @@ Consumers present a JWT minted by `auth.getoptimum.io` for a new audience
 | Env / yaml | Default | Purpose |
 | --- | --- | --- |
 | `OPT_STREAM_ENABLE` / `stream_enable` | `false` | Master switch for the consumer API. |
+| `OPT_STREAM_ONLY` / `stream_only` | `false` | Skip CL host/ingest; never publishes. Requires `stream_enable`. |
 | `OPT_STREAM_ADDR` / `stream_addr` | `0.0.0.0:9600` | WebSocket/HTTP listener. |
 | `OPT_STREAM_GRPC_ADDR` / `stream_grpc_addr` | `0.0.0.0:9601` | gRPC listener. |
 | `OPT_STREAM_REQUIRE_AUTH` / `stream_require_auth` | `true` | Verify consumer JWTs; `false` only for local dev. |
@@ -105,9 +106,8 @@ Consumers present a JWT minted by `auth.getoptimum.io` for a new audience
 beyond `127.0.0.1`) requires TLS — native or a trusted TLS-terminating proxy.
 Startup validation must **reject** a non-loopback listener when
 `stream_require_auth=false`; disabling auth is allowed only on a loopback bind for
-local dev. (Read/idle timeouts, max frame size, and the per-connection event-rate
-cap are the other DoS mitigations — see Consequences — with concrete values fixed
-in the implementation.)
+local dev. (Read/idle timeouts, max frame size, and the connection caps are the
+other DoS mitigations — see Consequences.)
 
 ### Data model — `BlockEvent`
 
@@ -153,8 +153,8 @@ flowchart LR
 ## Consequences
 
 * New public surface means DoS exposure. Mitigations: auth-before-subscribe,
-  connection caps (global + per-`sub`), per-connection rate cap, read/idle
-  timeouts, max frame size, WS keepalive, TLS (proxy or native).
+  connection caps (global + per-`sub`), read/idle timeouts, max frame size, WS
+  keepalive, gRPC keepalive, TLS (proxy or native).
 * Central-auth coupling, bounded by the `ConsumerAuthenticator` seam.
 * Drop-on-lag means slow consumers miss events — surfaced via `lagged`/`dropped`
   rather than silently.

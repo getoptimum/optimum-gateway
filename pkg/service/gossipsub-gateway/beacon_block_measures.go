@@ -7,6 +7,7 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
 	chainstate "github.com/getoptimum/optimum-gateway/pkg/protocol/chain_state"
 	"github.com/getoptimum/optimum-gateway/pkg/protocol/consensus"
+	"github.com/getoptimum/optimum-gateway/pkg/service/streamhub"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
 	"github.com/getoptimum/optimum-gateway/pkg/utils"
 )
@@ -47,7 +48,28 @@ func (s *Service) processBeaconBlockArrival(
 
 	// stale blocks are still measured above but not forwarded, to avoid polluting the mesh
 	currentSlot := chainstate.CurrentSlot(time.Now())
-	if diff := utils.DiffUint64(blockDecoded.Header.Slot, currentSlot); diff > staleSlotThreshold {
+	diff := utils.DiffUint64(blockDecoded.Header.Slot, currentSlot)
+	stale := diff > staleSlotThreshold
+
+	// Stream every observation, stale flagged rather than dropped (ADR-0011).
+	if s.streamHub != nil {
+		s.streamHub.Emit(&streamhub.BlockEvent{
+			Slot:           blockDecoded.Header.Slot,
+			ProposerIndex:  blockDecoded.Header.ProposerIndex,
+			ParentRoot:     blockDecoded.Header.ParentRoot,
+			StateRoot:      blockDecoded.Header.StateRoot,
+			BlockSizeBytes: uint64(len(msg)),
+			Topic:          topic,
+			Source:         source,
+			ReceivedAtMs:   recvAt,
+			GatewayID:      s.cfg.GatewayID,
+			ForkDigest:     s.srvForkMgr.ActiveDigest(),
+			Stale:          stale,
+			Raw:            msg,
+		})
+	}
+
+	if stale {
 		l.Info("stale_data, skipping publish of beacon_block",
 			logger.WithUint64("current_slot", currentSlot),
 			logger.WithUint64("diff", diff),

@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package getoptimum.optimum_gateway.service.stream.v1;
+
+option go_package = "github.com/getoptimum/optimum-gateway/pkg/service/stream/v1";
+
+// BlockStreamService streams decoded beacon-block observations to consumers (ADR-0011).
+service BlockStreamService {
+  // Subscribe opens a read-only server stream of block observations.
+  rpc Subscribe(SubscribeRequest) returns (stream BlockEvent);
+}
+
+// SubscribeRequest selects the payload mode and topics for a subscription.
+message SubscribeRequest {
+  string mode = 1; // "metadata" (default) or "raw"
+  repeated string topics = 2; // validated only; v1 has one topic, so nothing is filtered
+}
+
+// BlockEvent is one frame: a block observation or a lag signal (ADR-0011).
+message BlockEvent {
+  // frame tells an observation apart from a control signal.
+  oneof frame {
+    Block block = 1;
+    Lagged lagged = 2;
+  }
+}
+
+// Block is one block observation (fields mirror the streamhub hub type).
+message Block {
+  uint64 slot = 1;
+  uint64 proposer_index = 2;
+  bytes parent_root = 3;
+  bytes state_root = 4;
+  uint64 block_size_bytes = 5;
+  string topic = 6;
+  string source = 7;
+  int64 received_at_ms = 8;
+  string gateway_id = 9;
+  string fork_digest = 10;
+  bool stale = 11;
+  bytes raw = 12; // present only in raw mode
+}
+
+// Lagged reports the cumulative drop count after a buffer overflow.
+message Lagged {
+  uint64 dropped = 1;
+}
