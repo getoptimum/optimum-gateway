@@ -183,7 +183,7 @@ func NewNodeWithHost(
 
 	optList := []rlncps.RLNCOption{
 		rlncps.WithRLNCTracer(ret.tracer),
-		// rlncps.WithPeerAdmissionControl(),
+		// todo fix it rlncps.WithPeerAdmissionControl(),
 		rlncps.WithPeerFilterFN(func(pid peer.ID, _ string) bool {
 			_, ok := ret.peersApprovedMap.Load(pid)
 			return ok
