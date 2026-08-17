@@ -22,11 +22,6 @@ type Config struct {
 	PublisherShardMultiplier float64 `yaml:"publisher_shard_multiplier"`
 	ForwardShardThreshold    float64 `yaml:"forward_shard_threshold"`
 
-	// Mesh topology settings
-	MeshDegreeTarget int `yaml:"mesh_degree_target"`
-	MeshDegreeMin    int `yaml:"mesh_degree_min"`
-	MeshDegreeMax    int `yaml:"mesh_degree_max"`
-
 	BootstrapPeers []string `yaml:"bootstrap_peers"`
 
 	// Trace event categories to broadcast to RegisterListener consumers. Shard metrics
