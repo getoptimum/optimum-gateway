@@ -3,7 +3,6 @@ package mum_p2p
 import (
 	"fmt"
 	"math"
-	"time"
 
 	"github.com/libp2p/go-libp2p/core/connmgr"
 
@@ -60,20 +59,24 @@ func (cfg *Config) Get() *commonentities.OptimumConfig {
 
 func toMumP2PConfig(cfg *Config) *mump2pcfg.Config {
 	res := mump2pcfg.DefaultConfig()
-	if cfg.Get().MeshDegreeTarget != 0 {
-		res.MeshD = int(cfg.Get().MeshDegreeTarget)
-		res.MeshDlo = int(cfg.Get().MeshDegreeTarget - 1)
-		res.MeshDhi = int(cfg.Get().MeshDegreeTarget + 6)
+	dc := cfg.Get()
+	if dc.MeshDegreeTarget != 0 {
+		res.MeshD = int(dc.MeshDegreeTarget)
+		res.MeshDlo = int(dc.MeshDegreeTarget - 1)
+		res.MeshDhi = int(dc.MeshDegreeTarget + 6)
 	}
-	if cfg.Get().MeshDegreeMin != 0 {
-		res.MeshDlo = int(cfg.Get().MeshDegreeMin)
+	if dc.MeshDegreeMin != 0 {
+		res.MeshDlo = int(dc.MeshDegreeMin)
 	}
-	if cfg.Get().MeshDegreeMax != 0 {
-		res.MeshDhi = int(cfg.Get().MeshDegreeMax)
+	if dc.MeshDegreeMax != 0 {
+		res.MeshDhi = int(dc.MeshDegreeMax)
 	}
-
-	res.HeartbeatMS = int((700 * time.Millisecond).Milliseconds()) // frequency of heartbeat, milliseconds
-	res.HistoryLength = 6                                          // number of windows to retain full messages in cache for `IWANT` responses
-	res.HistoryGossip = 3                                          // number of windows to gossip about
+	res.RLNC = mump2pcfg.RLNCConfig{
+		K:                           cfg.ShardFactor,
+		MaxShardSize:                cfg.RandomMessageSize,
+		RedundancyFraction:          cfg.PublisherShardMultiplier,
+		ForwardingThresholdFraction: cfg.ForwardShardThreshold,
+		MeshDegreeMax:               res.MeshDhi,
+	}
 	return res
 }

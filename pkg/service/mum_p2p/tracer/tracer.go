@@ -29,9 +29,10 @@ func (p *MumP2P) Trace(evt *tracepb.TraceEvent) {
 	if evt == nil || evt.GetEvent() == nil {
 		return
 	}
-	p.notifyMetrics(evt)
+	kind := entities.MumP2PTraceEventKindOf(evt)
+	p.notifyMetrics(kind)
 
-	if _, ok := p.traceEvents[entities.MumP2PTraceEventKindOf(evt)]; ok {
+	if _, ok := p.traceEvents[kind]; ok {
 		p.broadcaster.Broadcast(&entities.MumP2PResponse{
 			TraceEvent: evt,
 			Command:    entities.MumP2PCommandTraceMumP2P,
@@ -39,21 +40,18 @@ func (p *MumP2P) Trace(evt *tracepb.TraceEvent) {
 	}
 }
 
-func (p *MumP2P) notifyMetrics(evt *tracepb.TraceEvent) {
-	switch evt.GetEvent().(type) {
-	case *tracepb.TraceEvent_HelpfulSymbol,
-		*tracepb.TraceEvent_RedundantSymbol,
-		*tracepb.TraceEvent_UnnecessarySymbol,
-		*tracepb.TraceEvent_InconsistentSymbol:
+func (p *MumP2P) notifyMetrics(kind entities.MumP2PTraceEventKind) {
+	switch kind {
+	case entities.MumP2PTraceEventHelpfulSymbol:
 		telemetry.AddTotalShardCount()
-	}
-
-	switch evt.GetEvent().(type) {
-	case *tracepb.TraceEvent_RedundantSymbol:
+	case entities.MumP2PTraceEventRedundantSymbol:
+		telemetry.AddTotalShardCount()
 		telemetry.AddDuplicateShardCount()
-	case *tracepb.TraceEvent_UnnecessarySymbol:
+	case entities.MumP2PTraceEventUnnecessarySymbol:
+		telemetry.AddTotalShardCount()
 		telemetry.AddUnnecessaryShardCount()
-	case *tracepb.TraceEvent_InconsistentSymbol:
+	case entities.MumP2PTraceEventInconsistentSymbol:
+		telemetry.AddTotalShardCount()
 		telemetry.AddUnhelpfulShardCount()
 	}
 }

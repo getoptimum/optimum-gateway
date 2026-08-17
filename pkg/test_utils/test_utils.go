@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	_ "embed"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
@@ -67,10 +66,6 @@ type Container struct {
 func GetClean(tb testing.TB) *Container {
 	tb.Helper()
 
-	if available := hasRLNCServerSemaphore(tb, "/dev/shm"); !available {
-		tb.Fatalf("rlnc server is not running, start it as `make run-rlnc-server`")
-	}
-
 	ctx, cancel := context.WithTimeout(tb.Context(), time.Minute*3)
 	log := logger.NewAppSLogger(logger.Debug)
 	tb.Cleanup(cancel)
@@ -78,19 +73,6 @@ func GetClean(tb testing.TB) *Container {
 		Ctx: ctx,
 		Log: log,
 	}
-}
-
-func hasRLNCServerSemaphore(tb testing.TB, dir string) bool {
-	tb.Helper()
-	entries, err := os.ReadDir(dir)
-	require.NoError(tb, err)
-
-	for _, entry := range entries {
-		if strings.HasPrefix(entry.Name(), "go_shm_rlnc_semaphore_mump2p-protocol_lane") {
-			return true
-		}
-	}
-	return false
 }
 
 func SpawnLocalDeps(t *testing.T) {
