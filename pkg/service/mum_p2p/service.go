@@ -181,7 +181,14 @@ func NewNodeWithHost(
 		return nil, fmt.Errorf("create RLNC engine: %w", err)
 	}
 
-	optList := []rlncps.RLNCOption{rlncps.WithRLNCTracer(ret.tracer)}
+	optList := []rlncps.RLNCOption{
+		rlncps.WithRLNCTracer(ret.tracer),
+		rlncps.WithPeerAdmissionControl(),
+		rlncps.WithPeerFilterFN(func(pid peer.ID, _ string) bool {
+			_, ok := ret.peersApprovedMap.Load(pid)
+			return ok
+		}),
+	}
 	if telemetry.MetricsEnabled() {
 		optList = append(optList, rlncps.WithRawTracer(telemetry.NewMumP2PCollector()))
 	}
