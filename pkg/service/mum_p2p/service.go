@@ -18,7 +18,6 @@ import (
 	gomplex "github.com/libp2p/go-mplex"
 	"github.com/multiformats/go-multiaddr"
 
-	mump2pcfg "github.com/getoptimum/mump2p-protocol/pkg/config"
 	"github.com/getoptimum/mump2p-protocol/pkg/engine"
 	rlncps "github.com/getoptimum/mump2p-protocol/pkg/pubsub"
 	"github.com/getoptimum/mump2p-protocol/pkg/router"
@@ -172,31 +171,22 @@ func NewNodeWithHost(
 
 	log.Info("initializing optimum gossipsub")
 
-	shmSvc, err := rlncshm.New(&mump2pcfg.Config{
-		SharedMemory: mump2pcfg.DefaultSharedMemoryConfig(),
-	})
+	psCfg := toMumP2PConfig(cfg)
+	shmSvc, err := rlncshm.New(psCfg)
 	if err != nil {
 		return nil, fmt.Errorf("initialize RLNC shared memory: %w", err)
 	}
-	rlncEngine, err := engine.NewEngine(mump2pcfg.RLNCConfig{
-		K:                           cfg.ShardFactor,
-		MaxShardSize:                cfg.RandomMessageSize,
-		RedundancyFraction:          cfg.PublisherShardMultiplier,
-		ForwardingThresholdFraction: cfg.ForwardShardThreshold,
-		MeshDegreeMax:               cfg.MeshDegreeMax,
-		EnableTopicPeerFallback:     false,
-	}, log.With(logger.WithService("rlncEngine")).Slog(), shmSvc)
+	rlncEngine, err := engine.NewEngine(psCfg.RLNC, log.With(logger.WithService("rlncEngine")).Slog(), shmSvc)
 	if err != nil {
 		return nil, fmt.Errorf("create RLNC engine: %w", err)
 	}
 
-	optList := make([]rlncps.RLNCOption, 0, 2)
-	optList = append(optList, rlncps.WithRLNCTracer(ret.tracer))
+	optList := []rlncps.RLNCOption{rlncps.WithRLNCTracer(ret.tracer)}
 	if telemetry.MetricsEnabled() {
 		optList = append(optList, rlncps.WithRawTracer(telemetry.NewMumP2PCollector()))
 	}
 	ret.ps, ret.psRouter, err = rlncps.NewRLNCPubSub(ctx,
-		toMumP2PConfig(cfg),
+		psCfg,
 		log.With(logger.WithService("mump2p")).Slog(),
 		h,
 		rlncEngine,

@@ -3,6 +3,8 @@ package test_utils
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -40,6 +42,9 @@ func NewTestNodeWithCfg(
 	opts ...mum_p2p.NodeOption,
 ) *mum_p2p.Node {
 	t.Helper()
+	if !hasRLNCServerSemaphore(t, "/dev/shm") {
+		t.Fatalf("rlnc server is not running, start it as `make run-rlnc-server`")
+	}
 
 	h, err := libp2p.New(
 		libp2p.ListenAddrStrings(fmt.Sprintf("/ip4/127.0.0.1/tcp/%d", test_utils.GetFreePortT(t))),
@@ -58,6 +63,20 @@ func NewTestNodeWithCfg(
 
 	t.Cleanup(node.Stop)
 	return node
+}
+
+func hasRLNCServerSemaphore(tb testing.TB, dir string) bool {
+	tb.Helper()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return false
+	}
+	for _, entry := range entries {
+		if strings.HasPrefix(entry.Name(), "go_shm_rlnc_semaphore_mump2p-protocol_lane") {
+			return true
+		}
+	}
+	return false
 }
 
 func NewTestConfig(ctx context.Context, log logger.AppLogger, clusterID string, listenPort int, boostrapPeers []string) *mum_p2p.Config {
