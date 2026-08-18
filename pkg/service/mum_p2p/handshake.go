@@ -66,6 +66,7 @@ func (n *Node) handleNewConnection(clusterID string, conn network.Conn) {
 		// still-trusted peer must be re-authorized here since the handshake is skipped.
 		if n.psRouter != nil {
 			n.psRouter.AllowPeer(peerID)
+			n.reannounceTopics()
 		}
 		return
 	}
@@ -166,6 +167,7 @@ func (n *Node) markHandshakeValid(peerID peer.ID) {
 	n.setPeerState(peerID, entities.PeerStateHandshakeValid)
 	if n.psRouter != nil {
 		n.psRouter.AllowPeer(peerID)
+		n.reannounceTopics()
 	}
 }
 

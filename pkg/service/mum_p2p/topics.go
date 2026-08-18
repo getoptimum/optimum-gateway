@@ -94,3 +94,15 @@ func (n *Node) UnsubscribeTopic(topicName string) error {
 	n.log.Info("unsubscribed topic", logger.WithTopic(topicName))
 	return nil
 }
+
+func (n *Node) reannounceTopics() {
+	for _, topic := range append([]string(nil), n.GetTopics()...) {
+		if err := n.UnsubscribeTopic(topic); err != nil {
+			n.log.Error("failed to drop topic for mesh reannounce", err, logger.WithTopic(topic))
+			continue
+		}
+		if err := n.SubscribeTopic(topic); err != nil {
+			n.log.Error("failed to resubscribe topic for mesh reannounce", err, logger.WithTopic(topic))
+		}
+	}
+}
