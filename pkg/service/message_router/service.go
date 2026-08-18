@@ -86,6 +86,7 @@ func (s *Service) ShouldForwardMessageToMumP2P(l logger.AppLogger, kind topics.T
 		l.Error("attestation rejected because validator is not known",
 			fmt.Errorf("validator %d is not in known set", attester),
 			logger.WithUint64("attester", attester),
+			logger.WithInt("known_validators", s.knownValidators.Len()),
 		)
 		return false
 	}
