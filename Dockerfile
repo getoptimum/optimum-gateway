@@ -5,7 +5,7 @@ FROM --platform=$BUILDPLATFORM golang:1.26.6-alpine AS builder
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
 
-RUN apk add --no-cache build-base git bash clang lld openssh-client
+RUN apk add --no-cache build-base git clang lld openssh-client bash
 
 COPY --from=xx / /
 
@@ -52,7 +52,7 @@ RUN --mount=type=ssh,required=false \
     --mount=type=secret,id=github_token,required=false \
     --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
-    make build-rlnc-server RLNC_SERVER_OUTPUT=/gateway/bin/rlnc-server
+    make RLNC_SERVER_OUTPUT=/gateway/bin/rlnc-server build-rlnc-server
 
 FROM alpine:3.22
 
