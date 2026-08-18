@@ -24,12 +24,9 @@ func (s *Service) setupMumP2PHost() error {
 		ListenPort:               s.cfg.AgentMumP2PPort,
 		MaxMessageSize:           config.DefaultMaxMessageSize,
 		RandomMessageSize:        config.DefaultRandomMessageSize,
-		ShardFactor:              int(config.DefaultShardFactor),
+		ShardFactor:              config.DefaultShardFactor,
 		PublisherShardMultiplier: config.DefaultPublisherShardMultiplier,
 		ForwardShardThreshold:    config.DefaultForwardShardThreshold,
-		MeshDegreeTarget:         int(config.DefaultMeshDegreeTarget),
-		MeshDegreeMin:            int(config.DefaultMeshDegreeMin),
-		MeshDegreeMax:            int(config.DefaultMeshDegreeMax),
 		BootstrapPeers:           filtered,
 		ClusterID:                s.cfg.GatewayClusterID,
 		Rotator:                  s.cfg.GetDCRotator(),
@@ -43,7 +40,7 @@ func (s *Service) setupMumP2PHost() error {
 
 	s.nodeMumP2P, err = mum_p2p.NewNode(
 		s.ctx,
-		s.log.With(logger.WithService("mump2p")),
+		s.log,
 		optCfg,
 		s.cfg.IdentityMumP2PDir,
 		mum_p2p.WithCustomHandshakeBuilder(s.handshakeBuilder),

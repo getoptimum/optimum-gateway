@@ -64,8 +64,8 @@ func (n *Node) handleNewConnection(clusterID string, conn network.Conn) {
 		l.Debug("peer already has valid handshake, skipping handshake")
 		// Re-admit on reconnect: pubsub revokes mesh admission on disconnect (#923), so a
 		// still-trusted peer must be re-authorized here since the handshake is skipped.
-		if n.ps != nil {
-			n.ps.AllowPeer(peerID)
+		if n.psRouter != nil {
+			n.psRouter.AllowPeer(peerID)
 		}
 		return
 	}
@@ -164,16 +164,16 @@ func (n *Node) RegisterHandshakeHandler(clusterID string) {
 // markHandshakeValid records a verified handshake and admits the peer to the pubsub mesh (#923).
 func (n *Node) markHandshakeValid(peerID peer.ID) {
 	n.setPeerState(peerID, entities.PeerStateHandshakeValid)
-	if n.ps != nil {
-		n.ps.AllowPeer(peerID)
+	if n.psRouter != nil {
+		n.psRouter.AllowPeer(peerID)
 	}
 }
 
 func (n *Node) disconnectPeer(peerID peer.ID) {
 	n.setPeerState(peerID, entities.PeerStateHandshakeInvalid)
 	// Revoke mesh admission (#923) before closing so the peer cannot linger in any mesh.
-	if n.ps != nil {
-		n.ps.DenyPeer(peerID)
+	if n.psRouter != nil {
+		n.psRouter.DenyPeer(peerID)
 	}
 	if n.host.Network().Connectedness(peerID) == network.NotConnected {
 		return

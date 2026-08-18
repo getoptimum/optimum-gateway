@@ -9,6 +9,7 @@ import (
 
 	"github.com/libp2p/go-libp2p"
 	mplex "github.com/libp2p/go-libp2p-mplex"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
@@ -17,7 +18,10 @@ import (
 	gomplex "github.com/libp2p/go-mplex"
 	"github.com/multiformats/go-multiaddr"
 
-	commonhash "github.com/getoptimum/optimum-common/pkg/hash"
+	"github.com/getoptimum/mump2p-protocol/pkg/engine"
+	rlncps "github.com/getoptimum/mump2p-protocol/pkg/pubsub"
+	"github.com/getoptimum/mump2p-protocol/pkg/router"
+	rlncshm "github.com/getoptimum/mump2p-protocol/pkg/shm"
 	"github.com/getoptimum/optimum-common/pkg/identity"
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	commonnet "github.com/getoptimum/optimum-common/pkg/net"
@@ -28,16 +32,15 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/service/mum_p2p/tracer"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
 	"github.com/getoptimum/optimum-gateway/pkg/utils"
-	pubsub "github.com/getoptimum/optimum-p2p/optimum-pubsub"
-	pboptimum "github.com/getoptimum/optimum-p2p/optimum-pubsub/pb"
 )
 
 type Node struct {
-	ctx  context.Context
-	log  logger.AppLogger
-	cfg  *Config
-	host host.Host      // The libp2p host managing network connections and identity
-	ps   *pubsub.PubSub // The Optimum pub-sub instance
+	ctx      context.Context
+	log      logger.AppLogger
+	cfg      *Config
+	host     host.Host          // The libp2p host managing network connections and identity
+	ps       *pubsub.PubSub     // The Optimum pub-sub instance
+	psRouter *router.RLNCRouter // The Optimum pub-sub instance
 
 	tracer         *tracer.MumP2P
 	bootstrapNodes []peer.AddrInfo                            // Optional bootstrap peers for initial connectivity
@@ -167,42 +170,37 @@ func NewNodeWithHost(
 	ret.tracer = tracer.NewTracerMumP2P(ret.broadcaster, entities.OptimumTraceEventSet(cfg.TraceMesh, cfg.TraceRPC, cfg.TraceShard))
 
 	log.Info("initializing optimum gossipsub")
-	maxMessageSize, err := utils.CalculateMaxSize(cfg.MaxMessageSize)
+
+	psCfg := toMumP2PConfig(cfg)
+	shmSvc, err := rlncshm.New(psCfg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to calculate max message size: %w", err)
+		return nil, fmt.Errorf("initialize RLNC shared memory: %w", err)
 	}
-	options := []pubsub.Option{
-		// todo this for some reason not publish message to all mesh peers pubsub.WithMessageSignaturePolicy(pubsub.StrictNoSign),
-		// todo this triggers panics connection manager because of missing peer.ID pubsub.WithNoAuthor(),
-		pubsub.WithEventTracer(ret.tracer),
-		pubsub.WithMaxMessageSize(maxMessageSize),
-		pubsub.WithOptimumSubParams(toOptimumConfig(cfg)),
-		pubsub.WithConfigRotator(cfg.Rotator),
-		// Default-deny mesh admission (#923): a peer joins the mesh only after its
-		// handshake verifies (AllowPeer in handshake.go), not merely on connect.
-		pubsub.WithPeerAdmissionControl(),
-		pubsub.WithPeerMsgFilter(func(pid peer.ID, _ string) bool {
+	rlncEngine, err := engine.NewEngine(psCfg.RLNC, log.With(logger.WithService("rlncEngine")).Slog(), shmSvc)
+	if err != nil {
+		return nil, fmt.Errorf("create RLNC engine: %w", err)
+	}
+
+	optList := []rlncps.RLNCOption{
+		rlncps.WithRLNCTracer(ret.tracer),
+		// todo fix it rlncps.WithPeerAdmissionControl(),
+		rlncps.WithPeerFilterFN(func(pid peer.ID, _ string) bool {
 			_, ok := ret.peersApprovedMap.Load(pid)
 			return ok
 		}),
 	}
 	if telemetry.MetricsEnabled() {
-		options = append(options, pubsub.WithRawTracer(telemetry.NewMumP2PCollector()))
+		optList = append(optList, rlncps.WithRawTracer(telemetry.NewMumP2PCollector()))
 	}
-
-	// NN: set custom message ID function for optimump2p to use SHA256 hash of the message data
-	options = append(options, pubsub.WithMessageIdFn(func(msg *pboptimum.Message) string {
-		if msg == nil {
-			return ""
-		}
-		return commonhash.SHA256(msg.Data)
-	}))
-
-	// Create pubsub before registering handshake handlers so ps is set when the first
-	// handshake calls AllowPeer (#923); otherwise the peer is deferred for its lifetime.
-	ret.ps, err = pubsub.NewOptimumP2P(ctx, h, options...)
+	ret.ps, ret.psRouter, err = rlncps.NewRLNCPubSub(ctx,
+		psCfg,
+		log.With(logger.WithService("mump2p")).Slog(),
+		h,
+		rlncEngine,
+		optList...,
+	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create mump2p: %w", err)
+		return nil, fmt.Errorf("create RLNCP pubsub: %w", err)
 	}
 
 	ret.RegisterHandshakeMessageSender(cfg.ClusterID)
@@ -252,14 +250,14 @@ func (n *Node) CountConnectedPeers() (totalPeers int, perTopicPeers map[string]i
 	topics := n.ps.GetTopics()
 	perTopicPeers = make(map[string]int, len(topics))
 	for _, t := range topics {
-		perTopicPeers[t] = len(n.ps.GetMeshPeers(t))
+		perTopicPeers[t] = len(n.GetMeshPeers(t))
 	}
 	return len(n.host.Network().Peers()), perTopicPeers
 }
 
 // GetMeshPeers returns the list of peer in the state variable mesh[topic] at the node.
 func (n *Node) GetMeshPeers(topic string) []peer.ID {
-	return n.ps.GetMeshPeers(topic)
+	return n.psRouter.MeshPeers(topic)
 }
 
 // GetTopics returns list of topics the node is subscribed to.
