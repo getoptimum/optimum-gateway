@@ -84,17 +84,17 @@ func (s *Service) ShouldForwardMessageToMumP2P(l logger.AppLogger, kind topics.T
 	}
 	if !s.IsKnownValidator(attester) {
 		telemetry.IncAttestationDropped("rejected")
-		l.Error("attestation rejected because validator is not known",
-			fmt.Errorf("validator %d is not in known set", attester),
-			logger.WithUint64("attester", attester),
-			logger.WithInt("known_validators", s.knownValidators.Len()),
-			logger.WithString("api_key", s.cfg.APIKey),
-		)
-		if s.knownValidators.Len() < 100 {
-			aa, _ := json.Marshal(s.knownValidators.LoadAll())
-			l.Info("known validators", logger.WithString("validators", string(aa)))
-		}
 		return false
+	}
+	l.Error("attestation passed because validator is known",
+		fmt.Errorf("validator %d is not in known set", attester),
+		logger.WithUint64("attester", attester),
+		logger.WithInt("known_validators", s.knownValidators.Len()),
+		logger.WithString("api_key", s.cfg.APIKey),
+	)
+	if s.knownValidators.Len() < 100 {
+		aa, _ := json.Marshal(s.knownValidators.LoadAll())
+		l.Info("known validators", logger.WithString("validators", string(aa)))
 	}
 	telemetry.IncAttestationForwarded(entities.SourceMumP2P)
 	return true
