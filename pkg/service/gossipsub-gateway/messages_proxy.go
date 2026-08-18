@@ -71,8 +71,10 @@ func (s *Service) processCLAttestation(l logger.AppLogger, msg *entities.CLMessa
 	}
 
 	if !s.srvMsgRouter.ShouldForwardMessageToMumP2P(l, meta.Kind, msg.Topic, msg.Message) {
+		s.log.Info("attestation message rejected by router", logger.WithTopic(msg.Topic), logger.WithInt("size", len(msg.Message)))
 		return
 	}
+	s.log.Info("processing attestation message from CL", logger.WithTopic(msg.Topic), logger.WithInt("size", len(msg.Message)))
 
 	s.aggregatorMessages.Enqueue(msg.Topic, meta, msg.Message)
 }

@@ -64,13 +64,15 @@ RUN mkdir -p /gateway/logs
 
 COPY --from=builder /gateway/optimum-gateway /optimum-gateway
 COPY --from=builder /gateway/bin/rlnc-server /rlnc-server
+COPY --from=builder /gateway/docker-entrypoint.sh /docker-entrypoint.sh
 
 # License, patent marking and third-party attribution shipped with the binary.
 COPY --from=builder /optimum-gateway/LICENSE /optimum-gateway/NOTICE /optimum-gateway/PATENTS /optimum-gateway/THIRD-PARTY-NOTICES.md /usr/share/doc/optimum-gateway/
 
 # USER gateway
-RUN /rlnc-server --lanes 20 --name mump2p-protocol &
+#RUN /rlnc-server --lanes 20 --name mump2p-protocol &
 
 EXPOSE 33212 33213 48123
 
-ENTRYPOINT ["/optimum-gateway"]
+RUN chmod +x /docker-entrypoint.sh
+ENTRYPOINT ["/docker-entrypoint.sh"]
