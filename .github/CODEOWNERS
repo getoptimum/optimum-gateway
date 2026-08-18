@@ -2,8 +2,10 @@
 
 * @getoptimum/senior-core-dev @swarna1101
 
-# CI workflows
-/.github/workflows/ @Taranpreet26311 @abergasov @swarna1101 @CryptoFewka
+# CI / build / deploy surface (runs with tokens; can push images or bump versions)
+/.github/    @Taranpreet26311 @abergasov @swarna1101 @CryptoFewka
+/Makefile    @Taranpreet26311 @abergasov @swarna1101 @CryptoFewka
+/Dockerfile  @Taranpreet26311 @abergasov @swarna1101 @CryptoFewka
 
 # Critical paths — last match wins, so these override the global rule above.
 

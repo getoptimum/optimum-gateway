@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -87,6 +88,19 @@ type AppConfig struct {
 	// real billing/auth service. Must not be disabled in production — the
 	// gateway logs a loud startup warning when off.
 	EnableAuth bool `yaml:"enable_auth" env:"OPT_ENABLE_AUTH" default:"true"`
+
+	// Consumer block-stream (ADR-0011): opt-in read-only fan-out of decoded
+	// beacon blocks over WebSocket/gRPC, off by default.
+	StreamEnable bool `yaml:"stream_enable" env:"OPT_STREAM_ENABLE" default:"false"`
+	// StreamOnly skips the CL host and ingest: no CL connection, never publishes
+	// into the mesh. Requires stream_enable.
+	StreamOnly           bool   `yaml:"stream_only" env:"OPT_STREAM_ONLY" default:"false"`
+	StreamAddr           string `yaml:"stream_addr" env:"OPT_STREAM_ADDR" default:"0.0.0.0:9600"`
+	StreamGRPCAddr       string `yaml:"stream_grpc_addr" env:"OPT_STREAM_GRPC_ADDR" default:"0.0.0.0:9601"`
+	StreamRequireAuth    bool   `yaml:"stream_require_auth" env:"OPT_STREAM_REQUIRE_AUTH" default:"true"`
+	StreamMaxConns       int    `yaml:"stream_max_conns" env:"OPT_STREAM_MAX_CONNS" default:"256"`
+	StreamMaxConnsPerSub int    `yaml:"stream_max_conns_per_sub" env:"OPT_STREAM_MAX_CONNS_PER_SUB" default:"8"`
+	StreamBufferSize     int    `yaml:"stream_buffer_size" env:"OPT_STREAM_BUFFER_SIZE" default:"64"`
 
 	RemotePushEnable   bool   `yaml:"remote_push_enable" env:"OPT_REMOTE_PUSH_ENABLE" default:"false"`
 	RemotePushMimirURL string `yaml:"remote_push_mimir_url" env:"OPT_REMOTE_PUSH_MIMIR_URL" default:"https://v2-mimir.getoptimum.io"`
@@ -240,6 +254,30 @@ func (c *AppConfig) Validate() error {
 		return fmt.Errorf("OPT_GATEWAY_CLUSTER_ID is required")
 	}
 
+	if c.StreamEnable {
+		if err := validateStreamListener("stream_addr", c.StreamAddr, c.StreamRequireAuth); err != nil {
+			return err
+		}
+		if err := validateStreamListener("stream_grpc_addr", c.StreamGRPCAddr, c.StreamRequireAuth); err != nil {
+			return err
+		}
+		if strings.TrimSpace(c.StreamAddr) == strings.TrimSpace(c.StreamGRPCAddr) {
+			return fmt.Errorf("stream_addr and stream_grpc_addr must differ, got %q", c.StreamAddr)
+		}
+		if c.StreamMaxConns <= 0 {
+			return fmt.Errorf("stream_max_conns must be > 0")
+		}
+		if c.StreamMaxConnsPerSub <= 0 {
+			return fmt.Errorf("stream_max_conns_per_sub must be > 0")
+		}
+		if c.StreamBufferSize <= 0 {
+			return fmt.Errorf("stream_buffer_size must be > 0")
+		}
+	}
+	if c.StreamOnly && !c.StreamEnable {
+		return fmt.Errorf("stream_only requires stream_enable")
+	}
+
 	if c.AggregationIntervalMs < 0 {
 		return fmt.Errorf("aggregation_interval_ms must be non-negative")
 	}
@@ -254,6 +292,34 @@ func (c *AppConfig) Validate() error {
 	}
 
 	return nil
+}
+
+// validateStreamListener enforces the ADR-0011 exposure rule: auth may be
+// disabled only on a loopback bind.
+func validateStreamListener(field, addr string, requireAuth bool) error {
+	host, port, err := net.SplitHostPort(strings.TrimSpace(addr))
+	if err != nil {
+		return fmt.Errorf("invalid %s %q: %w", field, addr, err)
+	}
+	if p, perr := strconv.Atoi(port); perr != nil || p <= 0 || p > 65535 {
+		return fmt.Errorf("invalid %s %q: port must be between 1 and 65535", field, addr)
+	}
+	if !requireAuth && !isLoopbackHost(host) {
+		return fmt.Errorf("%s=%q requires stream_require_auth=true (auth may be disabled only on a loopback bind)", field, addr)
+	}
+	return nil
+}
+
+// isLoopbackHost treats an empty host (binds all interfaces) as non-loopback.
+func isLoopbackHost(host string) bool {
+	switch host {
+	case "":
+		return false
+	case "localhost":
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 func (c *AppConfig) PropagationEnabled() bool {

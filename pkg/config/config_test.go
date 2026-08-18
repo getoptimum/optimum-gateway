@@ -269,3 +269,60 @@ gateway_id: local-dockerized
 	require.Equal(t, "local-dockerized", cfg.GatewayID)
 	require.Equal(t, "optimum_hoodi_v0_1", cfg.GatewayClusterID)
 }
+
+// The stream is off by default, and when enabled auth may be disabled only on
+// a loopback bind (ADR-0011 exposure rule).
+func TestStreamValidation(t *testing.T) {
+	base := func(t *testing.T) {
+		t.Helper()
+		t.Setenv("OPT_IDENTITY_LIBP2P_DIR", "./libid")
+		t.Setenv("OPT_IDENTITY_MUMP2P_DIR", "./mump2pid")
+		t.Setenv("OPT_AGENT_LIB_P2P_PORT", "5000")
+		t.Setenv("OPT_AGENT_MUMP2P_PORT", "5001")
+		t.Setenv("OPT_GATEWAY_CLUSTER_ID", "gw-cluster")
+		t.Setenv("OPT_TELEMETRY_PORT", "8888")
+	}
+
+	t.Run("off by default", func(t *testing.T) {
+		base(t)
+		cfg, err := config.LoadConfig("")
+		require.NoError(t, err)
+		require.False(t, cfg.StreamEnable)
+		require.True(t, cfg.StreamRequireAuth)
+	})
+
+	t.Run("auth off on loopback allowed", func(t *testing.T) {
+		base(t)
+		t.Setenv("OPT_STREAM_ENABLE", "true")
+		t.Setenv("OPT_STREAM_REQUIRE_AUTH", "false")
+		t.Setenv("OPT_STREAM_ADDR", "127.0.0.1:9600")
+		t.Setenv("OPT_STREAM_GRPC_ADDR", "localhost:9601")
+		_, err := config.LoadConfig("")
+		require.NoError(t, err)
+	})
+
+	t.Run("auth off on exposed bind rejected", func(t *testing.T) {
+		base(t)
+		t.Setenv("OPT_STREAM_ENABLE", "true")
+		t.Setenv("OPT_STREAM_REQUIRE_AUTH", "false")
+		t.Setenv("OPT_STREAM_ADDR", "0.0.0.0:9600")
+		_, err := config.LoadConfig("")
+		require.ErrorContains(t, err, "stream_require_auth=true")
+	})
+
+	t.Run("stream_only without stream_enable rejected", func(t *testing.T) {
+		base(t)
+		t.Setenv("OPT_STREAM_ONLY", "true")
+		_, err := config.LoadConfig("")
+		require.ErrorContains(t, err, "stream_only requires stream_enable")
+	})
+
+	t.Run("stream_only with stream_enable allowed", func(t *testing.T) {
+		base(t)
+		t.Setenv("OPT_STREAM_ENABLE", "true")
+		t.Setenv("OPT_STREAM_ONLY", "true")
+		cfg, err := config.LoadConfig("")
+		require.NoError(t, err)
+		require.True(t, cfg.StreamOnly)
+	})
+}

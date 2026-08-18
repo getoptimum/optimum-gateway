@@ -17,6 +17,7 @@ linters:
     - unused
     - copyloopvar
     - errorlint
+    - modernize
     # Resource safety (stdlib-mandated)
     - bodyclose
     - sqlclosecheck

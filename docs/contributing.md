@@ -65,7 +65,15 @@ Before submitting, ensure:
 
 ## CI Checks
 
-All Pull Requests must pass our CI pipeline (Linting, Tests, Building) before they can be merged. If CI fails, please check the logs and fix the reported issues.
+All pull requests must pass CI before merge.
+
+**Pull requests from a fork** (the usual open-source flow):
+
+1. **Automatic:** secret scanning (TruffleHog) runs without maintainer action.
+2. **Skipped on fork `pull_request`:** lint, tests, and other jobs that need private `github.com/getoptimum/*` modules — GitHub does not pass repository secrets to fork PR workflows.
+3. **After maintainer review:** a team member adds the **`ok-to-test`** label, which triggers the **Fork CI (ok-to-test)** workflow (lint, tests, coverage) on the PR head commit. Pushing new commits requires re-applying the label.
+
+Run `make lint` and `make test` locally before opening a PR when you can.
 
 ## Questions?
 

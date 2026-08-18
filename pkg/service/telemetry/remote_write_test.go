@@ -96,14 +96,12 @@ func TestBuildMimirPromConfig(t *testing.T) {
 	t.Run("concurrent", func(t *testing.T) {
 		var wg sync.WaitGroup
 		for range 4 {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
+			wg.Go(func() {
 				for range 10 {
 					_, err := buildMimirPromConfig(cfg, mimirScrapeInterval)
 					require.NoError(t, err)
 				}
-			}()
+			})
 		}
 		wg.Wait()
 	})

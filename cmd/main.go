@@ -2,12 +2,17 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+
+	"google.golang.org/grpc"
 
 	commonio "github.com/getoptimum/optimum-common/pkg/io"
 	"github.com/getoptimum/optimum-common/pkg/logger"
@@ -16,6 +21,8 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/service/auth_token"
 	gateway "github.com/getoptimum/optimum-gateway/pkg/service/gossipsub-gateway"
 	"github.com/getoptimum/optimum-gateway/pkg/service/message_router"
+	"github.com/getoptimum/optimum-gateway/pkg/service/stream"
+	"github.com/getoptimum/optimum-gateway/pkg/service/streamhub"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
 	"github.com/getoptimum/optimum-gateway/pkg/utils"
 )
@@ -155,7 +162,35 @@ func main() {
 		}
 	}
 
-	srvGateway, err := gateway.NewService(ctx, l, appConf, srvMessageRouter, authMgr)
+	// Consumer block-stream (ADR-0011), opt-in and off by default. The hub must
+	// exist before the gateway so it can be wired as an emit sink; WS and gRPC
+	// share the one hub.
+	var streamServer *stream.Server
+	var streamGRPCServer *stream.GRPCServer
+	var hub *streamhub.Service
+	if appConf.StreamEnable {
+		hub = streamhub.New()
+		authenticator := stream.NewConsumerAuthenticator(authMgr, appConf.StreamRequireAuth)
+		// One limiter across both transports keeps the caps global, not
+		// per-transport; config validation guarantees the caps are > 0.
+		limiter := stream.NewConnLimiter(appConf.StreamMaxConns, appConf.StreamMaxConnsPerSub)
+		streamServer = stream.NewServer(hub, authenticator, stream.Config{
+			Addr:           appConf.StreamAddr,
+			MaxConns:       appConf.StreamMaxConns,
+			MaxConnsPerSub: appConf.StreamMaxConnsPerSub,
+			BufferSize:     appConf.StreamBufferSize,
+			Limiter:        limiter,
+		}, l)
+		streamGRPCServer = stream.NewGRPCServer(hub, authenticator, stream.Config{
+			Addr:           appConf.StreamGRPCAddr,
+			MaxConns:       appConf.StreamMaxConns,
+			MaxConnsPerSub: appConf.StreamMaxConnsPerSub,
+			BufferSize:     appConf.StreamBufferSize,
+			Limiter:        limiter,
+		}, l)
+	}
+
+	srvGateway, err := gateway.NewService(ctx, l, appConf, srvMessageRouter, authMgr, gateway.WithStreamHub(hub))
 	if err != nil {
 		l.Fatal("unable to initialize gossipsub gateway", err)
 	}
@@ -171,9 +206,33 @@ func main() {
 		}
 	}()
 
+	if streamServer != nil {
+		go func() {
+			if runErr := streamServer.Run(); runErr != nil && !errors.Is(runErr, http.ErrServerClosed) {
+				l.Fatal("failed to run consumer stream server", runErr)
+			}
+		}()
+	}
+
+	if streamGRPCServer != nil {
+		go func() {
+			if runErr := streamGRPCServer.Run(); runErr != nil && !errors.Is(runErr, grpc.ErrServerStopped) {
+				l.Fatal("failed to run consumer stream grpc server", runErr)
+			}
+		}()
+	}
+
 	<-c // This blocks the main thread until an interrupt is received
 	cancel()
 	_ = appRouter.Stop()
+	if streamServer != nil {
+		shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 5*time.Second)
+		_ = streamServer.Stop(shutdownCtx)
+		cancelShutdown()
+	}
+	if streamGRPCServer != nil {
+		streamGRPCServer.Stop()
+	}
 	srvGateway.Stop()
 	if lokiDone != nil {
 		<-lokiDone // wait for final Loki flush to complete

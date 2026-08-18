@@ -24,6 +24,7 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/service/bootstrapper"
 	"github.com/getoptimum/optimum-gateway/pkg/service/message_router"
 	"github.com/getoptimum/optimum-gateway/pkg/service/mum_p2p"
+	"github.com/getoptimum/optimum-gateway/pkg/service/streamhub"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry/tracer"
 )
 
@@ -76,6 +77,8 @@ type Service struct {
 
 	lastBlockReceivedAt atomic.Int64 // Unix ms — stamped on every beacon block from any source
 	startedAt           time.Time    // wall-clock time the service was created
+
+	streamHub *streamhub.Service // consumer block-stream fan-out (ADR-0011); nil disables it
 }
 
 // LastBlockReceivedMs returns Unix ms of the last beacon block seen (0 if none).
@@ -91,6 +94,14 @@ type Option func(*Service)
 func WithCustomMumP2PConnectionGater(gater connmgr.ConnectionGater) func(*Service) {
 	return func(s *Service) {
 		s.customMumP2PConnectionGater = gater
+	}
+}
+
+// WithStreamHub wires the consumer block-stream fan-out (ADR-0011); nil (the
+// default) leaves the stream off.
+func WithStreamHub(hub *streamhub.Service) Option {
+	return func(s *Service) {
+		s.streamHub = hub
 	}
 }
 
@@ -149,7 +160,10 @@ func (s *Service) GetForkDigestManager() *forks.Service {
 // subscribes local node to the topics defined in the configuration,
 // and establishes connections to mump2p nodes from the gateway hosts.
 func (s *Service) Run() error {
-	if err := s.setupLibP2PHost(); err != nil {
+	// Stream-only: skip the CL host and ingest. Blocks arrive from mump2p.
+	if s.cfg.StreamOnly {
+		s.log.Info("running in stream-only mode: CL host and CL ingest disabled")
+	} else if err := s.setupLibP2PHost(); err != nil {
 		return fmt.Errorf("unable to setup gateway host: %w", err)
 	}
 	// We use bootstrap node to get list of other gateways in network
@@ -158,7 +172,9 @@ func (s *Service) Run() error {
 	if err := s.setupMumP2PHost(); err != nil {
 		return fmt.Errorf("failed setup mump2p host: %w", err)
 	}
-	go s.handleMessagesFromCL()         // handle messages from CL clients and pass them to mump2p nodes
+	if !s.cfg.StreamOnly {
+		go s.handleMessagesFromCL() // handle messages from CL clients and pass them to mump2p nodes
+	}
 	go s.handleMessagesFromMumP2PNode() // handle messages from LOCAL mump2p node
 	return nil
 }
@@ -194,6 +210,9 @@ func (s *Service) terminateLibP2PHost() {
 }
 
 func (s *Service) GetHostInfo() peer.AddrInfo {
+	if s.hostLibP2P == nil { // stream-only mode runs without a CL host
+		return peer.AddrInfo{}
+	}
 	return peer.AddrInfo{
 		ID:    s.hostLibP2P.ID(),
 		Addrs: s.hostLibP2P.Addrs(),
@@ -206,6 +225,9 @@ func (s *Service) ConnectToPeer(ctx context.Context, peerAddr string) error {
 		return fmt.Errorf("failed to parse peer address %s: %w", peerAddr, err)
 	}
 
+	if s.hostLibP2P == nil { // stream-only: no CL host
+		return fmt.Errorf("no CL host")
+	}
 	if err = s.hostLibP2P.Connect(ctx, *addrInfo); err != nil {
 		return fmt.Errorf("failed to connect to peer %s: %w", addrInfo.ID, err)
 	}
