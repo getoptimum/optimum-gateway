@@ -17,6 +17,20 @@ const (
 	AuthMintResultNetworkError = "network_error" // POST failed before a status was read
 	AuthMintResultEmptyToken   = "empty_token"   // 2xx but body missing access_token
 	AuthMintResultVerifyFailed = "verify_failed" // minted token failed local JWKS verify
+	// AuthMintResultAssertionFailed is a local failure to sign the client assertion
+	// (enrollment mode only): the request never left the process.
+	AuthMintResultAssertionFailed = "assertion_failed"
+)
+
+// Result label values for auth_enrollment_total, the outcome of resolving this
+// gateway's own credential at boot. "reused" is the steady state after the first
+// successful enrollment; a fleet showing repeated "success" is losing its
+// credential directory and burning a join-key use on every restart.
+const (
+	EnrollmentResultSuccess = "success" // enrolled and persisted a new credential
+	EnrollmentResultReused  = "reused"  // loaded an existing credential from disk
+	EnrollmentResultInvalid = "invalid_enrollment"
+	EnrollmentResultFailed  = "failed" // network, server, or persistence failure
 )
 
 // Result label values for p2p_handshake_cluster_claim_total: the outcome of the
@@ -29,6 +43,7 @@ const (
 var (
 	authTokenMintTotal         *prometheus.CounterVec
 	authTokenExpiresAt         prometheus.Gauge
+	authEnrollmentTotal        *prometheus.CounterVec
 	handshakeClusterClaimTotal *prometheus.CounterVec
 )
 
@@ -45,6 +60,12 @@ func initAuthMetrics() {
 		subsystem,
 		"Unix timestamp at which the most recently minted gateway JWT expires (0 if never minted)",
 	)
+	authEnrollmentTotal = commonmetrics.NewCounterVec(
+		"auth_enrollment_total",
+		subsystem,
+		"Outcomes of resolving this gateway's own enrollment credential at startup",
+		[]string{"result"},
+	)
 	handshakeClusterClaimTotal = commonmetrics.NewCounterVec(
 		"p2p_handshake_cluster_claim_total",
 		subsystem,
@@ -56,6 +77,12 @@ func initAuthMetrics() {
 func IncAuthMintResult(result string) {
 	if enabledMetrics && authTokenMintTotal != nil {
 		authTokenMintTotal.WithLabelValues(result).Inc()
+	}
+}
+
+func IncEnrollmentResult(result string) {
+	if enabledMetrics && authEnrollmentTotal != nil {
+		authEnrollmentTotal.WithLabelValues(result).Inc()
 	}
 }
 

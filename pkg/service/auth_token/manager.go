@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"sync/atomic"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 	randutil "github.com/getoptimum/optimum-common/pkg/rand"
 	"github.com/getoptimum/optimum-common/pkg/syncx"
 	"github.com/getoptimum/optimum-gateway/pkg/config"
+	"github.com/getoptimum/optimum-gateway/pkg/service/enrollment"
 	"github.com/getoptimum/optimum-gateway/pkg/service/jwks_verifier"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
 	"github.com/getoptimum/optimum-gateway/pkg/utils"
@@ -29,6 +29,9 @@ var (
 
 const (
 	mintPath = "/api/v1/auth/token" // mintPath is appended to AppConfig.RemoteAuthURL to form the mint endpoint.
+	// clientAssertionType is the RFC 7523 grant identifier optimum-auth requires
+	// alongside a client_assertion; omitting it is a 400, not a 401.
+	clientAssertionType = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
 	// Upstream issues 6h JWTs; refreshing around the 3h mark leaves a 3h
 	// fence for transient auth-service outages while still hitting the
 	// auth service only ~8 times/day.
@@ -37,12 +40,17 @@ const (
 )
 
 type Service struct {
-	log         logger.AppLogger
-	apiKey      string
-	mintURL     string
-	mintPayload map[string]string
-	verifier    *jwks_verifier.Verifier
-	token       atomic.Pointer[string]
+	log     logger.AppLogger
+	apiKey  string
+	mintURL string
+	// peerID binds the minted token to this node's mumP2P identity (the cnf claim).
+	peerID string
+	// cred is set only in enrollment mode. When non-nil the mint payload is a fresh
+	// client assertion per call, so it cannot be precomputed the way apiKey was.
+	cred     *enrollment.Credential
+	mintAud  string
+	verifier *jwks_verifier.Verifier
+	token    atomic.Pointer[string]
 	// servicesToken is the aud=services token used to authenticate centralized
 	// HTTP/push calls (it carries operator_id). Empty when upstream auth predates
 	// the two-token split; callers fall back to the handshake token.
@@ -63,23 +71,27 @@ type mintResponse struct {
 	Error            string   `json:"error,omitempty"`
 }
 
-// New always returns a non-nil Manager. When auth is off (EnableAuth=false
-// or APIKey empty) the returned Manager has empty apiKey/mintURL/verifier
-// and every operation degrades to a no-op: Token returns ("", nil), Start
-// is a no-op, claim getters return zero values. Callers never need to
-// nil-check; use IsEnabled() where the disabled-vs-misconfigured
+// New always returns a non-nil Manager. When auth is off (EnableAuth=false, or
+// neither credential configured) the returned Manager has no credential, no
+// mintURL and no verifier, and every operation degrades to a no-op: Token returns
+// ("", nil), Start is a no-op, claim getters return zero values. Callers never
+// need to nil-check; use IsEnabled() where the disabled-vs-misconfigured
 // distinction matters (e.g. the router's token gate).
 //
 // Resolution:
 //
-//	EnableAuth=false                — LOCAL DEV ONLY; disabled Manager.
-//	EnableAuth=true + APIKey empty  — same: disabled Manager with an info log.
-//	EnableAuth=true + APIKey set    — full path: build JWKS verifier and
-//	                                  return a ready-to-mint Manager.
+//	EnableAuth=false                 : LOCAL DEV ONLY; disabled Manager.
+//	EnableAuth=true, no credential   : same, disabled Manager with an info log.
+//	EnableAuth=true + APIKey         : legacy symmetric grant, unchanged.
+//	EnableAuth=true + JoinKey        : self-enroll (once, then cached on disk) and
+//	                                   mint with an RFC 7523 client assertion.
 //
-// The JWKS verifier is constructed internally so the auth wiring sits in
-// one place; verifier construction can be a slow network call, so it's
-// skipped entirely when auth is off.
+// Config rejects both credentials being set, so the branch order here is not a
+// precedence rule.
+//
+// The JWKS verifier is constructed internally so the auth wiring sits in one
+// place; verifier construction can be a slow network call, so it's skipped
+// entirely when auth is off.
 func New(ctx context.Context, log logger.AppLogger, appCfg *config.AppConfig) (*Service, error) {
 	if log == nil {
 		return nil, errors.New("auth_token: log is required")
@@ -91,8 +103,8 @@ func New(ctx context.Context, log logger.AppLogger, appCfg *config.AppConfig) (*
 	case !appCfg.EnableAuth:
 		log.Info("OPT_ENABLE_AUTH=false — gateway JWT mint disabled; LOCAL DEV ONLY")
 		return NewDisabled(log), nil
-	case appCfg.APIKey == "":
-		log.Info("OPT_API_KEY not set — auth_token disabled")
+	case appCfg.APIKey == "" && appCfg.JoinKey == "":
+		log.Info("neither OPT_API_KEY nor OPT_JOIN_KEY set: auth_token disabled")
 		return NewDisabled(log), nil
 	}
 	if appCfg.RemoteAuthURL == "" {
@@ -111,15 +123,77 @@ func New(ctx context.Context, log logger.AppLogger, appCfg *config.AppConfig) (*
 		return nil, fmt.Errorf("auth_token: extract identity: %w", err)
 	}
 
-	return &Service{
+	// Audiences come from the auth ISSUER, not from the URL we post to. optimum-auth
+	// builds both from SIGNER_ISSUER, and the two differ whenever the Worker is
+	// reached somewhere other than its canonical host (a local wrangler dev, say).
+	// jwks_verifier pins the issuer to RemoteAuthURL, so derive it the same way.
+	issuer := enrollment.NormalizeIssuer(appCfg.RemoteAuthURL)
+
+	svc := &Service{
 		log:      log.With(logger.WithService("auth_token")),
 		apiKey:   appCfg.APIKey,
-		mintURL:  strings.TrimRight(appCfg.RemoteAuthURL, "/") + mintPath,
+		peerID:   identityKey.ID.String(),
+		mintURL:  issuer + mintPath,
+		mintAud:  issuer + enrollment.TokenPath,
 		verifier: verifier,
-		mintPayload: map[string]string{
-			"api_key": appCfg.APIKey,
-			"peer_id": identityKey.ID.String(),
-		},
+	}
+
+	if appCfg.JoinKey != "" {
+		cred, reused, enrollErr := enrollment.LoadOrEnroll(ctx, svc.log, &enrollment.Options{
+			Issuer:  issuer,
+			Dir:     appCfg.EnrollmentDir(),
+			JoinKey: appCfg.JoinKey,
+			PeerID:  svc.peerID,
+			// The console shows this to identify the host; ansible sets gateway_id to
+			// inventory_hostname. It is not yet the JWT sub at this point.
+			Label: appCfg.GatewayID,
+		})
+		if enrollErr != nil {
+			telemetry.IncEnrollmentResult(enrollmentResultFor(enrollErr))
+			return nil, fmt.Errorf("auth_token: enroll gateway: %w", enrollErr)
+		}
+		if reused {
+			telemetry.IncEnrollmentResult(telemetry.EnrollmentResultReused)
+		} else {
+			telemetry.IncEnrollmentResult(telemetry.EnrollmentResultSuccess)
+		}
+		svc.cred = cred
+	}
+
+	return svc, nil
+}
+
+// enrollmentResultFor maps an enrollment failure to a metric label. The endpoint
+// collapses every credential rejection to one 401, so invalid_enrollment is as
+// specific as this can get.
+func enrollmentResultFor(err error) string {
+	if errors.Is(err, enrollment.ErrInvalidEnrollment) {
+		return telemetry.EnrollmentResultInvalid
+	}
+	return telemetry.EnrollmentResultFailed
+}
+
+// buildMintPayload returns the body for one mint call.
+//
+// The legacy shape is a constant, but a client assertion has a 120s ceiling
+// upstream, so in enrollment mode it must be signed per call rather than cached.
+// peer_id is sent in the body for both grants and, in enrollment mode, also inside
+// the signature: optimum-auth prefers the signed copy and rejects a mismatch.
+func (m *Service) buildMintPayload() (map[string]string, error) {
+	if m.cred == nil {
+		return map[string]string{
+			"api_key": m.apiKey,
+			"peer_id": m.peerID,
+		}, nil
+	}
+	assertion, err := m.cred.SignAssertion(m.mintAud, m.peerID)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]string{
+		"client_assertion":      assertion,
+		"client_assertion_type": clientAssertionType,
+		"peer_id":               m.peerID,
 	}, nil
 }
 
@@ -138,7 +212,16 @@ func NewDisabled(log logger.AppLogger) *Service {
 // use this — most callers just call the regular methods, which degrade
 // gracefully on a disabled manager.
 func (m *Service) IsEnabled() bool {
-	return m.apiKey != ""
+	return m.apiKey != "" || m.cred != nil
+}
+
+// ClientID returns the enrolled credential's client_id, or "" on the legacy
+// api_key path and on a disabled Manager. Useful for operator-facing state.
+func (m *Service) ClientID() string {
+	if m.cred == nil {
+		return ""
+	}
+	return m.cred.ClientID
 }
 
 // Token returns the cached JWT, minting on first call. Returns ("", nil)
@@ -295,10 +378,15 @@ func (m *Service) VerifyStreamToken(rawJWT string) (*jwks_verifier.Claims, error
 // mint hits /auth/token, verifies the response locally, and atomically
 // swaps the cached token + claims + indexes.
 func (m *Service) mint(ctx context.Context) (string, error) {
+	payload, err := m.buildMintPayload()
+	if err != nil {
+		telemetry.IncAuthMintResult(telemetry.AuthMintResultAssertionFailed)
+		return "", fmt.Errorf("auth_token: build mint payload: %w", err)
+	}
 	parsed, statusCode, err := utils.RetryPostRequest[mintResponse](
 		ctx,
 		m.mintURL,
-		m.mintPayload,
+		payload,
 		nil,
 		http.StatusUnauthorized,
 		http.StatusForbidden,

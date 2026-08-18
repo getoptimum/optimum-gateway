@@ -19,6 +19,7 @@ import (
 
 	"github.com/getoptimum/optimum-common/pkg/identity"
 	"github.com/getoptimum/optimum-gateway/pkg/config"
+	"github.com/getoptimum/optimum-gateway/pkg/service/enrollment"
 	"github.com/getoptimum/optimum-gateway/pkg/service/jwks_verifier"
 )
 
@@ -39,6 +40,35 @@ type AuthTestRig struct {
 	// ResponseStatus / ResponseBody override the mint reply for error-path tests.
 	ResponseStatus int
 	ResponseBody   []byte
+
+	// EnrollCalls counts hits on /api/v1/gateways/enroll.
+	EnrollCalls atomic.Int32
+	// EnrollStatus / EnrollBody override the enroll reply for error-path tests.
+	EnrollStatus int
+	EnrollBody   []byte
+	// LastMintPayload is the decoded body of the most recent mint request, so tests
+	// can assert which grant the gateway used.
+	LastMintPayload map[string]string
+	// EnrolledJWK is the public key the gateway registered, kept so a test can
+	// verify the client assertion the way optimum-auth would.
+	EnrolledJWK enrollment.PublicJWK
+}
+
+// ServerURL is the stub auth service's base URL, which doubles as its issuer.
+func (r *AuthTestRig) ServerURL() string { return r.server.URL }
+
+// PublicKeyFromJWK rebuilds a P-256 public key from its JWK, the verification side
+// of what a gateway submits at enrollment. ParseUncompressedPublicKey also checks
+// the point is on the curve, as optimum-auth's importJWK does.
+func PublicKeyFromJWK(t *testing.T, j enrollment.PublicJWK) *ecdsa.PublicKey {
+	t.Helper()
+	x, err := base64.RawURLEncoding.DecodeString(j.X)
+	require.NoError(t, err)
+	y, err := base64.RawURLEncoding.DecodeString(j.Y)
+	require.NoError(t, err)
+	pub, err := ecdsa.ParseUncompressedPublicKey(elliptic.P256(), append([]byte{4}, append(x, y...)...))
+	require.NoError(t, err)
+	return pub
 }
 
 // AppCfg returns a minimal AppConfig the Manager will accept (auth enabled,
@@ -139,8 +169,10 @@ func NewAuthTestRig(t *testing.T, opts ...Option) *AuthTestRig {
 			"kid": "test-key",
 			"alg": "ES256",
 			"use": "sig",
-			"x":   base64.RawURLEncoding.EncodeToString(privateKey.X.Bytes()),
-			"y":   base64.RawURLEncoding.EncodeToString(privateKey.Y.Bytes()),
+			// Fixed-width: big.Int.Bytes() drops leading zero bytes, which yields a
+			// short coordinate and an invalid JWK for roughly 1 key in 256.
+			"x": base64.RawURLEncoding.EncodeToString(privateKey.X.FillBytes(make([]byte, 32))),
+			"y": base64.RawURLEncoding.EncodeToString(privateKey.Y.FillBytes(make([]byte, 32))),
 		}},
 	})
 	require.NoError(t, err)
@@ -154,6 +186,7 @@ func NewAuthTestRig(t *testing.T, opts ...Option) *AuthTestRig {
 		require.NoError(t, errR)
 		var payload map[string]string
 		require.NoError(t, json.Unmarshal(payloadBytes, &payload))
+		rig.LastMintPayload = payload
 
 		if rig.ResponseStatus != 0 || rig.ResponseBody != nil {
 			status := rig.ResponseStatus
@@ -199,6 +232,48 @@ func NewAuthTestRig(t *testing.T, opts ...Option) *AuthTestRig {
 			"expires_in":        3600,
 			"operator_id":       rig.OperatorID,
 			"validator_indexes": rig.ValidatorIndexes,
+		})
+	})
+	mux.HandleFunc(enrollment.EnrollPath, func(w http.ResponseWriter, req *http.Request) {
+		rig.EnrollCalls.Add(1)
+		body, errR := io.ReadAll(req.Body)
+		require.NoError(t, errR)
+		var er struct {
+			JoinToken       string               `json:"join_token"`
+			PublicJWK       enrollment.PublicJWK `json:"public_jwk"`
+			EnrollAssertion string               `json:"enroll_assertion"`
+			PeerID          string               `json:"peer_id"`
+			Label           string               `json:"label"`
+		}
+		require.NoError(t, json.Unmarshal(body, &er))
+		rig.EnrolledJWK = er.PublicJWK
+
+		if rig.EnrollStatus != 0 {
+			w.WriteHeader(rig.EnrollStatus)
+			if rig.EnrollBody != nil {
+				_, _ = w.Write(rig.EnrollBody)
+			}
+			return
+		}
+
+		// Proof-of-possession against the SUBMITTED key, bound to this endpoint and
+		// to the key's own thumbprint, as optimum-auth does before any DB work.
+		thumb, errT := er.PublicJWK.Thumbprint()
+		require.NoError(t, errT)
+		claims := jwt.MapClaims{}
+		_, errV := jwt.ParseWithClaims(er.EnrollAssertion, claims,
+			func(*jwt.Token) (any, error) { return PublicKeyFromJWK(t, er.PublicJWK), nil },
+			jwt.WithValidMethods([]string{"ES256"}),
+			jwt.WithAudience(rig.server.URL+enrollment.EnrollPath),
+		)
+		require.NoError(t, errV, "enroll proof-of-possession must verify")
+		require.Equal(t, thumb, claims["sub"])
+		require.Equal(t, thumb, claims["iss"])
+
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"client_id": "ag_test",
+			"type":      "partner",
+			"chain_id":  "hoodi",
 		})
 	})
 	rig.server = httptest.NewServer(mux)

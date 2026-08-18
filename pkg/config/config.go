@@ -64,8 +64,20 @@ type AppConfig struct {
 	//
 	// Auth service that mints gateway JWTs (POST {url}/api/v1/auth/token) and
 	// hosts the JWKS used to verify peer JWTs (GET {issuer}/.well-known/jwks.json).
-	RemoteAuthURL          string `yaml:"remote_auth_url"    env:"OPT_REMOTE_AUTH_URL"    default:"https://auth.getoptimum.io"`
-	APIKey                 string `yaml:"api_key"            env:"OPT_API_KEY"            default:""`
+	RemoteAuthURL string `yaml:"remote_auth_url"    env:"OPT_REMOTE_AUTH_URL"    default:"https://auth.getoptimum.io"`
+	APIKey        string `yaml:"api_key"            env:"OPT_API_KEY"            default:""`
+	// JoinKey is the org-wide ojk_ enrollment credential. When set, the gateway
+	// generates its own keypair, registers it once at /api/v1/gateways/enroll, and
+	// mints with a client assertion thereafter, so there is no per-host secret to
+	// distribute.
+	// Mutually exclusive with APIKey; setting both is a config error rather than a
+	// silent precedence rule, so a half-migrated host fails loudly.
+	JoinKey string `yaml:"join_key" env:"OPT_JOIN_KEY" default:""`
+	// EnrollCredDir holds the enrollment credential (keypair + client_id). Empty
+	// means IdentityMumP2PDir, which is already a persistent mount and already
+	// holds the peer identity the credential is bound to. Losing this directory
+	// means a new keypair, a new enrollment, and a burnt join-key use.
+	EnrollCredDir          string `yaml:"enroll_cred_dir" env:"OPT_ENROLL_CRED_DIR" default:""`
 	JWKSCachePath          string `yaml:"jwks_cache_path"            env:"OPT_JWKS_CACHE_PATH"            default:"/gateway/cache/jwks.json"`
 	JWKSRefreshIntervalSec int    `yaml:"jwks_refresh_interval_sec"  env:"OPT_JWKS_REFRESH_INTERVAL_SEC"  default:"3600"`
 	// GatewayID is JWT-sourced in production — InitRuntime overwrites this
@@ -235,6 +247,15 @@ func (c *AppConfig) effectiveAggregationIntervalMs() int64 {
 	return c.AggregationIntervalMs
 }
 
+// EnrollmentDir resolves where the enrollment credential lives, defaulting to the
+// mumP2P identity directory the credential's peer_id comes from.
+func (c *AppConfig) EnrollmentDir() string {
+	if c.EnrollCredDir != "" {
+		return c.EnrollCredDir
+	}
+	return c.IdentityMumP2PDir
+}
+
 // Validate ensures the AppConfig has valid and complete values
 func (c *AppConfig) Validate() error {
 	if c.IdentityLibP2PDir == "" {
@@ -271,6 +292,14 @@ func (c *AppConfig) Validate() error {
 	}
 	if c.GatewayClusterID == "" {
 		return fmt.Errorf("OPT_GATEWAY_CLUSTER_ID is required")
+	}
+	if c.APIKey != "" && c.JoinKey != "" {
+		return fmt.Errorf("api_key and join_key are mutually exclusive: set one (join_key self-enrolls, api_key is the legacy per-host secret)")
+	}
+	if c.JoinKey != "" {
+		if err := os.MkdirAll(c.EnrollmentDir(), 0o750); err != nil {
+			return fmt.Errorf("failed to create enrollment credential directory %s: %w", c.EnrollmentDir(), err)
+		}
 	}
 
 	if c.StreamEnable {
