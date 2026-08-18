@@ -52,6 +52,8 @@ type AuthTestRig struct {
 	// EnrolledJWK is the public key the gateway registered, kept so a test can
 	// verify the client assertion the way optimum-auth would.
 	EnrolledJWK enrollment.PublicJWK
+	// EnrolledLabel is the label sent at enrollment.
+	EnrolledLabel string
 }
 
 // ServerURL is the stub auth service's base URL, which doubles as its issuer.
@@ -247,6 +249,7 @@ func NewAuthTestRig(t *testing.T, opts ...Option) *AuthTestRig {
 		}
 		require.NoError(t, json.Unmarshal(body, &er))
 		rig.EnrolledJWK = er.PublicJWK
+		rig.EnrolledLabel = er.Label
 
 		if rig.EnrollStatus != 0 {
 			w.WriteHeader(rig.EnrollStatus)

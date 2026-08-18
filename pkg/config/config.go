@@ -247,6 +247,26 @@ func (c *AppConfig) effectiveAggregationIntervalMs() int64 {
 	return c.AggregationIntervalMs
 }
 
+// DefaultGatewayID mirrors the struct tag default above. It is a placeholder, not
+// an identity: every unconfigured node carries the same value.
+const DefaultGatewayID = "dev-gateway"
+
+// EnrollmentLabel is the label to record against an enrolled credential, empty
+// when GatewayID is still the placeholder.
+//
+// The label is not cosmetic at enrollment: it lands in a per-org unique index over
+// live credentials (gateway_api_keys_operator_label_live_uidx, on (operator_id,
+// label) where the label is non-empty), so two gateways sharing one would make the
+// second enrollment fail. Empty labels are excluded from that index, which is what
+// makes "one join key, many gateways" work by default. Ansible sets gateway_id to
+// inventory_hostname, so real deployments get a useful, unique label.
+func (c *AppConfig) EnrollmentLabel() string {
+	if c.GatewayID == DefaultGatewayID {
+		return ""
+	}
+	return c.GatewayID
+}
+
 // EnrollmentDir resolves where the enrollment credential lives, defaulting to the
 // mumP2P identity directory the credential's peer_id comes from.
 func (c *AppConfig) EnrollmentDir() string {

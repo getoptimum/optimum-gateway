@@ -93,6 +93,30 @@ func TestEnrollmentGrant_SignsAFreshAssertionPerMint(t *testing.T) {
 	require.LessOrEqual(t, exp-iat, int64(120), "optimum-auth rejects a longer-lived assertion")
 }
 
+// The enrollment label is unique per org among live credentials, so sending the
+// placeholder gateway_id from every unconfigured node would fail the second
+// gateway's enrollment with a constraint violation the endpoint reports as an
+// opaque "invalid join key".
+func TestEnrollmentGrant_OmitsThePlaceholderLabel(t *testing.T) {
+	rig := test_utils.NewAuthTestRig(t)
+	cfg := joinKeyCfg(t, rig, t.TempDir())
+	cfg.GatewayID = config.DefaultGatewayID
+
+	_, err := auth_token.New(t.Context(), logger.NewAppSLogger(logger.Debug), cfg)
+	require.NoError(t, err)
+	require.Empty(t, rig.EnrolledLabel, "an unconfigured node must not claim a shared label")
+}
+
+func TestEnrollmentGrant_SendsAConfiguredLabel(t *testing.T) {
+	rig := test_utils.NewAuthTestRig(t)
+	cfg := joinKeyCfg(t, rig, t.TempDir())
+	cfg.GatewayID = "optimum-dev-hoodi-spot-us-central-hermes-2"
+
+	_, err := auth_token.New(t.Context(), logger.NewAppSLogger(logger.Debug), cfg)
+	require.NoError(t, err)
+	require.Equal(t, "optimum-dev-hoodi-spot-us-central-hermes-2", rig.EnrolledLabel)
+}
+
 func TestEnrollmentGrant_ReusesCredentialAcrossRestarts(t *testing.T) {
 	rig := test_utils.NewAuthTestRig(t)
 	dir := t.TempDir()

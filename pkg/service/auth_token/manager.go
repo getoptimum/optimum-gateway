@@ -144,9 +144,10 @@ func New(ctx context.Context, log logger.AppLogger, appCfg *config.AppConfig) (*
 			Dir:     appCfg.EnrollmentDir(),
 			JoinKey: appCfg.JoinKey,
 			PeerID:  svc.peerID,
-			// The console shows this to identify the host; ansible sets gateway_id to
-			// inventory_hostname. It is not yet the JWT sub at this point.
-			Label: appCfg.GatewayID,
+			// Identifies the host in the console. Empty when gateway_id is still the
+			// placeholder: the label is unique per org among live credentials, so a
+			// shared default would fail the second gateway's enrollment.
+			Label: appCfg.EnrollmentLabel(),
 		})
 		if enrollErr != nil {
 			telemetry.IncEnrollmentResult(enrollmentResultFor(enrollErr))
