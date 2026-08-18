@@ -96,7 +96,7 @@ func (s *Service) ShouldForwardMessageToMumP2P(l logger.AppLogger, kind topics.T
 		}
 		return false
 	}
-	telemetry.IncAttestationForwarded()
+	telemetry.IncAttestationForwarded(entities.SourceMumP2P)
 	return true
 }
 
