@@ -430,3 +430,21 @@ func TestEnrollRequiresJoinKeyAndIssuer(t *testing.T) {
 	_, err = enrollment.Enroll(t.Context(), testLogger(), &enrollment.Options{Dir: t.TempDir(), JoinKey: "ojk_x"})
 	require.Error(t, err)
 }
+
+// The credential is bound to the peer it enrolled with. A regenerated identity
+// under a surviving credential otherwise 401s at every mint with no local signal.
+func TestLoadOrEnrollRejectsAChangedPeerIdentity(t *testing.T) {
+	auth := newStubAuth(t)
+	dir := t.TempDir()
+	opts := &enrollment.Options{Issuer: auth.server.URL, Dir: dir, JoinKey: testJoinKey, PeerID: "12D3KooWfirst"}
+
+	_, _, err := enrollment.LoadOrEnroll(t.Context(), testLogger(), opts)
+	require.NoError(t, err)
+
+	moved := *opts
+	moved.PeerID = "12D3KooWsecond"
+	_, _, err = enrollment.LoadOrEnroll(t.Context(), testLogger(), &moved)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "mumP2P identity changed")
+	require.EqualValues(t, 1, auth.calls.Load(), "must not silently re-enroll")
+}

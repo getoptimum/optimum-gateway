@@ -55,13 +55,34 @@ type AuthTestRig struct {
 	EnrolledJWK enrollment.PublicJWK
 	// EnrolledLabel is the label sent at enrollment.
 	EnrolledLabel string
-	// mu guards the three fields above, which handler goroutines write and the test
-	// goroutine reads.
+	// mu guards LastMintPayload, EnrolledJWK and EnrolledLabel, which handler
+	// goroutines write. Read them through the accessors, not directly.
 	mu sync.Mutex
 }
 
 // ServerURL is the stub auth service's base URL, which doubles as its issuer.
 func (r *AuthTestRig) ServerURL() string { return r.server.URL }
+
+// MintPayload returns the most recent mint request body.
+func (r *AuthTestRig) MintPayload() map[string]string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.LastMintPayload
+}
+
+// EnrolledKey returns the public key registered at enrollment.
+func (r *AuthTestRig) EnrolledKey() enrollment.PublicJWK {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.EnrolledJWK
+}
+
+// EnrolledLabelValue returns the label sent at enrollment.
+func (r *AuthTestRig) EnrolledLabelValue() string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.EnrolledLabel
+}
 
 // PublicKeyFromJWK rebuilds a P-256 public key from its JWK, the verification side
 // of what a gateway submits at enrollment. ParseUncompressedPublicKey also checks

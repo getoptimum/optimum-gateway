@@ -45,8 +45,7 @@ type Service struct {
 	mintURL string
 	// peerID binds the minted token to this node's mumP2P identity (the cnf claim).
 	peerID string
-	// cred is set only in enrollment mode. When non-nil the mint payload is a fresh
-	// client assertion per call, so it cannot be precomputed the way apiKey was.
+	// cred is set only in enrollment mode.
 	cred     *enrollment.Credential
 	mintAud  string
 	verifier *jwks_verifier.Verifier
@@ -58,7 +57,10 @@ type Service struct {
 	claims         atomic.Pointer[jwks_verifier.Claims]
 	servicesClaims atomic.Pointer[jwks_verifier.Claims]
 	operatorID     atomic.Pointer[string]
-	indexes        syncx.RWSlice[uint64]
+	// enrollResult is replayed by RefreshAuthMetrics: New runs before
+	// telemetry.InitMetrics, so incrementing at enrollment time is dropped.
+	enrollResult string
+	indexes      syncx.RWSlice[uint64]
 }
 
 type mintResponse struct {
@@ -123,10 +125,7 @@ func New(ctx context.Context, log logger.AppLogger, appCfg *config.AppConfig) (*
 		return nil, fmt.Errorf("auth_token: extract identity: %w", err)
 	}
 
-	// Audiences come from the auth ISSUER, not from the URL we post to. optimum-auth
-	// builds both from SIGNER_ISSUER, and the two differ whenever the Worker is
-	// reached somewhere other than its canonical host (a local wrangler dev, say).
-	// jwks_verifier pins the issuer to RemoteAuthURL, so derive it the same way.
+	// Audiences derive from the issuer, not the URL we post to; see enrollment.EnrollPath.
 	issuer := enrollment.NormalizeIssuer(appCfg.RemoteAuthURL)
 
 	svc := &Service{
@@ -144,19 +143,15 @@ func New(ctx context.Context, log logger.AppLogger, appCfg *config.AppConfig) (*
 			Dir:     appCfg.EnrollmentDir(),
 			JoinKey: appCfg.JoinKey,
 			PeerID:  svc.peerID,
-			// Identifies the host in the console. Empty when gateway_id is still the
-			// placeholder: the label is unique per org among live credentials, so a
-			// shared default would fail the second gateway's enrollment.
-			Label: appCfg.EnrollmentLabel(),
+			Label:   appCfg.EnrollmentLabel(),
 		})
 		if enrollErr != nil {
 			telemetry.IncEnrollmentResult(enrollmentResultFor(enrollErr))
 			return nil, fmt.Errorf("auth_token: enroll gateway: %w", enrollErr)
 		}
+		svc.enrollResult = telemetry.EnrollmentResultSuccess
 		if reused {
-			telemetry.IncEnrollmentResult(telemetry.EnrollmentResultReused)
-		} else {
-			telemetry.IncEnrollmentResult(telemetry.EnrollmentResultSuccess)
+			svc.enrollResult = telemetry.EnrollmentResultReused
 		}
 		svc.cred = cred
 	}
@@ -164,9 +159,7 @@ func New(ctx context.Context, log logger.AppLogger, appCfg *config.AppConfig) (*
 	return svc, nil
 }
 
-// enrollmentResultFor maps an enrollment failure to a metric label. The endpoint
-// collapses every credential rejection to one 401, so invalid_enrollment is as
-// specific as this can get.
+// enrollmentResultFor maps an enrollment failure to a metric label.
 func enrollmentResultFor(err error) string {
 	if errors.Is(err, enrollment.ErrInvalidEnrollment) {
 		return telemetry.EnrollmentResultInvalid
@@ -174,12 +167,9 @@ func enrollmentResultFor(err error) string {
 	return telemetry.EnrollmentResultFailed
 }
 
-// buildMintPayload returns the body for one mint call.
-//
-// The legacy shape is a constant, but a client assertion has a 120s ceiling
-// upstream, so in enrollment mode it must be signed per call rather than cached.
-// peer_id is sent in the body for both grants and, in enrollment mode, also inside
-// the signature: optimum-auth prefers the signed copy and rejects a mismatch.
+// buildMintPayload returns the body for one mint call. The assertion is signed per
+// call: it has a 120s ceiling upstream. peer_id also rides inside the signature,
+// which optimum-auth prefers over the body.
 func (m *Service) buildMintPayload() (map[string]string, error) {
 	if m.cred == nil {
 		return map[string]string{
@@ -217,7 +207,7 @@ func (m *Service) IsEnabled() bool {
 }
 
 // ClientID returns the enrolled credential's client_id, or "" on the legacy
-// api_key path and on a disabled Manager. Useful for operator-facing state.
+// api_key path and on a disabled Manager.
 func (m *Service) ClientID() string {
 	if m.cred == nil {
 		return ""
@@ -384,6 +374,11 @@ func (m *Service) mint(ctx context.Context) (string, error) {
 		telemetry.IncAuthMintResult(telemetry.AuthMintResultAssertionFailed)
 		return "", fmt.Errorf("auth_token: build mint payload: %w", err)
 	}
+	if m.cred != nil {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, enrollment.AssertionValidityBudget)
+		defer cancel()
+	}
 	parsed, statusCode, err := utils.RetryPostRequest[mintResponse](
 		ctx,
 		m.mintURL,
@@ -472,37 +467,50 @@ func (m *Service) mint(ctx context.Context) (string, error) {
 // range spreads a fleet's mint requests so billing doesn't see synchronized
 // spikes.
 func (m *Service) refreshLoop(ctx context.Context) {
+	backoff := time.Duration(0)
 	for {
-		sleepSec, _ := randutil.RandBetween(refreshIntervalMinSec, refreshIntervalMaxSec)
-		time.Sleep(time.Duration(sleepSec) * time.Second)
+		if backoff > 0 {
+			time.Sleep(backoff)
+		} else {
+			sleepSec, _ := randutil.RandBetween(refreshIntervalMinSec, refreshIntervalMaxSec)
+			time.Sleep(time.Duration(sleepSec) * time.Second)
+		}
 		if _, err := m.mint(ctx); err != nil {
 			if m.MintErrorIsTerminal(err) {
-				m.log.Error("api key terminal failure, refresh loop exiting", err)
+				m.log.Error("credential terminal failure, refresh loop exiting", err)
 				return
 			}
-			m.log.Error("auth refresh failed; will retry next tick", err)
+			// Retry sooner than the next full interval: another 3h sleep can land
+			// after the cached 6h token has already expired, and the gateway would
+			// serve a dead JWT in the meantime.
+			backoff = NextRetryBackoff(backoff)
+			m.log.Error("auth refresh failed; retrying sooner", err)
+			continue
 		}
+		backoff = 0
 	}
 }
 
-// MintErrorIsTerminal reports whether a mint failure means the refresh loop should
-// give up rather than retry on the next tick.
-//
-// A 401 is terminal only for a shared secret, where it means the key hash is
-// unknown or revoked and no amount of retrying changes that. On the assertion path
-// optimum-auth returns the same opaque 401 for every verification failure,
-// including an assertion that expired in flight, so treating it as terminal would
-// let one NTP slip or one stalled request retire the node: it would serve its
-// cached token until expiry and then fail every handshake, with no further mint
-// attempt short of a restart. Each mint signs a fresh assertion, so a transient
-// cause self-heals on the next tick.
-func (m *Service) MintErrorIsTerminal(err error) bool {
-	if m.cred != nil {
-		return false
+// NextRetryBackoff doubles from 1m to a 30m ceiling, so a transient outage costs
+// minutes rather than a whole refresh interval.
+func NextRetryBackoff(current time.Duration) time.Duration {
+	if current == 0 {
+		return time.Minute
 	}
-	return errors.Is(err, ErrUnknownKey) ||
-		errors.Is(err, ErrKeyRevoked) ||
-		errors.Is(err, ErrKeySuspended)
+	return min(current*2, 30*time.Minute)
+}
+
+// MintErrorIsTerminal reports whether a mint failure should stop the refresh loop.
+//
+// A 403 names the credential as revoked or suspended, which is unambiguous on both
+// grants. A 401 is opaque: for a shared secret it means the key is dead, but on the
+// assertion path it is also every verification failure, including one that expired
+// in flight, so retiring the node on it would let a clock slip cost a restart.
+func (m *Service) MintErrorIsTerminal(err error) bool {
+	if errors.Is(err, ErrKeyRevoked) || errors.Is(err, ErrKeySuspended) {
+		return true
+	}
+	return m.cred == nil && errors.Is(err, ErrUnknownKey)
 }
 
 func (m *Service) recordSuccessfulMintMetrics(claims *jwks_verifier.Claims) {
@@ -520,6 +528,9 @@ func (m *Service) recordSuccessfulMintMetrics(claims *jwks_verifier.Claims) {
 func (m *Service) RefreshAuthMetrics() {
 	if !m.IsEnabled() {
 		return
+	}
+	if m.enrollResult != "" {
+		telemetry.IncEnrollmentResult(m.enrollResult)
 	}
 	m.recordSuccessfulMintMetrics(m.OwnClaims())
 }

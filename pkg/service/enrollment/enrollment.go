@@ -40,8 +40,7 @@ import (
 )
 
 const (
-	// CredentialFile lives next to the mumP2P identity by default: the credential
-	// is bound to that peer ID, and the directory is already a persistent mount.
+	// CredentialFile is the credential's name inside the enrollment directory.
 	CredentialFile = "enrollment.json"
 
 	// EnrollPath and TokenPath are appended to the auth ISSUER (not the request
@@ -55,12 +54,9 @@ const (
 	// to ~119s slow still verifies; a fast clock is not bounded server-side.
 	assertionLifetime = 60 * time.Second
 
-	// assertionValidityBudget caps a whole request-plus-retries sequence so every
-	// attempt reuses an assertion that is still valid. optimum-common's HTTP client
-	// has no timeout of its own, so without this one stalled attempt would push the
-	// later retries past assertionLifetime and turn a network problem into what looks
-	// like a rejected credential.
-	assertionValidityBudget = 30 * time.Second
+	// AssertionValidityBudget caps a request-plus-retries sequence inside
+	// assertionLifetime; the shared HTTP client has no timeout of its own.
+	AssertionValidityBudget = 30 * time.Second
 )
 
 // ErrInvalidEnrollment is the single failure the enroll endpoint reports. Unknown,
@@ -82,14 +78,14 @@ type PublicJWK struct {
 	Y   string `json:"y"`
 }
 
-// Credential is the durable result of enrolling: the keypair we generated plus the
-// client_id optimum-auth issued for it. Persisted as JSON; the private key never
-// leaves the host.
+// Credential is the durable result of enrolling: our keypair plus the client_id
+// optimum-auth issued for it. The private key never leaves the host.
 type Credential struct {
 	ClientID   string    `json:"client_id"`
 	Type       string    `json:"type"`
 	ChainID    string    `json:"chain_id"`
 	Thumbprint string    `json:"thumbprint"`
+	PeerID     string    `json:"peer_id,omitempty"`
 	PrivateKey []byte    `json:"private_key_pkcs8"`
 	EnrolledAt time.Time `json:"enrolled_at"`
 
@@ -102,8 +98,7 @@ type Options struct {
 	// audiences are built from it, NOT from the URL we post to: the two differ
 	// whenever the worker runs somewhere other than its canonical host.
 	Issuer string
-	// Dir holds enrollment.json.
-	Dir string
+	Dir    string
 	// JoinKey is the raw ojk_ credential. Only needed to enroll.
 	JoinKey string
 	// PeerID is recorded on the enrollment audit row.
@@ -116,16 +111,11 @@ type Options struct {
 // identical to jwks_verifier's issuer handling so both derive the same value.
 func NormalizeIssuer(raw string) string { return strings.TrimRight(raw, "/") }
 
-// coordLen is the fixed width of a P-256 coordinate, and the reason the SEC 1
-// encoding is used below rather than the big.Int coordinates.
 const coordLen = 32
 
-// jwkFromPublic builds the canonical JWK for an in-memory public key.
-//
-// Coordinates come from the SEC 1 uncompressed point (0x04 || X || Y), which is
-// fixed-width by construction. The big.Int coordinates would not be: X.Bytes()
-// drops leading zero bytes and yields a base64url string shorter than the 43
-// characters optimum-auth requires, so roughly one key in 256 would be rejected.
+// jwkFromPublic builds the canonical JWK. Coordinates come from the SEC 1
+// uncompressed point because it is fixed-width; the big.Int coordinates are not,
+// and a short one is rejected outright (see TestCoordinatesAreFixedWidth).
 func jwkFromPublic(pub *ecdsa.PublicKey) (PublicJWK, error) {
 	raw, err := pub.Bytes()
 	if err != nil {
@@ -182,10 +172,9 @@ func (c *Credential) ensureKey() error {
 	return nil
 }
 
-// SignAssertion produces an RFC 7523 client assertion for aud, issued as the
-// credential's client_id. peerID travels inside the signature when set: optimum-auth
-// prefers the signed value over the request body and rejects a mismatch, so binding
-// it here is what stops a captured assertion being replayed for another peer.
+// SignAssertion produces an RFC 7523 client assertion for aud. peerID travels
+// inside the signature: optimum-auth prefers the signed value and rejects a
+// mismatch, which is what stops a replay for another peer.
 func (c *Credential) SignAssertion(aud, peerID string) (string, error) {
 	if err := c.ensureKey(); err != nil {
 		return "", err
@@ -231,6 +220,9 @@ type enrollResponse struct {
 	Error    string `json:"error"`
 }
 
+// terminalEnrollStatuses will not become valid on retry.
+var terminalEnrollStatuses = []int{http.StatusBadRequest, http.StatusUnauthorized}
+
 func credentialPath(dir string) string { return filepath.Join(dir, CredentialFile) }
 
 // ensureWritable verifies the credential directory can actually be written to.
@@ -249,15 +241,11 @@ func ensureWritable(dir string) error {
 	return os.Remove(name)
 }
 
-// Load reads a previously persisted credential. A missing file is os.ErrNotExist,
-// which LoadOrEnroll treats as "enroll now"; any other error is surfaced rather
-// than silently re-enrolling, because re-enrolling burns a join-key use and leaves
-// an orphaned credential behind.
+// Load reads a persisted credential. A missing file is os.ErrNotExist; any other
+// error is surfaced rather than silently re-enrolling.
 func Load(dir string) (*Credential, error) {
 	raw, err := optio.LoadFromFile(credentialPath(dir))
 	if err != nil {
-		// os.ErrNotExist must stay unwrapped-comparable for LoadOrEnroll; anything
-		// else is a damaged file and the operator needs to know which one.
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, err
 		}
@@ -289,17 +277,13 @@ func Load(dir string) (*Credential, error) {
 	return &c, nil
 }
 
-// Save persists a credential. AtomicallySaveToFile writes through a temp file
-// created at 0600 and prefixes a CRC64 checksum, so permissions and torn-write
-// detection come from the same helper the node identity uses.
+// Save persists a credential at 0600 with a CRC64 checksum, via the same helper
+// the node identity uses.
 func Save(dir string, c *Credential) error {
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return fmt.Errorf("enrollment: create %s: %w", dir, err)
 	}
-	// G117 flags the private key field by name. Persisting it is the point: the
-	// gateway must prove possession of this key on every mint, and it is written
-	// through AtomicallySaveToFile at 0600.
-	raw, err := json.Marshal(c) //nolint:gosec // private key persistence is intentional
+	raw, err := json.Marshal(c) //nolint:gosec // persisting the private key is the point
 	if err != nil {
 		return fmt.Errorf("enrollment: marshal credential: %w", err)
 	}
@@ -323,10 +307,6 @@ func Enroll(ctx context.Context, log logger.AppLogger, opts *Options) (*Credenti
 		return nil, errors.New("enrollment: issuer is required")
 	}
 
-	// Check we can persist BEFORE asking the server for a credential. Enrolling and
-	// then failing to write leaves a live credential upstream that this node can
-	// never present, and a crashlooping container repeats it every restart, draining
-	// the join key's uses and filling the per-org credential cap.
 	if err := ensureWritable(opts.Dir); err != nil {
 		return nil, err
 	}
@@ -355,10 +335,7 @@ func Enroll(ctx context.Context, log logger.AppLogger, opts *Options) (*Credenti
 		return nil, err
 	}
 
-	// 400 and 401 are terminal: a malformed request or a rejected join credential
-	// will not become valid on retry, and retrying a rejected join key just burns
-	// rate budget against an endpoint that is deliberately opaque about why.
-	ctx, cancel := context.WithTimeout(ctx, assertionValidityBudget)
+	ctx, cancel := context.WithTimeout(ctx, AssertionValidityBudget)
 	defer cancel()
 
 	parsed, status, err := utils.RetryPostRequest[enrollResponse](
@@ -372,8 +349,7 @@ func Enroll(ctx context.Context, log logger.AppLogger, opts *Options) (*Credenti
 			Label:           opts.Label,
 		},
 		nil,
-		http.StatusBadRequest,
-		http.StatusUnauthorized,
+		terminalEnrollStatuses...,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("enrollment: POST enroll: %w", err)
@@ -399,14 +375,12 @@ func Enroll(ctx context.Context, log logger.AppLogger, opts *Options) (*Credenti
 		Type:       parsed.Type,
 		ChainID:    parsed.ChainID,
 		Thumbprint: thumbprint,
+		PeerID:     opts.PeerID,
 		PrivateKey: pkcs8,
 		EnrolledAt: time.Now().UTC(),
 		key:        key,
 	}
 	if err := Save(opts.Dir, cred); err != nil {
-		// The credential exists upstream but we cannot prove ownership of it after a
-		// restart, and the next boot would enroll again under a new keypair. Fail
-		// loudly rather than run on a credential we are about to lose.
 		return nil, err
 	}
 
@@ -421,20 +395,22 @@ func Enroll(ctx context.Context, log logger.AppLogger, opts *Options) (*Credenti
 }
 
 // LoadOrEnroll returns the persisted credential when one exists, enrolling only on
-// a genuine miss. reused reports which happened, so callers can tell a first boot
-// from a restart.
-//
-// Not safe against two processes sharing one credential directory: both would miss,
-// both would enroll, and the loser's credential stays live upstream while being
-// unreachable locally. There is no lock because the directory also holds the mumP2P
-// identity, which two gateways cannot share either, so the deployment is one process
-// per directory by construction. Enrollment is idempotent on the thumbprint upstream, but a lost
+// a genuine miss. Two processes sharing a directory would both enroll and orphan
+// one credential; there is no lock because the default directory also holds the
+// mumP2P identity, which they cannot share either. Enrollment is idempotent on the thumbprint upstream, but a lost
 // private key means a NEW keypair, which is a new enrollment and a burnt use, so
 // the on-disk credential is the thing that matters.
 func LoadOrEnroll(ctx context.Context, log logger.AppLogger, opts *Options) (cred *Credential, reused bool, err error) {
 	cred, err = Load(opts.Dir)
 	switch {
 	case err == nil:
+		// The credential is bound to the peer it enrolled with. If the identity was
+		// regenerated under it, every mint 401s with nothing pointing at the cause.
+		if cred.PeerID != "" && opts.PeerID != "" && cred.PeerID != opts.PeerID {
+			return nil, false, fmt.Errorf(
+				"enrollment: %s was enrolled for peer %s but this node is %s; the mumP2P identity changed",
+				credentialPath(opts.Dir), cred.PeerID, opts.PeerID)
+		}
 		log.Info("reusing enrolled gateway credential",
 			logger.WithString("client_id", cred.ClientID),
 			logger.WithString("path", credentialPath(opts.Dir)),

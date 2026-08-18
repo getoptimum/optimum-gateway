@@ -66,17 +66,13 @@ type AppConfig struct {
 	// hosts the JWKS used to verify peer JWTs (GET {issuer}/.well-known/jwks.json).
 	RemoteAuthURL string `yaml:"remote_auth_url"    env:"OPT_REMOTE_AUTH_URL"    default:"https://auth.getoptimum.io"`
 	APIKey        string `yaml:"api_key"            env:"OPT_API_KEY"            default:""`
-	// JoinKey is the org-wide ojk_ enrollment credential. When set, the gateway
-	// generates its own keypair, registers it once at /api/v1/gateways/enroll, and
-	// mints with a client assertion thereafter, so there is no per-host secret to
-	// distribute.
-	// Mutually exclusive with APIKey; setting both is a config error rather than a
-	// silent precedence rule, so a half-migrated host fails loudly.
+	// JoinKey is the org-wide ojk_ enrollment credential: the gateway registers its
+	// own keypair once and mints with a client assertion thereafter, so there is no
+	// per-host secret to distribute. Mutually exclusive with APIKey.
 	JoinKey string `yaml:"join_key" env:"OPT_JOIN_KEY" default:""`
-	// EnrollCredDir holds the enrollment credential (keypair + client_id). Empty
-	// means IdentityMumP2PDir, which is already a persistent mount and already
-	// holds the peer identity the credential is bound to. Losing this directory
-	// means a new keypair, a new enrollment, and a burnt join-key use.
+	// EnrollCredDir holds the enrollment credential. Empty means IdentityMumP2PDir.
+	// MUST be persistent: losing it means a new keypair, a new enrollment, and a
+	// burnt join-key use.
 	EnrollCredDir          string `yaml:"enroll_cred_dir" env:"OPT_ENROLL_CRED_DIR" default:""`
 	JWKSCachePath          string `yaml:"jwks_cache_path"            env:"OPT_JWKS_CACHE_PATH"            default:"/gateway/cache/jwks.json"`
 	JWKSRefreshIntervalSec int    `yaml:"jwks_refresh_interval_sec"  env:"OPT_JWKS_REFRESH_INTERVAL_SEC"  default:"3600"`
@@ -247,19 +243,14 @@ func (c *AppConfig) effectiveAggregationIntervalMs() int64 {
 	return c.AggregationIntervalMs
 }
 
-// DefaultGatewayID mirrors the struct tag default above. It is a placeholder, not
-// an identity: every unconfigured node carries the same value.
+// DefaultGatewayID is the GatewayID placeholder, not an identity: every
+// unconfigured node carries it. Pinned to the struct tag by TestDefaultGatewayID.
 const DefaultGatewayID = "dev-gateway"
 
-// EnrollmentLabel is the label to record against an enrolled credential, empty
-// when GatewayID is still the placeholder.
-//
-// The label is not cosmetic at enrollment: it lands in a per-org unique index over
-// live credentials (gateway_api_keys_operator_label_live_uidx, on (operator_id,
-// label) where the label is non-empty), so two gateways sharing one would make the
-// second enrollment fail. Empty labels are excluded from that index, which is what
-// makes "one join key, many gateways" work by default. Ansible sets gateway_id to
-// inventory_hostname, so real deployments get a useful, unique label.
+// EnrollmentLabel is the label recorded against an enrolled credential, empty when
+// GatewayID is still the placeholder. The label is unique per org among live
+// credentials, so a shared default would fail the second gateway's enrollment;
+// empty labels are exempt.
 func (c *AppConfig) EnrollmentLabel() string {
 	if c.GatewayID == DefaultGatewayID {
 		return ""

@@ -352,6 +352,16 @@ func TestGatewayCredentialConfig(t *testing.T) {
 
 	// A missed env tag would leave JoinKey empty, which degrades to a disabled auth
 	// manager rather than erroring, so it would not be obvious in production.
+	// Nothing else stops DefaultGatewayID drifting from the tag it mirrors, and the
+	// consequence is specific: every unconfigured node would send the same label,
+	// and the second to enroll would fail on the per-org unique index.
+	t.Run("DefaultGatewayID matches the struct tag default", func(t *testing.T) {
+		base(t)
+		cfg, err := config.LoadConfig("")
+		require.NoError(t, err)
+		require.Equal(t, config.DefaultGatewayID, cfg.GatewayID)
+	})
+
 	t.Run("join_key and enroll_cred_dir bind from env", func(t *testing.T) {
 		base(t)
 		dir := t.TempDir()
