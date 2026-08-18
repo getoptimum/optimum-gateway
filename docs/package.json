@@ -24,12 +24,14 @@
     "typescript": "^5.2.2",
     "typescript-eslint": "^8.26.1",
     "vitepress": "^1.6.3",
+    "vitepress-plugin-group-icons": "^1.7.6",
     "vue-eslint-parser": "^10.1.1"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.0",
     "@fontsource-variable/geist-mono": "^5.2.0",
     "markdown-it-mathjax3": "^4.3.2",
+    "medium-zoom": "^1.1.0",
     "v-tooltip": "^2.1.3",
     "vue-clipboard2": "^0.3.3"
   },
