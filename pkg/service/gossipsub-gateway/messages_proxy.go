@@ -71,17 +71,17 @@ func (s *Service) processCLAttestation(l logger.AppLogger, msg *entities.CLMessa
 	}
 
 	if !s.srvMsgRouter.ShouldForwardMessageToMumP2P(l, meta.Kind, msg.Topic, msg.Message) {
-		gwType := commonentities.GatewayType("")
-		if c := s.authMgr.OwnClaims(); c != nil {
-			gwType = c.Type
-		}
-		s.log.Info("attestation message rejected by router",
-			logger.WithTopic(msg.Topic),
-			logger.WithInt("size", len(msg.Message)),
-			logger.WithBool("auth_enabled", s.authMgr.IsEnabled()),
-			logger.WithBool("has_valid_token", s.authMgr.HasValidToken()),
-			logger.WithString("type", gwType.String()),
-		)
+		//gwType := commonentities.GatewayType("")
+		//if c := s.authMgr.OwnClaims(); c != nil {
+		//	gwType = c.Type
+		//}
+		//s.log.Info("attestation message rejected by router",
+		//	logger.WithTopic(msg.Topic),
+		//	logger.WithInt("size", len(msg.Message)),
+		//	logger.WithBool("auth_enabled", s.authMgr.IsEnabled()),
+		//	logger.WithBool("has_valid_token", s.authMgr.HasValidToken()),
+		//	logger.WithString("type", gwType.String()),
+		//)
 		return
 	}
 	s.log.Info("processing attestation message from CL", logger.WithTopic(msg.Topic), logger.WithInt("size", len(msg.Message)))

@@ -75,12 +75,18 @@ func (s *Service) ShouldForwardMessageToMumP2P(l logger.AppLogger, kind topics.T
 	if diff > s.cfg.GetAttestationMaxSlotAge() {
 		l.Error("attestation is too old to forward",
 			fmt.Errorf("attestation slot %d is older than max slot age %d", slot, s.cfg.GetAttestationMaxSlotAge()),
-			logger.WithUint64("attester", attester), logger.WithUint64("slot", slot))
+			logger.WithUint64("attester", attester),
+			logger.WithUint64("slot", slot),
+		)
 		telemetry.IncAttestationDropped("stale")
 		return false
 	}
 	if !s.IsKnownValidator(attester) {
 		telemetry.IncAttestationDropped("rejected")
+		l.Error("attestation rejected because validator is not known",
+			fmt.Errorf("validator %d is not in known set", attester),
+			logger.WithUint64("attester", attester),
+		)
 		return false
 	}
 	telemetry.IncAttestationForwarded()
