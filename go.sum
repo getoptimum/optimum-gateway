@@ -331,8 +331,8 @@ github.com/gabriel-vasile/mimetype v1.4.13 h1:46nXokslUBsAJE/wMsp5gtO500a4F3Nkz9
 github.com/gabriel-vasile/mimetype v1.4.13/go.mod h1:d+9Oxyo1wTzWdyVUPMmXFvp4F9tea18J8ufA774AB3s=
 github.com/getoptimum/mump2p-protocol v0.0.1-rc3 h1:XtGJK6YVHyM/k5ldk/MfaH9c+dKYSCk9YbWvM+SMe8M=
 github.com/getoptimum/mump2p-protocol v0.0.1-rc3/go.mod h1:683ayY1pT3s9lwlfmLQEHPlkPZRfqDB1feCjuDChz/U=
-github.com/getoptimum/optimum-common v0.1.3 h1:QEjuVKXw4RdcEDP1ddrsf0M0AEbIfgmB9eDWQS7lW6E=
-github.com/getoptimum/optimum-common v0.1.3/go.mod h1:gOX2MYQQ7zqciRiybcVqIoCsV/tvw8cJdQfbmj4FSxc=
+github.com/getoptimum/optimum-common v0.1.4 h1:G6HzynbK3Xvk1uUhSTDt/iZqc0BabgxzSPgoNmnV0Yw=
+github.com/getoptimum/optimum-common v0.1.4/go.mod h1:gOX2MYQQ7zqciRiybcVqIoCsV/tvw8cJdQfbmj4FSxc=
 github.com/getoptimum/shm v0.5.0 h1:JKAFD2Gavx/vVWvHyEoUCyZ1ZzRJIk0WxciPATJlaz8=
 github.com/getoptimum/shm v0.5.0/go.mod h1:/18YgU96NuigZ/vD0FTiatCndt6lV2h8EJhUi/eypr0=
 github.com/ghostiam/protogetter v0.3.20 h1:oW7OPFit2FxZOpmMRPP9FffU4uUpfeE/rEdE1f+MzD0=
