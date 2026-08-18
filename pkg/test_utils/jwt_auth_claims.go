@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -54,6 +55,9 @@ type AuthTestRig struct {
 	EnrolledJWK enrollment.PublicJWK
 	// EnrolledLabel is the label sent at enrollment.
 	EnrolledLabel string
+	// mu guards the three fields above, which handler goroutines write and the test
+	// goroutine reads.
+	mu sync.Mutex
 }
 
 // ServerURL is the stub auth service's base URL, which doubles as its issuer.
@@ -188,7 +192,9 @@ func NewAuthTestRig(t *testing.T, opts ...Option) *AuthTestRig {
 		require.NoError(t, errR)
 		var payload map[string]string
 		require.NoError(t, json.Unmarshal(payloadBytes, &payload))
+		rig.mu.Lock()
 		rig.LastMintPayload = payload
+		rig.mu.Unlock()
 
 		if rig.ResponseStatus != 0 || rig.ResponseBody != nil {
 			status := rig.ResponseStatus
@@ -248,8 +254,10 @@ func NewAuthTestRig(t *testing.T, opts ...Option) *AuthTestRig {
 			Label           string               `json:"label"`
 		}
 		require.NoError(t, json.Unmarshal(body, &er))
+		rig.mu.Lock()
 		rig.EnrolledJWK = er.PublicJWK
 		rig.EnrolledLabel = er.Label
+		rig.mu.Unlock()
 
 		if rig.EnrollStatus != 0 {
 			w.WriteHeader(rig.EnrollStatus)

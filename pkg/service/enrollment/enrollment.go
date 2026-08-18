@@ -51,8 +51,16 @@ const (
 	TokenPath  = "/api/v1/auth/token"
 
 	// assertionLifetime is well inside the 120s ceiling optimum-auth enforces on
-	// exp - iat, with room for the 60s clock tolerance either side.
+	// exp - iat. The server also allows 60s of clock tolerance, so a client clock up
+	// to ~119s slow still verifies; a fast clock is not bounded server-side.
 	assertionLifetime = 60 * time.Second
+
+	// assertionValidityBudget caps a whole request-plus-retries sequence so every
+	// attempt reuses an assertion that is still valid. optimum-common's HTTP client
+	// has no timeout of its own, so without this one stalled attempt would push the
+	// later retries past assertionLifetime and turn a network problem into what looks
+	// like a rejected credential.
+	assertionValidityBudget = 30 * time.Second
 )
 
 // ErrInvalidEnrollment is the single failure the enroll endpoint reports. Unknown,
@@ -225,6 +233,22 @@ type enrollResponse struct {
 
 func credentialPath(dir string) string { return filepath.Join(dir, CredentialFile) }
 
+// ensureWritable verifies the credential directory can actually be written to.
+// os.MkdirAll returns nil for an existing directory whatever its mode, so the
+// directory existing is not evidence that Save will succeed.
+func ensureWritable(dir string) error {
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		return fmt.Errorf("enrollment: create %s: %w", dir, err)
+	}
+	probe, err := os.CreateTemp(dir, ".enroll-probe-*")
+	if err != nil {
+		return fmt.Errorf("enrollment: %s is not writable, refusing to enroll a credential that cannot be persisted: %w", dir, err)
+	}
+	name := probe.Name()
+	_ = probe.Close()
+	return os.Remove(name)
+}
+
 // Load reads a previously persisted credential. A missing file is os.ErrNotExist,
 // which LoadOrEnroll treats as "enroll now"; any other error is surfaced rather
 // than silently re-enrolling, because re-enrolling burns a join-key use and leaves
@@ -232,7 +256,12 @@ func credentialPath(dir string) string { return filepath.Join(dir, CredentialFil
 func Load(dir string) (*Credential, error) {
 	raw, err := optio.LoadFromFile(credentialPath(dir))
 	if err != nil {
-		return nil, err
+		// os.ErrNotExist must stay unwrapped-comparable for LoadOrEnroll; anything
+		// else is a damaged file and the operator needs to know which one.
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+		return nil, fmt.Errorf("enrollment: read %s: %w", credentialPath(dir), err)
 	}
 	var c Credential
 	if err := json.Unmarshal(raw, &c); err != nil {
@@ -243,6 +272,19 @@ func Load(dir string) (*Credential, error) {
 	}
 	if err := c.ensureKey(); err != nil {
 		return nil, err
+	}
+	jwk, err := jwkFromPublic(&c.key.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+	derived, err := jwk.Thumbprint()
+	if err != nil {
+		return nil, err
+	}
+	if c.Thumbprint != "" && derived != c.Thumbprint {
+		return nil, fmt.Errorf(
+			"enrollment: %s pairs client_id %s with a key whose thumbprint is %s, not the recorded %s",
+			credentialPath(dir), c.ClientID, derived, c.Thumbprint)
 	}
 	return &c, nil
 }
@@ -281,6 +323,14 @@ func Enroll(ctx context.Context, log logger.AppLogger, opts *Options) (*Credenti
 		return nil, errors.New("enrollment: issuer is required")
 	}
 
+	// Check we can persist BEFORE asking the server for a credential. Enrolling and
+	// then failing to write leaves a live credential upstream that this node can
+	// never present, and a crashlooping container repeats it every restart, draining
+	// the join key's uses and filling the per-org credential cap.
+	if err := ensureWritable(opts.Dir); err != nil {
+		return nil, err
+	}
+
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, fmt.Errorf("enrollment: generate keypair: %w", err)
@@ -308,6 +358,9 @@ func Enroll(ctx context.Context, log logger.AppLogger, opts *Options) (*Credenti
 	// 400 and 401 are terminal: a malformed request or a rejected join credential
 	// will not become valid on retry, and retrying a rejected join key just burns
 	// rate budget against an endpoint that is deliberately opaque about why.
+	ctx, cancel := context.WithTimeout(ctx, assertionValidityBudget)
+	defer cancel()
+
 	parsed, status, err := utils.RetryPostRequest[enrollResponse](
 		ctx,
 		issuer+EnrollPath,
@@ -369,7 +422,13 @@ func Enroll(ctx context.Context, log logger.AppLogger, opts *Options) (*Credenti
 
 // LoadOrEnroll returns the persisted credential when one exists, enrolling only on
 // a genuine miss. reused reports which happened, so callers can tell a first boot
-// from a restart. Enrollment is idempotent on the thumbprint upstream, but a lost
+// from a restart.
+//
+// Not safe against two processes sharing one credential directory: both would miss,
+// both would enroll, and the loser's credential stays live upstream while being
+// unreachable locally. There is no lock because the directory also holds the mumP2P
+// identity, which two gateways cannot share either, so the deployment is one process
+// per directory by construction. Enrollment is idempotent on the thumbprint upstream, but a lost
 // private key means a NEW keypair, which is a new enrollment and a burnt use, so
 // the on-disk credential is the thing that matters.
 func LoadOrEnroll(ctx context.Context, log logger.AppLogger, opts *Options) (cred *Credential, reused bool, err error) {

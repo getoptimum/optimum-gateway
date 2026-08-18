@@ -476,17 +476,33 @@ func (m *Service) refreshLoop(ctx context.Context) {
 		sleepSec, _ := randutil.RandBetween(refreshIntervalMinSec, refreshIntervalMaxSec)
 		time.Sleep(time.Duration(sleepSec) * time.Second)
 		if _, err := m.mint(ctx); err != nil {
-			switch {
-			case errors.Is(err, ErrUnknownKey),
-				errors.Is(err, ErrKeyRevoked),
-				errors.Is(err, ErrKeySuspended):
-				m.log.Error("api key terminal failure — refresh loop exiting", err)
+			if m.MintErrorIsTerminal(err) {
+				m.log.Error("api key terminal failure, refresh loop exiting", err)
 				return
-			default:
-				m.log.Error("auth refresh failed; will retry next tick", err)
 			}
+			m.log.Error("auth refresh failed; will retry next tick", err)
 		}
 	}
+}
+
+// MintErrorIsTerminal reports whether a mint failure means the refresh loop should
+// give up rather than retry on the next tick.
+//
+// A 401 is terminal only for a shared secret, where it means the key hash is
+// unknown or revoked and no amount of retrying changes that. On the assertion path
+// optimum-auth returns the same opaque 401 for every verification failure,
+// including an assertion that expired in flight, so treating it as terminal would
+// let one NTP slip or one stalled request retire the node: it would serve its
+// cached token until expiry and then fail every handshake, with no further mint
+// attempt short of a restart. Each mint signs a fresh assertion, so a transient
+// cause self-heals on the next tick.
+func (m *Service) MintErrorIsTerminal(err error) bool {
+	if m.cred != nil {
+		return false
+	}
+	return errors.Is(err, ErrUnknownKey) ||
+		errors.Is(err, ErrKeyRevoked) ||
+		errors.Is(err, ErrKeySuspended)
 }
 
 func (m *Service) recordSuccessfulMintMetrics(claims *jwks_verifier.Claims) {

@@ -6,12 +6,15 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"io"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync/atomic"
 	"testing"
 
@@ -21,6 +24,9 @@ import (
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	"github.com/getoptimum/optimum-gateway/pkg/service/enrollment"
 )
+
+// testJoinKey is the raw ojk_ credential every stubbed enrollment presents.
+const testJoinKey = "ojk_test_secret"
 
 func testLogger() logger.AppLogger { return logger.NewAppSLogger(logger.Debug) }
 
@@ -190,10 +196,11 @@ type stubAuth struct {
 	status int
 	body   []byte
 	seen   struct {
-		jwk    enrollment.PublicJWK
-		peerID string
-		label  string
-		token  string
+		jwk     enrollment.PublicJWK
+		peerID  string
+		label   string
+		token   string
+		rawBody []byte
 	}
 }
 
@@ -215,6 +222,7 @@ func newStubAuth(t *testing.T) *stubAuth {
 		}
 		require.NoError(t, json.Unmarshal(raw, &req))
 		s.seen.jwk, s.seen.peerID, s.seen.label, s.seen.token = req.PublicJWK, req.PeerID, req.Label, req.JoinToken
+		s.seen.rawBody = raw
 
 		if s.status != 0 {
 			w.WriteHeader(s.status)
@@ -251,7 +259,7 @@ func TestEnrollHappyPath(t *testing.T) {
 	cred, err := enrollment.Enroll(t.Context(), testLogger(), &enrollment.Options{
 		Issuer:  auth.server.URL,
 		Dir:     dir,
-		JoinKey: "ojk_test_secret",
+		JoinKey: testJoinKey,
 		PeerID:  "12D3KooWpeer",
 		Label:   "hermes-node-1",
 	})
@@ -260,7 +268,7 @@ func TestEnrollHappyPath(t *testing.T) {
 	require.Equal(t, "hermes", cred.Type)
 	require.Equal(t, "560048", cred.ChainID)
 
-	require.Equal(t, "ojk_test_secret", auth.seen.token)
+	require.Equal(t, testJoinKey, auth.seen.token)
 	require.Equal(t, "12D3KooWpeer", auth.seen.peerID)
 	require.Equal(t, "hermes-node-1", auth.seen.label)
 	require.Equal(t, "P-256", auth.seen.jwk.Crv)
@@ -279,14 +287,75 @@ func TestEnrollHappyPath(t *testing.T) {
 
 func TestEnrollNeverSendsPrivateMaterial(t *testing.T) {
 	auth := newStubAuth(t)
-	_, err := enrollment.Enroll(t.Context(), testLogger(), &enrollment.Options{
-		Issuer: auth.server.URL, Dir: t.TempDir(), JoinKey: "ojk_test_secret",
+	cred, err := enrollment.Enroll(t.Context(), testLogger(), &enrollment.Options{
+		Issuer: auth.server.URL, Dir: t.TempDir(), JoinKey: testJoinKey, PeerID: "12D3KooWpeer",
 	})
 	require.NoError(t, err)
 
-	raw, err := json.Marshal(auth.seen.jwk)
+	// Scan the bytes actually sent. Re-marshaling the decoded struct proves nothing:
+	// PublicJWK has four fields and none can hold private material.
+	body := auth.seen.rawBody
+	require.NotEmpty(t, body)
+
+	// The request carries exactly these fields, so any added one fails here wherever
+	// it sits in the object, not just inside public_jwk.
+	var probe map[string]any
+	require.NoError(t, json.Unmarshal(body, &probe))
+	keys := slices.Sorted(maps.Keys(probe))
+	require.Equal(t, []string{"enroll_assertion", "join_token", "peer_id", "public_jwk"}, keys)
+	jwk, ok := probe["public_jwk"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, []string{"crv", "kty", "x", "y"}, slices.Sorted(maps.Keys(jwk)))
+
+	// And the key material itself must not appear under any encoding a marshaller
+	// might use. encoding/json renders []byte as padded standard base64.
+	for name, enc := range map[string]string{
+		"std base64":    base64.StdEncoding.EncodeToString(cred.PrivateKey),
+		"rawurl base64": base64.RawURLEncoding.EncodeToString(cred.PrivateKey),
+		"hex":           hex.EncodeToString(cred.PrivateKey),
+	} {
+		require.NotContains(t, string(body), enc, "PKCS8 key leaked as %s", name)
+	}
+}
+
+// Enrolling and then failing to persist leaves a credential upstream that this node
+// can never present, and a crashlooping container repeats it every restart, draining
+// the join key's uses. The directory existing is not evidence it is writable, so the
+// check has to be a real probe and it has to happen before the POST.
+func TestEnrollRefusesAnUnwritableDirBeforeContactingTheServer(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("running as root; mode bits do not deny access")
+	}
+	auth := newStubAuth(t)
+	dir := filepath.Join(t.TempDir(), "readonly")
+	require.NoError(t, os.Mkdir(dir, 0o500))
+
+	_, err := enrollment.Enroll(t.Context(), testLogger(), &enrollment.Options{
+		Issuer: auth.server.URL, Dir: dir, JoinKey: testJoinKey,
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "not writable")
+	require.EqualValues(t, 0, auth.calls.Load(),
+		"the server must not be asked for a credential we cannot store")
+}
+
+// A credential file pairing a client_id with the wrong key would otherwise look
+// healthy at boot and fail three hours later as an opaque 401.
+func TestLoadRejectsAThumbprintMismatch(t *testing.T) {
+	dir := t.TempDir()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)
-	require.NotContains(t, string(raw), `"d"`, "the private scalar must never be serialized")
+	pkcs8, err := x509.MarshalPKCS8PrivateKey(key)
+	require.NoError(t, err)
+	require.NoError(t, enrollment.Save(dir, &enrollment.Credential{
+		ClientID:   "ag_1",
+		Thumbprint: "not-the-thumbprint-of-this-key",
+		PrivateKey: pkcs8,
+	}))
+
+	_, err = enrollment.Load(dir)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "not the recorded")
 }
 
 func TestEnrollRejectedJoinKey(t *testing.T) {
@@ -311,7 +380,7 @@ func TestEnrollServerError(t *testing.T) {
 	auth.body = []byte(`{"error":"internal_error"}`)
 
 	_, err := enrollment.Enroll(t.Context(), testLogger(), &enrollment.Options{
-		Issuer: auth.server.URL, Dir: t.TempDir(), JoinKey: "ojk_test_secret",
+		Issuer: auth.server.URL, Dir: t.TempDir(), JoinKey: testJoinKey,
 	})
 	require.Error(t, err)
 	require.NotErrorIs(t, err, enrollment.ErrInvalidEnrollment, "a 500 is not a credential rejection")
@@ -321,7 +390,7 @@ func TestLoadOrEnrollReusesWithoutCallingAuth(t *testing.T) {
 	auth := newStubAuth(t)
 	dir := t.TempDir()
 	opts := &enrollment.Options{
-		Issuer: auth.server.URL, Dir: dir, JoinKey: "ojk_test_secret", PeerID: "12D3KooWpeer",
+		Issuer: auth.server.URL, Dir: dir, JoinKey: testJoinKey, PeerID: "12D3KooWpeer",
 	}
 
 	first, reused, err := enrollment.LoadOrEnroll(t.Context(), testLogger(), opts)
@@ -343,7 +412,7 @@ func TestLoadOrEnrollSurfacesCorruptCredential(t *testing.T) {
 	require.NoError(t, os.WriteFile(filepath.Join(dir, enrollment.CredentialFile), []byte("not json"), 0o600))
 
 	_, _, err := enrollment.LoadOrEnroll(t.Context(), testLogger(), &enrollment.Options{
-		Issuer: auth.server.URL, Dir: dir, JoinKey: "ojk_test_secret",
+		Issuer: auth.server.URL, Dir: dir, JoinKey: testJoinKey,
 	})
 	require.Error(t, err)
 	require.EqualValues(t, 0, auth.calls.Load(),

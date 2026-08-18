@@ -1,6 +1,7 @@
 package auth_token_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -66,6 +67,28 @@ func TestEnrollmentGrant_EnrollsThenMintsWithClientAssertion(t *testing.T) {
 // caps exp - iat at 120s, so a payload fixed at boot would mint successfully once
 // and then fail every refresh three hours later. Two managers sharing one
 // credential mint separately, and their assertions must differ.
+// The audience must come from the normalized issuer, not from RemoteAuthURL as
+// configured. A trailing slash is the case that separates them: optimum-auth builds
+// its expected audience from SIGNER_ISSUER, so a doubled slash fails verification.
+// Without this, deriving aud either way looks identical and the property is untested.
+func TestEnrollmentGrant_AudienceIsNormalized(t *testing.T) {
+	rig := test_utils.NewAuthTestRig(t)
+	cfg := joinKeyCfg(t, rig, t.TempDir())
+	cfg.RemoteAuthURL = rig.ServerURL() + "/"
+
+	m, err := auth_token.New(t.Context(), logger.NewAppSLogger(logger.Debug), cfg)
+	require.NoError(t, err)
+	_, err = m.Token(t.Context())
+	require.NoError(t, err)
+
+	claims := jwt.MapClaims{}
+	_, err = jwt.ParseWithClaims(rig.LastMintPayload["client_assertion"], claims,
+		func(*jwt.Token) (any, error) { return test_utils.PublicKeyFromJWK(t, rig.EnrolledJWK), nil })
+	require.NoError(t, err)
+	require.Equal(t, rig.ServerURL()+enrollment.TokenPath, claims["aud"],
+		"a trailing slash on remote_auth_url must not produce a doubled slash in aud")
+}
+
 func TestEnrollmentGrant_SignsAFreshAssertionPerMint(t *testing.T) {
 	rig := test_utils.NewAuthTestRig(t)
 	dir := t.TempDir()
@@ -171,4 +194,25 @@ func TestNoCredential_ReturnsDisabledManager(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, m.IsEnabled())
 	require.EqualValues(t, 0, rig.EnrollCalls.Load())
+}
+
+// A 401 means different things on the two grants. For a shared secret it is a dead
+// key. For an assertion it is every verification failure, including one that
+// expired in flight because the host clock drifted, so retiring the node on it
+// would turn a two-minute NTP slip into a gateway that serves a stale token until
+// expiry and then fails every handshake until someone restarts it.
+func TestMintErrorIsTerminal(t *testing.T) {
+	rig := test_utils.NewAuthTestRig(t)
+
+	legacy, err := auth_token.New(t.Context(), logger.NewAppSLogger(logger.Debug), rig.AppCfg(t))
+	require.NoError(t, err)
+	enrolled, err := auth_token.New(t.Context(), logger.NewAppSLogger(logger.Debug), joinKeyCfg(t, rig, t.TempDir()))
+	require.NoError(t, err)
+
+	for _, err := range []error{auth_token.ErrUnknownKey, auth_token.ErrKeyRevoked, auth_token.ErrKeySuspended} {
+		require.True(t, legacy.MintErrorIsTerminal(err), "%v must retire the legacy api_key path", err)
+		require.False(t, enrolled.MintErrorIsTerminal(err), "%v must not retire an enrolled gateway", err)
+	}
+	require.False(t, legacy.MintErrorIsTerminal(errors.New("connection reset")))
+	require.False(t, enrolled.MintErrorIsTerminal(errors.New("connection reset")))
 }
