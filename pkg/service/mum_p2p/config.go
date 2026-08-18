@@ -16,11 +16,7 @@ type Config struct {
 	ListenPort     int    `yaml:"listen_port"`
 	MaxMessageSize int64  `yaml:"max_message_size_bytes"`
 
-	// RLNC and message settings
-	RandomMessageSize        uint32  `yaml:"random_message_size_bytes"`
-	ShardFactor              uint32  `yaml:"rlnc_shard_factor"`
-	PublisherShardMultiplier float64 `yaml:"publisher_shard_multiplier"`
-	ForwardShardThreshold    float64 `yaml:"forward_shard_threshold"`
+	// RLNC settings are not configured here; they are read from Rotator via Get().
 
 	BootstrapPeers []string `yaml:"bootstrap_peers"`
 
@@ -53,7 +49,7 @@ func (cfg *Config) Get() *commonentities.OptimumConfig {
 }
 
 func toMumP2PConfig(cfg *Config) *mump2pcfg.Config {
-	res := mump2pcfg.DefaultConfig()
+	res := mump2pcfg.DefaultGossipSubConfig()
 	dc := cfg.Get()
 	if dc.MeshDegreeTarget != 0 {
 		res.MeshD = int(dc.MeshDegreeTarget)
@@ -67,10 +63,10 @@ func toMumP2PConfig(cfg *Config) *mump2pcfg.Config {
 		res.MeshDhi = int(dc.MeshDegreeMax)
 	}
 	res.RLNC = mump2pcfg.RLNCConfig{
-		K:                           cfg.ShardFactor,
-		MaxShardSize:                cfg.RandomMessageSize,
-		RedundancyFraction:          cfg.PublisherShardMultiplier,
-		ForwardingThresholdFraction: cfg.ForwardShardThreshold,
+		K:                           dc.ShardFactor,
+		MaxShardSize:                dc.RandomMessageSize,
+		RedundancyFraction:          dc.PublisherShardMultiplier,
+		ForwardingThresholdFraction: dc.ForwardShardThreshold,
 		MeshDegreeMax:               res.MeshDhi,
 	}
 	return res

@@ -21,18 +21,14 @@ func (s *Service) setupMumP2PHost() error {
 	}
 	s.log.Info("setting mump2p host")
 	optCfg := &mum_p2p.Config{
-		ListenPort:               s.cfg.AgentMumP2PPort,
-		MaxMessageSize:           config.DefaultMaxMessageSize,
-		RandomMessageSize:        config.DefaultRandomMessageSize,
-		ShardFactor:              config.DefaultShardFactor,
-		PublisherShardMultiplier: config.DefaultPublisherShardMultiplier,
-		ForwardShardThreshold:    config.DefaultForwardShardThreshold,
-		BootstrapPeers:           filtered,
-		ClusterID:                s.cfg.GatewayClusterID,
-		Rotator:                  s.cfg.GetDCRotator(),
-		TraceMesh:                s.cfg.TraceMesh,
-		TraceRPC:                 s.cfg.TraceRPC,
-		TraceShard:               s.cfg.TraceShard,
+		ListenPort:     s.cfg.AgentMumP2PPort,
+		MaxMessageSize: config.DefaultMaxMessageSize,
+		BootstrapPeers: filtered,
+		ClusterID:      s.cfg.GatewayClusterID,
+		Rotator:        s.cfg.GetDCRotator(),
+		TraceMesh:      s.cfg.TraceMesh,
+		TraceRPC:       s.cfg.TraceRPC,
+		TraceShard:     s.cfg.TraceShard,
 	}
 	if s.customMumP2PConnectionGater != nil {
 		optCfg.CustomConnectionGater = s.customMumP2PConnectionGater

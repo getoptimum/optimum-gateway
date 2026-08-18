@@ -181,6 +181,14 @@ func NewNodeWithHost(
 		logger.WithFloat64("ForwardingThresholdFraction", psCfg.RLNC.ForwardingThresholdFraction),
 		logger.WithUint64("MeshDegreeMax", uint64(psCfg.RLNC.MeshDegreeMax)),
 	)
+
+	// Fail at boot rather than silently dropping every publish: nothing upstream
+	// checks these values, since the rotator never validates the fetched dynamic
+	// config and mump2p only validates on its YAML load path.
+	if err = psCfg.Validate(); err != nil {
+		return nil, fmt.Errorf("validate mump2p config: %w", err)
+	}
+
 	shmSvc, err := rlncshm.New(psCfg)
 	if err != nil {
 		return nil, fmt.Errorf("initialize RLNC shared memory: %w", err)
