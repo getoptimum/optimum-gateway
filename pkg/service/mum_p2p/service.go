@@ -172,6 +172,15 @@ func NewNodeWithHost(
 	log.Info("initializing optimum gossipsub")
 
 	psCfg := toMumP2PConfig(cfg)
+
+	log.Info("log params",
+		logger.WithFlow("RLNC"),
+		logger.WithUint64("RLNC_K", uint64(psCfg.RLNC.K)),
+		logger.WithUint64("MaxShardSize", uint64(psCfg.RLNC.MaxShardSize)),
+		logger.WithFloat64("RedundancyFraction", psCfg.RLNC.RedundancyFraction),
+		logger.WithFloat64("ForwardingThresholdFraction", psCfg.RLNC.ForwardingThresholdFraction),
+		logger.WithUint64("MeshDegreeMax", uint64(psCfg.RLNC.MeshDegreeMax)),
+	)
 	shmSvc, err := rlncshm.New(psCfg)
 	if err != nil {
 		return nil, fmt.Errorf("initialize RLNC shared memory: %w", err)
