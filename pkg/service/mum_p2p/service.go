@@ -182,9 +182,8 @@ func NewNodeWithHost(
 		logger.WithUint64("MeshDegreeMax", uint64(psCfg.RLNC.MeshDegreeMax)),
 	)
 
-	// Fail at boot rather than silently dropping every publish: nothing upstream
-	// checks these values, since the rotator never validates the fetched dynamic
-	// config and mump2p only validates on its YAML load path.
+	// Fail startup on invalid dynamic config: rotator fetch and programmatic
+	// mump2p setup do not validate these values, so a bad config would drop publishes.
 	if err = psCfg.Validate(); err != nil {
 		return nil, fmt.Errorf("validate mump2p config: %w", err)
 	}

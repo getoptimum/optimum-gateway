@@ -16,8 +16,6 @@ type Config struct {
 	ListenPort     int    `yaml:"listen_port"`
 	MaxMessageSize int64  `yaml:"max_message_size_bytes"`
 
-	// RLNC settings are not configured here; they are read from Rotator via Get().
-
 	BootstrapPeers []string `yaml:"bootstrap_peers"`
 
 	// Trace event categories to broadcast to RegisterListener consumers. Shard metrics
