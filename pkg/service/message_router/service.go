@@ -2,6 +2,7 @@ package message_router
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -88,6 +89,10 @@ func (s *Service) ShouldForwardMessageToMumP2P(l logger.AppLogger, kind topics.T
 			logger.WithUint64("attester", attester),
 			logger.WithInt("known_validators", s.knownValidators.Len()),
 		)
+		if s.knownValidators.Len() < 100 {
+			aa, _ := json.Marshal(s.knownValidators.LoadAll())
+			l.Info("known validators", logger.WithString("validators", string(aa)))
+		}
 		return false
 	}
 	telemetry.IncAttestationForwarded()
