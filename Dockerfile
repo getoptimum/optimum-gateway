@@ -5,7 +5,7 @@ FROM --platform=$BUILDPLATFORM golang:1.26.6-alpine AS builder
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
 
-RUN apk add --no-cache build-base git clang lld openssh-client
+RUN apk add --no-cache build-base git bash clang lld openssh-client
 
 COPY --from=xx / /
 
@@ -46,7 +46,13 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
     go build -o /gateway/optimum-gateway ./cmd
 
-RUN make build-rlnc-server
+# Companion binary for single-container runs. Cluster/Helm starts rlnc-server
+# as a sidecar sharing /dev/shm, so the gateway entrypoint must not.
+RUN --mount=type=ssh,required=false \
+    --mount=type=secret,id=github_token,required=false \
+    --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    make build-rlnc-server RLNC_SERVER_OUTPUT=/gateway/bin/rlnc-server
 
 FROM alpine:3.22
 
@@ -69,7 +75,6 @@ COPY --from=builder /gateway/bin/rlnc-server /rlnc-server
 COPY --from=builder /optimum-gateway/LICENSE /optimum-gateway/NOTICE /optimum-gateway/PATENTS /optimum-gateway/THIRD-PARTY-NOTICES.md /usr/share/doc/optimum-gateway/
 
 # USER gateway
-RUN /rlnc-server --lanes 20 --name mump2p-protocol &
 
 EXPOSE 33212 33213 48123
 

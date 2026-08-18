@@ -74,6 +74,7 @@ build: ## Builds binary
 	go build -o ./bin/optimum-gateway ./cmd
 
 build-rlnc-server:
+	mkdir -p "$(dir $(RLNC_SERVER_OUTPUT))"
 	rm -rf /tmp/rlnc
 	git clone --depth 1 --branch "$(RLNC_VERSION)" "$(RLNC_REPOSITORY)" /tmp/rlnc
 	echo "⚙️  Building RLNC server binary...";
