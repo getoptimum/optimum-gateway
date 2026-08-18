@@ -199,6 +199,7 @@ func (a *Service) loop() {
 //
 // Returns false when the gate is disabled. See ADR-010.
 func (a *Service) shouldHoldForSlotGate(now time.Time) bool {
+	return false
 	if a.cfg == nil {
 		return false
 	}

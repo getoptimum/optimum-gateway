@@ -2,6 +2,7 @@ package message_router
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
@@ -72,6 +73,12 @@ func (s *Service) ShouldForwardMessageToMumP2P(l logger.AppLogger, kind topics.T
 	diff := utils.DiffUint64(slot, chainstate.CurrentSlot(time.Now()))
 	telemetry.ObserveAttestationInclusionDelay(diff)
 	if diff > s.cfg.GetAttestationMaxSlotAge() {
+		l.Error("attestation is too old to forward",
+			fmt.Errorf("attestation slot %d is older than max slot age %d", slot, s.cfg.GetAttestationMaxSlotAge()),
+			logger.WithUint64("attester", attester),
+			logger.WithUint64("current_slot", chainstate.CurrentSlot(time.Now())),
+			logger.WithUint64("slot", slot),
+		)
 		telemetry.IncAttestationDropped("stale")
 		return false
 	}
@@ -79,7 +86,7 @@ func (s *Service) ShouldForwardMessageToMumP2P(l logger.AppLogger, kind topics.T
 		telemetry.IncAttestationDropped("rejected")
 		return false
 	}
-	telemetry.IncAttestationForwarded()
+	telemetry.IncAttestationForwarded(entities.SourceMumP2P)
 	return true
 }
 

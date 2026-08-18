@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	commonmetrics "github.com/getoptimum/optimum-common/pkg/telemetry"
+	"github.com/getoptimum/optimum-gateway/pkg/entities"
 )
 
 const (
@@ -157,7 +158,7 @@ func TestAggregationAndAttestationMetricsHelpers(t *testing.T) {
 	ObserveAttestationPackUniqueDataKeys(5)
 	IncAttestationSubnet(7)
 	IncAttestationEvaluated()
-	IncAttestationForwarded()
+	IncAttestationForwarded(entities.SourceMumP2P)
 	IncAttestationDropped("expired")
 	ObserveAttestationInclusionDelay(4)
 	ObserveAttestationPackLatency(3.5)

@@ -172,11 +172,31 @@ func NewNodeWithHost(
 	log.Info("initializing optimum gossipsub")
 
 	psCfg := toMumP2PConfig(cfg)
+
+	log.Info("log params",
+		logger.WithFlow("RLNC"),
+		logger.WithUint64("RLNC_K", uint64(psCfg.RLNC.K)),
+		logger.WithUint64("MaxShardSize", uint64(psCfg.RLNC.MaxShardSize)),
+		logger.WithFloat64("RedundancyFraction", psCfg.RLNC.RedundancyFraction),
+		logger.WithFloat64("ForwardingThresholdFraction", psCfg.RLNC.ForwardingThresholdFraction),
+		logger.WithInt("MeshDegreeMax", psCfg.RLNC.MeshDegreeMax),
+	)
+
+	// Fail startup on invalid dynamic config: rotator fetch and programmatic
+	// mump2p setup do not validate these values, so a bad config would drop publishes.
+	if err = psCfg.Validate(); err != nil {
+		return nil, fmt.Errorf("validate mump2p config: %w", err)
+	}
+
 	shmSvc, err := rlncshm.New(psCfg)
 	if err != nil {
 		return nil, fmt.Errorf("initialize RLNC shared memory: %w", err)
 	}
-	rlncEngine, err := engine.NewEngine(psCfg.RLNC, log.With(logger.WithService("rlncEngine")).Slog(), shmSvc)
+
+	ret.initConfigMap()
+	ret.logConfigs()
+
+	rlncEngine, err := engine.NewEngine(ret, log.With(logger.WithService("rlncEngine")).Slog(), shmSvc)
 	if err != nil {
 		return nil, fmt.Errorf("create RLNC engine: %w", err)
 	}
