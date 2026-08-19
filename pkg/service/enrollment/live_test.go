@@ -1,8 +1,10 @@
 package enrollment_test
 
 import (
+	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
@@ -38,10 +40,14 @@ func TestLiveEnroll(t *testing.T) {
 	if dir == "" {
 		dir = t.TempDir()
 	}
+	// The label is unique per org among live credentials, so a fixed one enrolls
+	// once and then 409s forever. Vary label and peer_id per run.
+	stamp := time.Now().UnixNano()
 	peerID := os.Getenv("OPT_LIVE_PEER_ID")
 	if peerID == "" {
-		peerID = "16Uiu2HAmLiveEnrollmentSmokeTest"
+		peerID = fmt.Sprintf("16Uiu2HAmLiveEnroll%d", stamp)
 	}
+	label := fmt.Sprintf("live-enroll-test-%d", stamp)
 
 	log := logger.NewAppSLogger(logger.Debug)
 	cred, reused, err := enrollment.LoadOrEnroll(t.Context(), log, &enrollment.Options{
@@ -49,7 +55,7 @@ func TestLiveEnroll(t *testing.T) {
 		Dir:     dir,
 		JoinKey: joinKey,
 		PeerID:  peerID,
-		Label:   "live-enroll-test",
+		Label:   label,
 	})
 	require.NoError(t, err)
 	require.NotEmpty(t, cred.ClientID)
