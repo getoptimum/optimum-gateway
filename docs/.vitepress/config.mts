@@ -29,6 +29,13 @@ const latest = versions.at(-1) ?? ''
 const base = process.env.BASE ?? '/'
 const withBase = (path: string) => `${base}${path.replace(/^\//, '')}`
 
+const securityAudit = {
+  text: 'Security Audit',
+  link: 'https://cdn.probelab.io/media/documents/2026-08-ProbeLab-Security_Audit_Report_Optimum_Gateway.pdf',
+  target: '_blank' as const,
+  rel: 'noopener',
+}
+
 // --- sidebar per version (install order; metrics tables stay linked from telemetry) ---
 const possibleItems = [
   { text: 'Network Requirements', file: '00_network_requirements.md' },
@@ -54,13 +61,6 @@ for (const v of versionDirs) {
 
   items.push({ text: 'Overview', link: `/versions/${v}/` })
 
-  items.push({
-    text: 'Security Audit',
-    link: 'https://cdn.probelab.io/media/documents/2026-08-ProbeLab-Security_Audit_Report_Optimum_Gateway.pdf',
-    target: '_blank',
-    rel: 'noopener',
-  })
-
   for (const item of possibleItems) {
     if (fs.existsSync(path.join(versionDir, item.file))) {
       items.push({ text: item.text, link: page(item.file) })
@@ -70,6 +70,8 @@ for (const v of versionDirs) {
   if (fs.existsSync(path.join(versionDir, 'release_notes.md'))) {
     items.push({ text: 'Release Notes', link: page('release_notes.md') })
   }
+
+  items.push({ ...securityAudit })
 
   sidebar[`/versions/${v}/`] = [{ text: `Gateway (${v})`, items }]
 }
@@ -168,7 +170,14 @@ export default defineConfigWithTheme<ThemeConfig>({
   themeConfig: {
     nav: [
       { text: 'Console', link: 'https://console.getoptimum.io/' },
-      { text: 'Changelog', link: '/CHANGELOG' }
+      { text: 'Changelog', link: '/CHANGELOG' },
+      {
+        text: 'GitHub',
+        link: 'https://github.com/getoptimum/optimum-gateway',
+        target: '_blank',
+        rel: 'noopener',
+      },
+      { ...securityAudit },
     ],
     // Exposed at runtime via useData().theme — consumed by the dropdown.
     versions,

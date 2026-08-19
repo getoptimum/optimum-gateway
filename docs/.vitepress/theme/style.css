@@ -176,6 +176,14 @@ html.dark .dark-mode-only {
 .VPNavBar .content-body > .extra             { order: 7; }
 .VPNavBar .content-body > .hamburger         { order: 8; }
 
+
+.VPNavBarMenu .VPNavBarMenuLink {
+  padding: 0 8px;
+}
+.VPNavBar .version-switcher .button {
+  padding-right: 8px;
+}
+
 .medium-zoom-overlay {
   z-index: 100;
 }
