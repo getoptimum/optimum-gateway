@@ -8471,18 +8471,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/pion/dtls/v3@v3.1.2?type=module",
+      "bom-ref": "pkg:golang/github.com/pion/dtls/v3@v3.1.4?type=module",
       "type": "library",
       "name": "github.com/pion/dtls/v3",
-      "version": "v3.1.2",
+      "version": "v3.1.4",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "82a11d3945cbb42196f9a7ec04b3b42ed0c3f069ee0418c4cba1d1b72a1f6537"
+          "content": "421bed31f94c7eef4a7f445c0c2e4124195ee1c68fb24072aca411eaeb98aa96"
         }
       ],
-      "purl": "pkg:golang/github.com/pion/dtls/v3@v3.1.2?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/pion/dtls/v3@v3.1.4?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/pion/dtls",
@@ -9457,18 +9457,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/quic-go/quic-go@v0.59.1?type=module",
+      "bom-ref": "pkg:golang/github.com/quic-go/quic-go@v0.60.0?type=module",
       "type": "library",
       "name": "github.com/quic-go/quic-go",
-      "version": "v0.59.1",
+      "version": "v0.60.0",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "d069ae6b41d6d53bfb00d47b8546304720f4306e4e25f82f61265ab066730627"
+          "content": "c5c422a04f0e33ae9440b79430796d2b508270ebb725b541e0901074341207ed"
         }
       ],
-      "purl": "pkg:golang/github.com/quic-go/quic-go@v0.59.1?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/quic-go/quic-go@v0.60.0?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/quic-go/quic-go",
@@ -9486,18 +9486,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/quic-go/webtransport-go@v0.10.0?type=module",
+      "bom-ref": "pkg:golang/github.com/quic-go/webtransport-go@v0.11.1?type=module",
       "type": "library",
       "name": "github.com/quic-go/webtransport-go",
-      "version": "v0.10.0",
+      "version": "v0.11.1",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "2ea5d73ce5ee1136395def084dd1a2b01cd362650ecb97928fef67e212d38c72"
+          "content": "aeb15030efbbff9d990c9d387ecae321a5aa9faab5cf5318a3d89516ae89b5b0"
         }
       ],
-      "purl": "pkg:golang/github.com/quic-go/webtransport-go@v0.10.0?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/quic-go/webtransport-go@v0.11.1?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/quic-go/webtransport-go",
@@ -13571,7 +13571,7 @@
         "pkg:golang/github.com/petermattis/goid@v0.0.0-20260330135022-df67b199bc81?type=module",
         "pkg:golang/github.com/pmezard/go-difflib@v1.0.1-0.20181226105442-5d4384ee4fb2?type=module",
         "pkg:golang/github.com/quic-go/qpack@v0.6.0?type=module",
-        "pkg:golang/github.com/quic-go/quic-go@v0.59.1?type=module",
+        "pkg:golang/github.com/quic-go/quic-go@v0.60.0?type=module",
         "pkg:golang/github.com/rivo/uniseg@v0.4.7?type=module",
         "pkg:golang/github.com/rs/cors@v1.11.1?type=module",
         "pkg:golang/github.com/russross/blackfriday/v2@v2.1.0?type=module",
@@ -14335,7 +14335,7 @@
         "pkg:golang/github.com/opentracing/opentracing-go@v1.2.0?type=module",
         "pkg:golang/github.com/pbnjay/memory@v0.0.0-20210728143218-7b4eea64cf58?type=module",
         "pkg:golang/github.com/pion/datachannel@v1.5.10?type=module",
-        "pkg:golang/github.com/pion/dtls/v3@v3.1.2?type=module",
+        "pkg:golang/github.com/pion/dtls/v3@v3.1.4?type=module",
         "pkg:golang/github.com/pion/ice/v4@v4.0.10?type=module",
         "pkg:golang/github.com/pion/interceptor@v0.1.40?type=module",
         "pkg:golang/github.com/pion/logging@v0.2.4?type=module",
@@ -14357,8 +14357,8 @@
         "pkg:golang/github.com/prometheus/common@v0.70.1?type=module",
         "pkg:golang/github.com/prometheus/procfs@v0.21.1?type=module",
         "pkg:golang/github.com/quic-go/qpack@v0.6.0?type=module",
-        "pkg:golang/github.com/quic-go/quic-go@v0.59.1?type=module",
-        "pkg:golang/github.com/quic-go/webtransport-go@v0.10.0?type=module",
+        "pkg:golang/github.com/quic-go/quic-go@v0.60.0?type=module",
+        "pkg:golang/github.com/quic-go/webtransport-go@v0.11.1?type=module",
         "pkg:golang/github.com/rivo/uniseg@v0.4.7?type=module",
         "pkg:golang/github.com/spaolacci/murmur3@v1.1.0?type=module",
         "pkg:golang/github.com/spf13/cobra@v1.10.2?type=module",
@@ -15150,7 +15150,7 @@
         "pkg:golang/github.com/opentracing/opentracing-go@v1.2.0?type=module",
         "pkg:golang/github.com/pbnjay/memory@v0.0.0-20210728143218-7b4eea64cf58?type=module",
         "pkg:golang/github.com/pion/datachannel@v1.5.10?type=module",
-        "pkg:golang/github.com/pion/dtls/v3@v3.1.2?type=module",
+        "pkg:golang/github.com/pion/dtls/v3@v3.1.4?type=module",
         "pkg:golang/github.com/pion/ice/v4@v4.0.10?type=module",
         "pkg:golang/github.com/pion/interceptor@v0.1.40?type=module",
         "pkg:golang/github.com/pion/logging@v0.2.4?type=module",
@@ -15172,8 +15172,8 @@
         "pkg:golang/github.com/prometheus/common@v0.70.1?type=module",
         "pkg:golang/github.com/prometheus/procfs@v0.21.1?type=module",
         "pkg:golang/github.com/quic-go/qpack@v0.6.0?type=module",
-        "pkg:golang/github.com/quic-go/quic-go@v0.59.1?type=module",
-        "pkg:golang/github.com/quic-go/webtransport-go@v0.10.0?type=module",
+        "pkg:golang/github.com/quic-go/quic-go@v0.60.0?type=module",
+        "pkg:golang/github.com/quic-go/webtransport-go@v0.11.1?type=module",
         "pkg:golang/github.com/spaolacci/murmur3@v1.1.0?type=module",
         "pkg:golang/github.com/stretchr/objx@v0.5.2?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.11.1?type=module",
@@ -15551,7 +15551,7 @@
         "pkg:golang/github.com/munnerz/goautoneg@v0.0.0-20191010083416-a7dc8b61c822?type=module",
         "pkg:golang/github.com/pbnjay/memory@v0.0.0-20210728143218-7b4eea64cf58?type=module",
         "pkg:golang/github.com/pion/datachannel@v1.5.10?type=module",
-        "pkg:golang/github.com/pion/dtls/v3@v3.1.2?type=module",
+        "pkg:golang/github.com/pion/dtls/v3@v3.1.4?type=module",
         "pkg:golang/github.com/pion/ice/v4@v4.0.10?type=module",
         "pkg:golang/github.com/pion/interceptor@v0.1.40?type=module",
         "pkg:golang/github.com/pion/logging@v0.2.4?type=module",
@@ -15573,8 +15573,8 @@
         "pkg:golang/github.com/prometheus/common@v0.70.1?type=module",
         "pkg:golang/github.com/prometheus/procfs@v0.21.1?type=module",
         "pkg:golang/github.com/quic-go/qpack@v0.6.0?type=module",
-        "pkg:golang/github.com/quic-go/quic-go@v0.59.1?type=module",
-        "pkg:golang/github.com/quic-go/webtransport-go@v0.10.0?type=module",
+        "pkg:golang/github.com/quic-go/quic-go@v0.60.0?type=module",
+        "pkg:golang/github.com/quic-go/webtransport-go@v0.11.1?type=module",
         "pkg:golang/github.com/spaolacci/murmur3@v1.1.0?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.11.1?type=module",
         "pkg:golang/github.com/wlynxg/anet@v0.0.5?type=module",
@@ -15670,7 +15670,7 @@
         "pkg:golang/github.com/munnerz/goautoneg@v0.0.0-20191010083416-a7dc8b61c822?type=module",
         "pkg:golang/github.com/pbnjay/memory@v0.0.0-20210728143218-7b4eea64cf58?type=module",
         "pkg:golang/github.com/pion/datachannel@v1.5.10?type=module",
-        "pkg:golang/github.com/pion/dtls/v3@v3.1.2?type=module",
+        "pkg:golang/github.com/pion/dtls/v3@v3.1.4?type=module",
         "pkg:golang/github.com/pion/ice/v4@v4.0.10?type=module",
         "pkg:golang/github.com/pion/interceptor@v0.1.40?type=module",
         "pkg:golang/github.com/pion/logging@v0.2.4?type=module",
@@ -15692,8 +15692,8 @@
         "pkg:golang/github.com/prometheus/common@v0.70.1?type=module",
         "pkg:golang/github.com/prometheus/procfs@v0.21.1?type=module",
         "pkg:golang/github.com/quic-go/qpack@v0.6.0?type=module",
-        "pkg:golang/github.com/quic-go/quic-go@v0.59.1?type=module",
-        "pkg:golang/github.com/quic-go/webtransport-go@v0.10.0?type=module",
+        "pkg:golang/github.com/quic-go/quic-go@v0.60.0?type=module",
+        "pkg:golang/github.com/quic-go/webtransport-go@v0.11.1?type=module",
         "pkg:golang/github.com/spaolacci/murmur3@v1.1.0?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.11.1?type=module",
         "pkg:golang/github.com/whyrusleeping/go-keyspace@v0.0.0-20160322163242-5b898ac5add1?type=module",
@@ -15843,7 +15843,7 @@
         "pkg:golang/github.com/munnerz/goautoneg@v0.0.0-20191010083416-a7dc8b61c822?type=module",
         "pkg:golang/github.com/pbnjay/memory@v0.0.0-20210728143218-7b4eea64cf58?type=module",
         "pkg:golang/github.com/pion/datachannel@v1.5.10?type=module",
-        "pkg:golang/github.com/pion/dtls/v3@v3.1.2?type=module",
+        "pkg:golang/github.com/pion/dtls/v3@v3.1.4?type=module",
         "pkg:golang/github.com/pion/ice/v4@v4.0.10?type=module",
         "pkg:golang/github.com/pion/interceptor@v0.1.40?type=module",
         "pkg:golang/github.com/pion/logging@v0.2.4?type=module",
@@ -15864,8 +15864,8 @@
         "pkg:golang/github.com/prometheus/common@v0.70.1?type=module",
         "pkg:golang/github.com/prometheus/procfs@v0.21.1?type=module",
         "pkg:golang/github.com/quic-go/qpack@v0.6.0?type=module",
-        "pkg:golang/github.com/quic-go/quic-go@v0.59.1?type=module",
-        "pkg:golang/github.com/quic-go/webtransport-go@v0.10.0?type=module",
+        "pkg:golang/github.com/quic-go/quic-go@v0.60.0?type=module",
+        "pkg:golang/github.com/quic-go/webtransport-go@v0.11.1?type=module",
         "pkg:golang/github.com/spaolacci/murmur3@v1.1.0?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.11.1?type=module",
         "pkg:golang/github.com/wlynxg/anet@v0.0.5?type=module",
@@ -16465,7 +16465,7 @@
       ]
     },
     {
-      "ref": "pkg:golang/github.com/pion/dtls/v3@v3.1.2?type=module",
+      "ref": "pkg:golang/github.com/pion/dtls/v3@v3.1.4?type=module",
       "dependsOn": [
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
         "pkg:golang/github.com/pion/logging@v0.2.4?type=module",
@@ -16474,6 +16474,7 @@
         "pkg:golang/github.com/stretchr/testify@v1.11.1?type=module",
         "pkg:golang/golang.org/x/crypto@v0.54.0?type=module",
         "pkg:golang/golang.org/x/net@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
@@ -16482,7 +16483,7 @@
       "dependsOn": [
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
         "pkg:golang/github.com/google/uuid@v1.6.0?type=module",
-        "pkg:golang/github.com/pion/dtls/v3@v3.1.2?type=module",
+        "pkg:golang/github.com/pion/dtls/v3@v3.1.4?type=module",
         "pkg:golang/github.com/pion/logging@v0.2.4?type=module",
         "pkg:golang/github.com/pion/mdns/v2@v2.0.7?type=module",
         "pkg:golang/github.com/pion/randutil@v0.1.0?type=module",
@@ -16593,7 +16594,7 @@
       "ref": "pkg:golang/github.com/pion/stun/v3@v3.1.1?type=module",
       "dependsOn": [
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
-        "pkg:golang/github.com/pion/dtls/v3@v3.1.2?type=module",
+        "pkg:golang/github.com/pion/dtls/v3@v3.1.4?type=module",
         "pkg:golang/github.com/pion/logging@v0.2.4?type=module",
         "pkg:golang/github.com/pion/transport/v4@v4.0.1?type=module",
         "pkg:golang/github.com/pmezard/go-difflib@v1.0.1-0.20181226105442-5d4384ee4fb2?type=module",
@@ -16635,7 +16636,7 @@
       "ref": "pkg:golang/github.com/pion/turn/v4@v4.0.2?type=module",
       "dependsOn": [
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
-        "pkg:golang/github.com/pion/dtls/v3@v3.1.2?type=module",
+        "pkg:golang/github.com/pion/dtls/v3@v3.1.4?type=module",
         "pkg:golang/github.com/pion/logging@v0.2.4?type=module",
         "pkg:golang/github.com/pion/randutil@v0.1.0?type=module",
         "pkg:golang/github.com/pion/stun/v3@v3.1.1?type=module",
@@ -16654,7 +16655,7 @@
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
         "pkg:golang/github.com/google/uuid@v1.6.0?type=module",
         "pkg:golang/github.com/pion/datachannel@v1.5.10?type=module",
-        "pkg:golang/github.com/pion/dtls/v3@v3.1.2?type=module",
+        "pkg:golang/github.com/pion/dtls/v3@v3.1.4?type=module",
         "pkg:golang/github.com/pion/ice/v4@v4.0.10?type=module",
         "pkg:golang/github.com/pion/interceptor@v0.1.40?type=module",
         "pkg:golang/github.com/pion/logging@v0.2.4?type=module",
@@ -17008,7 +17009,7 @@
       ]
     },
     {
-      "ref": "pkg:golang/github.com/quic-go/quic-go@v0.59.1?type=module",
+      "ref": "pkg:golang/github.com/quic-go/quic-go@v0.60.0?type=module",
       "dependsOn": [
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
         "pkg:golang/github.com/pmezard/go-difflib@v1.0.1-0.20181226105442-5d4384ee4fb2?type=module",
@@ -17027,16 +17028,17 @@
       ]
     },
     {
-      "ref": "pkg:golang/github.com/quic-go/webtransport-go@v0.10.0?type=module",
+      "ref": "pkg:golang/github.com/quic-go/webtransport-go@v0.11.1?type=module",
       "dependsOn": [
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
         "pkg:golang/github.com/dunglas/httpsfv@v1.1.0?type=module",
         "pkg:golang/github.com/pmezard/go-difflib@v1.0.1-0.20181226105442-5d4384ee4fb2?type=module",
         "pkg:golang/github.com/quic-go/qpack@v0.6.0?type=module",
-        "pkg:golang/github.com/quic-go/quic-go@v0.59.1?type=module",
+        "pkg:golang/github.com/quic-go/quic-go@v0.60.0?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.11.1?type=module",
         "pkg:golang/golang.org/x/crypto@v0.54.0?type=module",
         "pkg:golang/golang.org/x/net@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/sync@v0.22.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
         "pkg:golang/golang.org/x/text@v0.40.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
