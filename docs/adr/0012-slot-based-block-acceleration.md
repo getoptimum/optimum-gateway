@@ -119,8 +119,4 @@ Two things have to be easy to tell apart, because both look like success from th
 * A stale or missing list degrades to today's behaviour rather than to something worse.
 * New dependency on the block path, though only a local lookup.
 * Mesh block volume drops to accelerated slots only. Shard distribution and peer scoring were tuned on all-blocks traffic, so this wants validating on Hoodi first.
-* Partners lose accelerated delivery on slots that aren't on the list. That's the intent, but it's a change in what we deliver. The propagation switch is the way back if we get it wrong.
 
-## Non-goals
-
-Trader-facing API, Edge signal format, pricing, partner comms, and how the slot list is chosen. Those belong in product specs or follow-up ADRs.
