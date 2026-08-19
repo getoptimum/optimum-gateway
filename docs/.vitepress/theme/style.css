@@ -184,6 +184,10 @@ html.dark .dark-mode-only {
   padding-right: 8px;
 }
 
+.VPSidebarItem .link.vp-external-link-icon .text {
+  flex-grow: 0;
+}
+
 .medium-zoom-overlay {
   z-index: 100;
 }
