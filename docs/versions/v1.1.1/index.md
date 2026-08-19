@@ -4,6 +4,8 @@
 
 > **Release Notes:** [What's new in v1.1.1](./release_notes.md)
 
+> **Security audit:** ProbeLab, 2026 - [Full report](https://cdn.probelab.io/media/documents/2026-08-ProbeLab-Security_Audit_Report_Optimum_Gateway.pdf)
+
 The **Optimum Gateway** bridges your **Ethereum Consensus Layer (CL) client** with the **mump2p** network.
 
 ## What does Optimum Gateway do?

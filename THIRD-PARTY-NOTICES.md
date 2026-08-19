@@ -105,7 +105,7 @@ Total distributed third-party packages: 246
 - [github.com/multiformats/go-varint](https://github.com/multiformats/go-varint/blob/v0.1.0/LICENSE)
 - [github.com/philhofer/fwd](https://github.com/philhofer/fwd/blob/v1.2.0/LICENSE.md)
 - [github.com/pion/datachannel](https://github.com/pion/datachannel/blob/v1.5.10/LICENSE)
-- [github.com/pion/dtls/v3](https://github.com/pion/dtls/blob/v3.1.2/LICENSE)
+- [github.com/pion/dtls/v3](https://github.com/pion/dtls/blob/v3.1.4/LICENSE)
 - [github.com/pion/ice/v4](https://github.com/pion/ice/blob/v4.0.10/LICENSE)
 - [github.com/pion/interceptor](https://github.com/pion/interceptor/blob/v0.1.40/LICENSE)
 - [github.com/pion/logging](https://github.com/pion/logging/blob/v0.2.4/LICENSE)

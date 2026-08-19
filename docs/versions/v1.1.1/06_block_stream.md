@@ -15,8 +15,8 @@ is required; the rest have the defaults shown.
 ```yaml
 stream_enable: true            # default: false
 stream_only: false             # default: false — skip CL; never publishes (requires stream_enable)
-stream_addr: 0.0.0.0:9600      # WebSocket listener (own port, off /metrics)
-stream_grpc_addr: 0.0.0.0:9601 # gRPC listener
+stream_addr: 127.0.0.1:9600    # default — WebSocket listener (own port, off /metrics)
+stream_grpc_addr: 127.0.0.1:9601 # default — gRPC listener
 stream_require_auth: true      # verify consumer JWTs; false = loopback dev only
 stream_max_conns: 256          # global connection cap
 stream_max_conns_per_sub: 8    # per-consumer-key connection cap
@@ -29,9 +29,11 @@ client. The gateway still joins the mesh but does not publish.
 The gateway verifies consumer tokens against the JWKS at your `remote_auth_url`,
 so it must point at the same auth service that mints the stream tokens.
 
-> **Exposure.** The stream listeners are separate from the `/metrics` and
-> `/health` port. Any non-loopback bind must sit behind TLS (native or a
-> terminating proxy); disabling auth is allowed only on a loopback bind.
+> **Exposure.** Listeners default to loopback (`127.0.0.1:9600` /
+> `127.0.0.1:9601`), separate from the `/metrics` and `/health` port. Enabling
+> the stream does not bind every interface. A non-loopback bind is an operator
+> choice and must sit behind a trusted TLS-terminating proxy — the gateway does
+> not terminate TLS. Disabling auth is allowed only on a loopback bind.
 
 ## Step 1 — mint a stream key (console)
 

@@ -10,6 +10,7 @@
 [![Coverage](https://img.shields.io/badge/coverage-%E2%89%A571%25-green)](Makefile)
 [![Docker image](https://img.shields.io/docker/v/getoptimum/gateway?label=docker&sort=semver)](https://hub.docker.com/r/getoptimum/gateway)
 [![Kurtosis Readiness](https://github.com/getoptimum/optimum-gateway/actions/workflows/optimum-package.yml/badge.svg)](https://github.com/getoptimum/optimum-gateway/actions/workflows/optimum-package.yml)
+[![Audited by ProbeLab](https://img.shields.io/badge/Audited_by-ProbeLab-1B873F)](https://cdn.probelab.io/media/documents/2026-08-ProbeLab-Security_Audit_Report_Optimum_Gateway.pdf)
 [![License](https://img.shields.io/badge/License-MIT-blue)](./LICENSE)
 
 # Optimum Gateway
@@ -18,8 +19,10 @@
 
 **Bridging Ethereum Consensus Layer gossip with the RLNC-enhanced mump2p mesh — for faster block & attestation propagation.**
 
-> **Security:** see [`SECURITY.md`](SECURITY.md) for the trust model, the listener
-> inventory with default binds and auth gates, and how to report vulnerabilities.
+> **Security:** Independently audited by [ProbeLab](https://probelab.io/blog/security-audit-report-optimum-gateway/)
+> ([PDF](https://cdn.probelab.io/media/documents/2026-08-ProbeLab-Security_Audit_Report_Optimum_Gateway.pdf)).
+> See [`SECURITY.md`](SECURITY.md) for the trust model, the listener inventory
+> with default binds and auth gates, and how to report vulnerabilities.
 
 ---
 
@@ -218,6 +221,7 @@ Keep `make run-rlnc-server` running in a separate terminal before `make run` or 
 - [Architecture Decision Records (ADRs)](docs/adr/README.md)
 - [Changelog](docs/CHANGELOG.md)
 - [Security model](SECURITY.md)
+- [ProbeLab security audit (PDF)](https://cdn.probelab.io/media/documents/2026-08-ProbeLab-Security_Audit_Report_Optimum_Gateway.pdf)
 
 ## Contributing
 
