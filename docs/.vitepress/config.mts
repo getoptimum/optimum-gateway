@@ -26,16 +26,28 @@ const withBase = (path: string) => `${base}${path.replace(/^\//, '')}`
 const sidebar: Record<string, any> = {}
 for (const v of versions) {
   const versionDir = path.join(DOCS_ROOT, v)
-  const items: Array<{ text: string; link: string }> = []
-  
+  const items: Array<{
+    text: string
+    link: string
+    target?: string
+    rel?: string
+  }> = []
+
   // Check for Release Notes first (top of sidebar)
   const releaseNotesPath = path.join(versionDir, 'release_notes.md')
   if (fs.existsSync(releaseNotesPath)) {
     items.push({ text: 'Release Notes', link: `/versions/${v}/release_notes` })
   }
-  
+
   // Always include Overview second
   items.push({ text: 'Overview', link: `/versions/${v}/` })
+
+  items.push({
+    text: 'Security Audit',
+    link: 'https://cdn.probelab.io/media/documents/2026-08-ProbeLab-Security_Audit_Report_Optimum_Gateway.pdf',
+    target: '_blank',
+    rel: 'noopener',
+  })
   
   // Add other items only if the file exists
   const possibleItems = [
