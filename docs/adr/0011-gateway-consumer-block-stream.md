@@ -89,25 +89,55 @@ Consumers present a JWT minted by `auth.getoptimum.io` for a new audience
 
 ### 4. Config (opt-in, off by default)
 
-| Env / yaml | Default | Purpose |
-| --- | --- | --- |
-| `OPT_STREAM_ENABLE` / `stream_enable` | `false` | Master switch for the consumer API. |
-| `OPT_STREAM_ONLY` / `stream_only` | `false` | Skip CL host/ingest; never publishes. Requires `stream_enable`. |
-| `OPT_STREAM_ADDR` / `stream_addr` | `0.0.0.0:9600` | WebSocket/HTTP listener. |
-| `OPT_STREAM_GRPC_ADDR` / `stream_grpc_addr` | `0.0.0.0:9601` | gRPC listener. |
-| `OPT_STREAM_REQUIRE_AUTH` / `stream_require_auth` | `true` | Verify consumer JWTs; `false` only for local dev. |
-| `OPT_STREAM_MAX_CONNS` / `stream_max_conns` | `256` | Global connection cap. |
-| `OPT_STREAM_MAX_CONNS_PER_SUB` / `stream_max_conns_per_sub` | `8` | Per-subject connection cap. |
-| `OPT_STREAM_BUFFER_SIZE` / `stream_buffer_size` | `64` | Per-connection ring buffer depth (drop-on-overflow). |
+| Env / yaml                                                  | Default          | Purpose                                                         |
+| ----------------------------------------------------------- | ---------------- | --------------------------------------------------------------- |
+| `OPT_STREAM_ENABLE` / `stream_enable`                       | `false`          | Master switch for the consumer API.                             |
+| `OPT_STREAM_ONLY` / `stream_only`                           | `false`          | Skip CL host/ingest; never publishes. Requires `stream_enable`. |
+| `OPT_STREAM_ADDR` / `stream_addr`                           | `127.0.0.1:9600` | WebSocket/HTTP listener.                                        |
+| `OPT_STREAM_GRPC_ADDR` / `stream_grpc_addr`                 | `127.0.0.1:9601` | gRPC listener.                                                  |
+| `OPT_STREAM_REQUIRE_AUTH` / `stream_require_auth`           | `true`           | Verify consumer JWTs; `false` only for local dev.               |
+| `OPT_STREAM_MAX_CONNS` / `stream_max_conns`                 | `256`            | Global connection cap.                                          |
+| `OPT_STREAM_MAX_CONNS_PER_SUB` / `stream_max_conns_per_sub` | `8`              | Per-subject connection cap.                                     |
+| `OPT_STREAM_BUFFER_SIZE` / `stream_buffer_size`             | `64`             | Per-connection ring buffer depth (drop-on-overflow).            |
 
 `OPT_REMOTE_AUTH_URL` (already present) supplies the JWKS/issuer.
 
-**Exposure requirement.** Any non-loopback bind (`stream_addr` / `stream_grpc_addr`
-beyond `127.0.0.1`) requires TLS — native or a trusted TLS-terminating proxy.
-Startup validation must **reject** a non-loopback listener when
-`stream_require_auth=false`; disabling auth is allowed only on a loopback bind for
-local dev. (Read/idle timeouts, max frame size, and the connection caps are the
-other DoS mitigations — see Consequences.)
+### 5. Exposure
+
+Both listeners bind to loopback by default, matching `pprof_addr`. Exposing a
+consumer feed on every interface is something the operator opts into, not what
+happens when they flip `stream_enable`.
+
+| Topology                                            | Requirement                                                           |
+| --------------------------------------------------- | --------------------------------------------------------------------- |
+| Loopback bind (the default)                         | Nothing further.                                                      |
+| Private network — VPC peering, WireGuard, Tailscale | Nothing further; the network layer supplies the encryption TLS would. |
+| Public network                                      | TLS required, via a trusted terminating proxy.                        |
+
+**Enforced at startup** (`validateStreamListener`, `pkg/config/config.go`): a
+non-loopback bind requires `stream_require_auth=true`. An empty host counts as
+non-loopback, so `:9600` does not slip through. Disabling auth is allowed only on
+a loopback bind, for local dev.
+
+**Not enforced, and cannot be:** the TLS obligation itself — the gateway cannot
+detect whether a proxy terminates TLS in front of it. Native TLS is deliberately
+not implemented; the proxy is the intended path and every real deployment already
+has one. These two sentences are kept separate on purpose: one is a runtime check,
+the other is an operator obligation, and blurring them hides which is which.
+
+What TLS protects here is **not** block confidentiality — blocks are public
+consensus data already broadcast on a public p2p network. It is:
+
+1. **The consumer JWT**, which travels in the `Authorization` header or in a
+   `bearer.<jwt>` `Sec-WebSocket-Protocol` offer for browsers (`bearerToken`,
+   `pkg/service/stream/ws.go`). In plaintext it is sniffable and replayable until
+   expiry. The blast radius is bounded — the stream is read-only by design, the
+   connection caps still apply, and the key is centrally revocable — so this is a
+   commercial exposure (unpaid access), not a safety one.
+2. **Feed integrity**, which cuts differently by mode; see Data model below.
+
+Read/idle timeouts, max frame size, and the connection caps are the other DoS
+mitigations — see Consequences.
 
 ### Data model — `BlockEvent`
 
@@ -121,6 +151,26 @@ Two modes, both from the existing decode point:
 `DecodeBeaconBlockHeader` doesn't return a real `body_root`, so `block_root`
 isn't cheaply derivable in metadata mode. It's left to raw mode (consumer-side)
 or a later change rather than adding an SSZ decode on the hot path.
+
+**What a consumer can verify.** The two modes carry different trust
+requirements, and integrators need to know which they're in:
+
+* **Raw mode degrades gracefully.** `Raw` is the verbatim `ssz_snappy`
+  `SignedBeaconBlock`, so a consumer holding beacon state can check the proposer
+  signature. Fabricated blocks are detectable consumer-side with no gateway
+  signing.
+* **Metadata mode does not.** `slot`, `proposer_index`, `parent_root`,
+  `state_root` and friends arrive as gateway assertions with nothing to check
+  them against.
+* **Timing fields are unverifiable in both modes.** `received_at_ms`,
+  `gateway_id`, and `stale` are gateway claims by construction — and for a
+  latency-sensitive consumer they are the most valuable thing in the payload, so
+  they are exactly what an on-path attacker would target.
+
+**Metadata mode and all timing fields therefore require a trusted transport.**
+Signing events gateway-side would close this without confidentiality, and the
+gateway already holds an identity key — but it puts per-event crypto on a hot
+path to reimplement, worse, what the proxy already provides. Not doing it.
 
 ## Architecture
 
@@ -152,9 +202,10 @@ flowchart LR
 
 ## Consequences
 
-* New public surface means DoS exposure. Mitigations: auth-before-subscribe,
-  connection caps (global + per-`sub`), read/idle timeouts, max frame size, WS
-  keepalive, gRPC keepalive, TLS (proxy or native).
+* New public surface means DoS exposure — but only once an operator moves off the
+  loopback default. Mitigations: auth-before-subscribe, connection caps (global +
+  per-`sub`), read/idle timeouts, max frame size, WS keepalive, gRPC keepalive,
+  TLS at the proxy.
 * Central-auth coupling, bounded by the `ConsumerAuthenticator` seam.
 * Drop-on-lag means slow consumers miss events — surfaced via `lagged`/`dropped`
   rather than silently.
@@ -166,18 +217,3 @@ flowchart LR
 * Topics beyond beacon blocks (attestations/aggregated later; a scope claim can
   gate them when they land).
 * Any consumer write path — read-only, always.
-
-## Implementation notes
-
-* Emit `BlockEvent` from `processBeaconBlockArrival` after decode, non-blocking;
-  keep `stale` blocks in the stream, flagged, rather than dropping them.
-* New packages `pkg/service/streamhub` and `pkg/service/stream` (WS + gRPC + auth
-  middleware), wired in `cmd/main.go` behind `OPT_STREAM_ENABLE`.
-* Extend `pkg/service/jwks_verifier` with `AudStream`, behind
-  `ConsumerAuthenticator`.
-* Add `.../stream/v1/stream.proto`; run `make proto`.
-* Tests via `pkg/test_utils` (`jwt_auth_claims.go`, `NewLocalBootstrapServerWithRig`):
-  drop-on-lag fan-out, auth-reject-before-upgrade, and non-blocking ingest under
-  a stalled consumer.
-* Telemetry: connections (total and per-`sub`), events sent/dropped, auth
-  failures, on the existing registry.
