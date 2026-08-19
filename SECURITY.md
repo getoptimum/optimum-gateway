@@ -77,7 +77,7 @@ hostile by default.
 ## Listener inventory
 
 Default ports below are the config defaults; the actual port and (for
-pprof/telemetry) bind address come from the env vars in parentheses.
+pprof/telemetry/stream) bind address come from the env vars in parentheses.
 The gateway does **not** ship its own per-listener auth or loopback
 guard for most ports — operators are expected to firewall every port
 except the libp2p (`OPT_AGENT_LIB_P2P_PORT`) and Optimum
@@ -89,6 +89,8 @@ except the libp2p (`OPT_AGENT_LIB_P2P_PORT`) and Optimum
 | 33213 (`OPT_AGENT_MUMP2P_PORT`)  | Optimum (mump2p)        | all interfaces                                                              | `ClusterID` always enforced in handshake; JWT verified by `authMgr.VerifyToken` (no-op when `OPT_ENABLE_AUTH=false` or `OPT_API_KEY` empty)                    | No mainnet/hoodi refusal if auth is disabled — operators are responsible for setting `OPT_ENABLE_AUTH=true` in production.      |
 | 48123 (`OPT_TELEMETRY_PORT`)     | HTTP telemetry (Fiber)  | all interfaces                                                              | **none** — `/`, `/health`, `/api/v1/self_info` are unauthenticated; `/metrics` is registered only when `OPT_ENABLE_TELEMETRY=true` and is also unauthenticated | Put behind a reverse proxy / firewall if exposed.                                                                               |
 | 6060 (`OPT_PPROF_ADDR`)          | pprof HTTP              | `OPT_PPROF_ADDR` (default `127.0.0.1:6060`)                                 | none                                                                                                                                                           | Only started when `OPT_ENABLE_PPROF=true`. Remote exposure is controlled by setting `OPT_PPROF_ADDR` to a non-loopback address. |
+| 9600 (`OPT_STREAM_ADDR`)         | Consumer block stream (WebSocket) | `OPT_STREAM_ADDR` (default `127.0.0.1:9600`)                        | Consumer JWT (`aud=stream`) when `OPT_STREAM_REQUIRE_AUTH=true`; auth-off rejected on non-loopback                                                              | Only started when `OPT_STREAM_ENABLE=true`. No native TLS; a public bind must sit behind a trusted terminating proxy.            |
+| 9601 (`OPT_STREAM_GRPC_ADDR`)    | Consumer block stream (gRPC) | `OPT_STREAM_GRPC_ADDR` (default `127.0.0.1:9601`)                      | same as WebSocket                                                                                                                                              | Same exposure rules as `OPT_STREAM_ADDR`. Must differ from `stream_addr`.                                                        |
 
 ## Bootstrap server trust
 
