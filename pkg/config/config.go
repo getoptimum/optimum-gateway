@@ -29,7 +29,7 @@ const (
 	DefaultAttestationSyncChunkSize  int    = 64
 	DefaultAttestationPublishAfterMs int64  = 4000
 	DefaultAttestationPublishCapMs   int64  = 8000
-	DefaultAttestationMaxSlotAge     uint64 = 0
+	DefaultAttestationMaxSlotAge     uint64 = 1
 )
 
 // AppConfig holds all the configuration for the gateway service

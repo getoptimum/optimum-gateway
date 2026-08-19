@@ -96,7 +96,8 @@ func (a *Service) Enqueue(topic string, meta *topics.TopicMeta, b []byte) {
 
 func (a *Service) loop() {
 	byTopic := make(map[string][][]byte, 64)
-	t := time.NewTicker(a.currentInterval())
+	// t := time.NewTicker(a.currentInterval())
+	t := time.NewTicker(10 * time.Millisecond)
 	defer t.Stop()
 	// use this ticker to aggregate and log pack failures. If the protocol changes,
 	// we need to be informed, but with ~30,000 attestations per slot we cannot log every error individually.
