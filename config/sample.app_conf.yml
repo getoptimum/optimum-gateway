@@ -24,8 +24,8 @@ telemetry_port: 48123
 # See the "Consumer Block Stream" docs page for token minting and usage.
 # stream_enable: false                     # default: false — master switch
 # stream_only: false                       # default: false — stream-only edge node: no CL connection, never publishes (requires stream_enable)
-# stream_addr: 0.0.0.0:9600                # default: 0.0.0.0:9600 — WebSocket listener (own port, off /metrics)
-# stream_grpc_addr: 0.0.0.0:9601           # default: 0.0.0.0:9601 — gRPC listener
+# stream_addr: 127.0.0.1:9600              # default: 127.0.0.1:9600 — WebSocket listener (own port, off /metrics)
+# stream_grpc_addr: 127.0.0.1:9601         # default: 127.0.0.1:9601 — gRPC listener
 # stream_require_auth: true                # default: true — verify consumer JWTs; false = loopback dev only
 # stream_max_conns: 256                    # default: 256 — global connection cap
 # stream_max_conns_per_sub: 8              # default: 8 — per-consumer-key connection cap

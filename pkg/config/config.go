@@ -96,9 +96,14 @@ type AppConfig struct {
 	StreamEnable bool `yaml:"stream_enable" env:"OPT_STREAM_ENABLE" default:"false"`
 	// StreamOnly skips the CL host and ingest: no CL connection, never publishes
 	// into the mesh. Requires stream_enable.
-	StreamOnly           bool   `yaml:"stream_only" env:"OPT_STREAM_ONLY" default:"false"`
-	StreamAddr           string `yaml:"stream_addr" env:"OPT_STREAM_ADDR" default:"0.0.0.0:9600"`
-	StreamGRPCAddr       string `yaml:"stream_grpc_addr" env:"OPT_STREAM_GRPC_ADDR" default:"0.0.0.0:9601"`
+	StreamOnly bool `yaml:"stream_only" env:"OPT_STREAM_ONLY" default:"false"`
+	// Both listeners default to loopback, matching pprof_addr: exposing a
+	// consumer feed on every interface should be a deliberate act, not what
+	// happens when someone flips stream_enable. Binding beyond loopback puts
+	// the consumer JWT and the gateway's timing claims on the wire, so it
+	// requires TLS in front.
+	StreamAddr           string `yaml:"stream_addr" env:"OPT_STREAM_ADDR" default:"127.0.0.1:9600"`
+	StreamGRPCAddr       string `yaml:"stream_grpc_addr" env:"OPT_STREAM_GRPC_ADDR" default:"127.0.0.1:9601"`
 	StreamRequireAuth    bool   `yaml:"stream_require_auth" env:"OPT_STREAM_REQUIRE_AUTH" default:"true"`
 	StreamMaxConns       int    `yaml:"stream_max_conns" env:"OPT_STREAM_MAX_CONNS" default:"256"`
 	StreamMaxConnsPerSub int    `yaml:"stream_max_conns_per_sub" env:"OPT_STREAM_MAX_CONNS_PER_SUB" default:"8"`

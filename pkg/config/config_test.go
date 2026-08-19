@@ -289,6 +289,18 @@ func TestStreamValidation(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, cfg.StreamEnable)
 		require.True(t, cfg.StreamRequireAuth)
+		// Loopback by default: enabling the stream must not, on its own,
+		// publish a consumer feed on every interface (ADR-0011 §Exposure).
+		require.Equal(t, "127.0.0.1:9600", cfg.StreamAddr)
+		require.Equal(t, "127.0.0.1:9601", cfg.StreamGRPCAddr)
+	})
+
+	t.Run("auth off on default bind allowed", func(t *testing.T) {
+		base(t)
+		t.Setenv("OPT_STREAM_ENABLE", "true")
+		t.Setenv("OPT_STREAM_REQUIRE_AUTH", "false")
+		_, err := config.LoadConfig("")
+		require.NoError(t, err)
 	})
 
 	t.Run("auth off on loopback allowed", func(t *testing.T) {

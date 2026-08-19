@@ -44,10 +44,22 @@ const possibleItems = [
 const sidebar: Record<string, any> = {}
 for (const v of versionDirs) {
   const versionDir = path.join(DOCS_ROOT, v)
-  const items: Array<{ text: string; link: string }> = []
+  const items: Array<{
+    text: string
+    link: string
+    target?: string
+    rel?: string
+  }> = []
   const page = (file: string) => `/versions/${v}/${pretty(file).replace(/\.md$/, '')}`
 
   items.push({ text: 'Overview', link: `/versions/${v}/` })
+
+  items.push({
+    text: 'Security Audit',
+    link: 'https://cdn.probelab.io/media/documents/2026-08-ProbeLab-Security_Audit_Report_Optimum_Gateway.pdf',
+    target: '_blank',
+    rel: 'noopener',
+  })
 
   for (const item of possibleItems) {
     if (fs.existsSync(path.join(versionDir, item.file))) {
