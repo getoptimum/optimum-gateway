@@ -7,7 +7,7 @@ Partner install, API keys, and production config: **[Gateway documentation (late
 ## Prerequisites
 
 * Docker and Docker Compose installed
-* Optimum **API key** (`ogw_live_...`) — set as **`OPT_API_KEY`** in `ethereum/.env` (see [Generate your API key](https://getoptimum.github.io/optimum-gateway/versions/latest/01_quick_start#generate-your-api-key))
+* Optimum **API key** (`ogw_live_...`) — set as **`OPT_API_KEY`** in `ethereum/.env` (see [Generate your API key](https://getoptimum.github.io/optimum-gateway/versions/latest/quick-start#generate-your-api-key))
 * Ports available: gateway `33212`, `48123`; monitoring `9090`, `3000` (lite/full); CL-specific ports below
 
 ## Setup
@@ -109,7 +109,7 @@ Gateway config: `ethereum/config/app_conf.yml` (created from `config/sample.app_
 * **`gateway_cluster_id`** — must match the cluster assigned during onboarding (sample uses `optimum_hoodi_v0_2` for Hoodi dev).
 * Image versions (`GATEWAY_VERSION`, CL/EL tags) and `GATEWAY_PEER` live in `ethereum/.env` (from `.env.example`).
 
-Recommended CL versions and PeerDAS flags: [Gateway quick start](https://getoptimum.github.io/optimum-gateway/versions/latest/01_quick_start) and [Troubleshooting](https://getoptimum.github.io/optimum-gateway/versions/latest/04_troubleshoot).
+Recommended CL versions and PeerDAS flags: [Gateway quick start](https://getoptimum.github.io/optimum-gateway/versions/latest/quick-start) and [Troubleshooting](https://getoptimum.github.io/optimum-gateway/versions/latest/troubleshoot).
 
 ## Monitoring
 

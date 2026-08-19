@@ -6,10 +6,12 @@ import VPNavBarMenuGroup from 'vitepress/dist/client/theme-default/components/VP
 const route = useRoute()
 const { theme } = useData()
 
-const current = computed(() => {
-  const m = route.path.match(/\/versions\/([^/]+)\//)
-  return m?.[1] ?? ''
+const parsed = computed(() => {
+  const m = route.path.match(/\/versions\/([^/]+)(?:\/(.*))?$/)
+  return { ver: m?.[1] ?? '', rest: m?.[2] ?? '' }
 })
+
+const current = computed(() => parsed.value.ver)
 
 const label = computed(() => {
   const v = current.value
@@ -17,11 +19,21 @@ const label = computed(() => {
   return v === 'latest' ? `Latest (${theme.value.latest})` : v
 })
 
+function pageLink(ver: string): string {
+  const rest = parsed.value.rest
+  const fallback = `/versions/${ver}/`
+  if (!rest) return fallback
+  const target = `/versions/${ver}/${rest}`
+  const group = theme.value.sidebar[`/versions/${ver}/`]
+  const items = Array.isArray(group) ? group[0]?.items ?? [] : []
+  return items.some((i: { link?: string }) => i.link === target) ? target : fallback
+}
+
 const items = computed(() => [
-  { text: `Latest (${theme.value.latest})`, link: '/versions/latest/' },
+  { text: `Latest (${theme.value.latest})`, link: pageLink('latest') },
   ...theme.value.versions.slice().reverse().map((v: string) => ({
     text: v,
-    link: `/versions/${v}/`
+    link: pageLink(v)
   }))
 ])
 </script>

@@ -175,3 +175,23 @@ html.dark .dark-mode-only {
 .VPNavBar .content-body > .social-links      { order: 6; }
 .VPNavBar .content-body > .extra             { order: 7; }
 .VPNavBar .content-body > .hamburger         { order: 8; }
+
+
+.VPNavBarMenu .VPNavBarMenuLink {
+  padding: 0 8px;
+}
+.VPNavBar .version-switcher .button {
+  padding-right: 8px;
+}
+
+.VPSidebarItem .link.vp-external-link-icon .text {
+  flex-grow: 0;
+}
+
+.medium-zoom-overlay {
+  z-index: 100;
+}
+
+.medium-zoom-image--opened {
+  z-index: 101;
+}
