@@ -335,6 +335,8 @@ github.com/getoptimum/mump2p-protocol v0.0.1-rc4 h1:xC/RYdb+ZBKqmyAk8CGFaElth4v4
 github.com/getoptimum/mump2p-protocol v0.0.1-rc4/go.mod h1:683ayY1pT3s9lwlfmLQEHPlkPZRfqDB1feCjuDChz/U=
 github.com/getoptimum/mump2p-protocol v0.0.1-rc5 h1:G1eLyowU3kGzkgkc6XYBG2gVu90tnIt6zpnwv3PxOO8=
 github.com/getoptimum/mump2p-protocol v0.0.1-rc5/go.mod h1:683ayY1pT3s9lwlfmLQEHPlkPZRfqDB1feCjuDChz/U=
+github.com/getoptimum/mump2p-protocol v0.0.1-rc6 h1:pS3WyQNHyqIe5W32XT7YcV7OKTDoGUzyGkzj4ODIRQo=
+github.com/getoptimum/mump2p-protocol v0.0.1-rc6/go.mod h1:683ayY1pT3s9lwlfmLQEHPlkPZRfqDB1feCjuDChz/U=
 github.com/getoptimum/optimum-common v0.1.4 h1:G6HzynbK3Xvk1uUhSTDt/iZqc0BabgxzSPgoNmnV0Yw=
 github.com/getoptimum/optimum-common v0.1.4/go.mod h1:gOX2MYQQ7zqciRiybcVqIoCsV/tvw8cJdQfbmj4FSxc=
 github.com/getoptimum/shm v0.5.0 h1:JKAFD2Gavx/vVWvHyEoUCyZ1ZzRJIk0WxciPATJlaz8=

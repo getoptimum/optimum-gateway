@@ -18,6 +18,7 @@ import (
 	gomplex "github.com/libp2p/go-mplex"
 	"github.com/multiformats/go-multiaddr"
 
+	"github.com/getoptimum/mump2p-protocol/pkg/config"
 	"github.com/getoptimum/mump2p-protocol/pkg/engine"
 	rlncps "github.com/getoptimum/mump2p-protocol/pkg/pubsub"
 	"github.com/getoptimum/mump2p-protocol/pkg/router"
@@ -196,7 +197,9 @@ func NewNodeWithHost(
 	ret.initConfigMap()
 	ret.logConfigs()
 
-	rlncEngine, err := engine.NewEngine(ret, log.With(logger.WithService("rlncEngine")).Slog(), shmSvc)
+	rlncEngine, err := engine.NewEngine(config.RLNCConfigs{
+		"*": cfgMap[4096],
+	}, log.With(logger.WithService("rlncEngine")).Slog(), shmSvc)
 	if err != nil {
 		return nil, fmt.Errorf("create RLNC engine: %w", err)
 	}
