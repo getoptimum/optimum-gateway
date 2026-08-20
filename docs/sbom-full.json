@@ -3684,18 +3684,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.0.1-rc5?type=module",
+      "bom-ref": "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.0.1-rc6?type=module",
       "type": "library",
       "name": "github.com/getoptimum/mump2p-protocol",
-      "version": "v0.0.1-rc5",
+      "version": "v0.0.1-rc6",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "1b578bca8c14de41b392091ce976011b6815bbdd2d9c8b7ace99f0bf73f138ef"
+          "content": "a52dd6c90347caa21ee56df65d3ed8715ece2930e8194cf21a4ce3e0e0c8450a"
         }
       ],
-      "purl": "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.0.1-rc5?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.0.1-rc6?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/getoptimum/mump2p-protocol",
@@ -12951,7 +12951,7 @@
       "ref": "pkg:golang/github.com/getoptimum/optimum-gateway@0.0.0-dev?type=module",
       "dependsOn": [
         "pkg:golang/github.com/ferranbt/fastssz@v1.0.1-0.20251203093649-0b1f38e43198?type=module",
-        "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.0.1-rc5?type=module",
+        "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.0.1-rc6?type=module",
         "pkg:golang/github.com/getoptimum/optimum-common@v0.1.4?type=module",
         "pkg:golang/github.com/gofiber/fiber/v3@v3.4.0?type=module",
         "pkg:golang/github.com/golang-jwt/jwt/v5@v5.3.1?type=module",
@@ -14214,7 +14214,7 @@
       "ref": "pkg:golang/github.com/gabriel-vasile/mimetype@v1.4.13?type=module"
     },
     {
-      "ref": "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.0.1-rc5?type=module",
+      "ref": "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.0.1-rc6?type=module",
       "dependsOn": [
         "pkg:golang/4d63.com/gocheckcompilerdirectives@v1.3.0?type=module",
         "pkg:golang/4d63.com/gochecknoglobals@v0.2.2?type=module",
