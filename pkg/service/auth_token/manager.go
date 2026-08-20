@@ -164,6 +164,9 @@ func enrollmentResultFor(err error) string {
 	if errors.Is(err, enrollment.ErrInvalidEnrollment) {
 		return telemetry.EnrollmentResultInvalid
 	}
+	if errors.Is(err, enrollment.ErrEnrollmentConflict) {
+		return telemetry.EnrollmentResultConflict
+	}
 	return telemetry.EnrollmentResultFailed
 }
 

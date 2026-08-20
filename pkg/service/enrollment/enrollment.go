@@ -59,11 +59,16 @@ const (
 	AssertionValidityBudget = 30 * time.Second
 )
 
-// ErrInvalidEnrollment is the single failure the enroll endpoint reports. Unknown,
-// expired, exhausted and revoked join keys, a cross-org thumbprint and a bad proof
-// all collapse to one 401 upstream to defeat enumeration, so the cause cannot be
-// recovered here; check uses_count / expires_at / status on the join key instead.
+// ErrInvalidEnrollment is the 401 from the enroll endpoint. Unknown, expired, exhausted
+// and revoked join keys, a cross-org thumbprint and a bad proof all collapse to one
+// 401 upstream to defeat enumeration, so the cause cannot be recovered here; check
+// uses_count / expires_at / status on the join key instead.
 var ErrInvalidEnrollment = errors.New("enrollment: join credential rejected (401)")
+
+// ErrEnrollmentConflict means the join key was accepted but the credential could not
+// be created: this gateway's label is already live in the org, or the org is at its
+// key cap. Operator action, not a retry, so treat it as terminal.
+var ErrEnrollmentConflict = errors.New("enrollment: credential conflict (409)")
 
 // PublicJWK is a P-256 public key in the exact shape optimum-auth accepts.
 //
@@ -220,8 +225,9 @@ type enrollResponse struct {
 	Error    string `json:"error"`
 }
 
-// terminalEnrollStatuses will not become valid on retry.
-var terminalEnrollStatuses = []int{http.StatusBadRequest, http.StatusUnauthorized}
+// terminalEnrollStatuses will not become valid on retry. 409 included: a duplicate
+// label or a full org needs an operator, and retrying just re-POSTs the same body.
+var terminalEnrollStatuses = []int{http.StatusBadRequest, http.StatusUnauthorized, http.StatusConflict}
 
 func credentialPath(dir string) string { return filepath.Join(dir, CredentialFile) }
 
@@ -351,14 +357,26 @@ func Enroll(ctx context.Context, log logger.AppLogger, opts *Options) (*Credenti
 		nil,
 		terminalEnrollStatuses...,
 	)
-	if err != nil {
+	// Status 0 is the only case with no response to classify. An unparseable body still
+	// carries its status, and the status is what decides terminal-and-typed, so classify
+	// first: otherwise a 409 behind an HTML error page degrades to an untyped failure.
+	if status == 0 {
 		return nil, fmt.Errorf("enrollment: POST enroll: %w", err)
 	}
 
 	switch status {
 	case http.StatusOK, http.StatusCreated:
+		if err != nil {
+			return nil, fmt.Errorf("enrollment: POST enroll: %w", err)
+		}
 	case http.StatusUnauthorized:
 		return nil, ErrInvalidEnrollment
+	case http.StatusConflict:
+		// Carry the upstream code: label_conflict and gateway_key_limit need different fixes.
+		if parsed != nil && parsed.Error != "" {
+			return nil, fmt.Errorf("%w: %s", ErrEnrollmentConflict, parsed.Error)
+		}
+		return nil, ErrEnrollmentConflict
 	default:
 		detail := ""
 		if parsed != nil {

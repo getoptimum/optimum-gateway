@@ -124,7 +124,7 @@ func TestEnrollmentGrant_SignsAFreshAssertionPerMint(t *testing.T) {
 }
 
 // A shared placeholder label would fail the second gateway's enrollment on the
-// per-org unique index, reported as an opaque "invalid join key".
+// per-org unique index, now reported as a 409 label_conflict.
 func TestEnrollmentGrant_OmitsThePlaceholderLabel(t *testing.T) {
 	rig := test_utils.NewAuthTestRig(t)
 	cfg := joinKeyCfg(t, rig, t.TempDir())

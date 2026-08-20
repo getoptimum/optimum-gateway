@@ -374,6 +374,53 @@ func TestEnrollRejectedJoinKey(t *testing.T) {
 	require.ErrorIs(t, statErr, os.ErrNotExist, "a failed enrollment must not leave a credential behind")
 }
 
+func TestEnrollLabelConflictIsTerminal(t *testing.T) {
+	auth := newStubAuth(t)
+	auth.status = http.StatusConflict
+	auth.body = []byte(`{"error":"label_conflict"}`)
+
+	dir := t.TempDir()
+	_, err := enrollment.Enroll(t.Context(), testLogger(), &enrollment.Options{
+		Issuer: auth.server.URL, Dir: dir, JoinKey: "ojk_test_dup", Label: "node-1",
+	})
+	require.ErrorIs(t, err, enrollment.ErrEnrollmentConflict)
+	require.Contains(t, err.Error(), "label_conflict", "the operator needs the upstream code to know what to fix")
+	require.EqualValues(t, 1, auth.calls.Load(), "a conflict must not be retried")
+
+	_, statErr := os.Stat(filepath.Join(dir, enrollment.CredentialFile))
+	require.ErrorIs(t, statErr, os.ErrNotExist)
+}
+
+func TestEnrollConflictVariants(t *testing.T) {
+	// A 409 must stay typed however the body arrives: an unparseable one still carries
+	// its status.
+	for _, tc := range []struct {
+		name, body, wantDetail string
+	}{
+		{"cap", `{"error":"gateway_key_limit"}`, "gateway_key_limit"},
+		{"non-JSON body", "<html>409</html>", ""},
+		{"empty body", "", ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			auth := newStubAuth(t)
+			auth.status = http.StatusConflict
+			auth.body = []byte(tc.body)
+
+			_, err := enrollment.Enroll(t.Context(), testLogger(), &enrollment.Options{
+				Issuer: auth.server.URL, Dir: t.TempDir(), JoinKey: "ojk_test_x", Label: "node-1",
+			})
+			require.ErrorIs(t, err, enrollment.ErrEnrollmentConflict)
+			require.EqualValues(t, 1, auth.calls.Load(), "a conflict must not be retried")
+			if tc.wantDetail != "" {
+				require.Contains(t, err.Error(), tc.wantDetail)
+			} else {
+				require.Equal(t, enrollment.ErrEnrollmentConflict.Error(), err.Error(),
+					"no detail means no dangling separator")
+			}
+		})
+	}
+}
+
 func TestEnrollServerError(t *testing.T) {
 	auth := newStubAuth(t)
 	auth.status = http.StatusInternalServerError
