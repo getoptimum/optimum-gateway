@@ -1,6 +1,7 @@
 package bootstrapper_test
 
 import (
+	"net/http"
 	"testing"
 	"time"
 
@@ -77,6 +78,54 @@ func TestSendTrackedSlotsEmitsLatestSameSlotValue(t *testing.T) {
 	}
 	require.GreaterOrEqual(t, seen, 1, "expected at least one emission")
 	require.Equal(t, int64(300), last, "settled emission must carry the latest same-slot value")
+}
+
+func TestBlockLatencyExportRetriesThenRecovers(t *testing.T) {
+	srv, bootstrap, cfg := getTestSrv(t)
+	cfg.TelemetryEnable = true
+
+	// Bootstrap is "down": Cloudflare 521 is a transient error and must be retried.
+	bootstrap.SetBlockLatencyStatus(521)
+
+	const slot = uint64(700)
+	srv.RecordMumPublishedAt(slot, 100)
+
+	// The same slot is attempted more than once while the endpoint keeps failing.
+	a1 := bootstrap.WaitBlockLatencyRequest(t, 5*time.Second)
+	require.Equal(t, slot, a1.Payload.BlockSlot)
+	a2 := bootstrap.WaitBlockLatencyRequest(t, 5*time.Second)
+	require.Equal(t, slot, a2.Payload.BlockSlot)
+
+	// Bootstrap recovers: once a send succeeds, retries for the slot stop.
+	bootstrap.SetBlockLatencyStatus(0)
+
+	deadline := time.After(20 * time.Second)
+	for {
+		select {
+		case <-deadline:
+			t.Fatal("exporter never quiesced after bootstrap recovery")
+		default:
+		}
+		if _, ok := bootstrap.TryBlockLatencyRequest(2500 * time.Millisecond); !ok {
+			return // no further attempts: the successful send cleared the slot
+		}
+	}
+}
+
+func TestBlockLatencyExportTerminalResponseIsNotRetried(t *testing.T) {
+	srv, bootstrap, cfg := getTestSrv(t)
+	cfg.TelemetryEnable = true
+
+	// A terminal 4xx must be dropped, not retried.
+	bootstrap.SetBlockLatencyStatus(http.StatusBadRequest)
+
+	const slot = uint64(800)
+	srv.RecordMumPublishedAt(slot, 100)
+
+	req := bootstrap.WaitBlockLatencyRequest(t, 5*time.Second)
+	require.Equal(t, slot, req.Payload.BlockSlot)
+
+	bootstrap.AssertNoBlockLatencyRequest(t, 2500*time.Millisecond)
 }
 
 func TestHandleBeaconBlock(t *testing.T) {
