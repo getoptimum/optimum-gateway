@@ -17,8 +17,14 @@ git remote add upstream git@github.com:getoptimum/optimum-gateway.git
 ```
 
 ```bash
-make build   # Verify it compiles
-make test    # Run unit tests
+make build              # Verify the gateway compiles
+make run-rlnc-server    # Keep the required RLNC server running in this terminal
+```
+
+In a separate terminal:
+
+```bash
+make test    # Run tests with the RLNC server available
 make run     # Run the service locally
 ```
 
@@ -43,6 +49,7 @@ Here are some ways you can contribute:
 
 Before submitting, ensure:
 
+* [ ] `make run-rlnc-server` is running before tests
 * [ ] `make test` passes (including coverage)
 * [ ] `make lint` passes (we use `golangci-lint`)
 * [ ] Your code is formatted using `go fmt`

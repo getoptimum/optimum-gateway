@@ -18,20 +18,18 @@ import (
 )
 
 const (
-	DefaultMaxMessageSize            int64   = 1024 * 1024 // 1MB
-	DefaultRandomMessageSize         int64   = 512
-	DefaultShardFactor               int64   = 4
-	DefaultPublisherShardMultiplier  float32 = 1.2
-	DefaultForwardShardThreshold     float32 = 0.75
-	DefaultMeshDegreeTarget          int64   = 6
-	DefaultMeshDegreeMin             int64   = 4
-	DefaultMeshDegreeMax             int64   = 12
-	DefaultAggregationIntervalMs     int64   = 25
-	maxAggregationIntervalMs         int64   = 600000 // 10 minutes
-	DefaultAttestationSyncChunkSize  int     = 64
-	DefaultAttestationPublishAfterMs int64   = 4000
-	DefaultAttestationPublishCapMs   int64   = 8000
-	DefaultAttestationMaxSlotAge     uint64  = 0
+	DefaultMaxMessageSize           int64   = 1024 * 1024 // 1MB
+	DefaultRandomMessageSize        uint32  = 512
+	DefaultShardFactor              uint32  = 4
+	DefaultPublisherShardMultiplier float64 = 1.2
+	DefaultForwardShardThreshold    float64 = 0.75
+
+	DefaultAggregationIntervalMs     int64  = 25
+	maxAggregationIntervalMs         int64  = 600000 // 10 minutes
+	DefaultAttestationSyncChunkSize  int    = 64
+	DefaultAttestationPublishAfterMs int64  = 4000
+	DefaultAttestationPublishCapMs   int64  = 8000
+	DefaultAttestationMaxSlotAge     uint64 = 1
 )
 
 // AppConfig holds all the configuration for the gateway service
@@ -185,9 +183,6 @@ func (c *AppConfig) InitRuntime(ctx context.Context, log logger.AppLogger, chain
 			ShardFactor:              DefaultShardFactor,
 			PublisherShardMultiplier: DefaultPublisherShardMultiplier,
 			ForwardShardThreshold:    DefaultForwardShardThreshold,
-			MeshDegreeTarget:         DefaultMeshDegreeTarget,
-			MeshDegreeMin:            DefaultMeshDegreeMin,
-			MeshDegreeMax:            DefaultMeshDegreeMax,
 		},
 		ch.String(),
 		c.GatewayClusterID,
@@ -384,7 +379,7 @@ func (c *AppConfig) LogConfigState() {
 			logger.WithInt64("mesh_degree_target", optCfg.MeshDegreeTarget),
 			logger.WithInt64("mesh_degree_min", optCfg.MeshDegreeMin),
 			logger.WithInt64("mesh_degree_max", optCfg.MeshDegreeMax),
-			logger.WithInt64("shard_factor", optCfg.ShardFactor),
+			logger.WithUint64("shard_factor", uint64(optCfg.ShardFactor)),
 			logger.WithInt64("aggregation_interval_ms", c.aggregationIntervalMs.Load()),
 		)
 	}

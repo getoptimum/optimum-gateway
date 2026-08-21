@@ -22,7 +22,6 @@ cover.out
 
 # CI/CD and development files
 .github/
-Makefile
 docker-compose*.yml
 
 # Test data

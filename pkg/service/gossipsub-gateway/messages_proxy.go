@@ -1,8 +1,11 @@
 package gossipsub_gateway
 
 import (
+	"encoding/hex"
+	"fmt"
 	"time"
 
+	"github.com/getoptimum/mump2p-protocol/pkg/engine"
 	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
 	commonhash "github.com/getoptimum/optimum-common/pkg/hash"
 	"github.com/getoptimum/optimum-common/pkg/logger"
@@ -49,6 +52,13 @@ func (s *Service) processCLBeaconBlock(l logger.AppLogger, msg *entities.CLMessa
 	if s.nodeMumP2P == nil {
 		return
 	}
+	if engine.IsRLNC(msg.Message) {
+		l.Error(
+			"CL beacon block payload starts with RLNC magic byte",
+			fmt.Errorf("RLNC magic byte: %x", msg.Message[0]),
+			logger.WithString("payload_prefix", hex.EncodeToString(msg.Message[:min(len(msg.Message), 8)])),
+		)
+	}
 	publishedAt := time.Now().UnixMilli()
 	if err := s.nodeMumP2P.PublishMessage(s.ctx, msg.Topic, msg.Message); err != nil {
 		telemetry.IncreaseBadMessagesToMum()
@@ -73,6 +83,7 @@ func (s *Service) processCLAttestation(l logger.AppLogger, msg *entities.CLMessa
 	if !s.srvMsgRouter.ShouldForwardMessageToMumP2P(l, meta.Kind, msg.Topic, msg.Message) {
 		return
 	}
+	s.log.Info("processing attestation message from CL", logger.WithTopic(msg.Topic), logger.WithInt("size", len(msg.Message)))
 
 	s.aggregatorMessages.Enqueue(msg.Topic, meta, msg.Message)
 }

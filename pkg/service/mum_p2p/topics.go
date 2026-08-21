@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"strings"
 
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
+
 	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
-	pubsub "github.com/getoptimum/optimum-p2p/optimum-pubsub"
 )
 
 // SubscribeTopic subscribes to a topic and calls the provided function when a message is received.

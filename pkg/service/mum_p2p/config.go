@@ -3,30 +3,19 @@ package mum_p2p
 import (
 	"fmt"
 	"math"
-	"time"
 
 	"github.com/libp2p/go-libp2p/core/connmgr"
 
+	mump2pcfg "github.com/getoptimum/mump2p-protocol/pkg/config"
 	commonconfig "github.com/getoptimum/optimum-common/pkg/config"
 	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
-	pubsub "github.com/getoptimum/optimum-p2p/optimum-pubsub"
+	"github.com/getoptimum/optimum-common/pkg/logger"
 )
 
 type Config struct {
 	ClusterID      string `yaml:"cluster_id"`
 	ListenPort     int    `yaml:"listen_port"`
 	MaxMessageSize int64  `yaml:"max_message_size_bytes"`
-
-	// RLNC and message settings
-	RandomMessageSize        int64   `yaml:"random_message_size_bytes"`
-	ShardFactor              int     `yaml:"rlnc_shard_factor"`
-	PublisherShardMultiplier float32 `yaml:"publisher_shard_multiplier"`
-	ForwardShardThreshold    float32 `yaml:"forward_shard_threshold"`
-
-	// Mesh topology settings
-	MeshDegreeTarget int `yaml:"mesh_degree_target"`
-	MeshDegreeMin    int `yaml:"mesh_degree_min"`
-	MeshDegreeMax    int `yaml:"mesh_degree_max"`
 
 	BootstrapPeers []string `yaml:"bootstrap_peers"`
 
@@ -58,22 +47,37 @@ func (cfg *Config) Get() *commonentities.OptimumConfig {
 	return cfg.Rotator.Get()
 }
 
-func toOptimumConfig(cfg *Config) *pubsub.OptimumSubParams {
-	res := pubsub.DefaultOptimumSubParams()
-	if cfg.Get().MeshDegreeTarget != 0 {
-		res.D = int(cfg.Get().MeshDegreeTarget)
-		res.Dlo = int(cfg.Get().MeshDegreeTarget - 1)
-		res.Dhi = int(cfg.Get().MeshDegreeTarget + 6)
+func toMumP2PConfig(cfg *Config) *mump2pcfg.Config {
+	res := mump2pcfg.DefaultGossipSubConfig()
+	dc := cfg.Get()
+	if dc.MeshDegreeTarget != 0 {
+		res.MeshD = int(dc.MeshDegreeTarget)
+		res.MeshDlo = int(dc.MeshDegreeTarget - 1)
+		res.MeshDhi = int(dc.MeshDegreeTarget + 6)
 	}
-	if cfg.Get().MeshDegreeMin != 0 {
-		res.Dlo = int(cfg.Get().MeshDegreeMin)
+	if dc.MeshDegreeMin != 0 {
+		res.MeshDlo = int(dc.MeshDegreeMin)
 	}
-	if cfg.Get().MeshDegreeMax != 0 {
-		res.Dhi = int(cfg.Get().MeshDegreeMax)
+	if dc.MeshDegreeMax != 0 {
+		res.MeshDhi = int(dc.MeshDegreeMax)
 	}
+	res.RLNC = mump2pcfg.RLNCConfig{
+		K:                           dc.ShardFactor,
+		MaxShardSize:                dc.RandomMessageSize,
+		RedundancyFraction:          dc.PublisherShardMultiplier,
+		ForwardingThresholdFraction: dc.ForwardShardThreshold,
+		MeshDegreeMax:               res.MeshDhi,
+	}
+	return res
+}
 
-	res.HeartbeatInterval = 700 * time.Millisecond // frequency of heartbeat, milliseconds
-	res.HistoryLength = 6                          // number of windows to retain full messages in cache for `IWANT` responses
-	res.HistoryGossip = 3                          // number of windows to gossip about
-	return &res
+func (n *Node) logRLNCConfig(cfgLog mump2pcfg.RLNCConfig) {
+	n.log.Info("RLNC config",
+		logger.WithFlow("RLNC"),
+		logger.WithUint64("RLNC_K", uint64(cfgLog.K)),
+		logger.WithUint64("MaxShardSize", uint64(cfgLog.MaxShardSize)),
+		logger.WithFloat64("RedundancyFraction", cfgLog.RedundancyFraction),
+		logger.WithFloat64("ForwardingThresholdFraction", cfgLog.ForwardingThresholdFraction),
+		logger.WithInt("MeshDegreeMax", cfgLog.MeshDegreeMax),
+	)
 }

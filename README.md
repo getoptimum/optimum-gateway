@@ -54,14 +54,18 @@ flowchart LR
         LP <--> CORE <--> MP
     end
 
+    RLNC["Local rlnc-server<br/>20 shared-memory lanes"]
     MESH["Other gateways<br/>mump2p mesh"]
 
     CL <-->|"gossip (ssz_snappy)"| LP
+    MP <-->|"shared memory"| RLNC
     MP <-->|"RLNC mump2p"| MESH
 
     classDef ext fill:#eef,stroke:#88a,color:#225;
-    class CL,BS,RLNC,MESH,OBS ext;
+    class CL,RLNC,MESH ext;
 ```
+
+The gateway uses `mump2p-protocol` for RLNC-enabled pubsub and delegates RLNC coding to the required local `rlnc-server` process over shared memory.
 
 ### Message flow
 
@@ -105,14 +109,19 @@ docker run --name optimum-gateway --rm \
 
 ### Run from source
 
-Requires **Go 1.26+**.
+Requires **Go 1.26+**, Git, and a working CGO/C toolchain.
 
 ```sh
 git clone https://github.com/getoptimum/optimum-gateway
 cd optimum-gateway
 cp config/sample.app_conf.yml config/app_conf.yml
-make build      # builds ./bin/optimum-gateway
-make run        # go run cmd/main.go -config config/app_conf.yml
+make build                 # builds ./bin/optimum-gateway
+
+# terminal 1; builds ./bin/rlnc-server on first use
+make run-rlnc-server
+
+# terminal 2
+make run                   # go run cmd/main.go -config config/app_conf.yml
 ```
 
 ### Connect your CL client
@@ -195,12 +204,16 @@ For debugging Prysm from source, patch the flags noted in [`guide.md`](guide.md)
 ## Make targets
 
 ```sh
-make help        # list all targets
-make build       # build the binary
-make test        # unit + integration tests with coverage
-make lint        # golangci-lint
-make vulcheck    # govulncheck (with documented exception list)
+make help               # list all targets
+make build              # build the gateway binary
+make build-rlnc-server  # build ./bin/rlnc-server from getoptimum/rlnc
+make run-rlnc-server    # run the required local RLNC shared-memory server
+make test               # unit + integration tests with coverage
+make lint               # golangci-lint
+make vulcheck           # govulncheck (with documented exception list)
 ```
+
+Keep `make run-rlnc-server` running in a separate terminal before `make run` or `make test`.
 
 ## Documentation
 
