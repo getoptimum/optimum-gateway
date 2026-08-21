@@ -62,12 +62,14 @@ func TestExportPendingSetIsBounded(t *testing.T) {
 func TestExportResolve(t *testing.T) {
 	s := newExportTestService()
 	s.exportPend[5] = &pendingExport{version: 2, nextAt: time.Now()}
+	s.exportPend[7] = &pendingExport{version: 2, nextAt: time.Now()}
 	s.exportPend[9] = &pendingExport{version: 1, nextAt: time.Now()}
 	s.exportPend[11] = &pendingExport{version: 1, nextAt: time.Now()}
 	s.exportPend[13] = &pendingExport{version: 1, nextAt: time.Now()}
 
 	before := time.Now()
-	s.exportResolve(5, 1, exportOutcomeSuccess, 200, nil) // stale success must keep the newer update
+	s.exportResolve(5, 1, exportOutcomeSuccess, 200, nil)  // stale success must keep the newer update
+	s.exportResolve(7, 1, exportOutcomeTerminal, 400, nil) // stale terminal must not drop the newer update
 	s.exportResolve(9, 1, exportOutcomeTransient, 521, nil)
 	s.exportResolve(11, 1, exportOutcomeTerminal, 400, nil)
 	s.exportResolve(13, 1, exportOutcomeExpired, 0, nil)
@@ -78,6 +80,9 @@ func TestExportResolve(t *testing.T) {
 	s.exportResolve(5, 2, exportOutcomeSuccess, 200, nil)
 	_, ok = s.exportPend[5]
 	require.False(t, ok)
+
+	_, ok = s.exportPend[7]
+	require.True(t, ok)
 
 	pe, ok = s.exportPend[9]
 	require.True(t, ok)

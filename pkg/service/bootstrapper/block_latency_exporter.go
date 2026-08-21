@@ -50,28 +50,19 @@ func (s *Service) enqueueBlockLatencyExport(slot uint64) {
 		pe.nextAt = now
 	} else {
 		if len(s.exportPend) >= exportMaxPending {
-			s.exportEvictOldestLocked()
+			oldest := ^uint64(0)
+			for sl := range s.exportPend {
+				if sl < oldest {
+					oldest = sl
+				}
+			}
+			delete(s.exportPend, oldest)
+			telemetry.RecordBlockLatencyExport(telemetry.ExportResultOverflow)
 		}
 		s.exportPend[slot] = &pendingExport{version: 1, nextAt: now}
 	}
 	s.exportMu.Unlock()
 	s.exportSignal()
-}
-
-// exportEvictOldestLocked drops the oldest (lowest) slot to keep the pending set
-// bounded. Slots are monotonic, so the lowest is the least useful to retry.
-func (s *Service) exportEvictOldestLocked() {
-	var oldest uint64
-	found := false
-	for slot := range s.exportPend {
-		if !found || slot < oldest {
-			oldest, found = slot, true
-		}
-	}
-	if found {
-		delete(s.exportPend, oldest)
-		telemetry.RecordBlockLatencyExport(telemetry.ExportResultOverflow)
-	}
 }
 
 func (s *Service) exportSignal() {
@@ -113,7 +104,7 @@ func (s *Service) exportNextLocked() (slot uint64, ready bool, wait time.Duratio
 	var bestAt time.Time
 	found := false
 	for sl, pe := range s.exportPend {
-		if !found || pe.nextAt.Before(bestAt) || (pe.nextAt.Equal(bestAt) && sl < best) {
+		if !found || pe.nextAt.Before(bestAt) {
 			best, bestAt, found = sl, pe.nextAt, true
 		}
 	}
@@ -190,31 +181,25 @@ func (s *Service) exportResolve(slot, startVersion uint64, outcome exportOutcome
 	}
 	s.exportMu.Unlock()
 
+	// A stale in-flight result must not look like a drop (or a finish) of the live slot.
+	if newer {
+		s.exportSignal()
+		return
+	}
+
 	switch outcome {
 	case exportOutcomeSuccess:
 		telemetry.RecordBlockLatencyExport(telemetry.ExportResultSuccess)
 	case exportOutcomeTerminal:
 		telemetry.RecordBlockLatencyExport(telemetry.ExportResultTerminal)
-		s.exportLogDrop("block latency export dropped (non-retryable response)", slot, code, err)
+		s.log.Debug("block latency export dropped (non-retryable response)", logger.WithUint64("slot", slot), logger.WithInt("code", code), logger.WithAny("err", err))
 	case exportOutcomeExpired:
 		telemetry.RecordBlockLatencyExport(telemetry.ExportResultExpired)
 	case exportOutcomeTransient:
 		telemetry.RecordBlockLatencyExport(telemetry.ExportResultTransient)
 		telemetry.RecordBlockLatencyExportTransientCode(code)
-		s.exportLogDrop("block latency export failed, will retry", slot, code, err)
+		s.log.Debug("block latency export failed, will retry", logger.WithUint64("slot", slot), logger.WithInt("code", code), logger.WithAny("err", err))
 	}
-
-	if newer {
-		s.exportSignal()
-	}
-}
-
-func (s *Service) exportLogDrop(msg string, slot uint64, code int, err error) {
-	fields := []logger.Field{logger.WithUint64("slot", slot), logger.WithInt("code", code)}
-	if err != nil {
-		fields = append(fields, logger.WithError(err))
-	}
-	s.log.Debug(msg, fields...)
 }
 
 // isRetryableExportCode treats transport failures (code 0), 408/429, Cloudflare

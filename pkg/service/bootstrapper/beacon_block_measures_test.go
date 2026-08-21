@@ -10,7 +10,7 @@ import (
 	chainstate "github.com/getoptimum/optimum-gateway/pkg/protocol/chain_state"
 )
 
-func TestRecordMumPublishedAtChanOverflow(t *testing.T) {
+func TestRecordMumPublishedAtDoesNotBlock(t *testing.T) {
 	srv, _, _ := getTestSrv(t)
 	n := time.Now().Unix()
 	for i := range uint64(1000) {
@@ -43,7 +43,7 @@ func TestRecordMumPublishedAt(t *testing.T) {
 	require.Equal(t, int64(444), req.Payload.MumPublishedAtMs)
 }
 
-func TestSendTrackedSlotsEmitsLatestSameSlotValue(t *testing.T) {
+func TestBlockLatencyExportEmitsLatestSameSlotValue(t *testing.T) {
 	srv, bootstrap, _ := getTestSrv(t)
 
 	const slot = uint64(128)
