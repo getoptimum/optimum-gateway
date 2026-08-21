@@ -98,16 +98,16 @@ func (s *Service) ShouldForwardMessageToMumP2P(l logger.AppLogger, kind topics.T
 		}
 	}
 
-	//if diff > s.cfg.GetAttestationMaxSlotAge() {
-	//	l.Error("attestation is too old to forward",
-	//		fmt.Errorf("attestation slot %d is older than max slot age %d", att.Data.Slot, s.cfg.GetAttestationMaxSlotAge()),
-	//		logger.WithUint64("attester", uint64(att.AttesterIndex)),
-	//		logger.WithUint64("current_slot", chainstate.CurrentSlot(time.Now())),
-	//		logger.WithUint64("slot", uint64(att.Data.Slot)),
-	//	)
-	//	telemetry.IncAttestationDropped("stale")
-	//	return false
-	//}
+	if diff > s.cfg.GetAttestationMaxSlotAge() {
+		l.Error("attestation is too old to forward",
+			fmt.Errorf("attestation slot %d is older than max slot age %d", att.Data.Slot, s.cfg.GetAttestationMaxSlotAge()),
+			logger.WithUint64("attester", uint64(att.AttesterIndex)),
+			logger.WithUint64("current_slot", chainstate.CurrentSlot(time.Now())),
+			logger.WithUint64("slot", uint64(att.Data.Slot)),
+		)
+		telemetry.IncAttestationDropped("stale")
+		return false
+	}
 
 	telemetry.IncAttestationForwarded(entities.SourceMumP2P)
 	return true

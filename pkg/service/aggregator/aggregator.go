@@ -96,8 +96,7 @@ func (a *Service) Enqueue(topic string, meta *topics.TopicMeta, b []byte) {
 
 func (a *Service) loop() {
 	byTopic := make(map[string][][]byte, 64)
-	// t := time.NewTicker(a.currentInterval())
-	t := time.NewTicker(10 * time.Millisecond)
+	t := time.NewTicker(a.currentInterval())
 	defer t.Stop()
 	// use this ticker to aggregate and log pack failures. If the protocol changes,
 	// we need to be informed, but with ~30,000 attestations per slot we cannot log every error individually.
@@ -200,7 +199,6 @@ func (a *Service) loop() {
 //
 // Returns false when the gate is disabled. See ADR-010.
 func (a *Service) shouldHoldForSlotGate(now time.Time) bool {
-	return false
 	if a.cfg == nil {
 		return false
 	}

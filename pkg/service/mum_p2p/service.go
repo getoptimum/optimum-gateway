@@ -173,6 +173,7 @@ func NewNodeWithHost(
 	log.Info("initializing optimum gossipsub")
 
 	psCfg := toMumP2PConfig(cfg)
+	ret.logRLNCConfig(psCfg.RLNC)
 
 	log.Info("log params",
 		logger.WithFlow("RLNC"),
