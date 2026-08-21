@@ -125,8 +125,8 @@ func newLocalBootstrapServer(t *testing.T, rig *AuthTestRig) *LocalBootstrapServ
 
 // SetBlockLatencyStatus makes the block-latency endpoint respond with the given
 // HTTP status. Use 0 to restore success (200). Safe to call concurrently.
-func (m *LocalBootstrapServer) SetBlockLatencyStatus(code int) {
-	m.latencyStatus.Store(int32(code))
+func (m *LocalBootstrapServer) SetBlockLatencyStatus(code int32) {
+	m.latencyStatus.Store(code)
 }
 
 func mapToURLValues(src map[string]string) url.Values {

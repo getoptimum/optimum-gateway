@@ -11,7 +11,7 @@ import (
 // Block-latency export outcomes (issue #90). Kept as a small, fixed label set so
 // success rate, retry pressure, and drop reasons are visible without parsing logs.
 const (
-	ExportResultSuccess   = "success"        // delivered (2xx), possibly after retries
+	ExportResultSuccess   = "success"         // delivered (2xx), possibly after retries
 	ExportResultTransient = "transient_retry" // attempt failed with a retryable error; rescheduled
 	ExportResultTerminal  = "terminal_drop"   // non-retryable response (e.g. 4xx); dropped
 	ExportResultExpired   = "expired"         // slot left the retention window before delivery
