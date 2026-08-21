@@ -195,11 +195,8 @@ func NewNodeWithHost(
 		return nil, fmt.Errorf("initialize RLNC shared memory: %w", err)
 	}
 
-	ret.initConfigMap()
-	ret.logConfigs()
-
 	rlncEngine, err := engine.NewEngine(config.RLNCConfigs{
-		"*": cfgMap[4096],
+		"*": psCfg.RLNC,
 	}, log.With(logger.WithService("rlncEngine")).Slog(), shmSvc)
 	if err != nil {
 		return nil, fmt.Errorf("create RLNC engine: %w", err)
