@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -38,9 +39,13 @@ type Service struct {
 	srvForkMgr *forks.Service
 
 	nodeMumP2PStr string // This gateway's mump2p peer ID
-	sendSlotsChan chan uint64
 	blockEvents   chan *blockArrival
 	trackedSlots  *syncx.TTLMap[uint64, *entities.LatencyComparator]
+
+	// block-latency export retry scheduler (issue #90)
+	exportMu   sync.Mutex
+	exportPend map[uint64]*pendingExport
+	exportWake chan struct{}
 }
 
 func NewService(
@@ -57,11 +62,13 @@ func NewService(
 		authMgr:    authMgr,
 		srvForkMgr: srvForkMgr,
 
-		sendSlotsChan: make(chan uint64, 100),
-		blockEvents:   make(chan *blockArrival, 1024),
-		trackedSlots:  syncx.NewTTLMap[uint64, *entities.LatencyComparator](5*time.Minute, 1*time.Minute),
+		blockEvents:  make(chan *blockArrival, 1024),
+		trackedSlots: syncx.NewTTLMap[uint64, *entities.LatencyComparator](5*time.Minute, 1*time.Minute),
+
+		exportPend: make(map[uint64]*pendingExport),
+		exportWake: make(chan struct{}, 1),
 	}
-	go srv.bgHandleSendSlots()
+	go srv.runBlockLatencyExporter()
 	go srv.bgHandleBlockEvents()
 	return srv
 }

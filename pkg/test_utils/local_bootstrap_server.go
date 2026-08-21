@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -41,6 +42,7 @@ type LocalBootstrapServer struct {
 	registerReqs  chan RegisterGatewayRequest
 	exposeReqs    chan ExposeNodesRequest
 	latencyReqs   chan BlockLatencyRequest
+	latencyStatus *atomic.Int32 // 0 => success; otherwise HTTP status to return for block-latency posts
 	srv           *httptest.Server
 }
 
@@ -57,6 +59,7 @@ func newLocalBootstrapServer(t *testing.T, rig *AuthTestRig) *LocalBootstrapServ
 	registerReqs := make(chan RegisterGatewayRequest, 32)
 	exposeReqs := make(chan ExposeNodesRequest, 32)
 	latencyReqs := make(chan BlockLatencyRequest, 32)
+	latencyStatus := &atomic.Int32{}
 	app := fiber.New()
 	app.Get(utils.BootstrapExposeNodesPath, func(c fiber.Ctx) error {
 		select {
@@ -99,6 +102,9 @@ func newLocalBootstrapServer(t *testing.T, rig *AuthTestRig) *LocalBootstrapServ
 		default:
 			// Keep latency capture best-effort so unrelated tests never block on this test stub.
 		}
+		if code := latencyStatus.Load(); code != 0 {
+			return c.SendStatus(int(code))
+		}
 		return nil
 	})
 
@@ -113,7 +119,14 @@ func newLocalBootstrapServer(t *testing.T, rig *AuthTestRig) *LocalBootstrapServ
 		registerReqs:  registerReqs,
 		exposeReqs:    exposeReqs,
 		latencyReqs:   latencyReqs,
+		latencyStatus: latencyStatus,
 	}
+}
+
+// SetBlockLatencyStatus makes the block-latency endpoint respond with the given
+// HTTP status. Use 0 to restore success (200). Safe to call concurrently.
+func (m *LocalBootstrapServer) SetBlockLatencyStatus(code int32) {
+	m.latencyStatus.Store(code)
 }
 
 func mapToURLValues(src map[string]string) url.Values {
