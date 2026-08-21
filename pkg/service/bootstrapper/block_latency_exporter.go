@@ -2,7 +2,6 @@ package bootstrapper
 
 import (
 	"context"
-	"net/http"
 	"time"
 
 	"github.com/getoptimum/optimum-common/pkg/logger"
@@ -155,14 +154,14 @@ func (s *Service) exportSend(slot uint64) {
 	_, code, err := commonnet.PostCurl[any](ctx, url, data, s.bearerAuthHeader(ctx))
 	cancel()
 
+	outcome := exportOutcomeTerminal
 	switch {
 	case utils.IsPostSuccess(code):
-		s.exportResolve(slot, startVersion, exportOutcomeSuccess, code, err)
+		outcome = exportOutcomeSuccess
 	case isRetryableExportCode(code):
-		s.exportResolve(slot, startVersion, exportOutcomeTransient, code, err)
-	default:
-		s.exportResolve(slot, startVersion, exportOutcomeTerminal, code, err)
+		outcome = exportOutcomeTransient
 	}
+	s.exportResolve(slot, startVersion, outcome, code, err)
 }
 
 // exportResolve applies the attempt result to the pending set (with the version
@@ -221,32 +220,13 @@ func (s *Service) exportLogDrop(msg string, slot uint64, code int, err error) {
 // isRetryableExportCode treats transport failures (code 0), 408/429, Cloudflare
 // 521, and any 5xx as transient. Terminal 4xx are not retried.
 func isRetryableExportCode(code int) bool {
-	switch {
-	case code == 0:
-		return true
-	case code == http.StatusRequestTimeout, code == http.StatusTooManyRequests:
-		return true
-	case code == 521: // Cloudflare "Web Server Is Down"
-		return true
-	case code >= 500 && code <= 599:
-		return true
-	default:
-		return false
-	}
+	return code == 0 || code == 408 || code == 429 || code == 521 || (code >= 500 && code <= 599)
 }
 
-// exportBackoff is capped exponential backoff with up to 50% jitter.
 func exportBackoff(attempt int) time.Duration {
-	d := exportMaxBackoff
-	if attempt >= 1 && attempt <= 8 {
-		if shifted := exportBaseBackoff << (attempt - 1); shifted > 0 && shifted < exportMaxBackoff {
-			d = shifted
-		}
-	}
-	if half := int(d / 2); half > 0 {
-		if j, err := commonrand.RandBetween(0, half); err == nil {
-			d += time.Duration(j)
-		}
+	d := min(exportBaseBackoff<<min(max(attempt-1, 0), 8), exportMaxBackoff)
+	if j, err := commonrand.RandBetween(0, int(d/2)); err == nil {
+		d += time.Duration(j)
 	}
 	return d
 }

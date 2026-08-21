@@ -59,58 +59,35 @@ func TestExportPendingSetIsBounded(t *testing.T) {
 	require.False(t, hasOldest, "oldest slot must be evicted under pressure")
 }
 
-func TestExportResolveGenerationGuard(t *testing.T) {
+func TestExportResolve(t *testing.T) {
 	s := newExportTestService()
-	const slot = uint64(5)
-	s.exportPend[slot] = &pendingExport{version: 1, nextAt: time.Now()}
-
-	// A newer update lands (version bumped) while a version-1 attempt is in flight.
-	s.exportPend[slot].version = 2
-
-	// Success for the stale version 1 must NOT drop the newer update.
-	s.exportResolve(slot, 1, exportOutcomeSuccess, 200, nil)
-	pe, ok := s.exportPend[slot]
-	require.True(t, ok, "stale success must not discard a newer update")
-	require.Equal(t, 0, pe.attempt, "newer update should be rescheduled promptly")
-
-	// Success for the current version 2 clears the slot.
-	s.exportResolve(slot, 2, exportOutcomeSuccess, 200, nil)
-	_, ok = s.exportPend[slot]
-	require.False(t, ok, "success for the current version must clear the slot")
-}
-
-func TestExportResolveTransientReschedulesWithBackoff(t *testing.T) {
-	s := newExportTestService()
-	const slot = uint64(9)
-	s.exportPend[slot] = &pendingExport{version: 1, nextAt: time.Now()}
+	s.exportPend[5] = &pendingExport{version: 2, nextAt: time.Now()}
+	s.exportPend[9] = &pendingExport{version: 1, nextAt: time.Now()}
+	s.exportPend[11] = &pendingExport{version: 1, nextAt: time.Now()}
+	s.exportPend[13] = &pendingExport{version: 1, nextAt: time.Now()}
 
 	before := time.Now()
-	s.exportResolve(slot, 1, exportOutcomeTransient, 521, nil)
+	s.exportResolve(5, 1, exportOutcomeSuccess, 200, nil) // stale success must keep the newer update
+	s.exportResolve(9, 1, exportOutcomeTransient, 521, nil)
+	s.exportResolve(11, 1, exportOutcomeTerminal, 400, nil)
+	s.exportResolve(13, 1, exportOutcomeExpired, 0, nil)
 
-	pe, ok := s.exportPend[slot]
-	require.True(t, ok, "transient failure must keep the slot for retry")
+	pe, ok := s.exportPend[5]
+	require.True(t, ok)
+	require.Equal(t, 0, pe.attempt)
+	s.exportResolve(5, 2, exportOutcomeSuccess, 200, nil)
+	_, ok = s.exportPend[5]
+	require.False(t, ok)
+
+	pe, ok = s.exportPend[9]
+	require.True(t, ok)
 	require.Equal(t, 1, pe.attempt)
-	require.True(t, pe.nextAt.After(before), "retry must be scheduled in the future")
-}
+	require.True(t, pe.nextAt.After(before))
 
-func TestExportResolveTerminalDropsSlot(t *testing.T) {
-	s := newExportTestService()
-	const slot = uint64(11)
-	s.exportPend[slot] = &pendingExport{version: 1, nextAt: time.Now()}
-
-	s.exportResolve(slot, 1, exportOutcomeTerminal, 400, nil)
-	_, ok := s.exportPend[slot]
-	require.False(t, ok, "terminal response must drop the slot")
-}
-
-func TestExportResolveExpiredDropsSlot(t *testing.T) {
-	s := newExportTestService()
-	const slot = uint64(13)
-	s.exportPend[slot] = &pendingExport{version: 1, nextAt: time.Now()}
-
-	s.exportResolve(slot, 1, exportOutcomeExpired, 0, nil)
-	_, ok := s.exportPend[slot]
-	require.False(t, ok, "expiry must drop the slot")
+	_, ok = s.exportPend[11]
+	require.False(t, ok)
+	_, ok = s.exportPend[13]
+	require.False(t, ok)
 }
 
 func TestRunBlockLatencyExporterStopsPromptlyOnCancel(t *testing.T) {
