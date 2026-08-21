@@ -1,7 +1,6 @@
 package bootstrapper_test
 
 import (
-	"net/http"
 	"testing"
 	"time"
 
@@ -13,19 +12,9 @@ import (
 
 func TestRecordMumPublishedAtChanOverflow(t *testing.T) {
 	srv, _, _ := getTestSrv(t)
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		n := time.Now()
-		for i := range uint64(1000) {
-			srv.RecordMumPublishedAt(i, n.Unix())
-		}
-	}()
-
-	select {
-	case <-done:
-	case <-time.After(5 * time.Second):
-		t.Fatal("timeout")
+	n := time.Now().Unix()
+	for i := range uint64(1000) {
+		srv.RecordMumPublishedAt(i, n)
 	}
 }
 
@@ -55,8 +44,7 @@ func TestRecordMumPublishedAt(t *testing.T) {
 }
 
 func TestSendTrackedSlotsEmitsLatestSameSlotValue(t *testing.T) {
-	srv, bootstrap, cfg := getTestSrv(t)
-	cfg.TelemetryEnable = true
+	srv, bootstrap, _ := getTestSrv(t)
 
 	const slot = uint64(128)
 	srv.RecordMumPublishedAt(slot, 100)
@@ -81,50 +69,32 @@ func TestSendTrackedSlotsEmitsLatestSameSlotValue(t *testing.T) {
 }
 
 func TestBlockLatencyExportRetriesThenRecovers(t *testing.T) {
-	srv, bootstrap, cfg := getTestSrv(t)
-	cfg.TelemetryEnable = true
-
-	// Bootstrap is "down": Cloudflare 521 is a transient error and must be retried.
+	srv, bootstrap, _ := getTestSrv(t)
 	bootstrap.SetBlockLatencyStatus(521)
 
 	const slot = uint64(700)
 	srv.RecordMumPublishedAt(slot, 100)
 
-	// The same slot is attempted more than once while the endpoint keeps failing.
 	a1 := bootstrap.WaitBlockLatencyRequest(t, 5*time.Second)
 	require.Equal(t, slot, a1.Payload.BlockSlot)
 	a2 := bootstrap.WaitBlockLatencyRequest(t, 5*time.Second)
 	require.Equal(t, slot, a2.Payload.BlockSlot)
 
-	// Bootstrap recovers: once a send succeeds, retries for the slot stop.
 	bootstrap.SetBlockLatencyStatus(0)
-
-	deadline := time.After(20 * time.Second)
-	for {
-		select {
-		case <-deadline:
-			t.Fatal("exporter never quiesced after bootstrap recovery")
-		default:
-		}
-		if _, ok := bootstrap.TryBlockLatencyRequest(2500 * time.Millisecond); !ok {
-			return // no further attempts: the successful send cleared the slot
-		}
-	}
+	req := bootstrap.WaitBlockLatencyRequest(t, 20*time.Second)
+	require.Equal(t, slot, req.Payload.BlockSlot)
+	bootstrap.AssertNoBlockLatencyRequest(t, 2500*time.Millisecond)
 }
 
 func TestBlockLatencyExportTerminalResponseIsNotRetried(t *testing.T) {
-	srv, bootstrap, cfg := getTestSrv(t)
-	cfg.TelemetryEnable = true
-
-	// A terminal 4xx must be dropped, not retried.
-	bootstrap.SetBlockLatencyStatus(http.StatusBadRequest)
+	srv, bootstrap, _ := getTestSrv(t)
+	bootstrap.SetBlockLatencyStatus(400)
 
 	const slot = uint64(800)
 	srv.RecordMumPublishedAt(slot, 100)
 
 	req := bootstrap.WaitBlockLatencyRequest(t, 5*time.Second)
 	require.Equal(t, slot, req.Payload.BlockSlot)
-
 	bootstrap.AssertNoBlockLatencyRequest(t, 2500*time.Millisecond)
 }
 
