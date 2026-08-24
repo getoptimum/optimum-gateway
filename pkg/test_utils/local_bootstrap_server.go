@@ -60,6 +60,16 @@ func newLocalBootstrapServer(t *testing.T, rig *AuthTestRig) *LocalBootstrapServ
 	exposeReqs := make(chan ExposeNodesRequest, 32)
 	latencyReqs := make(chan BlockLatencyRequest, 32)
 	latencyStatus := &atomic.Int32{}
+	captureLatency := func(c fiber.Ctx, payload entities.LatencyComparator) {
+		select {
+		case latencyReqs <- BlockLatencyRequest{
+			Authorization: strings.Clone(c.Get("Authorization")),
+			Payload:       payload,
+		}:
+		default:
+			// Keep latency capture best-effort so unrelated tests never block on this test stub.
+		}
+	}
 	app := fiber.New()
 	app.Get(utils.BootstrapExposeNodesPath, func(c fiber.Ctx) error {
 		select {
@@ -93,14 +103,17 @@ func newLocalBootstrapServer(t *testing.T, rig *AuthTestRig) *LocalBootstrapServ
 	app.Post(utils.BootstrapHandleBlockLatencyV2, func(c fiber.Ctx) error {
 		var payload entities.LatencyComparator
 		require.NoError(t, json.Unmarshal(c.Body(), &payload))
-		req := BlockLatencyRequest{
-			Authorization: strings.Clone(c.Get("Authorization")),
-			Payload:       payload,
+		captureLatency(c, payload)
+		if code := latencyStatus.Load(); code != 0 {
+			return c.SendStatus(int(code))
 		}
-		select {
-		case latencyReqs <- req:
-		default:
-			// Keep latency capture best-effort so unrelated tests never block on this test stub.
+		return nil
+	})
+	app.Post(utils.BootstrapHandleBlockLatencyBulkV2, func(c fiber.Ctx) error {
+		var payloads []entities.LatencyComparator
+		require.NoError(t, json.Unmarshal(c.Body(), &payloads))
+		for _, payload := range payloads {
+			captureLatency(c, payload)
 		}
 		if code := latencyStatus.Load(); code != 0 {
 			return c.SendStatus(int(code))

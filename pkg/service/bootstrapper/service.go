@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/peer"
@@ -42,9 +41,8 @@ type Service struct {
 	blockEvents   chan *blockArrival
 	trackedSlots  *syncx.TTLMap[uint64, *entities.LatencyComparator]
 
-	// block-latency export retry scheduler (issue #90)
-	exportMu   sync.Mutex
-	exportPend map[uint64]*pendingExport
+	// failed block-latency posts, retried in bulk
+	resendList *syncx.RWSlice[*entities.LatencyComparator]
 	exportWake chan struct{}
 }
 
@@ -65,7 +63,7 @@ func NewService(
 		blockEvents:  make(chan *blockArrival, 1024),
 		trackedSlots: syncx.NewTTLMap[uint64, *entities.LatencyComparator](5*time.Minute, 1*time.Minute),
 
-		exportPend: make(map[uint64]*pendingExport),
+		resendList: syncx.NewRWSlice[*entities.LatencyComparator](),
 		exportWake: make(chan struct{}, 1),
 	}
 	go srv.runBlockLatencyExporter()

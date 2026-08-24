@@ -14,8 +14,7 @@ const (
 	ExportResultSuccess   = "success"         // delivered (2xx), possibly after retries
 	ExportResultTransient = "transient_retry" // attempt failed with a retryable error; rescheduled
 	ExportResultTerminal  = "terminal_drop"   // non-retryable response (e.g. 4xx); dropped
-	ExportResultExpired   = "expired"         // slot left the retention window before delivery
-	ExportResultOverflow  = "overflow"        // evicted because the pending set was full
+	ExportResultOverflow  = "overflow"        // evicted because the resend list was full
 )
 
 var (
