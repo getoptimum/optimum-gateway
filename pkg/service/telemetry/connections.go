@@ -20,22 +20,22 @@ func initConnMetrics() {
 		[]string{"direction"})
 }
 
-// ConnectionsMeeter implements network.Notifiee for connection counts.
+// ConnectionsMeter implements network.Notifiee for connection counts.
 // Stream metrics come from libp2p.PrometheusRegisterer (libp2p_rcmgr_streams).
-type ConnectionsMeeter struct{}
+type ConnectionsMeter struct{}
 
-var _ network.Notifiee = (*ConnectionsMeeter)(nil)
+var _ network.Notifiee = (*ConnectionsMeter)(nil)
 
-// NewConnectionsMeeter creates a new ConnectionsMeeter instance.
-func NewConnectionsMeeter() *ConnectionsMeeter { return &ConnectionsMeeter{} }
+// NewConnectionsMeter creates a new ConnectionsMeter instance.
+func NewConnectionsMeter() *ConnectionsMeter { return &ConnectionsMeter{} }
 
-func (c *ConnectionsMeeter) Listen(network.Network, ma.Multiaddr)      {}
-func (c *ConnectionsMeeter) ListenClose(network.Network, ma.Multiaddr) {}
+func (c *ConnectionsMeter) Listen(network.Network, ma.Multiaddr)      {}
+func (c *ConnectionsMeter) ListenClose(network.Network, ma.Multiaddr) {}
 
-func (c *ConnectionsMeeter) Connected(_ network.Network, conn network.Conn) {
+func (c *ConnectionsMeter) Connected(_ network.Network, conn network.Conn) {
 	connections.WithLabelValues(strings.ToLower(conn.Stat().Direction.String())).Inc()
 }
 
-func (c *ConnectionsMeeter) Disconnected(_ network.Network, conn network.Conn) {
+func (c *ConnectionsMeter) Disconnected(_ network.Network, conn network.Conn) {
 	connections.WithLabelValues(strings.ToLower(conn.Stat().Direction.String())).Dec()
 }

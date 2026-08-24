@@ -120,7 +120,7 @@ func NewNode(
 		return nil, fmt.Errorf("failed to create optimum libp2p host: %w", err)
 	}
 	if telemetry.MetricsEnabled() {
-		h.Network().Notify(telemetry.NewConnectionsMeeter())
+		h.Network().Notify(telemetry.NewConnectionsMeter())
 	}
 	return NewNodeWithHost(ctx, log, cfg, h, identityDir, opts...)
 }

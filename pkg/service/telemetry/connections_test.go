@@ -11,9 +11,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestConnectionsMeeter(t *testing.T) {
+func TestConnectionsMeter(t *testing.T) {
 	reg := initTestMetricsRegistry(t, initConnMetrics)
-	meter := NewConnectionsMeeter()
+	meter := NewConnectionsMeter()
 	require.NotNil(t, meter)
 
 	hostA, err := libp2p.New()
