@@ -27,8 +27,7 @@ func (s *Service) enqueueBlockLatencyExport(slot uint64) {
 	if !ok || v == nil {
 		return
 	}
-	cp := *v
-	s.resendList.Add(&cp)
+	s.resendList.Add(*v)
 	select {
 	case s.exportWake <- struct{}{}:
 	default:
@@ -62,7 +61,7 @@ func (s *Service) runBlockLatencyExporter() {
 	}
 }
 
-func (s *Service) exportSend() (retry bool) {
+func (s *Service) exportSend() bool {
 	items := s.takeResendBatch()
 	if len(items) == 0 {
 		return false
@@ -90,7 +89,7 @@ func (s *Service) exportSend() (retry bool) {
 	return false
 }
 
-func (s *Service) takeResendBatch() []*entities.LatencyComparator {
+func (s *Service) takeResendBatch() []entities.LatencyComparator {
 	items := s.resendList.LoadAndErase()
 	if len(items) > exportMaxPending {
 		telemetry.RecordBlockLatencyExport(telemetry.ExportResultOverflow)
@@ -101,10 +100,9 @@ func (s *Service) takeResendBatch() []*entities.LatencyComparator {
 
 // requeue puts failed items in front of anything that arrived during the POST
 // so later snapshots for the same slot still win at bootstrap.
-func (s *Service) requeue(failed []*entities.LatencyComparator) {
+func (s *Service) requeue(failed []entities.LatencyComparator) {
 	newer := s.resendList.LoadAndErase()
-	out := make([]*entities.LatencyComparator, 0, len(failed)+len(newer))
-	s.resendList.AddBulk(append(append(out, failed...), newer...))
+	s.resendList.AddBulk(append(append([]entities.LatencyComparator{}, failed...), newer...))
 }
 
 func isRetryableExportCode(code int) bool {

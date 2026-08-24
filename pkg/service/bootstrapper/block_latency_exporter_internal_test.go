@@ -19,7 +19,7 @@ func init() {
 func newExportTestService() *Service {
 	return &Service{
 		log:        logger.NewAppSLogger(logger.Error, logger.WithService("bootstrapper-test")),
-		resendList: syncx.NewRWSlice[*entities.LatencyComparator](),
+		resendList: syncx.NewRWSlice[entities.LatencyComparator](),
 		exportWake: make(chan struct{}, 1),
 	}
 }
@@ -40,7 +40,7 @@ func TestTakeResendBatchKeepsNewest(t *testing.T) {
 
 	s := newExportTestService()
 	for slot := uint64(1); slot <= 10; slot++ {
-		s.resendList.Add(&entities.LatencyComparator{BlockSlot: slot})
+		s.resendList.Add(entities.LatencyComparator{BlockSlot: slot})
 	}
 
 	got := s.takeResendBatch()
