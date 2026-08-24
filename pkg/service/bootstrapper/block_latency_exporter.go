@@ -23,16 +23,12 @@ var (
 )
 
 func (s *Service) enqueueBlockLatencyExport(slot uint64) {
-	var snap *entities.LatencyComparator
-	ok := s.trackedSlots.DoAndApply(slot, func(v *entities.LatencyComparator) *entities.LatencyComparator {
-		cp := *v
-		snap = &cp
-		return v
-	})
-	if !ok || snap == nil {
+	v, ok := s.trackedSlots.Get(slot)
+	if !ok || v == nil {
 		return
 	}
-	s.resendList.Add(snap)
+	cp := *v
+	s.resendList.Add(&cp)
 	select {
 	case s.exportWake <- struct{}{}:
 	default:
@@ -71,17 +67,17 @@ func (s *Service) exportSend() (retry bool) {
 	if len(items) == 0 {
 		return false
 	}
-	chunks := commonslices.ChunkSlice(items, exportChunkSize)
 	url := utils.BootstrapHandleBlockLatencyBulkURL(s.cfg.RemoteBootstrapURL)
+	chunks := commonslices.ChunkSlice(items, exportChunkSize)
 	for i, chunk := range chunks {
 		ctx, cancel := context.WithTimeout(s.ctx, exportReqTimeout)
-		_, code, err := commonnet.PostCurl[any](ctx, url, derefComparators(chunk), s.bearerAuthHeader(ctx))
+		_, code, err := commonnet.PostCurl[any](ctx, url, chunk, s.bearerAuthHeader(ctx))
 		cancel()
 		switch {
 		case utils.IsPostSuccess(code):
 			telemetry.RecordBlockLatencyExport(telemetry.ExportResultSuccess)
 		case isRetryableExportCode(code):
-			s.requeue(flattenChunks(chunks[i:]))
+			s.requeue(items[i*exportChunkSize:])
 			telemetry.RecordBlockLatencyExport(telemetry.ExportResultTransient)
 			telemetry.RecordBlockLatencyExportTransientCode(code)
 			s.log.Debug("block latency bulk export failed, will retry", logger.WithInt("n", len(chunk)), logger.WithInt("code", code), logger.WithAny("err", err))
@@ -107,25 +103,8 @@ func (s *Service) takeResendBatch() []*entities.LatencyComparator {
 // so later snapshots for the same slot still win at bootstrap.
 func (s *Service) requeue(failed []*entities.LatencyComparator) {
 	newer := s.resendList.LoadAndErase()
-	s.resendList.AddBulk(append(failed, newer...))
-}
-
-func flattenChunks(chunks [][]*entities.LatencyComparator) []*entities.LatencyComparator {
-	var out []*entities.LatencyComparator
-	for _, c := range chunks {
-		out = append(out, c...)
-	}
-	return out
-}
-
-func derefComparators(in []*entities.LatencyComparator) []entities.LatencyComparator {
-	out := make([]entities.LatencyComparator, 0, len(in))
-	for _, p := range in {
-		if p != nil {
-			out = append(out, *p)
-		}
-	}
-	return out
+	out := make([]*entities.LatencyComparator, 0, len(failed)+len(newer))
+	s.resendList.AddBulk(append(append(out, failed...), newer...))
 }
 
 func isRetryableExportCode(code int) bool {

@@ -100,20 +100,11 @@ func newLocalBootstrapServer(t *testing.T, rig *AuthTestRig) *LocalBootstrapServ
 		}
 		return c.JSON(forksResponse.LoadAll())
 	})
-	app.Post(utils.BootstrapHandleBlockLatencyV2, func(c fiber.Ctx) error {
-		var payload entities.LatencyComparator
-		require.NoError(t, json.Unmarshal(c.Body(), &payload))
-		captureLatency(c, payload)
-		if code := latencyStatus.Load(); code != 0 {
-			return c.SendStatus(int(code))
-		}
-		return nil
-	})
 	app.Post(utils.BootstrapHandleBlockLatencyBulkV2, func(c fiber.Ctx) error {
 		var payloads []entities.LatencyComparator
 		require.NoError(t, json.Unmarshal(c.Body(), &payloads))
-		for _, payload := range payloads {
-			captureLatency(c, payload)
+		for i := range payloads {
+			captureLatency(c, payloads[i])
 		}
 		if code := latencyStatus.Load(); code != 0 {
 			return c.SendStatus(int(code))
