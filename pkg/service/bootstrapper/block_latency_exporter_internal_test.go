@@ -20,7 +20,6 @@ func newExportTestService() *Service {
 	return &Service{
 		log:        logger.NewAppSLogger(logger.Error, logger.WithService("bootstrapper-test")),
 		resendList: syncx.NewRWSlice[entities.LatencyComparator](),
-		exportWake: make(chan struct{}, 1),
 	}
 }
 

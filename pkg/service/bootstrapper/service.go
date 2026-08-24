@@ -41,9 +41,8 @@ type Service struct {
 	blockEvents   chan *blockArrival
 	trackedSlots  *syncx.TTLMap[uint64, *entities.LatencyComparator]
 
-	// failed block-latency posts, retried in bulk
+	// queued block-latency snapshots, flushed in bulk once a minute
 	resendList *syncx.RWSlice[entities.LatencyComparator]
-	exportWake chan struct{}
 }
 
 func NewService(
@@ -64,7 +63,6 @@ func NewService(
 		trackedSlots: syncx.NewTTLMap[uint64, *entities.LatencyComparator](5*time.Minute, 1*time.Minute),
 
 		resendList: syncx.NewRWSlice[entities.LatencyComparator](),
-		exportWake: make(chan struct{}, 1),
 	}
 	go srv.runBlockLatencyExporter()
 	go srv.bgHandleBlockEvents()

@@ -12,7 +12,7 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/utils"
 )
 
-// Failed block-latency posts are queued and retried as bulk uploads so the
+// Snapshots sit on resendList and are flushed once per exportRetryWait so the
 // forwarding path never waits on bootstrap. Tunables are vars so tests can
 // shorten them.
 var (
@@ -28,43 +28,25 @@ func (s *Service) enqueueBlockLatencyExport(slot uint64) {
 		return
 	}
 	s.resendList.Add(*v)
-	select {
-	case s.exportWake <- struct{}{}:
-	default:
-	}
 }
 
 func (s *Service) runBlockLatencyExporter() {
+	t := time.NewTicker(exportRetryWait)
+	defer t.Stop()
 	for {
-		if s.resendList.Len() == 0 {
-			select {
-			case <-s.ctx.Done():
-				return
-			case <-s.exportWake:
-			}
-			continue
-		}
-		retry := s.exportSend()
-		if s.ctx.Err() != nil {
-			return
-		}
-		if !retry {
-			continue
-		}
-		timer := time.NewTimer(exportRetryWait)
 		select {
 		case <-s.ctx.Done():
-			timer.Stop()
 			return
-		case <-timer.C:
+		case <-t.C:
+			s.exportSend()
 		}
 	}
 }
 
-func (s *Service) exportSend() bool {
+func (s *Service) exportSend() {
 	items := s.takeResendBatch()
 	if len(items) == 0 {
-		return false
+		return
 	}
 	url := utils.BootstrapHandleBlockLatencyBulkURL(s.cfg.RemoteBootstrapURL)
 	chunks := commonslices.ChunkSlice(items, exportChunkSize)
@@ -80,13 +62,12 @@ func (s *Service) exportSend() bool {
 			telemetry.RecordBlockLatencyExport(telemetry.ExportResultTransient)
 			telemetry.RecordBlockLatencyExportTransientCode(code)
 			s.log.Debug("block latency bulk export failed, will retry", logger.WithInt("n", len(chunk)), logger.WithInt("code", code), logger.WithAny("err", err))
-			return true
+			return
 		default:
 			telemetry.RecordBlockLatencyExport(telemetry.ExportResultTerminal)
 			s.log.Debug("block latency bulk export dropped (non-retryable response)", logger.WithInt("n", len(chunk)), logger.WithInt("code", code), logger.WithAny("err", err))
 		}
 	}
-	return false
 }
 
 func (s *Service) takeResendBatch() []entities.LatencyComparator {
