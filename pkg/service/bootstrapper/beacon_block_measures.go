@@ -1,15 +1,10 @@
 package bootstrapper
 
 import (
-	"context"
-	"time"
-
 	"github.com/getoptimum/optimum-common/pkg/logger"
-	commonnet "github.com/getoptimum/optimum-common/pkg/net"
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
 	chainstate "github.com/getoptimum/optimum-gateway/pkg/protocol/chain_state"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
-	"github.com/getoptimum/optimum-gateway/pkg/utils"
 )
 
 // blockArrival carries a beacon block observation off the gateway forwarding
@@ -24,52 +19,9 @@ type blockArrival struct {
 	upstreamPeerID  string
 }
 
-func (s *Service) bgHandleSendSlots() {
-	for slot := range s.sendSlotsChan {
-		s.sendTrackedSlots(slot)
-	}
-}
-
 func (s *Service) bgHandleBlockEvents() {
 	for ev := range s.blockEvents {
 		s.composeBlockTelemetry(ev)
-	}
-}
-
-// sendTrackedSlots sends the latency comparator data for a given slot to a remote URL for further analysis.
-// on any changes we just send updated data to remote server.
-// we do not wait for response or care about errors here, as this is best-effort telemetry data.
-// as we use TTL map, old slots will be removed automatically.
-// also TTL map is sequence change operations, so we may expect that each next call will have latest data.
-func (s *Service) sendTrackedSlots(slot uint64) {
-	l := s.log.With(logger.WithUint64("slot", slot))
-	var data entities.LatencyComparator
-	// do and apply is used to get latest data for slot, as we may have multiple updates for same slot.
-	ok := s.trackedSlots.DoAndApply(slot, func(v *entities.LatencyComparator) *entities.LatencyComparator {
-		data = *v
-		return v
-	})
-	if !ok {
-		l.Info("no tracked data for slot")
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
-	defer cancel()
-	url := utils.BootstrapHandleBlockLatencyURL(s.cfg.RemoteBootstrapURL)
-	_, code, err := commonnet.PostCurl[any](ctx, url, data, s.bearerAuthHeader(ctx))
-	if utils.IsPostSuccess(code) {
-		return
-	}
-	l.Error("failed to send tracked slot data", err, logger.WithInt("code", code))
-}
-
-// enqueueSlotForTracking enqueues slot export without blocking the CL/mump2p path.
-func (s *Service) enqueueSlotForTracking(slot uint64) {
-	select {
-	case s.sendSlotsChan <- slot:
-	default:
-		s.log.Debug("sendSlotsChan is full, skipping sending slot for latency tracking", logger.WithUint64("slot", slot))
 	}
 }
 
@@ -88,7 +40,7 @@ func (s *Service) RecordMumPublishedAt(slot uint64, publishedAt int64) {
 		SlotTime:         chainstate.SlotStartTime(slot).UnixMilli(),
 		MumPublishedAtMs: publishedAt,
 	})
-	s.enqueueSlotForTracking(slot)
+	s.enqueueBlockLatencyExport(slot)
 }
 
 // HandleBeaconBlock records a beacon block observation without blocking the
@@ -164,5 +116,5 @@ func (s *Service) composeBlockTelemetry(ev *blockArrival) {
 	if firstForSlot {
 		telemetry.IncBlocksFirstSeen(ev.source)
 	}
-	s.enqueueSlotForTracking(ev.slot)
+	s.enqueueBlockLatencyExport(ev.slot)
 }
