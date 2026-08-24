@@ -115,6 +115,10 @@ func (d *Discovery) connectToBootstrapNodes() {
 		go func(key int) {
 			defer wg.Done()
 			if err := d.h.Connect(ctx, d.bootNodes[key]); err != nil {
+				if ctx.Err() != nil {
+					d.log.Debug("bootstrap dial stopped", logger.WithError(err), logger.WithPeer(d.bootNodes[key]))
+					return
+				}
 				d.log.Error("failed to connect", err, logger.WithPeer(d.bootNodes[key]))
 			}
 		}(i)

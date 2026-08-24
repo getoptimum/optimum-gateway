@@ -68,6 +68,10 @@ func (n *Node) connectToBootstrapNodes() error {
 			}
 			if n.host.Network().Connectedness(p.ID) != network.Connected {
 				if err := n.host.Connect(dialCtx, p); err != nil {
+					if dialCtx.Err() != nil {
+						n.log.Debug("bootstrap dial stopped", logger.WithError(err), logger.WithPeer(p))
+						return
+					}
 					n.log.Error("failed to connect to bootstrap node", err, logger.WithPeer(p))
 					return
 				}
