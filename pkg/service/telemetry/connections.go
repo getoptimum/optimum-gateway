@@ -2,7 +2,6 @@ package telemetry
 
 import (
 	"strings"
-	"time"
 
 	"github.com/libp2p/go-libp2p/core/network"
 	ma "github.com/multiformats/go-multiaddr"
@@ -11,11 +10,7 @@ import (
 	commonmetrics "github.com/getoptimum/optimum-common/pkg/telemetry"
 )
 
-var (
-	connections        *prometheus.GaugeVec
-	streamsPerProtocol *prometheus.GaugeVec
-	durationHistogram  *prometheus.HistogramVec
-)
+var connections *prometheus.GaugeVec
 
 func initConnMetrics() {
 	connections = commonmetrics.NewGaugeVec(
@@ -23,19 +18,13 @@ func initConnMetrics() {
 		"conn",
 		"Active libp2p connections",
 		[]string{"direction"})
-	streamsPerProtocol = commonmetrics.NewGaugeVec(
-		"streams_current",
-		"conn",
-		"Active streams per protocol",
-		[]string{labelProtocol})
-	durationHistogram = commonmetrics.NewHistogram(
-		"stream_duration_seconds",
-		"conn",
-		"Duration of streams",
-		[]string{labelProtocol})
 }
 
+// ConnectionsMeeter implements network.Notifiee for connection counts.
+// Stream metrics come from libp2p.PrometheusRegisterer (libp2p_rcmgr_streams).
 type ConnectionsMeeter struct{}
+
+var _ network.Notifiee = (*ConnectionsMeeter)(nil)
 
 // NewConnectionsMeeter creates a new ConnectionsMeeter instance.
 func NewConnectionsMeeter() *ConnectionsMeeter { return &ConnectionsMeeter{} }
@@ -49,15 +38,4 @@ func (c *ConnectionsMeeter) Connected(_ network.Network, conn network.Conn) {
 
 func (c *ConnectionsMeeter) Disconnected(_ network.Network, conn network.Conn) {
 	connections.WithLabelValues(strings.ToLower(conn.Stat().Direction.String())).Dec()
-}
-
-func (c *ConnectionsMeeter) OpenedStream(_ network.Network, str network.Stream) {
-	streamsPerProtocol.WithLabelValues(string(str.Protocol())).Inc()
-}
-
-func (c *ConnectionsMeeter) ClosedStream(_ network.Network, str network.Stream) {
-	protocolID := string(str.Protocol())
-	streamsPerProtocol.WithLabelValues(protocolID).Dec()
-	duration := time.Since(str.Stat().Opened)
-	durationHistogram.WithLabelValues(protocolID).Observe(duration.Seconds())
 }
