@@ -30,9 +30,7 @@ type Service struct {
 	// knownValidators keep mapping between validator and target chunkID. also keep length of target chunk
 	// 1st number is chunkID, 2nd number is chunk length
 	knownValidators *syncx.RWMap[uint64, [2]uint64]
-	// accelerate is the last successful bootstrap slot list (ADR-0012). nil means
-	// not covered yet, so every block fail-opens (today's behaviour).
-	accelerate atomic.Pointer[accelerateWindow]
+	accelerate      atomic.Pointer[accelerateWindow] // nil = ADR-0012 fail-open
 }
 
 func NewService(ctx context.Context, cfg *config.AppConfig, log logger.AppLogger, authMgr *auth_token.Service) (*Service, error) {
