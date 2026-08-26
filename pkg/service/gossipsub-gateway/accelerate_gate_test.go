@@ -1,6 +1,7 @@
 package gossipsub_gateway
 
 import (
+	"context"
 	"encoding/binary"
 	"encoding/hex"
 	"testing"
@@ -18,6 +19,11 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/utils"
 )
 
+// blockSlotOffset is where BeaconBlock.slot starts in a gossip SignedBeaconBlock:
+// the 4-byte SSZ message offset plus the 96-byte BLS signature. Must stay in step
+// with consensus.DecodeBeaconBlockHeader, which reads the slot from the same place.
+const blockSlotOffset = 4 + 96
+
 // blockAtSlot rewrites the slot of a captured gossip block. Slot sits at a fixed
 // offset in the SSZ payload, so no re-signing or re-hashing is involved.
 func blockAtSlot(t *testing.T, hexBlock string, slot uint64) []byte {
@@ -26,21 +32,27 @@ func blockAtSlot(t *testing.T, hexBlock string, slot uint64) []byte {
 	require.NoError(t, err)
 	ssz, err := utils.DecodeSnappy(raw, utils.MaxGossipPayloadSize)
 	require.NoError(t, err)
-	binary.LittleEndian.PutUint64(ssz[100:108], slot)
+	require.GreaterOrEqual(t, len(ssz), blockSlotOffset+8, "fixture is too short to hold a slot")
+	binary.LittleEndian.PutUint64(ssz[blockSlotOffset:blockSlotOffset+8], slot)
 	return snappy.Encode(nil, ssz)
 }
 
-// joinCLTopic registers a real libp2p topic so publishToCLTopic is observable.
-func joinCLTopic(t *testing.T, svc *Service, topic string) {
+// joinCLTopic registers a real libp2p topic and subscribes to it, so what the
+// gateway hands the CL can be read back rather than inferred from a counter.
+func joinCLTopic(t *testing.T, svc *Service, topic string) *libp2ppubsub.Subscription {
 	t.Helper()
-	h, err := libp2p.New()
+	h, err := libp2p.New(libp2p.NoListenAddrs) // publishing needs no peers, so bind nothing
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = h.Close() })
 	ps, err := libp2ppubsub.NewGossipSub(t.Context(), h)
 	require.NoError(t, err)
 	tp, err := ps.Join(topic)
 	require.NoError(t, err)
+	sub, err := tp.Subscribe()
+	require.NoError(t, err)
+	t.Cleanup(sub.Cancel)
 	svc.libP2PTopics.Store(topic, tp)
+	return sub
 }
 
 // An unselected slot is withheld from the CL, but is still measured and streamed:
@@ -48,11 +60,12 @@ func joinCLTopic(t *testing.T, svc *Service, topic string) {
 func TestMumP2PBeaconBlockAccelerateGate(t *testing.T) {
 	svc, bootstrap := newGateway(t)
 	topic := "/eth2/deadbeef/beacon_block/ssz_snappy"
-	joinCLTopic(t, svc, topic)
-	svc.cfg.SetPropagationEnabled(true)
+	clSub := joinCLTopic(t, svc, topic)
 	hub := streamhub.New()
 	svc.streamHub = hub
 	sub := hub.Subscribe(4)
+	t.Cleanup(sub.Close)
+	t.Cleanup(svc.messagesMap.Close)
 
 	cur := chainstate.CurrentSlot(time.Now())
 	bootstrap.SetAccelerateResponse(map[string]any{
@@ -62,22 +75,24 @@ func TestMumP2PBeaconBlockAccelerateGate(t *testing.T) {
 	})
 	svc.srvMsgRouter.RefreshAccelerateSlots(t.Context())
 
+	// Unselected slot first: if the gate let it through it would be the message
+	// waiting on the subscription below, so ordering does the negative assertion
+	// without a timeout to wait out.
+	unselected := blockAtSlot(t, test_utils.HoodiBeaconBlockMessage2, cur+1)
 	svc.processMumP2PMessage(svc.log, &commonentities.P2PMessage{
-		SourceNodeID: "peer-1", Topic: topic,
-		Message: blockAtSlot(t, test_utils.HoodiBeaconBlockMessage1, cur),
+		SourceNodeID: "peer-1", Topic: topic, Message: unselected,
 	})
-	_, ok := svc.statSendLib.Load(topic)
-	require.True(t, ok, "on-list slot must reach the CL")
 
-	svc.statSendLib.DeleteAll()
-
+	onList := blockAtSlot(t, test_utils.HoodiBeaconBlockMessage1, cur)
 	svc.processMumP2PMessage(svc.log, &commonentities.P2PMessage{
-		SourceNodeID: "peer-1", Topic: topic,
-		Message: blockAtSlot(t, test_utils.HoodiBeaconBlockMessage2, cur+1),
+		SourceNodeID: "peer-1", Topic: topic, Message: onList,
 	})
-	_, ok = svc.statSendLib.Load(topic)
-	require.False(t, ok, "examined but unselected slot must be withheld from the CL")
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	got, err := clSub.Next(ctx)
+	require.NoError(t, err, "on-list slot must reach the CL")
+	require.Equal(t, onList, got.Data, "examined but unselected slot must be withheld from the CL")
 
 	require.Len(t, sub.Events(), 2, "both blocks are streamed regardless of the verdict")
-	svc.messagesMap.Close()
 }

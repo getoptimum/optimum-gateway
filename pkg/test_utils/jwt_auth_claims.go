@@ -66,6 +66,7 @@ func (r *AuthTestRig) AppCfg(t *testing.T) *config.AppConfig {
 		TelemetryPort:          48123,
 		GatewayClusterID:       "test-cluster",
 		TelemetryEnable:        true,
+		PropagationEnabledRaw:  true, // match the yaml-loaded test configs
 	}
 	require.NoError(t, cfg.Validate())
 	return cfg
