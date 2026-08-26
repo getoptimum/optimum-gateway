@@ -135,7 +135,7 @@ func LoadConfig(confFile string) (*AppConfig, error) {
 	}
 	cfg.Version = version.GetVersion()
 	cfg.CommitHash = version.GetCommitHash()
-	cfg.propagationEnabled.Store(cfg.PropagationEnabledRaw)
+	cfg.SetPropagationEnabled(cfg.PropagationEnabledRaw)
 	cfg.skipMessageFromSelf.Store(true)
 	var aggMs int64
 	if cfg.AggregationIntervalMs == 0 {
@@ -192,7 +192,7 @@ func (c *AppConfig) InitRuntime(ctx context.Context, log logger.AppLogger, chain
 		ch.String(),
 		c.GatewayClusterID,
 		func(dc *commonentities.DynamicConfig) {
-			c.propagationEnabled.Store(dc.PropagationEnabled)
+			c.SetPropagationEnabled(dc.PropagationEnabled)
 			c.skipMessageFromSelf.Store(dc.ExcludeSelfMessages)
 		},
 		commonconfig.WithServiceVersion("gateway-"+c.Version),
@@ -330,6 +330,12 @@ func isLoopbackHost(host string) bool {
 	}
 	ip := net.ParseIP(host)
 	return ip != nil && ip.IsLoopback()
+}
+
+// SetPropagationEnabled stores the fleet-wide propagation switch. Written by the
+// loader, by dynamic-config rotations, and by tests that build an AppConfig directly.
+func (c *AppConfig) SetPropagationEnabled(v bool) {
+	c.propagationEnabled.Store(v)
 }
 
 func (c *AppConfig) PropagationEnabled() bool {

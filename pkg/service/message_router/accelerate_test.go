@@ -10,13 +10,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
-	"github.com/getoptimum/optimum-gateway/pkg/service/message_router"
 )
 
 func TestShouldAccelerateBlock(t *testing.T) {
-	srv := newTestService(t, commonentities.GatewayTypePartner)
-	require.True(t, srv.ShouldAccelerateBlock(1), "no list fail-opens")
-
 	var fail atomic.Bool
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, "/api/v2/hoodi/accelerate_slots", r.URL.Path)
@@ -33,14 +29,17 @@ func TestShouldAccelerateBlock(t *testing.T) {
 	}))
 	t.Cleanup(ts.Close)
 
-	message_router.PollAccelerateSlotsForTest(t, srv, ts.URL)
+	srv := newTestServiceAt(t, commonentities.GatewayTypePartner, ts.URL)
+	require.True(t, srv.ShouldAccelerateBlock(1), "no list fail-opens")
+
+	srv.RefreshAccelerateSlots(t.Context())
 	require.True(t, srv.ShouldAccelerateBlock(100))
 	require.True(t, srv.ShouldAccelerateBlock(101))
 	require.False(t, srv.ShouldAccelerateBlock(110), "examined, not selected")
 	require.True(t, srv.ShouldAccelerateBlock(121), "past to_slot fail-opens")
 
 	fail.Store(true)
-	message_router.PollAccelerateSlotsForTest(t, srv, ts.URL)
+	srv.RefreshAccelerateSlots(t.Context())
 	require.False(t, srv.ShouldAccelerateBlock(110), "failed poll must not clear the list")
 	require.True(t, srv.ShouldAccelerateBlock(100))
 }
