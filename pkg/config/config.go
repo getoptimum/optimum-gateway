@@ -218,12 +218,8 @@ func (c *AppConfig) GetDCRotator() *commonconfig.Rotator {
 	return c.rotator
 }
 
-// InitDerived seeds the internal state mirroring the yaml/env fields. LoadConfig
-// calls it; anything building an AppConfig directly, such as a test, must too, or
-// the getters below read zero values rather than the configured ones.
-//
-// Not safe on a config already in service: dynamic-config rotations own
-// propagationEnabled and skipMessageFromSelf afterwards, and this resets them.
+// InitDerived seeds atomics from yaml/env fields. Required for hand-built configs;
+// unsafe after dynamic-config rotation, which owns those atomics afterwards.
 func (c *AppConfig) InitDerived() {
 	c.propagationEnabled.Store(c.PropagationEnabledRaw)
 	c.skipMessageFromSelf.Store(true)

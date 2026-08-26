@@ -222,8 +222,6 @@ func newTestService(t *testing.T, pairedWith commonentities.GatewayType, validat
 	return newTestServiceAt(t, pairedWith, "dev-bootstrap.getoptimum.io", validators...)
 }
 
-// newTestServiceAt points the router at a specific bootstrap, for tests that stand
-// up their own stub.
 func newTestServiceAt(t *testing.T, pairedWith commonentities.GatewayType, bootstrapURL string, validators ...uint64) *message_router.Service {
 	t.Helper()
 

@@ -40,8 +40,7 @@ func decideAccelerate(w *accelerateWindow, slot uint64) string {
 	return "not_on_list"
 }
 
-// RefreshAccelerateSlots runs one accelerate_slots poll and swaps the whole window
-// at once. A failed poll keeps the previous one: to_slot already handles expiry.
+// RefreshAccelerateSlots runs one poll and swaps the whole window. A failed poll keeps the previous one.
 func (s *Service) RefreshAccelerateSlots(ctx context.Context) {
 	chainID := s.authMgr.Chain()
 	if chainID == "" || s.cfg.RemoteBootstrapURL == "" {
