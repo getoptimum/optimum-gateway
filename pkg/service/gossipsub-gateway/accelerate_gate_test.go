@@ -35,7 +35,13 @@ func blockAtSlot(t *testing.T, hexBlock string, slot uint64) []byte {
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(ssz), blockSlotOffset+8, "fixture is too short to hold a slot")
 	binary.LittleEndian.PutUint64(ssz[blockSlotOffset:blockSlotOffset+8], slot)
-	return snappy.Encode(nil, ssz)
+	encoded := snappy.Encode(nil, ssz)
+	// Read the slot back through the production decoder, so a drifted offset fails
+	// here rather than silently handing the gate a stale slot.
+	hdr, err := consensus.DecodeBeaconBlockHeader(encoded)
+	require.NoError(t, err)
+	require.Equal(t, slot, hdr.Header.Slot, "slot rewrite landed at the wrong offset")
+	return encoded
 }
 
 // joinCLTopic registers a real libp2p topic and subscribes to it, so what the
@@ -98,6 +104,14 @@ func TestMumP2PBeaconBlockAccelerateGate(t *testing.T) {
 	delivered, err := consensus.DecodeBeaconBlockHeader(got.Data)
 	require.NoError(t, err)
 	require.Equal(t, cur, delivered.Header.Slot, "examined but unselected slot must be withheld from the CL")
+
+	// Nothing else may follow, which holds the negative assertion whichever order
+	// the two publishes would have been delivered in. Local delivery is immediate,
+	// so the wait is generous rather than load-bearing.
+	idle, cancelIdle := context.WithTimeout(t.Context(), 250*time.Millisecond)
+	defer cancelIdle()
+	_, err = clSub.Next(idle)
+	require.ErrorIs(t, err, context.DeadlineExceeded, "only the on-list slot may reach the CL")
 
 	require.Len(t, sub.Events(), 2, "both blocks are streamed regardless of the verdict")
 }

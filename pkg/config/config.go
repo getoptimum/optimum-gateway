@@ -227,11 +227,16 @@ func (c *AppConfig) GetDCRotator() *commonconfig.Rotator {
 func (c *AppConfig) InitDerived() {
 	c.propagationEnabled.Store(c.PropagationEnabledRaw)
 	c.skipMessageFromSelf.Store(true)
-	aggMs := c.AggregationIntervalMs
-	if aggMs == 0 {
-		aggMs = DefaultAggregationIntervalMs
+	c.aggregationIntervalMs.Store(c.effectiveAggregationIntervalMs())
+}
+
+// effectiveAggregationIntervalMs resolves the zero-means-default rule shared by
+// InitDerived and Validate.
+func (c *AppConfig) effectiveAggregationIntervalMs() int64 {
+	if c.AggregationIntervalMs == 0 {
+		return DefaultAggregationIntervalMs
 	}
-	c.aggregationIntervalMs.Store(aggMs)
+	return c.AggregationIntervalMs
 }
 
 // Validate ensures the AppConfig has valid and complete values
@@ -299,13 +304,7 @@ func (c *AppConfig) Validate() error {
 	if c.AggregationIntervalMs < 0 {
 		return fmt.Errorf("aggregation_interval_ms must be non-negative")
 	}
-	var effectiveAggMs int64
-	if c.AggregationIntervalMs == 0 {
-		effectiveAggMs = DefaultAggregationIntervalMs
-	} else {
-		effectiveAggMs = c.AggregationIntervalMs
-	}
-	if effectiveAggMs > maxAggregationIntervalMs {
+	if c.effectiveAggregationIntervalMs() > maxAggregationIntervalMs {
 		return fmt.Errorf("aggregation_interval_ms must be <= %d", maxAggregationIntervalMs)
 	}
 
