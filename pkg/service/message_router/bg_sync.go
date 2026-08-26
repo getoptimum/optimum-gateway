@@ -24,6 +24,7 @@ func (s *Service) bgSync(ctx context.Context) {
 			return
 		case <-ticker.C:
 			s.SetKnownValidators(s.authMgr.ValidatorIndexes())
+			s.pollAccelerateSlots(ctx)
 		}
 	}
 }
