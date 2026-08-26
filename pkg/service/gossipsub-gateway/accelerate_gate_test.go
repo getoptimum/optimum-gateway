@@ -14,6 +14,7 @@ import (
 
 	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
 	chainstate "github.com/getoptimum/optimum-gateway/pkg/protocol/chain_state"
+	"github.com/getoptimum/optimum-gateway/pkg/protocol/consensus"
 	"github.com/getoptimum/optimum-gateway/pkg/service/streamhub"
 	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
 	"github.com/getoptimum/optimum-gateway/pkg/utils"
@@ -92,7 +93,11 @@ func TestMumP2PBeaconBlockAccelerateGate(t *testing.T) {
 	defer cancel()
 	got, err := clSub.Next(ctx)
 	require.NoError(t, err, "on-list slot must reach the CL")
-	require.Equal(t, onList, got.Data, "examined but unselected slot must be withheld from the CL")
+	// Compare the slot, not the raw block: a failure here prints one number
+	// instead of two multi-kilobyte payloads.
+	delivered, err := consensus.DecodeBeaconBlockHeader(got.Data)
+	require.NoError(t, err)
+	require.Equal(t, cur, delivered.Header.Slot, "examined but unselected slot must be withheld from the CL")
 
 	require.Len(t, sub.Events(), 2, "both blocks are streamed regardless of the verdict")
 }

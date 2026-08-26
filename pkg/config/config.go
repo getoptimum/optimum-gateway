@@ -135,14 +135,7 @@ func LoadConfig(confFile string) (*AppConfig, error) {
 	}
 	cfg.Version = version.GetVersion()
 	cfg.CommitHash = version.GetCommitHash()
-	cfg.skipMessageFromSelf.Store(true)
-	var aggMs int64
-	if cfg.AggregationIntervalMs == 0 {
-		aggMs = DefaultAggregationIntervalMs
-	} else {
-		aggMs = cfg.AggregationIntervalMs
-	}
-	cfg.aggregationIntervalMs.Store(aggMs)
+	cfg.InitDerived()
 
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("failed to validate config: %w", err)
@@ -225,13 +218,24 @@ func (c *AppConfig) GetDCRotator() *commonconfig.Rotator {
 	return c.rotator
 }
 
+// InitDerived seeds the internal state mirroring the yaml/env fields. LoadConfig
+// calls it; anything building an AppConfig directly, such as a test, must too, or
+// the getters below read zero values rather than the configured ones.
+//
+// Not safe on a config already in service: dynamic-config rotations own
+// propagationEnabled and skipMessageFromSelf afterwards, and this resets them.
+func (c *AppConfig) InitDerived() {
+	c.propagationEnabled.Store(c.PropagationEnabledRaw)
+	c.skipMessageFromSelf.Store(true)
+	aggMs := c.AggregationIntervalMs
+	if aggMs == 0 {
+		aggMs = DefaultAggregationIntervalMs
+	}
+	c.aggregationIntervalMs.Store(aggMs)
+}
+
 // Validate ensures the AppConfig has valid and complete values
 func (c *AppConfig) Validate() error {
-	// Seed the switch from its yaml/env value here rather than in LoadConfig, so a
-	// hand-built AppConfig honours PropagationEnabledRaw too. Dynamic-config
-	// rotations own it from here on, and never run before validation.
-	c.propagationEnabled.Store(c.PropagationEnabledRaw)
-
 	if c.IdentityLibP2PDir == "" {
 		return fmt.Errorf("OPT_IDENTITY_LIBP2P_DIR is required")
 	}

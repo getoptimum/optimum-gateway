@@ -68,6 +68,7 @@ func (r *AuthTestRig) AppCfg(t *testing.T) *config.AppConfig {
 		TelemetryEnable:        true,
 		PropagationEnabledRaw:  true, // match the yaml-loaded test configs
 	}
+	cfg.InitDerived()
 	require.NoError(t, cfg.Validate())
 	return cfg
 }
