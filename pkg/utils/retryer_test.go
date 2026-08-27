@@ -158,3 +158,51 @@ func TestRetryPostRequest_DoNotRetry(t *testing.T) {
 	require.Equal(t, want, *got)
 	require.EqualValues(t, 1, calls.Load())
 }
+
+func TestRetryGetRequestStopsWhenContextIsCanceled(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var calls atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		cancel()
+		// Never respond. Writing a status here would race the cancellation: if the
+		// response landed first the call returned it with a nil error, the opposite
+		// of what this asserts. Leaving the client's canceled context as the only
+		// way out makes the transport error the single possible outcome.
+		<-r.Context().Done()
+	}))
+	t.Cleanup(srv.Close)
+
+	got, code, err := utils.RetryGetRequest[retryResponse](ctx, srv.URL, nil)
+
+	require.ErrorContains(t, err, "context canceled")
+	require.Zero(t, code)
+	require.Nil(t, got)
+	require.LessOrEqual(t, calls.Load(), int32(1))
+}
+
+// The test above pins that a canceled request surfaces as a context error, but
+// not that the retry loop itself gives up: once ctx is canceled the real fn
+// fails before reaching the server, so the attempt count looks identical either
+// way and only the elapsed time differs. Driving the loop with an fn that
+// ignores ctx makes "stopped after one attempt" observable as a count.
+func TestRetryRequestStopsRetryingWhenContextIsCanceled(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	var calls atomic.Int32
+	_, code, err := utils.RetryRequestForTest(ctx, func() (*retryResponse, int, error) {
+		calls.Add(1)
+		return &retryResponse{Value: "retry-me"}, http.StatusInternalServerError, nil
+	}, func(c int) bool { return c == http.StatusOK })
+
+	require.NoError(t, err)
+	require.Equal(t, http.StatusInternalServerError, code)
+	require.Equal(t, int32(1), calls.Load(), "a canceled context must stop the loop after the first attempt")
+}
