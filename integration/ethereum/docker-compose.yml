@@ -11,7 +11,6 @@ services:
     ports:
       - "33212:33212"         # libp2p port (CL clients connect here)
       - "43213:43213"         # mump2p agent port
-      - "43213:43213/udp"     # mump2p agent QUIC port
       - "48123:48123"         # Telemetry/metrics port
     volumes:
       - ./config:/app/config  # Config directory (must contain app_conf.yml)

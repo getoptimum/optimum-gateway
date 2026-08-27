@@ -9,7 +9,6 @@ services:
     ports:
       - "${GATEWAY_PORT_LIBP2P:-33212}:33212"
       - "${GATEWAY_PORT_MUMP2P:-43213}:43213"
-      - "${GATEWAY_PORT_MUMP2P:-43213}:43213/udp"
       - "${GATEWAY_PORT_TELEMETRY:-48123}:48123"
     volumes:
       - ./optimum/config:/app/config

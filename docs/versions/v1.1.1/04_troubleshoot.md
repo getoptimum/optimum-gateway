@@ -20,7 +20,7 @@ This guide covers the operational issues you can hit running the Optimum Gateway
 | `gateway_cluster_id`                          | Must match onboarding (Hoodi vs Mainnet)                                   |
 | `identity_libp2p_dir` / `identity_mump2p_dir` | **Persist as volumes** — without them, peer ID changes every restart       |
 | `agent_lib_p2p_port`                          | Default `33212`; CL connects here                                          |
-| `agent_mump2p_port`                          | Default `43213`; mump2p TCP + UDP (QUIC-v1), reachable from mesh peers     |
+| `agent_mump2p_port`                          | Default `43213`; mump2p egress                                             |
 | `telemetry_enable` / `telemetry_port`         | Default port `48123`                                                       |
 | `direct_cl_peers`                             | Optional, **strongly recommended** for Lighthouse / Nimbus                 |
 | `remote_push_enable`                          | Optional; pushes logs/metrics to Optimum for support visibility            |
@@ -60,8 +60,8 @@ docker logs optimum-gateway --tail=50
 
 | Failing check        | What it means                          | Fix                                                                                                                                          |
 | -------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cl_peers`           | No CL client connected on `:33212`     | Configure CL peering; add `direct_cl_peers`; allow the intended CL to reach **33212/TCP**; use a reachable IP in the multiaddr; restart CL after a gateway restart |
-| `mump2p_peers`       | Not connected to the Optimum mesh      | Check **43213/TCP inbound** and HTTPS to bootstrap; also check **43213/UDP** when QUIC is expected; verify `api_key` + `gateway_cluster_id`; wait 2-5 min after start |
+| `cl_peers`           | No CL client connected on `:33212`     | Configure CL peering; add `direct_cl_peers`; open **33212 inbound**; use a reachable IP in the multiaddr; restart CL after a gateway restart |
+| `mump2p_peers`       | Not connected to the Optimum mesh      | Check **43213 outbound** + HTTPS to bootstrap; verify `api_key` + `gateway_cluster_id`; wait 2-5 min after start                             |
 | `subscribed_topics`  | Topic subscription failed (expect ~65) | Usually a chain/cluster mismatch (wrong API key for the network); check logs for subscribe errors                                            |
 | `last_block_age_sec` | No beacon block in ~60s                | CL is connected but **silent** — CL not synced, EL stuck, or CL OOM/restart; fix the CL first                                                |
 | `cl_health`          | No CL gossip traffic in the last 30s   | Same as silent CL — peer count alone can be misleading                                                                                       |
@@ -276,19 +276,17 @@ Lodestar is supported. Add the gateway as a trusted/direct peer in Lodestar, and
 
 | Port    | Direction | Action                                                                                              |
 | ------- | --------- | --------------------------------------------------------------------------------------------------- |
-| `33212` | Inbound from intended CL only | CL clients connect here; do not expose it publicly                                      |
+| `33212` | Inbound   | CL clients connect here                                                                             |
 | `48123` | Localhost | `/health`, `/metrics`, `/api/v1/self_info` — see [Network Requirements](00_network_requirements.md) |
-| `43213` | Inbound TCP + UDP | mump2p mesh; UDP is QUIC-v1                                                                |
+| `43213` | Outbound  | mump2p mesh egress (no inbound rule needed)                                                         |
 | `443`   | Outbound  | auth, bootstrap, Loki, Mimir                                                                        |
 
 ```bash
-sudo lsof -iTCP:33212 -iTCP:43213 -iUDP:43213 -iTCP:48123
-sudo ufw allow from <CL-IP-or-CIDR> to any port 33212 proto tcp
-sudo ufw allow 43213/tcp
-sudo ufw allow 43213/udp
+sudo lsof -i :33212 -i :43213 -i :48123
+sudo ufw allow 33212/tcp
 ```
 
-Expose `agent_mump2p_port` publicly over **TCP + UDP** to enable QUIC; TCP remains a fallback if UDP is blocked. Allow **33212/TCP** only from the intended/local CL. **Docker tip:** `--network host` exposes all ports on the host network interface.
+Only **33212** needs a public inbound firewall rule. **Docker tip:** `--network host` exposes all ports on the host network interface.
 
 
 ## Identity / persistence
