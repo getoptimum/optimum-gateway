@@ -53,8 +53,12 @@ func (s *Service) RefreshAccelerateSlots(ctx context.Context) {
 		headers = map[string]string{"Authorization": "Bearer " + tok}
 	}
 	res, code, err := commonnet.GetCurl[accelerateSlotsResponse](ctx, utils.BootstrapAccelerateSlotsURL(s.cfg.RemoteBootstrapURL, chainID), headers)
-	if err != nil || code != http.StatusOK || res == nil {
-		s.log.Error("accelerate_slots poll failed, keeping previous list", fmt.Errorf("status code: %d, error: %w", code, err))
+	if err != nil {
+		s.log.Error("accelerate_slots poll failed, keeping previous list", err)
+		return
+	}
+	if code != http.StatusOK || res == nil {
+		s.log.Error("accelerate_slots poll failed, keeping previous list", fmt.Errorf("status code: %d", code))
 		return
 	}
 	w := &accelerateWindow{slots: make(map[uint64]struct{}, len(res.Slots))}
