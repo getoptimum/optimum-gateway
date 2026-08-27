@@ -219,6 +219,11 @@ func TestService_ResolveValidatorChunkUsesSortedValidatorSet(t *testing.T) {
 
 func newTestService(t *testing.T, pairedWith commonentities.GatewayType, validators ...uint64) *message_router.Service {
 	t.Helper()
+	return newTestServiceAt(t, pairedWith, "dev-bootstrap.getoptimum.io", validators...)
+}
+
+func newTestServiceAt(t *testing.T, pairedWith commonentities.GatewayType, bootstrapURL string, validators ...uint64) *message_router.Service {
+	t.Helper()
 
 	cnt := test_utils.GetClean(t)
 	rig := test_utils.NewAuthTestRig(t, test_utils.WithClaimModifier(func(claims *jwks_verifier.Claims) {
@@ -231,7 +236,7 @@ func newTestService(t *testing.T, pairedWith commonentities.GatewayType, validat
 	require.NoError(t, err)
 
 	srv, err := message_router.NewService(t.Context(), &config.AppConfig{
-		RemoteBootstrapURL: "dev-bootstrap.getoptimum.io",
+		RemoteBootstrapURL: bootstrapURL,
 	}, cnt.Log, m)
 	require.NoError(t, err)
 	srv.SetKnownValidators(validators)
