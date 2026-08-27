@@ -31,7 +31,7 @@ func TestNewNodeAcceptsInboundTCPAndQUIC(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	log := commonlogger.NewAppSLogger(commonlogger.Error)
-	cfg := newTransportTestConfig(t, ctx, log)
+	cfg := newTransportTestConfig(ctx, t, log)
 
 	target, err := NewNode(ctx, log, cfg, t.TempDir())
 	require.NoError(t, err)
@@ -63,7 +63,7 @@ func TestNewNodeAcceptsInboundTCPAndQUIC(t *testing.T) {
 	})
 }
 
-func newTransportTestConfig(t *testing.T, ctx context.Context, log commonlogger.AppLogger) *Config {
+func newTransportTestConfig(ctx context.Context, t *testing.T, log commonlogger.AppLogger) *Config {
 	t.Helper()
 	return &Config{
 		ClusterID:      "transport-test",
