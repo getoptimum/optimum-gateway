@@ -2,10 +2,10 @@ package message_router
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/getoptimum/optimum-common/pkg/logger"
 	commonnet "github.com/getoptimum/optimum-common/pkg/net"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
 	"github.com/getoptimum/optimum-gateway/pkg/utils"
@@ -46,19 +46,20 @@ func (s *Service) RefreshAccelerateSlots(ctx context.Context) {
 	if chainID == "" || s.cfg.RemoteBootstrapURL == "" {
 		return
 	}
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
+	// Token first, outside the deadline below: ServicesToken mints over HTTP when
+	// nothing is cached, and that must not eat the poll's budget.
 	var headers map[string]string
 	if tok, err := s.authMgr.ServicesToken(ctx); err == nil && tok != "" {
 		headers = map[string]string{"Authorization": "Bearer " + tok}
 	}
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 	res, code, err := commonnet.GetCurl[accelerateSlotsResponse](ctx, utils.BootstrapAccelerateSlotsURL(s.cfg.RemoteBootstrapURL, chainID), headers)
-	if err != nil {
-		s.log.Error("accelerate_slots poll failed, keeping previous list", err)
-		return
-	}
-	if code != http.StatusOK || res == nil {
-		s.log.Error("accelerate_slots poll failed, keeping previous list", fmt.Errorf("status code: %d", code))
+	// status_code is a field rather than part of err: a bootstrap without the
+	// endpoint serves a non-JSON 404, which GetCurl reports as an unmarshal error
+	// alongside the code, and the code is the half that says what is wrong.
+	if err != nil || code != http.StatusOK || res == nil {
+		s.log.Error("accelerate_slots poll failed, keeping previous list", err, logger.WithInt("status_code", code))
 		return
 	}
 	w := &accelerateWindow{slots: make(map[uint64]struct{}, len(res.Slots))}

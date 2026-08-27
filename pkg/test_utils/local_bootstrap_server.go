@@ -84,14 +84,14 @@ func newLocalBootstrapServer(t *testing.T, rig *AuthTestRig) *LocalBootstrapServ
 		return nil
 	})
 	app.Get(utils.BootstrapForkDigestPath, func(c fiber.Ctx) error {
-		if rig != nil {
-			require.True(t, c.HasHeader("Authorization"))
+		if err := requireAuth(rig, c); err != nil {
+			return err
 		}
 		return c.JSON(forksResponse.LoadAll())
 	})
 	app.Get("/api/v2/:chain/accelerate_slots", func(c fiber.Ctx) error {
-		if rig != nil {
-			require.True(t, c.HasHeader("Authorization"))
+		if err := requireAuth(rig, c); err != nil {
+			return err
 		}
 		return c.JSON(accelerateResponse.LoadAll())
 	})
@@ -123,6 +123,17 @@ func newLocalBootstrapServer(t *testing.T, rig *AuthTestRig) *LocalBootstrapServ
 		exposeReqs:         exposeReqs,
 		latencyReqs:        latencyReqs,
 	}
+}
+
+// requireAuth answers 401 rather than asserting. These run on fiber's handler
+// goroutine, where a failed require calls t.FailNow off the test goroutine: Go
+// does not support that, and the caller sees a transport error instead of the
+// missing header. A real status lets the caller report it.
+func requireAuth(rig *AuthTestRig, c fiber.Ctx) error {
+	if rig == nil || c.HasHeader("Authorization") {
+		return nil
+	}
+	return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "missing Authorization header"})
 }
 
 func mapToURLValues(src map[string]string) url.Values {
