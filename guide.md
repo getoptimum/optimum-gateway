@@ -49,7 +49,7 @@ The gateway accepts configuration through environment variables as well. Environ
 - `OPT_IDENTITY_LIBP2P_DIR`: Directory for the CL-facing libp2p identity
 - `OPT_IDENTITY_MUMP2P_DIR`: Directory for the mump2p mesh identity
 - `OPT_AGENT_LIB_P2P_PORT`: TCP port used for the CL-facing libp2p listener
-- `OPT_AGENT_MUMP2P_PORT`: TCP port used for the gateway-to-gateway mesh
+- `OPT_AGENT_MUMP2P_PORT`: TCP and UDP (QUIC-v1) port used for the gateway-to-gateway mesh
 - `OPT_ENABLE_TELEMETRY`: Enable local API and Prometheus metrics
 - `OPT_TELEMETRY_PORT`: HTTP port for `/health`, `/metrics`, `/api/v1/self_info`
 - `OPT_REMOTE_PUSH_ENABLE`: Push metrics/logs to Optimum (requires telemetry + API key)
@@ -77,6 +77,8 @@ make run
 ```sh
 docker run --name optimum-gateway --rm \
   -p 33212:33212/tcp \
+  -p 43213:43213/tcp \
+  -p 43213:43213/udp \
   -p 127.0.0.1:48123:48123/tcp \
   -e OPT_API_KEY=ogw_live_xxx \
   -v $(pwd)/config:/app/config \
@@ -86,7 +88,8 @@ docker run --name optimum-gateway --rm \
   -config=/app/config/app_conf.yml
 ```
 
-`agent_mump2p_port` (sample `43213`) is used for gateway-to-gateway mesh egress.
+`agent_mump2p_port` (sample `43213`) must be reachable by other gateways over
+both TCP and UDP (QUIC-v1).
 
 ## Connect Your CL Client
 

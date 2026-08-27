@@ -26,8 +26,9 @@ for a **digest**, not a tag: a tag can be repointed, a digest cannot.
 
 * **Kubernetes 1.25+**, **Helm 3.8+**
 * A node with a **public IP**
-* Inbound **TCP 33213** open to that node from the internet — this is the
-  Optimum network (mump2p) port and the gateway is unusable without it
+* Inbound **TCP and UDP 33213** open to that node from the internet — this is
+  the Optimum network (mump2p) port; UDP carries QUIC-v1. TCP remains a
+  fallback if UDP is unavailable, but opening both enables QUIC.
 * The CL client able to reach the gateway on **TCP 33212** (usually in-cluster;
   no public firewall hole needed for this)
 * A namespace permitting `hostNetwork` and `hostPort`. Under Pod Security
@@ -52,7 +53,8 @@ tell the gateway to announce that external address. Reachability comes from
 
 So the chart defaults to `networking.hostNetwork: true` (the K8s equivalent of
 Docker host-mode) and one gateway per node via anti-affinity, since it binds host
-ports. Schedule it on a node with a public IP and open inbound **33213**.
+ports. Schedule it on a node with a public IP and open inbound **33213/TCP + UDP**
+to enable QUIC (TCP remains a fallback).
 
 ## Install
 
@@ -225,7 +227,7 @@ Kubernetes-specific symptoms below. For gateway behaviour that isn't K8s-specifi
 | `helm install` says deployed but there are no pods | Pod Security is rejecting them. `kubectl -n optimum describe rs -l app.kubernetes.io/instance=gateway` — if it mentions `violates PodSecurity`, the namespace needs `privileged` |
 | `CrashLoopBackOff` immediately | Usually a rejected API key — `kubectl logs` will show `api key not recognized (401)` |
 | `cl_peers: 0` | `directClPeers` wrong, **or** your CL client was never pointed at the gateway (see above) |
-| `mump2p_peers: 0` after a few minutes | Inbound **33213** is not reachable from the internet |
+| `mump2p_peers: 0` after a few minutes | Inbound **33213/TCP** is not reachable from the internet; also open UDP to enable QUIC |
 | `multiaddrs` shows only private IPs | The node has no public IP, or `networking.hostNetwork` was disabled — it must stay `true` |
 | Pod stuck `Pending` | No node with capacity; the chart also keeps one gateway per node |
 

@@ -13,6 +13,8 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
 	"github.com/libp2p/go-libp2p/p2p/security/noise"
+	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
+	"github.com/libp2p/go-libp2p/p2p/transport/quicreuse"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	gomplex "github.com/libp2p/go-mplex"
 	"github.com/multiformats/go-multiaddr"
@@ -56,6 +58,10 @@ type Node struct {
 	oncer sync.Once
 }
 
+// getExternalIPs is a seam for tests around NewNode. Production uses the
+// common-net implementation; tests can avoid depending on external discovery.
+var getExternalIPs = commonnet.GetExternalIPs
+
 // NewNode creates a new P2P node instance using the provided config.
 // It sets up the libp2p host with a listen address and initializes Optimum pub-sub.
 func NewNode(
@@ -70,7 +76,7 @@ func NewNode(
 		return nil, fmt.Errorf("failed ensuring identity from %s: %w", identityDir, err)
 	}
 
-	publicIPV4, publicIPV6, err := commonnet.GetExternalIPs()
+	publicIPV4, publicIPV6, err := getExternalIPs()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get public IP address: %w", err)
 	}
@@ -87,16 +93,20 @@ func NewNode(
 		return nil, fmt.Errorf("failed to create connection manager: %w", err)
 	}
 
-	cachedAddrs := commonnet.MustBuildAdvertisedAddresses(log, publicIPV4, publicIPV6, cfg.ListenPort)
+	cachedAddrs := utils.BuildQUICTCPAddr(log, publicIPV4, publicIPV6, cfg.ListenPort)
 
 	libP2POpts := []libp2p.Option{
 		libp2p.ConnectionManager(cn),
+		libp2p.QUICReuse(quicreuse.NewConnManager),
 		libp2p.ListenAddrStrings(
 			fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", cfg.ListenPort),
 			fmt.Sprintf("/ip6/::/tcp/%d", cfg.ListenPort),
+			fmt.Sprintf("/ip4/0.0.0.0/udp/%d/quic-v1", cfg.ListenPort),
+			fmt.Sprintf("/ip6/::/udp/%d/quic-v1", cfg.ListenPort),
 		),
 		libp2p.Ping(false), // Disable Ping Service.
 		libp2p.Transport(tcp.NewTCPTransport),
+		libp2p.Transport(libp2pquic.NewTransport),
 		libp2p.DefaultMuxers,
 		libp2p.Muxer("/mplex/6.7.0", mplex.DefaultTransport),
 		libp2p.Security(noise.ID, noise.New),

@@ -110,7 +110,7 @@ The gateway receives automatic config updates from bootstrap.
 | `api_key` | `OPT_API_KEY` | *(required)* | Gateway API key (`ogw_live_...`). **Set via env, not YAML.** Drives gateway_id, chain, and validator scope |
 | `gateway_cluster_id` | `OPT_GATEWAY_CLUSTER_ID` | *(required)* | Cluster ID assigned by Optimum during onboarding |
 | `agent_lib_p2p_port` | `OPT_AGENT_LIB_P2P_PORT` | 33212 | CL clients connect here (inbound) |
-| `agent_mump2p_port` | `OPT_AGENT_MUMP2P_PORT` | 33213 | mump2p agent port (outbound). Sample config uses `43213` |
+| `agent_mump2p_port` | `OPT_AGENT_MUMP2P_PORT` | 33213 | mump2p agent port for TCP and UDP (QUIC-v1); allow inbound reachability for both. Sample config uses `43213` |
 | `telemetry_enable` | `OPT_ENABLE_TELEMETRY` | false | Enable metrics / health endpoint |
 | `telemetry_port` | `OPT_TELEMETRY_PORT` | 48123 | Telemetry HTTP port (`/health`, `/metrics`, `/api/v1/self_info`) |
 | `identity_libp2p_dir` | `OPT_IDENTITY_LIBP2P_DIR` | /tmp/libp2p | libp2p identity dir — **persist as a volume** |
@@ -143,7 +143,7 @@ docker logs optimum-gateway | grep "subscribed to topic"
 * **Wrong network** — Chain comes from the API key, not YAML. If `/api/v1/self_info` shows the wrong `chain`, you are using the wrong key. Get the right key from Optimum
 * **Missing `gateway_cluster_id`** — Required; use the ID assigned during onboarding
 * **API key in YAML / image** — Move it to `OPT_API_KEY` in the environment
-* **Port conflicts** — Ensure 33212, 43213, 48123 are free
+* **Port conflicts** — Ensure 33212/TCP, 43213/TCP + UDP, and 48123 are free
 * **Peer ID changes after restart** — Persist `identity_libp2p_dir` and `identity_mump2p_dir` as volumes
 
 See [Troubleshooting](04_troubleshoot.md) for more.
