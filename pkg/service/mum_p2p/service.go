@@ -22,7 +22,6 @@ import (
 	"github.com/getoptimum/mump2p-protocol/pkg/engine"
 	rlncps "github.com/getoptimum/mump2p-protocol/pkg/pubsub"
 	"github.com/getoptimum/mump2p-protocol/pkg/router"
-	rlncshm "github.com/getoptimum/mump2p-protocol/pkg/shm"
 	"github.com/getoptimum/optimum-common/pkg/identity"
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	commonnet "github.com/getoptimum/optimum-common/pkg/net"
@@ -190,7 +189,7 @@ func NewNodeWithHost(
 		return nil, fmt.Errorf("validate mump2p config: %w", err)
 	}
 
-	shmSvc, err := rlncshm.New(psCfg)
+	shmSvc, err := NewRLNCWrapper(psCfg)
 	if err != nil {
 		return nil, fmt.Errorf("initialize RLNC shared memory: %w", err)
 	}
