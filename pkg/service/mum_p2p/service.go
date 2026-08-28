@@ -14,7 +14,6 @@ import (
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
 	"github.com/libp2p/go-libp2p/p2p/security/noise"
 	libp2pquic "github.com/libp2p/go-libp2p/p2p/transport/quic"
-	"github.com/libp2p/go-libp2p/p2p/transport/quicreuse"
 	"github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	gomplex "github.com/libp2p/go-mplex"
 	"github.com/multiformats/go-multiaddr"
@@ -97,7 +96,6 @@ func NewNode(
 
 	libP2POpts := []libp2p.Option{
 		libp2p.ConnectionManager(cn),
-		libp2p.QUICReuse(quicreuse.NewConnManager),
 		libp2p.ListenAddrStrings(
 			fmt.Sprintf("/ip4/0.0.0.0/tcp/%d", cfg.ListenPort),
 			fmt.Sprintf("/ip6/::/tcp/%d", cfg.ListenPort),

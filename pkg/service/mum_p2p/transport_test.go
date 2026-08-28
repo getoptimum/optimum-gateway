@@ -22,75 +22,74 @@ import (
 )
 
 func TestNewNodeAcceptsInboundTCPAndQUIC(t *testing.T) {
-	// NewNode normally discovers public addresses. Keep this production
-	// constructor test deterministic while still exercising its host setup.
+	// NewNode calls GetExternalIPs for advertised addrs. Stub it so this
+	// only exercises listen + transport registration.
 	oldGetExternalIPs := getExternalIPs
 	getExternalIPs = func() (string, string, error) { return "127.0.0.1", "", nil }
 	t.Cleanup(func() { getExternalIPs = oldGetExternalIPs })
 
-	for _, tc := range []struct {
-		name      string
-		transport string
-		addr      string
-		dialOpts  []libp2p.Option
-	}{
-		{
-			name:      "tcp",
-			transport: "tcp",
-			addr:      "/ip4/127.0.0.1/tcp/%d/p2p/%s",
-			dialOpts:  []libp2p.Option{libp2p.Transport(tcp.NewTCPTransport)},
-		},
-		{
-			name:      "quic",
-			transport: "quic-v1",
-			addr:      "/ip4/127.0.0.1/udp/%d/quic-v1/p2p/%s",
-			dialOpts:  []libp2p.Option{libp2p.Transport(libp2pquic.NewTransport)},
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-			defer cancel()
-			log := commonlogger.NewAppSLogger(commonlogger.Error)
-			cfg := newTransportTestConfig(ctx, log, "transport-test-"+tc.name)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	log := commonlogger.NewAppSLogger(commonlogger.Error)
+	cfg := newTransportTestConfig(ctx, t, log)
 
-			target, err := NewNode(ctx, log, cfg, t.TempDir())
-			require.NoError(t, err)
-			t.Cleanup(target.Stop)
+	target, err := NewNode(ctx, log, cfg, t.TempDir())
+	require.NoError(t, err)
+	t.Cleanup(target.Stop)
 
-			dialOpts := append([]libp2p.Option{}, tc.dialOpts...)
-			dialer, err := libp2p.New(dialOpts...)
-			require.NoError(t, err)
-			t.Cleanup(func() { require.NoError(t, dialer.Close()) })
+	id := target.GetHost().ID()
+	port := cfg.ListenPort
 
-			addr := multiaddr.StringCast(fmt.Sprintf(tc.addr, cfg.ListenPort, target.GetHost().ID().String()))
-			require.NoError(t, dialer.Connect(ctx, peer.AddrInfo{ID: target.GetHost().ID(), Addrs: []multiaddr.Multiaddr{addr}}))
+	dial := func(t *testing.T, transport, addrFmt string, opts ...libp2p.Option) {
+		t.Helper()
+		dialer, err := libp2p.New(opts...)
+		require.NoError(t, err)
+		t.Cleanup(func() { require.NoError(t, dialer.Close()) })
 
-			require.Eventually(t, func() bool {
-				for _, conn := range target.GetHost().Network().ConnsToPeer(dialer.ID()) {
-					state := conn.ConnState()
-					if state.Transport == tc.transport && conn.Stat().Direction == network.DirInbound {
-						return true
-					}
-				}
-				return false
-			}, 5*time.Second, 25*time.Millisecond)
-		})
+		addr := multiaddr.StringCast(fmt.Sprintf(addrFmt, port, id))
+		require.NoError(t, dialer.Connect(ctx, peer.AddrInfo{ID: id, Addrs: []multiaddr.Multiaddr{addr}}))
+
+		conns := target.GetHost().Network().ConnsToPeer(dialer.ID())
+		require.NotEmpty(t, conns)
+		require.Equal(t, transport, conns[0].ConnState().Transport)
+		require.Equal(t, network.DirInbound, conns[0].Stat().Direction)
 	}
+
+	t.Run("tcp", func(t *testing.T) {
+		dial(t, "tcp", "/ip4/127.0.0.1/tcp/%d/p2p/%s", libp2p.Transport(tcp.NewTCPTransport))
+	})
+	t.Run("quic", func(t *testing.T) {
+		dial(t, "quic-v1", "/ip4/127.0.0.1/udp/%d/quic-v1/p2p/%s", libp2p.Transport(libp2pquic.NewTransport))
+	})
 }
 
-func newTransportTestConfig(ctx context.Context, log commonlogger.AppLogger, clusterID string) *Config {
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		panic(err)
-	}
-	port := listener.Addr().(*net.TCPAddr).Port
-	_ = listener.Close()
+func newTransportTestConfig(ctx context.Context, t *testing.T, log commonlogger.AppLogger) *Config {
+	t.Helper()
 	return &Config{
-		ClusterID:      clusterID,
-		ListenPort:     port,
+		ClusterID:      "transport-test",
+		ListenPort:     freeTCPUDPPort(t),
 		MaxMessageSize: cfgpkg.DefaultMaxMessageSize,
 		Rotator: commonconfig.NewConfigRotator(ctx, log, &commonentities.OptimumConfig{
 			MaxMessageSize: cfgpkg.DefaultMaxMessageSize,
-		}, "hoodi", clusterID, func(*commonentities.DynamicConfig) {}),
+		}, "hoodi", "transport-test", func(*commonentities.DynamicConfig) {}),
 	}
+}
+
+func freeTCPUDPPort(t *testing.T) int {
+	t.Helper()
+	for range 20 {
+		ln, err := net.Listen("tcp", "127.0.0.1:0")
+		require.NoError(t, err)
+		port := ln.Addr().(*net.TCPAddr).Port
+		pc, err := net.ListenPacket("udp", fmt.Sprintf("127.0.0.1:%d", port))
+		if err != nil {
+			_ = ln.Close()
+			continue
+		}
+		require.NoError(t, ln.Close())
+		require.NoError(t, pc.Close())
+		return port
+	}
+	t.Fatal("could not allocate a port free on both TCP and UDP")
+	return 0
 }

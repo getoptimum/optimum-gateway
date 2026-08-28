@@ -81,7 +81,6 @@ mkdir -p config data/libp2p data/mump2p
 docker run --name optimum-gateway --rm \
   -p 33212:33212/tcp \
   -p 33213:33213/tcp \
-  -p 33213:33213/udp \
   -p 127.0.0.1:48123:48123/tcp \
   -e OPT_API_KEY=$OPT_API_KEY \
   -v $(pwd)/config:/app/config \
@@ -92,8 +91,6 @@ docker run --name optimum-gateway --rm \
 ```
 
 > Persist the identity volumes (`/tmp/libp2p`, `/tmp/mump2p`) across restarts — otherwise the gateway's peer ID changes on every run and your CL client config breaks.
-
-> `agent_mump2p_port` must be published and allowed through the firewall for both TCP and UDP (QUIC-v1). The example uses port `33213` for both transports.
 
 ## Verify
 
