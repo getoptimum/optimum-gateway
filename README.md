@@ -93,6 +93,7 @@ To run the gateway image directly:
 docker run --name optimum-gateway --rm \
   -p 33212:33212/tcp \
   -p 33213:33213/tcp \
+  -p 33213:33213/udp \
   -p 48123:48123/tcp \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data/libp2p:/tmp/libp2p \
@@ -101,7 +102,8 @@ docker run --name optimum-gateway --rm \
   -config=/app/config/app_conf.yml
 ```
 
-`agent_mump2p_port` (default `33213`) must be reachable by other gateways in the mesh.
+`agent_mump2p_port` (default `33213`) must be reachable by other gateways in
+the mesh over both TCP and UDP (QUIC-v1).
 
 ### Run from source
 

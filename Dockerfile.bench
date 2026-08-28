@@ -68,6 +68,6 @@ RUN mkdir -p /gateway/logs
 
 COPY --from=builder /gateway/optimum-gateway /optimum-gateway
 
-EXPOSE 33212 33213 48123
+EXPOSE 33212 33213 33213/udp 48123
 
 ENTRYPOINT ["/optimum-gateway"]
