@@ -82,6 +82,11 @@ jobs:
           go-version: ${{ env.go-version }}
       - name: Install dependencies
         run: go mod download
+      - name: Run rlnc-server
+        run: |
+          make run-rlnc-server &
+          timeout 120s bash -c 'until compgen -G "/dev/shm/go_shm_rlnc_semaphore_mump2p-protocol_lane*" >/dev/null; do
+          sleep 1; done'
       - name: Run tests
         run: CI_RUN="true" PROMETHEUS_VALIDATION_SCHEME=legacy make test
       - name: Measure test coverage

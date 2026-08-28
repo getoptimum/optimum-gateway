@@ -2,6 +2,7 @@ package message_router
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
@@ -10,6 +11,7 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/config"
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
 	chainstate "github.com/getoptimum/optimum-gateway/pkg/protocol/chain_state"
+	"github.com/getoptimum/optimum-gateway/pkg/protocol/consensus"
 	"github.com/getoptimum/optimum-gateway/pkg/protocol/topics"
 	"github.com/getoptimum/optimum-gateway/pkg/service/auth_token"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
@@ -43,6 +45,8 @@ func NewService(ctx context.Context, cfg *config.AppConfig, log logger.AppLogger
 	return srv, nil
 }
 
+var slotRoots = syncx.NewTTLMap[uint64, [32]byte](1*time.Minute, 12*time.Second)
+
 // ShouldForwardMessageToMumP2P decides whether the gateway may fan out a locally-produced CL message into MumP2P
 func (s *Service) ShouldForwardMessageToMumP2P(l logger.AppLogger, kind topics.TopicKind, srcTopic string, payload []byte) bool {
 	if kind == topics.TopicBeaconBlock {
@@ -62,24 +66,50 @@ func (s *Service) ShouldForwardMessageToMumP2P(l logger.AppLogger, kind topics.T
 		return false
 	}
 	telemetry.IncAttestationEvaluated()
-	attester, slot, err := utils.ParseAttestationSSZTopic(payload)
-	if err != nil {
+
+	var att consensus.SingleAttestation
+	if err := (&consensus.SSZSnappyCodec{}).DecodeGossip(payload, &att); err != nil {
 		l.Error("unable to parse attestation topic", err, logger.WithString("topic_meta", kind.String()))
 		telemetry.IncAttestationDropped("parse_error")
 		telemetry.IncParseSSZError(srcTopic, entities.SourceLibP2P)
 		return false
 	}
-	diff := utils.DiffUint64(slot, chainstate.CurrentSlot(time.Now()))
-	telemetry.ObserveAttestationInclusionDelay(diff)
-	if diff > s.cfg.GetAttestationMaxSlotAge() {
-		telemetry.IncAttestationDropped("stale")
-		return false
+	if _, ok := slotRoots.Get(uint64(att.Data.Slot)); !ok {
+		slotRoots.Put(uint64(att.Data.Slot), att.Data.BeaconBlockRoot)
 	}
-	if !s.IsKnownValidator(attester) {
+	if !s.IsKnownValidator(uint64(att.AttesterIndex)) {
 		telemetry.IncAttestationDropped("rejected")
 		return false
 	}
-	telemetry.IncAttestationForwarded()
+
+	diff := utils.DiffUint64(uint64(att.Data.Slot), chainstate.CurrentSlot(time.Now()))
+	telemetry.ObserveAttestationInclusionDelay(diff)
+
+	if slotBasedOnRoot, ok := slotRoots.Get(uint64(att.Data.Slot)); ok {
+		if slotBasedOnRoot != att.Data.BeaconBlockRoot {
+			l.Error(
+				"attestation slot does not match slot based on beacon block root",
+				fmt.Errorf("attestation slot %d does not match slot based on beacon block root %d", att.Data.Slot, slotBasedOnRoot),
+				logger.WithUint64("attester", uint64(att.AttesterIndex)),
+				logger.WithUint64("current_slot", chainstate.CurrentSlot(time.Now())),
+				logger.WithUint64("slot", uint64(att.Data.Slot)),
+			)
+			telemetry.IncAttestationDropped("slot_mismatch")
+		}
+	}
+
+	if diff > s.cfg.GetAttestationMaxSlotAge() {
+		l.Error("attestation is too old to forward",
+			fmt.Errorf("attestation slot %d is older than max slot age %d", att.Data.Slot, s.cfg.GetAttestationMaxSlotAge()),
+			logger.WithUint64("attester", uint64(att.AttesterIndex)),
+			logger.WithUint64("current_slot", chainstate.CurrentSlot(time.Now())),
+			logger.WithUint64("slot", uint64(att.Data.Slot)),
+		)
+		telemetry.IncAttestationDropped("stale")
+		return false
+	}
+
+	telemetry.IncAttestationForwarded(entities.SourceMumP2P)
 	return true
 }
 
