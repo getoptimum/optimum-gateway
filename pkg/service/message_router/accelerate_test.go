@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
@@ -15,12 +16,11 @@ import (
 
 func TestShouldAccelerateBlock(t *testing.T) {
 	var fail atomic.Bool
-	// bgSync primes on startup, so serve failures until the fail-open assertion
-	// below is done. A failed poll leaves the window nil, which is what it needs.
-	fail.Store(true)
+	fail.Store(true) // keep window nil until the fail-open assert; bgSync polls at start
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		require.Equal(t, "/api/v2/hoodi/accelerate_slots", r.URL.Path)
-		require.NotEmpty(t, r.Header.Get("Authorization"))
+		// assert, not require: FailNow off the test goroutine is unsupported.
+		assert.Equal(t, "/api/v2/hoodi/accelerate_slots", r.URL.Path)
+		assert.NotEmpty(t, r.Header.Get("Authorization"))
 		if fail.Load() {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -49,9 +49,6 @@ func TestShouldAccelerateBlock(t *testing.T) {
 	require.True(t, srv.ShouldAccelerateBlock(100))
 }
 
-// Without a prime the window stays empty until the first 30s tick, so a restarted
-// gateway accelerates every block for half a minute: fail-open for want of an
-// answer rather than because one was unavailable.
 func TestAccelerateSlotsPrimedAtStartup(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
@@ -64,8 +61,6 @@ func TestAccelerateSlotsPrimedAtStartup(t *testing.T) {
 
 	srv := newTestServiceAt(t, commonentities.GatewayTypePartner, ts.URL)
 
-	// Slot 110 is inside the horizon and unselected, so it only stops accelerating
-	// once the window has been fetched. The prime runs on bgSync's goroutine.
 	require.Eventually(t, func() bool {
 		return !srv.ShouldAccelerateBlock(110)
 	}, 5*time.Second, 5*time.Millisecond, "startup must fetch the window without waiting for a tick")

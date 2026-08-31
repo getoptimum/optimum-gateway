@@ -16,9 +16,7 @@ import (
 // and the per-tick work degenerates to a single comparison, so we don't
 // bother short-circuiting here.
 func (s *Service) bgSync(ctx context.Context) {
-	// Prime before the first tick: otherwise every restart accelerates every block
-	// for 30s, which is the fail-open path taken for want of an answer rather than
-	// because one was unavailable.
+	// Prime so a restart is not fail-open until the first 30s tick.
 	s.RefreshAccelerateSlots(ctx)
 
 	ticker := time.NewTicker(30 * time.Second)

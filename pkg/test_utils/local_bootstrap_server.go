@@ -125,10 +125,7 @@ func newLocalBootstrapServer(t *testing.T, rig *AuthTestRig) *LocalBootstrapServ
 	}
 }
 
-// requireAuth answers 401 rather than asserting. These run on fiber's handler
-// goroutine, where a failed require calls t.FailNow off the test goroutine: Go
-// does not support that, and the caller sees a transport error instead of the
-// missing header. A real status lets the caller report it.
+// Fiber handlers cannot require.FailNow; return 401 instead.
 func requireAuth(rig *AuthTestRig, c fiber.Ctx) error {
 	if rig == nil || c.HasHeader("Authorization") {
 		return nil

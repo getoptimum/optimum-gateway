@@ -56,7 +56,15 @@ func joinCLTopic(t *testing.T, svc *Service, topic string) *libp2ppubsub.Subscri
 
 // Unselected slot is withheld from the CL; both blocks are still streamed (gate is after arrival).
 func TestMumP2PBeaconBlockAccelerateGate(t *testing.T) {
-	svc, bootstrap := newGateway(t)
+	cur := chainstate.CurrentSlot(time.Now())
+	// Seed before the router exists: bgSync primes at startup and may land after the refresh.
+	svc, _ := newGateway(t, func(b *test_utils.LocalBootstrapServer) {
+		b.SetAccelerateResponse(map[string]any{
+			"to_slot":         cur + 10,
+			"slots":           []int64{int64(cur)},
+			"generated_at_ms": 1,
+		})
+	})
 	topic := "/eth2/deadbeef/beacon_block/ssz_snappy"
 	clSub := joinCLTopic(t, svc, topic)
 	hub := streamhub.New()
@@ -65,12 +73,6 @@ func TestMumP2PBeaconBlockAccelerateGate(t *testing.T) {
 	t.Cleanup(sub.Close)
 	t.Cleanup(svc.messagesMap.Close)
 
-	cur := chainstate.CurrentSlot(time.Now())
-	bootstrap.SetAccelerateResponse(map[string]any{
-		"to_slot":         cur + 10,
-		"slots":           []int64{int64(cur)},
-		"generated_at_ms": 1,
-	})
 	svc.srvMsgRouter.RefreshAccelerateSlots(t.Context())
 
 	fixture := test_utils.HoodiBeaconBlockMessage1
