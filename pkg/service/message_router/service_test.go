@@ -3,6 +3,8 @@ package message_router_test
 import (
 	"bytes"
 	"encoding/hex"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -219,7 +221,12 @@ func TestService_ResolveValidatorChunkUsesSortedValidatorSet(t *testing.T) {
 
 func newTestService(t *testing.T, pairedWith commonentities.GatewayType, validators ...uint64) *message_router.Service {
 	t.Helper()
-	return newTestServiceAt(t, pairedWith, "dev-bootstrap.getoptimum.io", validators...)
+	// bgSync polls at startup; an unstubbed URL would put every caller on the network.
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	t.Cleanup(ts.Close)
+	return newTestServiceAt(t, pairedWith, ts.URL, validators...)
 }
 
 func newTestServiceAt(t *testing.T, pairedWith commonentities.GatewayType, bootstrapURL string, validators ...uint64) *message_router.Service {

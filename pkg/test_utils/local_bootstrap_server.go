@@ -84,14 +84,14 @@ func newLocalBootstrapServer(t *testing.T, rig *AuthTestRig) *LocalBootstrapServ
 		return nil
 	})
 	app.Get(utils.BootstrapForkDigestPath, func(c fiber.Ctx) error {
-		if rig != nil {
-			require.True(t, c.HasHeader("Authorization"))
+		if err := requireAuth(rig, c); err != nil {
+			return err
 		}
 		return c.JSON(forksResponse.LoadAll())
 	})
 	app.Get("/api/v2/:chain/accelerate_slots", func(c fiber.Ctx) error {
-		if rig != nil {
-			require.True(t, c.HasHeader("Authorization"))
+		if err := requireAuth(rig, c); err != nil {
+			return err
 		}
 		return c.JSON(accelerateResponse.LoadAll())
 	})
@@ -123,6 +123,14 @@ func newLocalBootstrapServer(t *testing.T, rig *AuthTestRig) *LocalBootstrapServ
 		exposeReqs:         exposeReqs,
 		latencyReqs:        latencyReqs,
 	}
+}
+
+// Fiber handlers cannot require.FailNow; return 401 instead.
+func requireAuth(rig *AuthTestRig, c fiber.Ctx) error {
+	if rig == nil || c.HasHeader("Authorization") {
+		return nil
+	}
+	return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "missing Authorization header"})
 }
 
 func mapToURLValues(src map[string]string) url.Values {
