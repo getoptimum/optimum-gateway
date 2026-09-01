@@ -20,7 +20,7 @@
 {
   "status": "healthy",
   "gateway_id": "optimum-dev-hoodi-kubernetes-validator-lighthouse",
-  "version": "v1.0.2",
+  "version": "v1.2.0",
   "commit_hash": "a0b2bc1",
   "uptime_seconds": 1639,
   "checks": {
@@ -41,6 +41,8 @@
 
 If any check fails, `status` becomes `"degraded"` and the failing checks are listed in `"failing"`.
 
+**Propagation:** `mump2p_gateway_propagation_state` reports whether the gateway is relaying mump2p traffic to your CL (`1` = on, `0` = disabled via Optimum dynamic config). The same state appears as `propagation_enabled` in `/api/v1/self_info`.
+
 ## Self Info
 
 `GET /api/v1/self_info` returns gateway identity and peer information for CL client connection and operational visibility.
@@ -49,7 +51,7 @@ If any check fails, `status` becomes `"degraded"` and the failing checks are lis
 
 ```json
 {
-  "propagation_disabled": false,
+  "propagation_enabled": true,
   "chain": "hoodi",
   "commit_hash": "a0b2bc1",
   "fork_digest": "c6ecb76c",
@@ -57,7 +59,7 @@ If any check fails, `status` becomes `"degraded"` and the failing checks are lis
   "gateway_id": "optimum-dev-hoodi-kubernetes-validator-lighthouse",
   "paired_with": "partner",
   "remote_url": "bootstrap.getoptimum.io",
-  "version": "v1.0.2",
+  "version": "v1.2.0",
   "skip_messages_from_self": true,
   "peer_id": "12D3KooWNKZuPvVw5Sfnbq3nvyukxmhBBPZUXHeqzwcehmmwnKcR",
   "libp2p": {
@@ -98,7 +100,7 @@ Use a multiaddr from `libp2p.multiaddrs` that is reachable from your CL host and
 
 **Endpoint:** `GET /metrics`
 
-Metrics are labeled with `gateway_id` and `gateway_cluster_id`. See [Metrics Reference](metrics.md) for the full list.
+Metrics are labeled with `gateway_id` and `gateway_cluster_id`. See [Metrics Reference](metrics.md) for the full list. Consumer block-stream series (`mump2p_stream_*`) appear when `stream_enable` is true.
 
 **CL connected:** When a CL client connects, `mump2p_gateway_cl_peers` goes from 0 to >=1. Messages flow on both block and attestation topics.
 
@@ -280,7 +282,7 @@ providers:
 Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
 
 <details>
-<summary><strong>Click to expand: Partner Dashboard JSON (v1.0.2)</strong></summary>
+<summary><strong>Click to expand: Partner Dashboard JSON (v1.2.0)</strong></summary>
 
 ```json
 {
@@ -300,7 +302,7 @@ Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
       }
     ]
   },
-  "description": "Partner-facing dashboard for Optimum Gateway v1.0.2. All metrics sourced from the gateway /metrics endpoint. Select your Prometheus datasource and Network (Hoodi or Mainnet), then your gateway (by gateway_label).",
+  "description": "Partner-facing dashboard for Optimum Gateway v1.2.0. All metrics sourced from the gateway /metrics endpoint. Select your Prometheus datasource and Network (Hoodi or Mainnet), then your gateway (by gateway_label).",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -738,16 +740,16 @@ Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "vector(1)",
+          "expr": "mump2p_gateway_propagation_state{gateway_label=\"$gateway\"}",
           "instant": true,
-          "legendFormat": "__auto",
+          "legendFormat": "propagation",
           "range": false,
           "refId": "A"
         }
       ],
       "title": "Propagation",
       "type": "stat",
-      "description": "Propagation of messages (blocks / attestations) from the mump2p network to the libp2p (CL) network. Enabled by default in v1."
+      "description": "Whether this gateway is propagating mump2p messages to CL (from mump2p_gateway_propagation_state: 1=enabled, 0=disabled via Optimum dynamic config)."
     },
     {
       "datasource": {
@@ -1763,7 +1765,7 @@ Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
   "tags": [
     "optimum",
     "partner",
-    "v1.0.2"
+    "v1.2.0"
   ],
   "templating": {
     "list": [
@@ -1844,7 +1846,7 @@ Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Optimum Gateway - Partner Dashboard (v1.0.2)",
+  "title": "Optimum Gateway - Partner Dashboard (v1.2.0)",
   "uid": "partner-gateway-v1"
 }
 ```

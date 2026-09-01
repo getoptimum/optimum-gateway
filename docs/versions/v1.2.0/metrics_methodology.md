@@ -74,6 +74,10 @@ Counters per topic (libp2p, mump2p) to isolate heavy topics.
 * **gap_to_best_ms** - Delay vs best observed first-seen time in the gateway population (independent of proposer publish timing)
 * **mum_spread_ms** - Delay from first mump2p publish to receiver (Optimum transport quality)
 
+### Propagation state
+
+* **`propagation_state`** — runtime gauge (`1` = propagating mump2p → CL, `0` = disabled via Optimum dynamic config). Matches `propagation_enabled` in `/api/v1/self_info`. Distinct from attestation propagation latency below.
+
 ### Attestation KPIs
 
 * **Inclusion rate** - `forwarded / evaluated` — what fraction of CL attestations pass the router filter

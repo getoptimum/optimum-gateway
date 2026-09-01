@@ -4,7 +4,7 @@ When `telemetry_enable: true`, metrics are exposed at `http://localhost:48123/me
 
 All gateway metrics carry these global labels: `gateway_id`, `gateway_cluster_id`, and `org_id`. Gateways also inherit the metadata labels set on your API key (for example `gateway_label`, and any Region / Consensus Client / Hosting Provider details you selected when generating the key).
 
-> **Metric prefix:** all gateway metrics are prefixed `mump2p_gateway_`. (Earlier releases used the `optp2p_gateway_optimum_gateway_` prefix — update any saved dashboards or queries.)
+> **Metric prefix:** most gateway metrics are prefixed `mump2p_gateway_`. Consumer block-stream metrics use `mump2p_stream_`. (Earlier releases used the `optp2p_gateway_optimum_gateway_` prefix — update any saved dashboards or queries.)
 
 ## Build & Identity
 
@@ -17,8 +17,9 @@ All gateway metrics carry these global labels: `gateway_id`, `gateway_cluster_id
 
 | Metric                                | Type  | Description                                                         |
 | ------------------------------------- | ----- | ------------------------------------------------------------------- |
-| `mump2p_gateway_cl_health_status`     | Gauge | CL health: 1 = healthy (gossip seen in last 30s), 0 = degraded      |
+| `mump2p_gateway_cl_health_status`     | Gauge | CL health: 1 = healthy (CL path activity in last 30s), 0 = degraded |
 | `mump2p_gateway_mump2p_health_status` | Gauge | mump2p health: 1 = healthy (mesh traffic in last 30s), 0 = degraded |
+| `mump2p_gateway_propagation_state`    | Gauge | Propagation to CL: 1 = propagating, 0 = disabled (dynamic config)    |
 
 ## Peers
 
@@ -95,6 +96,17 @@ All gateway metrics carry these global labels: `gateway_id`, `gateway_cluster_id
 | `mump2p_gateway_auth_token_mint_total`         | Counter | result | JWT mint outcomes (result: success, unknown_key, revoked, suspended, forbidden, bad_status, network_error, empty_token, verify_failed) |
 | `mump2p_gateway_auth_token_expires_at_seconds` | Gauge   | —      | Unix timestamp at which the current JWT expires (0 if never minted)                                                                    |
 
+## Consumer Block Stream
+
+These series appear when `stream_enable: true`. They use the `mump2p_stream_` prefix (not `mump2p_gateway_`). See [Consumer Block Stream](06_block_stream.md) for enablement, tokens, and connecting.
+
+| Metric                                  | Type    | Description                                              |
+| --------------------------------------- | ------- | -------------------------------------------------------- |
+| `mump2p_stream_connections`             | Gauge   | Currently open consumer connections                      |
+| `mump2p_stream_events_sent_total`       | Counter | Events written to consumers                              |
+| `mump2p_stream_events_dropped_total`    | Counter | Events dropped on buffer overflow (lag)                  |
+| `mump2p_stream_auth_failures_total`     | Counter | Connections rejected for bad or missing tokens           |
+
 ## mump2p Trace (debug)
 
 These are populated only when the corresponding trace flags are enabled (`OPT_TRACE_MESH`, `OPT_TRACE_RPC`, `OPT_TRACE_SHARD`). All labels are bounded — per-peer and per-message identifiers are deliberately not used.
@@ -120,3 +132,9 @@ curl -s http://localhost:48123/metrics | grep mump2p_gateway
 ```
 
 With a CL connected: `mump2p_gateway_cl_peers` ≥ 1, `mump2p_gateway_mump2p_peers` ≥ 1, and `/health` reports `subscribed_topics` = 65 (1 block + 64 attestation subnets).
+
+With the consumer stream enabled (`stream_enable: true`):
+
+```sh
+curl -s http://localhost:48123/metrics | grep mump2p_stream_
+```

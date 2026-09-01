@@ -1,16 +1,29 @@
 # Optimum Gateway - Version History & Changelog
 
-**Latest Release:** [v1.1.1](./versions/v1.1.1/release_notes.md)  
-**Latest Docs:** [v1.1.1 Documentation](./versions/v1.1.1/index.md)
+**Latest Release:** [v1.2.0](./versions/v1.2.0/release_notes.md)  
+**Latest Docs:** [v1.2.0 Documentation](./versions/v1.2.0/index.md)
 
 ## Supported Versions
 
 | Version | Status                | Docker Image                |
 | ------- | --------------------- | --------------------------- |
-| v1.1.1  | CURRENT — recommended | `getoptimum/gateway:v1.1.1` |
-| v1.0.2  | Previous — supported  | `getoptimum/gateway:v1.0.2` |
+| v1.2.0  | CURRENT — recommended | `getoptimum/gateway:v1.2.0` |
+| v1.1.1  | Previous — supported  | `getoptimum/gateway:v1.1.1` |
 
-## v1.1.1 (Current)
+## v1.2.0 (Current)
+
+**Docker Image:** `getoptimum/gateway:v1.2.0`
+
+Recommended upgrade for everyone on v1.1.1. Networking and CL peering are unchanged — same ports and firewall rules.
+
+### Highlights
+
+* **Consumer block stream.** Opt-in WebSocket + gRPC feed of decoded beacon blocks (`stream_enable: true`). Consumers use `osc_` keys from the [Partner Console](https://console.getoptimum.io/) (Hoodi and Mainnet). See [Consumer Block Stream](./versions/v1.2.0/06_block_stream.md).
+* **Stream metrics.** `mump2p_stream_*` series on the telemetry port when the stream is enabled. See [Metrics](./versions/v1.2.0/metrics.md#consumer-block-stream).
+
+[Full release notes](./versions/v1.2.0/release_notes.md) · [Documentation](./versions/v1.2.0/index.md)
+
+## v1.1.1
 
 **Docker Image:** `getoptimum/gateway:v1.1.1`
 
@@ -25,30 +38,17 @@ Recommended upgrade for everyone on v1.0.2. Networking and CL peering are unchan
 
 [Full release notes](./versions/v1.1.1/release_notes.md) · [Documentation](./versions/v1.1.1/index.md)
 
-## v1.0.2
+## v1.0.2 (Deprecated)
 
-**Docker Image:** `getoptimum/gateway:v1.0.2`
-
-Required upgrade that replaces all earlier releases.
-
-### Highlights
-
-* **API-key authentication.** Each gateway authenticates with an `ogw_live_...` key set via the `OPT_API_KEY` environment variable; the key drives `gateway_id`, `chain`, and validator scope (no per-network YAML).
-* **More consensus clients.** Adds Nimbus and Lodestar alongside Prysm, Lighthouse, and Teku.
-* **Lighthouse / PeerDAS compatibility.** Advertises a custody group count of 8 in libp2p metadata so PeerDAS-aware clients keep the gateway as a peer.
-* **Health endpoints.** Structured `GET /health` (200/503 with `cl_peers`, `mump2p_peers`, `subscribed_topics`, `last_block_age_sec`, `cl_health`, `mump2p_health`) plus a lightweight `GET /` liveness probe.
-* **Attestation subnet carry + metrics.** Subscribes to all 64 subnets and forwards partner-validator attestations over mump2p, with inclusion and propagation metrics.
-* **Metric namespace.** Gateway metrics are now prefixed `mump2p_gateway_` (previously `optp2p_gateway_optimum_gateway_`) — update saved Prometheus/Grafana queries.
-* **Simpler config + security hardening.** Removed `enable_aggregation`, the baked-in topic list, the sidecar port, and separate push credentials; bounded JWT lifetime and more frequent JWKS refresh.
-
-[Full release notes](./versions/v1.0.2/release_notes.md) · [Documentation](./versions/v1.0.2/index.md)
+**v1.0.2 is deprecated.** Docs for this release have been removed. Partners still on v1.0.2 should upgrade to **[v1.2.0](./versions/v1.2.0/release_notes.md)** (`getoptimum/gateway:v1.2.0`). v1.1.1 remains supported as a previous release.
 
 ## Important: Deprecated Versions
 
-**The following versions are deprecated and no longer supported. Upgrade to v1.1.1.**
+**The following versions are deprecated and no longer supported. Upgrade to v1.2.0.**
 
 | Version     | Status     |
 | ----------- | ---------- |
+| v1.0.2      | DEPRECATED |
 | v0.0.1-rc1  | DEPRECATED |
 | v0.0.1-rc2  | DEPRECATED |
 | v0.0.1-rc3  | DEPRECATED |
@@ -69,7 +69,7 @@ recreate the container:
 
 ```bash
 export OPT_API_KEY=ogw_live_xxx
-docker pull getoptimum/gateway:v1.1.1
+docker pull getoptimum/gateway:v1.2.0
 docker rm -f optimum-gateway
 docker run --name optimum-gateway --rm \
   -p 33212:33212/tcp \
@@ -78,7 +78,7 @@ docker run --name optimum-gateway --rm \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data/libp2p:/tmp/libp2p \
   -v $(pwd)/data/mump2p:/tmp/mump2p \
-  getoptimum/gateway:v1.1.1 \
+  getoptimum/gateway:v1.2.0 \
   -config=/app/config/app_conf.yml
 ```
 
