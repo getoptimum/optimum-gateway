@@ -13,7 +13,7 @@ log_level: info
 gateway_cluster_id: optimum_ethereum_hoodi_v0_1   # REQUIRED — assigned by Optimum
 
 agent_lib_p2p_port: 33212
-agent_mump2p_port: 43213
+agent_mump2p_port: 33213
 telemetry_enable: true
 telemetry_port: 48123
 identity_libp2p_dir: /tmp/libp2p
@@ -110,7 +110,7 @@ The gateway receives automatic config updates from bootstrap.
 | `api_key` | `OPT_API_KEY` | *(required)* | Gateway API key (`ogw_live_...`). **Set via env, not YAML.** Drives gateway_id, chain, and validator scope |
 | `gateway_cluster_id` | `OPT_GATEWAY_CLUSTER_ID` | *(required)* | Cluster ID assigned by Optimum during onboarding |
 | `agent_lib_p2p_port` | `OPT_AGENT_LIB_P2P_PORT` | 33212 | CL clients connect here (inbound) |
-| `agent_mump2p_port` | `OPT_AGENT_MUMP2P_PORT` | 33213 | mump2p agent port (outbound). Sample config uses `43213` |
+| `agent_mump2p_port` | `OPT_AGENT_MUMP2P_PORT` | 33213 | mump2p agent port (inbound) |
 | `telemetry_enable` | `OPT_ENABLE_TELEMETRY` | false | Enable metrics / health endpoint |
 | `telemetry_port` | `OPT_TELEMETRY_PORT` | 48123 | Telemetry HTTP port (`/health`, `/metrics`, `/api/v1/self_info`) |
 | `identity_libp2p_dir` | `OPT_IDENTITY_LIBP2P_DIR` | /tmp/libp2p | libp2p identity dir — **persist as a volume** |
@@ -118,17 +118,6 @@ The gateway receives automatic config updates from bootstrap.
 | `direct_cl_peers` | `OPT_DIRECT_CL_PEERS` | *(empty)* | CL node multiaddrs for auto-reconnect; when set, only listed peer IDs may stay connected |
 | `log_level` | `OPT_LOG_LEVEL` | debug | `debug` / `info` |
 | `remote_push_enable` | `OPT_REMOTE_PUSH_ENABLE` | false | Optional Loki/Mimir push (requires `telemetry_enable: true`) |
-| `stream_enable` | `OPT_STREAM_ENABLE` | false | Enable the consumer block stream (WebSocket + gRPC) |
-| `stream_only` | `OPT_STREAM_ONLY` | false | Skip CL host/ingest; never publishes. Requires `stream_enable` |
-| `stream_addr` | `OPT_STREAM_ADDR` | 127.0.0.1:9600 | WebSocket listener (own port, off `/metrics`); loopback by default |
-| `stream_grpc_addr` | `OPT_STREAM_GRPC_ADDR` | 127.0.0.1:9601 | gRPC listener; loopback by default |
-| `stream_require_auth` | `OPT_STREAM_REQUIRE_AUTH` | true | Verify consumer JWTs; `false` only on a loopback bind |
-| `stream_max_conns` | `OPT_STREAM_MAX_CONNS` | 256 | Global connection cap |
-| `stream_max_conns_per_sub` | `OPT_STREAM_MAX_CONNS_PER_SUB` | 8 | Per-consumer-key connection cap |
-| `stream_buffer_size` | `OPT_STREAM_BUFFER_SIZE` | 64 | Per-connection ring buffer (drop-on-overflow) |
-
-See [Consumer Block Stream](06_block_stream.md) for minting consumer tokens and
-opening a stream.
 
 ## Validation
 
@@ -143,7 +132,7 @@ docker logs optimum-gateway | grep "subscribed to topic"
 * **Wrong network** — Chain comes from the API key, not YAML. If `/api/v1/self_info` shows the wrong `chain`, you are using the wrong key. Get the right key from Optimum
 * **Missing `gateway_cluster_id`** — Required; use the ID assigned during onboarding
 * **API key in YAML / image** — Move it to `OPT_API_KEY` in the environment
-* **Port conflicts** — Ensure 33212, 43213, 48123 are free
+* **Port conflicts** — Ensure 33212, 33213, 48123 are free
 * **Peer ID changes after restart** — Persist `identity_libp2p_dir` and `identity_mump2p_dir` as volumes
 
 See [Troubleshooting](04_troubleshoot.md) for more.

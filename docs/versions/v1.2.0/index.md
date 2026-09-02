@@ -1,8 +1,8 @@
 # Optimum Gateway - User Guide
 
-> **Required upgrade:** v1.0.2 is a **mandatory** upgrade for all partners. It **replaces** every earlier release — previous release candidates (rc11, rc12) are no longer supported. Upgrade as soon as you receive your API key.
+> **Recommended upgrade:** v1.2.0 is the current release. Partners on v1.1.1 should upgrade when convenient — networking and CL peering are unchanged. This release adds the opt-in [consumer block stream](06_block_stream.md).
 
-> **Release Notes:** [What's new in v1.0.2](./release_notes.md)
+> **Release Notes:** [What's new in v1.2.0](./release_notes.md)
 
 > **Security audit:** ProbeLab, 2026 - [Full report](https://cdn.probelab.io/media/documents/2026-08-ProbeLab-Security_Audit_Report_Optimum_Gateway.pdf)
 
@@ -13,6 +13,7 @@ The **Optimum Gateway** bridges your **Ethereum Consensus Layer (CL) client** wi
 * **Problem**: Validators rely on CL gossip (libp2p) for block and attestation propagation. Latency variance hurts performance.
 * **Gateway Role**: Bridges your local CL client to the **mump2p** network for both blocks and attestations.
 * **Result**: Faster block and attestation propagation, reduced latency, improved validator rewards.
+* **Consumer block stream** (opt-in): expose decoded beacon blocks to your own consumers over WebSocket or gRPC. See [Consumer Block Stream](06_block_stream.md).
 
 ## Architecture
 
@@ -75,7 +76,7 @@ The **Optimum Gateway** bridges your **Ethereum Consensus Layer (CL) client** wi
 
 * The Gateway subscribes to ETH CL topics (beacon_block + all 64 attestation subnets) and forwards messages to the Optimum mump2p network.
 * **Peer discovery and fork digest** are handled automatically. The gateway connects to the Optimum network on startup.
-* **Identity, chain, and validator scope** all come from your **API key** — there is no per-network YAML to edit.
+* **Identity, chain, and validator scope** all come from your **API key** - there is no per-network YAML to edit.
 * **Config:** See [Quick Start](01_quick_start.md) and [Configuration](02_configuration.md).
 
 ## Requirements

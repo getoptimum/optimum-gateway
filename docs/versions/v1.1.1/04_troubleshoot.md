@@ -20,7 +20,7 @@ This guide covers the operational issues you can hit running the Optimum Gateway
 | `gateway_cluster_id`                          | Must match onboarding (Hoodi vs Mainnet)                                   |
 | `identity_libp2p_dir` / `identity_mump2p_dir` | **Persist as volumes** — without them, peer ID changes every restart       |
 | `agent_lib_p2p_port`                          | Default `33212`; CL connects here                                          |
-| `agent_mump2p_port`                          | Default `43213`; mump2p egress                                             |
+| `agent_mump2p_port`                          | Default `33213`; Optimum network peers connect here (inbound)              |
 | `telemetry_enable` / `telemetry_port`         | Default port `48123`                                                       |
 | `direct_cl_peers`                             | Optional, **strongly recommended** for Lighthouse / Nimbus                 |
 | `remote_push_enable`                          | Optional; pushes logs/metrics to Optimum for support visibility            |
@@ -61,7 +61,7 @@ docker logs optimum-gateway --tail=50
 | Failing check        | What it means                          | Fix                                                                                                                                          |
 | -------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `cl_peers`           | No CL client connected on `:33212`     | Configure CL peering; add `direct_cl_peers`; open **33212 inbound**; use a reachable IP in the multiaddr; restart CL after a gateway restart |
-| `mump2p_peers`       | Not connected to the Optimum mesh      | Check **43213 outbound** + HTTPS to bootstrap; verify `api_key` + `gateway_cluster_id`; wait 2-5 min after start                             |
+| `mump2p_peers`       | Not connected to the Optimum mesh      | Check **33213 inbound** + HTTPS to bootstrap; verify `api_key` + `gateway_cluster_id`; wait 2-5 min after start                              |
 | `subscribed_topics`  | Topic subscription failed (expect ~65) | Usually a chain/cluster mismatch (wrong API key for the network); check logs for subscribe errors                                            |
 | `last_block_age_sec` | No beacon block in ~60s                | CL is connected but **silent** — CL not synced, EL stuck, or CL OOM/restart; fix the CL first                                                |
 | `cl_health`          | No CL gossip traffic in the last 30s   | Same as silent CL — peer count alone can be misleading                                                                                       |
@@ -277,16 +277,17 @@ Lodestar is supported. Add the gateway as a trusted/direct peer in Lodestar, and
 | Port    | Direction | Action                                                                                              |
 | ------- | --------- | --------------------------------------------------------------------------------------------------- |
 | `33212` | Inbound   | CL clients connect here                                                                             |
+| `33213` | Inbound   | Optimum network (mump2p) peers connect here                                                         |
 | `48123` | Localhost | `/health`, `/metrics`, `/api/v1/self_info` — see [Network Requirements](00_network_requirements.md) |
-| `43213` | Outbound  | mump2p mesh egress (no inbound rule needed)                                                         |
 | `443`   | Outbound  | auth, bootstrap, Loki, Mimir                                                                        |
 
 ```bash
-sudo lsof -i :33212 -i :43213 -i :48123
+sudo lsof -i :33212 -i :33213 -i :48123
 sudo ufw allow 33212/tcp
+sudo ufw allow 33213/tcp
 ```
 
-Only **33212** needs a public inbound firewall rule. **Docker tip:** `--network host` exposes all ports on the host network interface.
+**33213** must be reachable from the internet for the mesh. **33212** is for your CL (usually private). **Docker tip:** `--network host` exposes all ports on the host network interface.
 
 
 ## Identity / persistence
