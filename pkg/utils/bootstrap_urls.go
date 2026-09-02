@@ -15,6 +15,11 @@ const (
 	BootstrapForkDigestPath       = "/api/v2/fork-digest"
 )
 
+// BootstrapAccelerateSlotsURL is GET /api/v2/:chain/accelerate_slots (ADR-0012).
+func BootstrapAccelerateSlotsURL(host string, chainID chain.Chain) string {
+	return bootstrapPathURL(host, "/api/v2/"+url.PathEscape(chainID.String())+"/accelerate_slots")
+}
+
 // isBaseURL returns true if s looks like a full URL (http:// or https://).
 func isBaseURL(s string) bool {
 	return strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://")

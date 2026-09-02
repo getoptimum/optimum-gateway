@@ -37,13 +37,15 @@ func (s *Service) handleMessagesFromCL() {
 }
 
 func (s *Service) processCLBeaconBlock(l logger.AppLogger, msg *entities.CLMessage) {
-	// beacon_block always try to deliver as fast as possible
 	slot, forward := s.processBeaconBlockArrival(l, msg.Topic, msg.Message, time.Now().UnixMilli(), entities.SourceLibP2P, "", msg.ReceivedFrom)
 	if !forward {
 		return
 	}
 	// record arrival before dedup so latency is captured even if mump2p delivered it first
 	if s.isDuplicateMessage(msg.Message) {
+		return
+	}
+	if !s.srvMsgRouter.ShouldAccelerateBlock(slot) {
 		return
 	}
 	if s.nodeMumP2P == nil {
@@ -106,8 +108,11 @@ func (s *Service) processMumP2PMessage(l logger.AppLogger, msg *commonentities.P
 	meta := topics.TopicMetaFor(msg.Topic)
 	// block measure goes before rejecting self messages: otherwise we send a message,
 	// nobody sends it back (we already have it) and we lose the propagation latency sample.
+	var slot uint64
 	if meta.IsBeaconBlock() {
-		if _, forward := s.processBeaconBlockArrival(l, msg.Topic, msg.Message, time.Now().UnixMilli(), entities.SourceMumP2P, msg.SourceNodeID, msg.UpstreamPeerID); !forward {
+		var forward bool
+		slot, forward = s.processBeaconBlockArrival(l, msg.Topic, msg.Message, time.Now().UnixMilli(), entities.SourceMumP2P, msg.SourceNodeID, msg.UpstreamPeerID)
+		if !forward {
 			return
 		}
 	}
@@ -121,13 +126,13 @@ func (s *Service) processMumP2PMessage(l logger.AppLogger, msg *commonentities.P
 
 	switch {
 	case meta.IsBeaconBlock():
-		s.processMumP2PBeaconBlock(l, msg)
+		s.processMumP2PBeaconBlock(l, msg, slot)
 	case msg.Topic == mumP2PAggregatedMessagesTopic:
 		s.handleAggregatedMessages(l, msg)
 	}
 }
 
-func (s *Service) processMumP2PBeaconBlock(l logger.AppLogger, msg *commonentities.P2PMessage) {
+func (s *Service) processMumP2PBeaconBlock(l logger.AppLogger, msg *commonentities.P2PMessage, slot uint64) {
 	propagationEnabled := s.cfg.PropagationEnabled()
 	telemetry.SetPropagationState(propagationEnabled)
 	if !propagationEnabled {
@@ -135,6 +140,9 @@ func (s *Service) processMumP2PBeaconBlock(l logger.AppLogger, msg *commonentiti
 		return
 	}
 	if !s.srvMsgRouter.ShouldForwardMessageToCLP2P(topics.TopicBeaconBlock, msg.Message) {
+		return
+	}
+	if !s.srvMsgRouter.ShouldAccelerateBlock(slot) {
 		return
 	}
 	if err := s.publishToCLTopic(msg.Message, msg.Topic); err != nil {
