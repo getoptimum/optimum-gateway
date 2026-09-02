@@ -2,6 +2,8 @@
 
 Get the Optimum Gateway running with Docker.
 
+> **Running on Kubernetes?** See [Kubernetes (Helm)](05_kubernetes.md) for the official Helm chart.
+
 > **Prerequisites:** [Requirements](index.md#requirements) and [Network Requirements](00_network_requirements.md). You also need an **API key** — see [Generate your API key](#generate-your-api-key) below.
 
 ## Hardware Requirements
@@ -46,7 +48,7 @@ The gateway exchanges this key on startup at `auth.getoptimum.io/api/v1/auth/tok
 ## Installation
 
 ```sh
-docker pull getoptimum/gateway:v1.0.2
+docker pull getoptimum/gateway:v1.2.0
 ```
 
 ## Configuration
@@ -58,11 +60,11 @@ log_level: info
 gateway_cluster_id: optimum_ethereum_hoodi_v0_1   # assigned by Optimum during onboarding
 
 agent_lib_p2p_port: 33212
-agent_opt_p2p_port: 43213
+agent_mump2p_port: 33213
 telemetry_enable: true
 telemetry_port: 48123
 identity_libp2p_dir: /tmp/libp2p
-identity_optp2p_dir: /tmp/optp2p
+identity_mump2p_dir: /tmp/mump2p
 ```
 
 > **Set your API key via the environment, not YAML.** Pass it as `OPT_API_KEY` so it never lives in a config file or image layer. Your `gateway_id`, `chain`, and validator scope are all derived from this key — do not set them in YAML.
@@ -78,16 +80,17 @@ mkdir -p config data/libp2p data/mump2p
 
 docker run --name optimum-gateway --rm \
   -p 33212:33212/tcp \
+  -p 33213:33213/tcp \
   -p 127.0.0.1:48123:48123/tcp \
   -e OPT_API_KEY=$OPT_API_KEY \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data/libp2p:/tmp/libp2p \
-  -v $(pwd)/data/mump2p:/tmp/optp2p \
-  getoptimum/gateway:v1.0.2 \
+  -v $(pwd)/data/mump2p:/tmp/mump2p \
+  getoptimum/gateway:v1.2.0 \
   -config=/app/config/app_conf.yml
 ```
 
-> Persist the identity volumes (`/tmp/libp2p`, `/tmp/optp2p`) across restarts — otherwise the gateway's peer ID changes on every run and your CL client config breaks.
+> Persist the identity volumes (`/tmp/libp2p`, `/tmp/mump2p`) across restarts — otherwise the gateway's peer ID changes on every run and your CL client config breaks.
 
 ## Verify
 
@@ -101,7 +104,7 @@ curl http://localhost:48123/health
 {
   "status": "healthy",
   "gateway_id": "optimum-dev-hoodi-kubernetes-validator-lighthouse",
-  "version": "v1.0.2",
+  "version": "v1.2.0",
   "commit_hash": "a0b2bc1",
   "uptime_seconds": 1639,
   "checks": {
@@ -163,7 +166,7 @@ curl -s http://localhost:48123/api/v1/self_info
 
 Use `libp2p.multiaddrs[0]` (or another reachable multiaddr) for IP and `peer_id` for peer ID.
 
-> **Recommended CL versions:** Use **Prysm v7.1.4** or later. For Teku use **v26.4.0+**. See [Troubleshooting](04_troubleshoot.md) for client-specific PeerDAS flags.
+> **Recommended CL versions:** Use **Prysm v7.1.8** or later. For Teku use **v26.6.0+** (minimum v26.4.0). See [Troubleshooting](04_troubleshoot.md) for client-specific PeerDAS flags.
 
 ### Prysm
 
@@ -222,5 +225,6 @@ Lodestar is supported. Point it at the gateway as a trusted/direct peer and add 
 ## Next Steps
 
 * [Configuration](02_configuration.md) - Ports, direct peers, advanced settings
+* [Consumer Block Stream](06_block_stream.md) - Opt-in WebSocket / gRPC feed of decoded blocks
 * [Troubleshooting](04_troubleshoot.md) - Gateway diagnosis and common issues
 * [Metrics](metrics.md) - Gateway and mesh metrics

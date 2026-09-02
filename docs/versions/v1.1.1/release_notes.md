@@ -34,6 +34,6 @@ No firewall or CL peering changes are required.
 | Version     | Status                    |
 | ----------- | ------------------------- |
 | v1.1.1      | **CURRENT - recommended** |
-| v1.0.2      | Previous                  |
+| v1.0.2      | DEPRECATED / unsupported  |
 | v0.0.1-rc12 | REMOVED / unsupported     |
 | v0.0.1-rc11 | REMOVED / unsupported     |
