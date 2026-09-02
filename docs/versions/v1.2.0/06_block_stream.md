@@ -284,12 +284,15 @@ Over gRPC the same signal is a `lagged` frame: `{ "lagged": { "dropped": "12" } 
 
 ## Errors
 
+Connection-time (gateway WebSocket / gRPC):
+
 | Condition | WebSocket | gRPC |
 | --- | --- | --- |
 | Missing / bad token | `401 Unauthorized` | `Unauthenticated` |
 | Invalid `mode` | `400 Bad Request` | `InvalidArgument` |
 | Connection cap reached | `503 Service Unavailable` | `ResourceExhausted` |
-| Unknown / suspended / revoked key (at mint) | `401 invalid_key` | `401 invalid_key` |
+
+Token exchange (`POST /api/v1/stream/token` on the auth service) is a different call. Unknown, suspended, or revoked `osc_` keys fail there as `401 invalid_key` — the gateway never sees that status on the stream.
 
 ## Metrics
 
