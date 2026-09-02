@@ -10,7 +10,7 @@ services:
     profiles: ["lite", "full", "geth", "nethermind", "teku", "prysm", "lighthouse", "nimbus", "lodestar"]
     ports:
       - "33212:33212"         # libp2p port (CL clients connect here)
-      - "43213:43213"         # mump2p agent port
+      - "33213:33213"         # mump2p agent port
       - "48123:48123"         # Telemetry/metrics port
     volumes:
       - ./config:/app/config  # Config directory (must contain app_conf.yml)
