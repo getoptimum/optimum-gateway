@@ -72,7 +72,22 @@ func NewNode(
 
 	publicIPV4, publicIPV6, err := commonnet.GetExternalIPs()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get public IP address: %w", err)
+		if cfg.AnnounceIP == "" {
+			return nil, fmt.Errorf("failed to get public IP address: %w", err)
+		}
+		// Autodetection failed (no outbound internet, hermetic environment,
+		// etc.), but an explicit override is configured for IPv4 - proceed
+		// without IPv6 rather than failing startup entirely.
+		log.Info("autodetection failed but announce_ip is configured, continuing without IPv6",
+			logger.WithString("autodetect_error", err.Error()),
+		)
+		publicIPV6 = ""
+	}
+	if cfg.AnnounceIP != "" {
+		log.Info("using configured announce_ip override for mump2p host IPv4, autodetected IPv6 (if any) is kept",
+			logger.WithString("announce_ip", cfg.AnnounceIP),
+		)
+		publicIPV4 = cfg.AnnounceIP
 	}
 	log.Info("ip detected", logger.WithString("ipv4", publicIPV4), logger.WithString("ipv6", publicIPV6))
 

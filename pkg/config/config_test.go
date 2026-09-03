@@ -338,3 +338,106 @@ func TestStreamValidation(t *testing.T) {
 		require.True(t, cfg.StreamOnly)
 	})
 }
+
+func TestValidate_AnnounceIP_Valid(t *testing.T) {
+	cfg := &config.AppConfig{
+		IdentityLibP2PDir: testLibP2PDir,
+		IdentityMumP2PDir: testMumP2PDir,
+		AgentLibP2PPort:   33212,
+		AgentMumP2PPort:   33213,
+		TelemetryPort:     48123,
+		GatewayClusterID:  "cluster",
+		AnnounceIP:        "203.0.113.10",
+	}
+	require.NoError(t, cfg.Validate())
+	require.Equal(t, "203.0.113.10", cfg.AnnounceIP)
+}
+
+func TestValidate_AnnounceIP_Empty_NoOp(t *testing.T) {
+	// Not set at all - Validate should neither error nor touch the field.
+	cfg := &config.AppConfig{
+		IdentityLibP2PDir: testLibP2PDir,
+		IdentityMumP2PDir: testMumP2PDir,
+		AgentLibP2PPort:   33212,
+		AgentMumP2PPort:   33213,
+		TelemetryPort:     48123,
+		GatewayClusterID:  "cluster",
+	}
+	require.NoError(t, cfg.Validate())
+	require.Empty(t, cfg.AnnounceIP)
+}
+
+func TestValidate_AnnounceIP_Invalid(t *testing.T) {
+	cases := []string{
+		"not-an-ip",
+		"999.999.999.999",
+		"",                     // handled separately by the empty-string no-op case, but a whitespace-only value is not empty and should still fail
+		"2001:db8::1",          // a genuine IPv6 address, not IPv4
+		"announce.example.com", // hostname, not an address
+		"203.0.113.10:8080",    // host:port, not a bare address
+	}
+	for _, in := range cases {
+		if in == "" {
+			continue // covered by TestValidate_AnnounceIP_Empty_NoOp
+		}
+		cfg := &config.AppConfig{
+			IdentityLibP2PDir: testLibP2PDir,
+			IdentityMumP2PDir: testMumP2PDir,
+			AgentLibP2PPort:   33212,
+			AgentMumP2PPort:   33213,
+			TelemetryPort:     48123,
+			GatewayClusterID:  "cluster",
+			AnnounceIP:        in,
+		}
+		err := cfg.Validate()
+		require.Errorf(t, err, "expected %q to be rejected as an invalid IPv4 address", in)
+		require.Contains(t, err.Error(), "OPT_ANNOUNCE_IP")
+	}
+}
+
+// TestValidate_AnnounceIP_NormalizesIPv4MappedIPv6: To4() accepts IPv4-mapped
+// IPv6 text too, so Validate must normalize it to dotted-decimal, not just check it.
+func TestValidate_AnnounceIP_NormalizesIPv4MappedIPv6(t *testing.T) {
+	cfg := &config.AppConfig{
+		IdentityLibP2PDir: testLibP2PDir,
+		IdentityMumP2PDir: testMumP2PDir,
+		AgentLibP2PPort:   33212,
+		AgentMumP2PPort:   33213,
+		TelemetryPort:     48123,
+		GatewayClusterID:  "cluster",
+		AnnounceIP:        "::ffff:203.0.113.10",
+	}
+	require.NoError(t, cfg.Validate())
+	require.Equal(t, "203.0.113.10", cfg.AnnounceIP,
+		"AnnounceIP must be normalized to dotted-decimal, not left as IPv4-mapped IPv6 text")
+}
+
+func TestLoadConfig_AnnounceIP_FromEnv(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("OPT_IDENTITY_LIBP2P_DIR", filepath.Join(dir, "libid"))
+	t.Setenv("OPT_IDENTITY_MUMP2P_DIR", filepath.Join(dir, "mump2pid"))
+	t.Setenv("OPT_AGENT_LIB_P2P_PORT", "5000")
+	t.Setenv("OPT_AGENT_MUMP2P_PORT", "5001")
+	t.Setenv("OPT_GATEWAY_CLUSTER_ID", "gw-cluster")
+	t.Setenv("OPT_TELEMETRY_PORT", "8888")
+	t.Setenv("OPT_ANNOUNCE_IP", "198.51.100.7")
+	cfg, err := config.LoadConfig("")
+	require.NoError(t, err)
+	require.Equal(t, "198.51.100.7", cfg.AnnounceIP)
+}
+
+func TestLoadConfig_AnnounceIP_FromYAML(t *testing.T) {
+	dir := t.TempDir()
+	path := writeTempConfig(t, `
+identity_libp2p_dir: `+filepath.Join(dir, "libid")+`
+identity_mump2p_dir: `+filepath.Join(dir, "mump2pid")+`
+agent_lib_p2p_port: 5000
+agent_mump2p_port: 5001
+gateway_cluster_id: gw-cluster
+telemetry_port: 8888
+announce_ip: 203.0.113.55
+`)
+	cfg, err := config.LoadConfig(path)
+	require.NoError(t, err)
+	require.Equal(t, "203.0.113.55", cfg.AnnounceIP)
+}

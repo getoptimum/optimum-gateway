@@ -91,9 +91,18 @@ func (s *Service) setupLibP2PHost() error {
 	}
 	listenAddrs := []multiaddr.Multiaddr{listenAddrIPv4, listenAddrIPv6}
 
-	publicIP, _, err := commonnet.GetExternalIPs()
-	if err != nil {
-		return fmt.Errorf("failed to get outbound IP address: %w", err)
+	var publicIP string
+	if s.cfg.AnnounceIP != "" {
+		s.log.Info("using configured announce_ip override for CL-facing host, skipping autodetection",
+			logger.WithString("announce_ip", s.cfg.AnnounceIP),
+		)
+		publicIP = s.cfg.AnnounceIP
+	} else {
+		var err error
+		publicIP, _, err = commonnet.GetExternalIPs()
+		if err != nil {
+			return fmt.Errorf("failed to get outbound IP address: %w", err)
+		}
 	}
 
 	internalIPs, err := commonnet.GetPrivateIPs()

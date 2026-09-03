@@ -152,11 +152,32 @@ func (s *Service) RegisterAndGetMumP2PPeers() ([]string, error) {
 func (s *Service) predictMumP2PAddrInfo() (peerInfo peer.AddrInfo, publicIP string, err error) {
 	publicIPV4, publicIPV6, err := commonnet.GetExternalIPs()
 	if err != nil {
-		s.log.Error("failed to get public IP, falling back to interface IP", err)
-		publicIPV4, err = commonnet.ExternalIP()
-		if err != nil {
-			return peer.AddrInfo{}, "", fmt.Errorf("unable to get any IP address: %w", err)
+		if s.cfg.AnnounceIP == "" {
+			s.log.Error("failed to get public IP, falling back to interface IP", err)
+			publicIPV4, err = commonnet.ExternalIP()
+			if err != nil {
+				return peer.AddrInfo{}, "", fmt.Errorf("unable to get any IP address: %w", err)
+			}
+		} else {
+			// Autodetection (and its interface-inspection fallback) both
+			// only matter when we don't already have an operator-supplied
+			// address. Continue without IPv6 rather than failing startup.
+			s.log.Info("autodetection failed but announce_ip is configured, continuing without IPv6",
+				logger.WithString("autodetect_error", err.Error()),
+			)
+			publicIPV6 = ""
 		}
+	}
+	if s.cfg.AnnounceIP != "" {
+		// Must match the override used when the mump2p host actually starts
+		// (setupMumP2PHost / mum_p2p.NewNode) - this prediction is registered
+		// with the bootstrap server ahead of time, and a mismatch here would
+		// have the gateway announce one address to bootstrap and then bind/
+		// advertise a different one once the host is up.
+		s.log.Info("using configured announce_ip override for bootstrap prediction IPv4, autodetected IPv6 (if any) is kept",
+			logger.WithString("announce_ip", s.cfg.AnnounceIP),
+		)
+		publicIPV4 = s.cfg.AnnounceIP
 	}
 	s.log.Info("public IP address detected from prediction",
 		logger.WithString("public_ip", publicIPV4),

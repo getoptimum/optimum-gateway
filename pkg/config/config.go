@@ -42,14 +42,17 @@ type AppConfig struct {
 	PProfAddr   string `yaml:"pprof_addr" env:"OPT_PPROF_ADDR" default:"127.0.0.1:6060"`
 	// mump2p trace-event categories consumed in-process for analysis (see handleMumP2PTrace).
 	// All default false. TraceRPC is a high-frequency firehose — enable only for deep debugging.
-	TraceMesh             bool     `yaml:"trace_mesh" env:"OPT_TRACE_MESH" default:"false"`
-	TraceRPC              bool     `yaml:"trace_rpc" env:"OPT_TRACE_RPC" default:"false"`
-	TraceShard            bool     `yaml:"trace_shard" env:"OPT_TRACE_SHARD" default:"false"`
-	LogLevel              string   `yaml:"log_level" env:"OPT_LOG_LEVEL" default:"debug"`
-	IdentityLibP2PDir     string   `yaml:"identity_libp2p_dir" env:"OPT_IDENTITY_LIBP2P_DIR" default:"/tmp/libp2p"`
-	IdentityMumP2PDir     string   `yaml:"identity_mump2p_dir" env:"OPT_IDENTITY_MUMP2P_DIR" default:"/tmp/mump2p"`
-	AgentLibP2PPort       int      `yaml:"agent_lib_p2p_port" env:"OPT_AGENT_LIB_P2P_PORT" default:"33212"`
-	AgentMumP2PPort       int      `yaml:"agent_mump2p_port" env:"OPT_AGENT_MUMP2P_PORT" default:"33213"`
+	TraceMesh         bool   `yaml:"trace_mesh" env:"OPT_TRACE_MESH" default:"false"`
+	TraceRPC          bool   `yaml:"trace_rpc" env:"OPT_TRACE_RPC" default:"false"`
+	TraceShard        bool   `yaml:"trace_shard" env:"OPT_TRACE_SHARD" default:"false"`
+	LogLevel          string `yaml:"log_level" env:"OPT_LOG_LEVEL" default:"debug"`
+	IdentityLibP2PDir string `yaml:"identity_libp2p_dir" env:"OPT_IDENTITY_LIBP2P_DIR" default:"/tmp/libp2p"`
+	IdentityMumP2PDir string `yaml:"identity_mump2p_dir" env:"OPT_IDENTITY_MUMP2P_DIR" default:"/tmp/mump2p"`
+	AgentLibP2PPort   int    `yaml:"agent_lib_p2p_port" env:"OPT_AGENT_LIB_P2P_PORT" default:"33212"`
+	AgentMumP2PPort   int    `yaml:"agent_mump2p_port" env:"OPT_AGENT_MUMP2P_PORT" default:"33213"`
+	// AnnounceIP, when set, always overrides the advertised public IPv4 (CL-facing
+	// and mump2p hosts); IPv6 autodetection still runs. Prysm's --p2p-host-ip equivalent.
+	AnnounceIP            string   `yaml:"announce_ip" env:"OPT_ANNOUNCE_IP"`
 	DirectCLPeers         []string `yaml:"direct_cl_peers" env:"OPT_DIRECT_CL_PEERS"`
 	TelemetryEnable       bool     `yaml:"telemetry_enable" env:"OPT_ENABLE_TELEMETRY" default:"false"`
 	TelemetryPort         int      `yaml:"telemetry_port" env:"OPT_TELEMETRY_PORT" default:"48123"`
@@ -262,6 +265,16 @@ func (c *AppConfig) Validate() error {
 	}
 	if c.GatewayClusterID == "" {
 		return fmt.Errorf("OPT_GATEWAY_CLUSTER_ID is required")
+	}
+	if c.AnnounceIP != "" {
+		ip := net.ParseIP(c.AnnounceIP)
+		v4 := ip.To4()
+		if ip == nil || v4 == nil {
+			return fmt.Errorf("OPT_ANNOUNCE_IP %q is not a valid IPv4 address", c.AnnounceIP)
+		}
+		// Normalize IPv4-mapped IPv6 text (e.g. "::ffff:1.2.3.4") to plain
+		// dotted-decimal; the raw form is invalid inside an /ip4/ multiaddr.
+		c.AnnounceIP = v4.String()
 	}
 
 	if c.StreamEnable {
