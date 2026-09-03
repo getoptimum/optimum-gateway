@@ -56,6 +56,14 @@ telemetry_port: 48123
 # chain: hoodi                             # OPT_DEV_CHAIN — overridden by JWT chain_id claim
 # gateway_id: dev-gateway                  # OPT_GATEWAY_ID — overridden by JWT sub claim
 
+# ─── Announce IP (optional) ───────────────────────────────────────────────────
+# Override the public IPv4 address advertised to peers on both the CL-facing
+# and mump2p hosts. Use when autodetection returns a private/pod-internal
+# address peers can't route to (e.g. behind NAT or a CNI network) and running
+# with a host-mode network namespace isn't an option. Equivalent to Prysm's
+# --p2p-host-ip.
+# announce_ip: 203.0.113.10
+
 # ─── Direct CL peers (optional) ──────────────────────────────────────────────
 # direct_cl_peers:
 #   - /ip4/1.2.3.4/tcp/13000/p2p/16Uiu2...

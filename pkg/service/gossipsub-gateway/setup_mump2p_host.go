@@ -32,6 +32,7 @@ func (s *Service) setupMumP2PHost() error {
 		MeshDegreeMax:            int(config.DefaultMeshDegreeMax),
 		BootstrapPeers:           filtered,
 		ClusterID:                s.cfg.GatewayClusterID,
+		AnnounceIP:               s.cfg.AnnounceIP,
 		Rotator:                  s.cfg.GetDCRotator(),
 		TraceMesh:                s.cfg.TraceMesh,
 		TraceRPC:                 s.cfg.TraceRPC,

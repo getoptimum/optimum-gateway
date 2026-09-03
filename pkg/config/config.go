@@ -50,6 +50,14 @@ type AppConfig struct {
 	IdentityMumP2PDir     string   `yaml:"identity_mump2p_dir" env:"OPT_IDENTITY_MUMP2P_DIR" default:"/tmp/mump2p"`
 	AgentLibP2PPort       int      `yaml:"agent_lib_p2p_port" env:"OPT_AGENT_LIB_P2P_PORT" default:"33212"`
 	AgentMumP2PPort       int      `yaml:"agent_mump2p_port" env:"OPT_AGENT_MUMP2P_PORT" default:"33213"`
+	// AnnounceIP overrides the public IPv4 address the gateway advertises to
+	// peers (both the CL-facing libp2p host and the mump2p host), bypassing
+	// commonnet.GetExternalIPs() autodetection. Equivalent to Prysm's
+	// --p2p-host-ip: https://prysm.offchainlabs.com/docs/manage-connections/p2p-host-ip/
+	// Needed when autodetection would return a private/pod-internal address
+	// (e.g. behind a NAT or CNI network) that peers cannot route to, and
+	// running with a host-mode network namespace isn't an option.
+	AnnounceIP            string   `yaml:"announce_ip" env:"OPT_ANNOUNCE_IP"`
 	DirectCLPeers         []string `yaml:"direct_cl_peers" env:"OPT_DIRECT_CL_PEERS"`
 	TelemetryEnable       bool     `yaml:"telemetry_enable" env:"OPT_ENABLE_TELEMETRY" default:"false"`
 	TelemetryPort         int      `yaml:"telemetry_port" env:"OPT_TELEMETRY_PORT" default:"48123"`
@@ -262,6 +270,12 @@ func (c *AppConfig) Validate() error {
 	}
 	if c.GatewayClusterID == "" {
 		return fmt.Errorf("OPT_GATEWAY_CLUSTER_ID is required")
+	}
+	if c.AnnounceIP != "" {
+		ip := net.ParseIP(c.AnnounceIP)
+		if ip == nil || ip.To4() == nil {
+			return fmt.Errorf("OPT_ANNOUNCE_IP %q is not a valid IPv4 address", c.AnnounceIP)
+		}
 	}
 
 	if c.StreamEnable {

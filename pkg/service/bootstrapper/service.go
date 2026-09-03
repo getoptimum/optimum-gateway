@@ -158,6 +158,18 @@ func (s *Service) predictMumP2PAddrInfo() (peerInfo peer.AddrInfo, publicIP stri
 			return peer.AddrInfo{}, "", fmt.Errorf("unable to get any IP address: %w", err)
 		}
 	}
+	if s.cfg.AnnounceIP != "" {
+		// Must match the override used when the mump2p host actually starts
+		// (setupMumP2PHost / mum_p2p.NewNode) - this prediction is registered
+		// with the bootstrap server ahead of time, and a mismatch here would
+		// have the gateway announce one address to bootstrap and then bind/
+		// advertise a different one once the host is up.
+		s.log.Info("using configured announce_ip override for bootstrap prediction, skipping autodetection",
+			logger.WithString("announce_ip", s.cfg.AnnounceIP),
+			logger.WithString("autodetected_ipv4", publicIPV4),
+		)
+		publicIPV4 = s.cfg.AnnounceIP
+	}
 	s.log.Info("public IP address detected from prediction",
 		logger.WithString("public_ip", publicIPV4),
 		logger.WithString("public_ip_v6", publicIPV6),

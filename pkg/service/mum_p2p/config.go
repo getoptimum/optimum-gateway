@@ -17,6 +17,13 @@ type Config struct {
 	ListenPort     int    `yaml:"listen_port"`
 	MaxMessageSize int64  `yaml:"max_message_size_bytes"`
 
+	// AnnounceIP overrides the public IPv4 address advertised for this host,
+	// bypassing commonnet.GetExternalIPs() autodetection. Populated from
+	// AppConfig.AnnounceIP by the caller (see setupMumP2PHost); mirrors the
+	// same override used for the CL-facing libp2p host so both hosts agree
+	// on the advertised address.
+	AnnounceIP string `yaml:"announce_ip"`
+
 	// RLNC and message settings
 	RandomMessageSize        int64   `yaml:"random_message_size_bytes"`
 	ShardFactor              int     `yaml:"rlnc_shard_factor"`

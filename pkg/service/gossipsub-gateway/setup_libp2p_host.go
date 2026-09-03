@@ -95,6 +95,13 @@ func (s *Service) setupLibP2PHost() error {
 	if err != nil {
 		return fmt.Errorf("failed to get outbound IP address: %w", err)
 	}
+	if s.cfg.AnnounceIP != "" {
+		s.log.Info("using configured announce_ip override for CL-facing host, skipping autodetection",
+			logger.WithString("announce_ip", s.cfg.AnnounceIP),
+			logger.WithString("autodetected_ip", publicIP),
+		)
+		publicIP = s.cfg.AnnounceIP
+	}
 
 	internalIPs, err := commonnet.GetPrivateIPs()
 	if err != nil {

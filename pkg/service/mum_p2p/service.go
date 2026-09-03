@@ -74,6 +74,13 @@ func NewNode(
 	if err != nil {
 		return nil, fmt.Errorf("failed to get public IP address: %w", err)
 	}
+	if cfg.AnnounceIP != "" {
+		log.Info("using configured announce_ip override for mump2p host, skipping autodetection",
+			logger.WithString("announce_ip", cfg.AnnounceIP),
+			logger.WithString("autodetected_ipv4", publicIPV4),
+		)
+		publicIPV4 = cfg.AnnounceIP
+	}
 	log.Info("ip detected", logger.WithString("ipv4", publicIPV4), logger.WithString("ipv6", publicIPV6))
 
 	identityKey, err := identity.ExtractIdentityFromDir(identityDir)
