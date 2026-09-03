@@ -8,7 +8,7 @@ if you don't account for them.
 > **Prerequisites:** [Requirements](index.md#requirements) and
 > [Network Requirements](00_network_requirements.md). You also need an
 > **API key** — see [Generate your API key](01_quick_start.md#generate-your-api-key).
-
+>
 > **Running on Kubernetes instead?** See [Kubernetes (Helm)](05_kubernetes.md).
 
 ## Why this page exists: rootless networking
@@ -34,6 +34,14 @@ namespace.
 With `--network=host` there is nothing to publish — the container simply
 listens on the host's ports directly. Do not combine `-p`/`--publish` with
 `--network=host`; Podman will ignore or reject it.
+
+> **Security note:** the gateway's telemetry HTTP server (`/health`,
+> `/metrics`, `/api/v1/self_info` on port 48123) listens on all interfaces,
+> not just localhost. With `--network=host` that means it's reachable from
+> the network the host is on — the public internet, if the host has a
+> public IP with no firewall in front. Restrict port 48123 with a host
+> firewall (e.g. `ufw deny 48123` / only allow from your monitoring
+> source) unless you specifically want it externally reachable.
 
 ## Requirements
 
@@ -125,7 +133,7 @@ current directory the earlier `podman run` example used — set up matching
 directories first:
 
 ```sh
-mkdir -p ~/optimum-gateway/{config,data/libp2p,data/mump2p}
+mkdir -p ~/optimum-gateway/config ~/optimum-gateway/data/libp2p ~/optimum-gateway/data/mump2p
 cp config/app_conf.yml ~/optimum-gateway/config/   # or write it fresh here
 ```
 
@@ -170,8 +178,16 @@ the unit file — mirrors the Kubernetes guide's use of a
 
 ```sh
 mkdir -p ~/.config/containers/systemd
-read -rsp 'API key: ' OPT_API_KEY_VALUE && echo
-printf '%s' "$OPT_API_KEY_VALUE" | podman secret create optimum-gateway-api-key -
+printf 'API key: '
+stty -echo
+read -r OPT_API_KEY_VALUE
+stty echo
+echo
+if [ -z "$OPT_API_KEY_VALUE" ]; then
+  echo "no key entered, aborting" >&2
+else
+  printf '%s' "$OPT_API_KEY_VALUE" | podman secret create optimum-gateway-api-key -
+fi
 unset OPT_API_KEY_VALUE
 ```
 
