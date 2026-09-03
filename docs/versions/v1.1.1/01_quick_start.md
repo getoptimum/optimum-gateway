@@ -3,6 +3,10 @@
 Get the Optimum Gateway running with Docker.
 
 > **Running on Kubernetes?** See [Kubernetes (Helm)](05_kubernetes.md) for the official Helm chart.
+>
+> **Running rootless Podman?** See [Podman](07_podman.md) — same binary and
+> config, but Podman's default rootless network needs `--network=host` or the
+> gateway advertises an unreachable address.
 
 > **Prerequisites:** [Requirements](index.md#requirements) and [Network Requirements](00_network_requirements.md). You also need an **API key** — see [Generate your API key](#generate-your-api-key) below.
 
