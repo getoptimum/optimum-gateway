@@ -42,14 +42,14 @@ type AppConfig struct {
 	PProfAddr   string `yaml:"pprof_addr" env:"OPT_PPROF_ADDR" default:"127.0.0.1:6060"`
 	// mump2p trace-event categories consumed in-process for analysis (see handleMumP2PTrace).
 	// All default false. TraceRPC is a high-frequency firehose — enable only for deep debugging.
-	TraceMesh             bool     `yaml:"trace_mesh" env:"OPT_TRACE_MESH" default:"false"`
-	TraceRPC              bool     `yaml:"trace_rpc" env:"OPT_TRACE_RPC" default:"false"`
-	TraceShard            bool     `yaml:"trace_shard" env:"OPT_TRACE_SHARD" default:"false"`
-	LogLevel              string   `yaml:"log_level" env:"OPT_LOG_LEVEL" default:"debug"`
-	IdentityLibP2PDir     string   `yaml:"identity_libp2p_dir" env:"OPT_IDENTITY_LIBP2P_DIR" default:"/tmp/libp2p"`
-	IdentityMumP2PDir     string   `yaml:"identity_mump2p_dir" env:"OPT_IDENTITY_MUMP2P_DIR" default:"/tmp/mump2p"`
-	AgentLibP2PPort       int      `yaml:"agent_lib_p2p_port" env:"OPT_AGENT_LIB_P2P_PORT" default:"33212"`
-	AgentMumP2PPort       int      `yaml:"agent_mump2p_port" env:"OPT_AGENT_MUMP2P_PORT" default:"33213"`
+	TraceMesh         bool   `yaml:"trace_mesh" env:"OPT_TRACE_MESH" default:"false"`
+	TraceRPC          bool   `yaml:"trace_rpc" env:"OPT_TRACE_RPC" default:"false"`
+	TraceShard        bool   `yaml:"trace_shard" env:"OPT_TRACE_SHARD" default:"false"`
+	LogLevel          string `yaml:"log_level" env:"OPT_LOG_LEVEL" default:"debug"`
+	IdentityLibP2PDir string `yaml:"identity_libp2p_dir" env:"OPT_IDENTITY_LIBP2P_DIR" default:"/tmp/libp2p"`
+	IdentityMumP2PDir string `yaml:"identity_mump2p_dir" env:"OPT_IDENTITY_MUMP2P_DIR" default:"/tmp/mump2p"`
+	AgentLibP2PPort   int    `yaml:"agent_lib_p2p_port" env:"OPT_AGENT_LIB_P2P_PORT" default:"33212"`
+	AgentMumP2PPort   int    `yaml:"agent_mump2p_port" env:"OPT_AGENT_MUMP2P_PORT" default:"33213"`
 	// AnnounceIP overrides the public IPv4 address the gateway advertises to
 	// peers (both the CL-facing libp2p host and the mump2p host), bypassing
 	// commonnet.GetExternalIPs() autodetection. Equivalent to Prysm's
@@ -273,9 +273,17 @@ func (c *AppConfig) Validate() error {
 	}
 	if c.AnnounceIP != "" {
 		ip := net.ParseIP(c.AnnounceIP)
-		if ip == nil || ip.To4() == nil {
+		v4 := ip.To4()
+		if ip == nil || v4 == nil {
 			return fmt.Errorf("OPT_ANNOUNCE_IP %q is not a valid IPv4 address", c.AnnounceIP)
 		}
+		// Normalize to canonical dotted-decimal (e.g. reject/rewrite
+		// IPv4-mapped IPv6 forms like "::ffff:203.0.113.10", which parse
+		// successfully and pass a bare To4() != nil check, but are not
+		// valid text for the "/ip4/<addr>/tcp/<port>" multiaddrs this
+		// value ends up in - MustBuildAdvertisedAddresses would build an
+		// invalid multiaddr from the raw text and fail fatally at startup).
+		c.AnnounceIP = v4.String()
 	}
 
 	if c.StreamEnable {
