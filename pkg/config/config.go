@@ -50,8 +50,8 @@ type AppConfig struct {
 	IdentityMumP2PDir string `yaml:"identity_mump2p_dir" env:"OPT_IDENTITY_MUMP2P_DIR" default:"/tmp/mump2p"`
 	AgentLibP2PPort   int    `yaml:"agent_lib_p2p_port" env:"OPT_AGENT_LIB_P2P_PORT" default:"33212"`
 	AgentMumP2PPort   int    `yaml:"agent_mump2p_port" env:"OPT_AGENT_MUMP2P_PORT" default:"33213"`
-	// AnnounceIP overrides the advertised public IPv4 (CL-facing and mump2p
-	// hosts) when autodetection can't reach a routable address. Prysm's --p2p-host-ip equivalent.
+	// AnnounceIP, when set, always overrides the advertised public IPv4 (CL-facing
+	// and mump2p hosts); IPv6 autodetection still runs. Prysm's --p2p-host-ip equivalent.
 	AnnounceIP            string   `yaml:"announce_ip" env:"OPT_ANNOUNCE_IP"`
 	DirectCLPeers         []string `yaml:"direct_cl_peers" env:"OPT_DIRECT_CL_PEERS"`
 	TelemetryEnable       bool     `yaml:"telemetry_enable" env:"OPT_ENABLE_TELEMETRY" default:"false"`
