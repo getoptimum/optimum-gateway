@@ -56,7 +56,7 @@ mkdir -p config data/libp2p data/mump2p
 podman run --name optimum-gateway -d \
   --network=host \
   -e OPT_API_KEY=$OPT_API_KEY \
-  -v $(pwd)/config:/app/config:Z \
+  -v $(pwd)/config:/app/config:Z,ro \
   -v $(pwd)/data/libp2p:/tmp/libp2p:Z \
   -v $(pwd)/data/mump2p:/tmp/mump2p:Z \
   getoptimum/gateway:v1.1.1 \
@@ -77,7 +77,7 @@ If you see `permission denied` on the identity or config directories despite
 the `:Z` suffix, confirm the host directory is owned by your user, not root:
 
 ```sh
-podman unshare chown -R $(id -u):$(id -g) data/libp2p data/mump2p
+podman unshare chown -R $(id -u):$(id -g) config data/libp2p data/mump2p
 ```
 
 > Persist `data/libp2p` and `data/mump2p` across restarts — as with Docker,
@@ -120,6 +120,15 @@ a declarative `.container` file — the Podman equivalent of Compose's
 
 `~/.config/containers/systemd/optimum-gateway.container`:
 
+Quadlet volume paths are rooted at `%h` (your home directory), not the
+current directory the earlier `podman run` example used — set up matching
+directories first:
+
+```sh
+mkdir -p ~/optimum-gateway/{config,data/libp2p,data/mump2p}
+cp config/app_conf.yml ~/optimum-gateway/config/   # or write it fresh here
+```
+
 ```ini
 [Unit]
 Description=Optimum Gateway
@@ -132,11 +141,9 @@ ContainerName=optimum-gateway
 Network=host
 Exec=-config=/app/config/app_conf.yml
 Secret=optimum-gateway-api-key,type=env,target=OPT_API_KEY
-Volume=%h/optimum-gateway/config:/app/config:Z
+Volume=%h/optimum-gateway/config:/app/config:Z,ro
 Volume=%h/optimum-gateway/data/libp2p:/tmp/libp2p:Z
 Volume=%h/optimum-gateway/data/mump2p:/tmp/mump2p:Z
-HealthCmd=curl -f http://localhost:48123/api/v1/self_info || exit 1
-HealthInterval=30s
 
 [Service]
 Restart=always
@@ -145,27 +152,50 @@ Restart=always
 WantedBy=default.target
 ```
 
+No in-container `HealthCmd` here — the published `getoptimum/gateway`
+images don't include `curl` (or any shell utilities beyond the binary
+itself), so a `HealthCmd` that shells out to `curl` never runs. Check
+health from the host instead:
+
+```sh
+curl -s http://localhost:48123/health | jq
+```
+
+or point a systemd timer / your own monitoring at that same URL from
+outside the container.
+
 The API key is passed as a **Podman secret**, not a plaintext env line in
 the unit file — mirrors the Kubernetes guide's use of a
 [Secret](05_kubernetes.md#install) rather than a value in `values.yaml`:
 
 ```sh
 mkdir -p ~/.config/containers/systemd
-echo -n 'ogw_live_...' | podman secret create optimum-gateway-api-key -
+read -rsp 'API key: ' OPT_API_KEY_VALUE && echo
+printf '%s' "$OPT_API_KEY_VALUE" | podman secret create optimum-gateway-api-key -
+unset OPT_API_KEY_VALUE
 ```
+
+`read -s` keeps the key out of your shell history — pasting the literal
+`ogw_live_...` value into a command line puts it there permanently.
 
 Then, for a user session that should keep running after logout:
 
 ```sh
 loginctl enable-linger $(whoami)
 systemctl --user daemon-reload
-systemctl --user start optimum-gateway.service
+systemctl --user enable --now optimum-gateway.service
 systemctl --user status optimum-gateway.service
 journalctl --user -u optimum-gateway.service -f
 ```
 
 Editing the `.container` file requires `daemon-reload` before it takes
-effect, same as any systemd unit change.
+effect, same as any systemd unit change — but `daemon-reload` alone does
+**not** restart an already-running service with the new definition:
+
+```sh
+systemctl --user daemon-reload
+systemctl --user restart optimum-gateway.service
+```
 
 ## When it doesn't work
 
