@@ -82,7 +82,7 @@ The **Optimum Gateway** bridges your **Ethereum Consensus Layer (CL) client** wi
 
 * **CL Client**: Prysm, Lighthouse, Teku, Nimbus, or Lodestar running
 * **API key**: Issued from the [Optimum Partner Console](https://console.getoptimum.io/) after onboarding (see [Quick Start](01_quick_start.md#generate-your-api-key))
-* **Docker**: Docker Desktop or Docker Engine
+* **Container runtime**: Docker Desktop/Engine, or rootless Podman 4.4+ (see [Podman](07_podman.md))
 * **Firewall**: Required ports open (see [Network Requirements](00_network_requirements.md))
 
 ## Getting Started
