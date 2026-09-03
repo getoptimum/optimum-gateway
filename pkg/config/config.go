@@ -50,13 +50,8 @@ type AppConfig struct {
 	IdentityMumP2PDir string `yaml:"identity_mump2p_dir" env:"OPT_IDENTITY_MUMP2P_DIR" default:"/tmp/mump2p"`
 	AgentLibP2PPort   int    `yaml:"agent_lib_p2p_port" env:"OPT_AGENT_LIB_P2P_PORT" default:"33212"`
 	AgentMumP2PPort   int    `yaml:"agent_mump2p_port" env:"OPT_AGENT_MUMP2P_PORT" default:"33213"`
-	// AnnounceIP overrides the public IPv4 address the gateway advertises to
-	// peers (both the CL-facing libp2p host and the mump2p host), bypassing
-	// commonnet.GetExternalIPs() autodetection. Equivalent to Prysm's
-	// --p2p-host-ip: https://prysm.offchainlabs.com/docs/manage-connections/p2p-host-ip/
-	// Needed when autodetection would return a private/pod-internal address
-	// (e.g. behind a NAT or CNI network) that peers cannot route to, and
-	// running with a host-mode network namespace isn't an option.
+	// AnnounceIP overrides the advertised public IPv4 (CL-facing and mump2p
+	// hosts) when autodetection can't reach a routable address. Prysm's --p2p-host-ip equivalent.
 	AnnounceIP            string   `yaml:"announce_ip" env:"OPT_ANNOUNCE_IP"`
 	DirectCLPeers         []string `yaml:"direct_cl_peers" env:"OPT_DIRECT_CL_PEERS"`
 	TelemetryEnable       bool     `yaml:"telemetry_enable" env:"OPT_ENABLE_TELEMETRY" default:"false"`
@@ -277,12 +272,8 @@ func (c *AppConfig) Validate() error {
 		if ip == nil || v4 == nil {
 			return fmt.Errorf("OPT_ANNOUNCE_IP %q is not a valid IPv4 address", c.AnnounceIP)
 		}
-		// Normalize to canonical dotted-decimal (e.g. reject/rewrite
-		// IPv4-mapped IPv6 forms like "::ffff:203.0.113.10", which parse
-		// successfully and pass a bare To4() != nil check, but are not
-		// valid text for the "/ip4/<addr>/tcp/<port>" multiaddrs this
-		// value ends up in - MustBuildAdvertisedAddresses would build an
-		// invalid multiaddr from the raw text and fail fatally at startup).
+		// Normalize IPv4-mapped IPv6 text (e.g. "::ffff:1.2.3.4") to plain
+		// dotted-decimal; the raw form is invalid inside an /ip4/ multiaddr.
 		c.AnnounceIP = v4.String()
 	}
 

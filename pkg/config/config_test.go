@@ -395,13 +395,8 @@ func TestValidate_AnnounceIP_Invalid(t *testing.T) {
 	}
 }
 
-// TestValidate_AnnounceIP_NormalizesIPv4MappedIPv6 guards the specific bug
-// CodeRabbit flagged on PR #108: net.ParseIP("::ffff:203.0.113.10").To4()
-// is non-nil (Go's net package treats IPv4-mapped IPv6 addresses as valid
-// IPv4), so a bare "does To4() succeed" check accepts this text - but the
-// raw string "::ffff:203.0.113.10" is not valid inside an
-// "/ip4/<addr>/tcp/<port>" multiaddr. Validate must normalize to the
-// canonical dotted-decimal form before the value is used anywhere else.
+// TestValidate_AnnounceIP_NormalizesIPv4MappedIPv6: To4() accepts IPv4-mapped
+// IPv6 text too, so Validate must normalize it to dotted-decimal, not just check it.
 func TestValidate_AnnounceIP_NormalizesIPv4MappedIPv6(t *testing.T) {
 	cfg := &config.AppConfig{
 		IdentityLibP2PDir: testLibP2PDir,
@@ -418,8 +413,9 @@ func TestValidate_AnnounceIP_NormalizesIPv4MappedIPv6(t *testing.T) {
 }
 
 func TestLoadConfig_AnnounceIP_FromEnv(t *testing.T) {
-	t.Setenv("OPT_IDENTITY_LIBP2P_DIR", "./libid")
-	t.Setenv("OPT_IDENTITY_MUMP2P_DIR", "./mump2pid")
+	dir := t.TempDir()
+	t.Setenv("OPT_IDENTITY_LIBP2P_DIR", filepath.Join(dir, "libid"))
+	t.Setenv("OPT_IDENTITY_MUMP2P_DIR", filepath.Join(dir, "mump2pid"))
 	t.Setenv("OPT_AGENT_LIB_P2P_PORT", "5000")
 	t.Setenv("OPT_AGENT_MUMP2P_PORT", "5001")
 	t.Setenv("OPT_GATEWAY_CLUSTER_ID", "gw-cluster")
@@ -428,4 +424,20 @@ func TestLoadConfig_AnnounceIP_FromEnv(t *testing.T) {
 	cfg, err := config.LoadConfig("")
 	require.NoError(t, err)
 	require.Equal(t, "198.51.100.7", cfg.AnnounceIP)
+}
+
+func TestLoadConfig_AnnounceIP_FromYAML(t *testing.T) {
+	dir := t.TempDir()
+	path := writeTempConfig(t, `
+identity_libp2p_dir: `+filepath.Join(dir, "libid")+`
+identity_mump2p_dir: `+filepath.Join(dir, "mump2pid")+`
+agent_lib_p2p_port: 5000
+agent_mump2p_port: 5001
+gateway_cluster_id: gw-cluster
+telemetry_port: 8888
+announce_ip: 203.0.113.55
+`)
+	cfg, err := config.LoadConfig(path)
+	require.NoError(t, err)
+	require.Equal(t, "203.0.113.55", cfg.AnnounceIP)
 }
