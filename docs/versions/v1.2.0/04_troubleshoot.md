@@ -53,10 +53,14 @@ docker logs optimum-gateway --tail=50
 
 **Healthy target:** `cl_peers` ≥ 1, `mump2p_peers` ≥ 1, `subscribed_topics` ≈ 65, `last_block_age_sec` < 60.
 
+On a `stream_only` gateway the target is `mump2p_peers` ≥ 1, `mump2p_health` ok, `last_block_age_sec` < 60; the CL checks read `skipped`.
+
 
 ## `/health` checks -> meaning -> fix
 
 `GET /health` returns 200 (healthy) or 503 (degraded). Each check covers a different part of the pipeline.
+
+A check is `ok`, `fail`, or `skipped`. `skipped` means the check does not apply to this node's mode: a `stream_only` gateway never starts the CL host, so `cl_peers`, `cl_health` and `subscribed_topics` are reported as `skipped` and are left out of `failing` and of the 200/503 roll-up.
 
 | Failing check        | What it means                          | Fix                                                                                                                                          |
 | -------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -102,6 +106,25 @@ Read the `failing[]` list first — it names which checks to fix next.
     "cl_health": {"status": "fail"}
   },
   "failing": ["last_block_age_sec", "cl_health"]
+}
+```
+
+### Example `stream_only` response
+
+The CL checks are structurally unreachable without a consensus client, so they never fail the node.
+
+```json
+{
+  "status": "healthy",
+  "gateway_id": "optimum-eu-mainnet-stream-01",
+  "checks": {
+    "cl_peers": {"status": "skipped"},
+    "cl_health": {"status": "skipped"},
+    "subscribed_topics": {"status": "skipped"},
+    "mump2p_peers": {"status": "ok", "value": 25},
+    "mump2p_health": {"status": "ok"},
+    "last_block_age_sec": {"status": "ok", "value": 11}
+  }
 }
 ```
 
