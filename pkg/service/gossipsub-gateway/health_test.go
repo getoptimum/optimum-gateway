@@ -39,6 +39,8 @@ func TestBuildHealthResponse(t *testing.T) {
 			require.NotNil(t, c.Value)
 			require.Contains(t, resp.Failing, name)
 		}
+		// cl_health is evaluated either way here, so only the skip must not leak.
+		require.NotEqual(t, healthSkipped, resp.Checks["cl_health"].Status)
 		require.Equal(t, http.StatusServiceUnavailable, code)
 	})
 }

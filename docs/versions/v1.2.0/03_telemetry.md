@@ -1883,7 +1883,7 @@ The Partner Dashboard includes the following sections:
 
 ### Gateway Info
 
-* **Status** - ON/OFF based on CL + mump2p peer connectivity
+* **Status** - ON/OFF based on CL + mump2p peer connectivity. Reads OFF on a `stream_only` gateway, which has no CL peers by design; judge those nodes by `/health` instead
 * **CL Peers** / **mump2p Peers** - current peer counts
 * **Hoodi Slot** - live slot number from Hoodi genesis
 * **Hoodi Epoch** - epoch index (32 slots per epoch)
