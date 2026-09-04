@@ -16,7 +16,7 @@ import (
 // process-global telemetry atomics that other tests in this binary can flip.
 func TestBuildHealthResponse(t *testing.T) {
 	t.Run("stream-only skips the CL checks", func(t *testing.T) {
-		resp, _ := newHealthTestService(true).BuildHealthResponse()
+		resp, _ := newHealthTestService(t, true).BuildHealthResponse()
 
 		for _, name := range []string{"cl_peers", "cl_health", "subscribed_topics"} {
 			c, ok := resp.Checks[name]
@@ -31,7 +31,7 @@ func TestBuildHealthResponse(t *testing.T) {
 	})
 
 	t.Run("keeps the CL checks otherwise", func(t *testing.T) {
-		resp, code := newHealthTestService(false).BuildHealthResponse()
+		resp, code := newHealthTestService(t, false).BuildHealthResponse()
 
 		for _, name := range []string{"cl_peers", "subscribed_topics"} {
 			c := resp.Checks[name]
@@ -43,7 +43,8 @@ func TestBuildHealthResponse(t *testing.T) {
 	})
 }
 
-func newHealthTestService(streamOnly bool) *Service {
+func newHealthTestService(t *testing.T, streamOnly bool) *Service {
+	t.Helper()
 	return &Service{
 		cfg:          &config.AppConfig{StreamOnly: streamOnly},
 		libP2PTopics: syncx.NewRWMap[string, *libp2ppubsub.Topic](),

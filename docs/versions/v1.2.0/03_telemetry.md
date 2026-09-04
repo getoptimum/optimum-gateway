@@ -24,12 +24,12 @@
   "commit_hash": "a0b2bc1",
   "uptime_seconds": 1639,
   "checks": {
+    "cl_health": {"status": "ok"},
     "cl_peers": {"status": "ok", "value": 1},
     "last_block_age_sec": {"status": "ok", "value": 1},
+    "mump2p_health": {"status": "ok"},
     "mump2p_peers": {"status": "ok", "value": 13},
-    "subscribed_topics": {"status": "ok", "value": 65},
-    "cl_health": {"status": "ok"},
-    "mump2p_health": {"status": "ok"}
+    "subscribed_topics": {"status": "ok", "value": 65}
   }
 }
 ```
@@ -45,7 +45,7 @@
 
 If any check fails, `status` becomes `"degraded"` and the failing checks are listed in `"failing"`.
 
-A check can also be `skipped`, meaning it does not apply to this node's mode. A `stream_only` gateway never starts the CL host, so `cl_peers`, `cl_health` and `subscribed_topics` are `skipped` and left out of `failing` and of the 200/503 roll-up. The `mump2p_gateway_cl_health_status` gauge has no such notion and still reads 0 on those nodes, so exclude it from alerts there.
+A check can also be `skipped`, meaning it does not apply to this node's mode. A `stream_only` gateway never starts the CL host, so `cl_peers`, `cl_health` and `subscribed_topics` are `skipped` and left out of `failing` and of the 200/503 roll-up. The `mump2p_gateway_cl_health_status` and `mump2p_gateway_cl_peers` gauges have no such notion and still read 0 on those nodes, so exclude them from alerts there, including the "Status" panel below, which multiplies `cl_peers` by `mump2p_peers`.
 
 **Propagation:** `mump2p_gateway_propagation_state` reports whether the gateway is relaying mump2p traffic to your CL (`1` = on, `0` = disabled via Optimum dynamic config). The same state appears as `propagation_enabled` in `/api/v1/self_info`.
 

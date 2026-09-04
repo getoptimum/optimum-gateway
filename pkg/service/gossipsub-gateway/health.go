@@ -59,9 +59,10 @@ func (s *Service) BuildHealthResponse() (resp *HealthResponse, httpCode int) {
 
 	// Stream-only skips the CL host and ingest (see Run), so CL-derived checks can never pass.
 	if s.cfg.StreamOnly {
-		for _, name := range []string{"cl_peers", "cl_health", "subscribed_topics"} {
-			checks[name] = HealthCheck{Status: healthSkipped}
-		}
+		skipped := HealthCheck{Status: healthSkipped}
+		checks["cl_peers"] = skipped
+		checks["cl_health"] = skipped
+		checks["subscribed_topics"] = skipped
 	}
 
 	var failing []string
