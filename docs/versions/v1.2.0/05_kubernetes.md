@@ -157,8 +157,8 @@ curl -s localhost:48123/api/v1/self_info | jq '{peer_id, multiaddrs: .libp2p.mul
 
 Healthy looks like: `status: "healthy"`, `cl: "ok"`, `cl_peers: 1`, and
 `mump2p_peers` in the tens. Expect this **within a couple of minutes** of the pod
-going ready. On a `stream_only` deployment `cl` reads `skipped` and `cl_peers` is
-absent, while `status` is still `"healthy"`.
+going ready. On a `stream_only` deployment `cl` reads `skipped` and `cl_peers`
+prints `null` (the check carries no value), while `status` is still `"healthy"`.
 
 In `self_info`, `multiaddrs` must contain a **public IP**. If it only shows a
 private or pod address (`10.x`), nothing outside your cluster can dial you and
