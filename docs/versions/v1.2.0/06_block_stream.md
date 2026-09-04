@@ -107,7 +107,8 @@ stream_buffer_size: 64         # per-connection ring buffer (drop-on-overflow)
 Set `stream_only: true` if you only want the stream and do not run a consensus
 client. The gateway still joins the mesh but does not publish. Because it never
 starts the CL host, `/health` reports `cl_peers`, `cl_health` and
-`subscribed_topics` as `skipped` and returns 200 on the mesh signals alone.
+`subscribed_topics` as `skipped` and returns 200 on the mesh signals alone
+(with `telemetry_enable: true`, which drives the `mump2p_health` check).
 
 The gateway verifies consumer tokens against the JWKS at your `remote_auth_url`,
 so it must point at the same auth service that mints the stream tokens.

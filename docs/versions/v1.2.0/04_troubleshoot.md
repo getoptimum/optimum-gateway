@@ -53,7 +53,7 @@ docker logs optimum-gateway --tail=50
 
 **Healthy target:** `cl_peers` ≥ 1, `mump2p_peers` ≥ 1, `subscribed_topics` ≈ 65, `last_block_age_sec` < 60.
 
-On a `stream_only` gateway the target is `mump2p_peers` ≥ 1, `mump2p_health` ok, `last_block_age_sec` < 60; the CL checks read `skipped`.
+On a `stream_only` gateway the target is `mump2p_peers` ≥ 1, `last_block_age_sec` < 60; the CL checks read `skipped`.
 
 
 ## `/health` checks -> meaning -> fix
@@ -110,8 +110,6 @@ Read the `failing[]` list first — it names which checks to fix next.
 ```
 
 ### Example `stream_only` response
-
-The CL checks are structurally unreachable without a consensus client, so they never fail the node.
 
 ```json
 {

@@ -12,8 +12,36 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/config"
 )
 
-// clChecks are the checks derived from the CL host, which stream-only never starts.
-var clChecks = []string{"cl_peers", "cl_health", "subscribed_topics"}
+// Only checks derived from Service state are asserted: cl_health and mump2p_health read
+// process-global telemetry atomics that other tests in this binary can flip.
+func TestBuildHealthResponse(t *testing.T) {
+	t.Run("stream-only skips the CL checks", func(t *testing.T) {
+		resp, _ := newHealthTestService(true).BuildHealthResponse()
+
+		for _, name := range []string{"cl_peers", "cl_health", "subscribed_topics"} {
+			c, ok := resp.Checks[name]
+			require.True(t, ok, "%s should stay visible", name)
+			require.Equal(t, healthSkipped, c.Status)
+			require.Nil(t, c.Value)
+			require.NotContains(t, resp.Failing, name)
+		}
+		// Mesh checks alone decide the roll-up; no mump2p node here, so it stays degraded.
+		require.Contains(t, resp.Failing, "mump2p_peers")
+		require.Equal(t, healthStatusDeg, resp.Status)
+	})
+
+	t.Run("keeps the CL checks otherwise", func(t *testing.T) {
+		resp, code := newHealthTestService(false).BuildHealthResponse()
+
+		for _, name := range []string{"cl_peers", "subscribed_topics"} {
+			c := resp.Checks[name]
+			require.Equal(t, healthFail, c.Status)
+			require.NotNil(t, c.Value)
+			require.Contains(t, resp.Failing, name)
+		}
+		require.Equal(t, http.StatusServiceUnavailable, code)
+	})
+}
 
 func newHealthTestService(streamOnly bool) *Service {
 	return &Service{
@@ -21,29 +49,4 @@ func newHealthTestService(streamOnly bool) *Service {
 		libP2PTopics: syncx.NewRWMap[string, *libp2ppubsub.Topic](),
 		startedAt:    time.Now(),
 	}
-}
-
-func TestBuildHealthResponseStreamOnlySkipsCLChecks(t *testing.T) {
-	resp, _ := newHealthTestService(true).BuildHealthResponse()
-
-	for _, name := range clChecks {
-		c, ok := resp.Checks[name]
-		require.True(t, ok, "%s should stay visible", name)
-		require.Equal(t, healthSkipped, c.Status)
-		require.Nil(t, c.Value)
-		require.NotContains(t, resp.Failing, name)
-	}
-	// Mesh checks alone decide the roll-up; no mump2p node here, so only they fail.
-	require.ElementsMatch(t, []string{"mump2p_peers", "mump2p_health"}, resp.Failing)
-	require.Equal(t, healthStatusDeg, resp.Status)
-}
-
-func TestBuildHealthResponseKeepsCLChecksWithoutStreamOnly(t *testing.T) {
-	resp, code := newHealthTestService(false).BuildHealthResponse()
-
-	for _, name := range clChecks {
-		require.Equal(t, healthFail, resp.Checks[name].Status)
-		require.Contains(t, resp.Failing, name)
-	}
-	require.Equal(t, http.StatusServiceUnavailable, code)
 }

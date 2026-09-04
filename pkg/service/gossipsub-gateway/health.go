@@ -8,8 +8,7 @@ import (
 )
 
 // HealthCheck holds the individual check name -> result.
-// Status is one of ok, fail or skipped; skipped means the check does not apply
-// to this node's mode and never counts toward Failing.
+// A skipped check does not apply to this node's mode and never counts toward Failing.
 type HealthCheck struct {
 	Status string `json:"status"`
 	Value  *int   `json:"value,omitempty"`
@@ -37,7 +36,9 @@ const (
 
 // BuildHealthResponse evaluates all checks and returns the response (resp) and HTTP status code (httpCode: 200 or 503).
 func (s *Service) BuildHealthResponse() (resp *HealthResponse, httpCode int) {
+	clPeers, _, _, _ := s.GetLibP2PPeers()
 	mumPeers, _, _, _ := s.GetMumP2PPeers()
+	subscribedTopics := len(s.libP2PTopics.Keys())
 
 	lastMs := s.lastBlockReceivedAt.Load()
 	var lastBlockAgeSec int
@@ -48,22 +49,19 @@ func (s *Service) BuildHealthResponse() (resp *HealthResponse, httpCode int) {
 	}
 
 	checks := map[string]HealthCheck{
+		"cl_peers":           {Status: boolStatus(clPeers >= 1), Value: new(clPeers)},
 		"mump2p_peers":       {Status: boolStatus(mumPeers >= 1), Value: new(mumPeers)},
-		"mump2p_health":      {Status: boolStatus(telemetry.HealthMUM() == 1)},
+		"subscribed_topics":  {Status: boolStatus(subscribedTopics >= 1), Value: new(subscribedTopics)},
 		"last_block_age_sec": {Status: boolStatus(lastBlockAgeSec < blockStaleSec), Value: new(lastBlockAgeSec)},
+		"cl_health":          {Status: boolStatus(telemetry.HealthCL() == 1)},
+		"mump2p_health":      {Status: boolStatus(telemetry.HealthMUM() == 1)},
 	}
 
 	// Stream-only skips the CL host and ingest (see Run), so CL-derived checks can never pass.
 	if s.cfg.StreamOnly {
-		checks["cl_peers"] = HealthCheck{Status: healthSkipped}
-		checks["cl_health"] = HealthCheck{Status: healthSkipped}
-		checks["subscribed_topics"] = HealthCheck{Status: healthSkipped}
-	} else {
-		clPeers, _, _, _ := s.GetLibP2PPeers()
-		subscribedTopics := len(s.libP2PTopics.Keys())
-		checks["cl_peers"] = HealthCheck{Status: boolStatus(clPeers >= 1), Value: new(clPeers)}
-		checks["cl_health"] = HealthCheck{Status: boolStatus(telemetry.HealthCL() == 1)}
-		checks["subscribed_topics"] = HealthCheck{Status: boolStatus(subscribedTopics >= 1), Value: new(subscribedTopics)}
+		for _, name := range []string{"cl_peers", "cl_health", "subscribed_topics"} {
+			checks[name] = HealthCheck{Status: healthSkipped}
+		}
 	}
 
 	var failing []string
