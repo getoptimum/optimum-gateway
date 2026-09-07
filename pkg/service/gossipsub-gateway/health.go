@@ -8,6 +8,7 @@ import (
 )
 
 // HealthCheck holds the individual check name -> result.
+// A skipped check does not apply to this node's mode and never counts toward Failing.
 type HealthCheck struct {
 	Status string `json:"status"`
 	Value  *int   `json:"value,omitempty"`
@@ -27,6 +28,7 @@ type HealthResponse struct {
 const (
 	healthOK        = "ok"
 	healthFail      = "fail"
+	healthSkipped   = "skipped"
 	healthStatusOK  = "healthy"
 	healthStatusDeg = "degraded"
 	blockStaleSec   = 60
@@ -53,6 +55,14 @@ func (s *Service) BuildHealthResponse() (resp *HealthResponse, httpCode int) {
 		"last_block_age_sec": {Status: boolStatus(lastBlockAgeSec < blockStaleSec), Value: new(lastBlockAgeSec)},
 		"cl_health":          {Status: boolStatus(telemetry.HealthCL() == 1)},
 		"mump2p_health":      {Status: boolStatus(telemetry.HealthMUM() == 1)},
+	}
+
+	// Stream-only skips the CL host and ingest (see Run), so CL-derived checks can never pass.
+	if s.cfg.StreamOnly {
+		skipped := HealthCheck{Status: healthSkipped}
+		checks["cl_peers"] = skipped
+		checks["cl_health"] = skipped
+		checks["subscribed_topics"] = skipped
 	}
 
 	var failing []string
