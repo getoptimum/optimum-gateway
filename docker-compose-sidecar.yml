@@ -53,7 +53,8 @@ services:
       - mump2p_cluster
     ports:
       - "33212:33212" # libp2p port
-      - "33213:33213" # opt port
+      - "33213:33213" # mump2p TCP port
+      - "33213:33213/udp" # mump2p QUIC port
       - "48123:48123" # telemetry + API
     volumes:
       - "./config:/app/config:ro"

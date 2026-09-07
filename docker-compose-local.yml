@@ -11,6 +11,7 @@ services:
     ports:
       - "33212:33212"
       - "33213:33213"
+      - "33213:33213/udp"
       - "48123:48123"
     volumes:
       - "./config:/app/config:ro"
