@@ -14,7 +14,7 @@
 
 ## Health Endpoint
 
-`GET /health` returns 200 (healthy) or 503 (degraded) based on four checks:
+`GET /health` returns 200 (healthy) or 503 (degraded) based on six checks:
 
 ```json
 {
@@ -24,22 +24,28 @@
   "commit_hash": "a0b2bc1",
   "uptime_seconds": 1639,
   "checks": {
+    "cl_health": {"status": "ok"},
     "cl_peers": {"status": "ok", "value": 1},
     "last_block_age_sec": {"status": "ok", "value": 1},
+    "mump2p_health": {"status": "ok"},
     "mump2p_peers": {"status": "ok", "value": 13},
     "subscribed_topics": {"status": "ok", "value": 65}
   }
 }
 ```
 
-| Check                | Passes when                   |
-| -------------------- | ----------------------------- |
-| `cl_peers`           | ≥ 1 CL peer connected         |
-| `mump2p_peers`       | ≥ 1 mump2p peer connected     |
-| `subscribed_topics`  | ≥ 1 topic subscribed          |
-| `last_block_age_sec` | Last block received < 60s ago |
+| Check                | Passes when                    |
+| -------------------- | ------------------------------ |
+| `cl_peers`           | ≥ 1 CL peer connected          |
+| `mump2p_peers`       | ≥ 1 mump2p peer connected      |
+| `subscribed_topics`  | ≥ 1 topic subscribed           |
+| `last_block_age_sec` | Last block received < 60s ago  |
+| `cl_health`          | CL gossip traffic in last 30s  |
+| `mump2p_health`      | Mesh traffic in last 30s       |
 
 If any check fails, `status` becomes `"degraded"` and the failing checks are listed in `"failing"`.
+
+A check can also be `skipped`, meaning it does not apply to this node's mode. A `stream_only` gateway never starts the CL host, so `cl_peers`, `cl_health` and `subscribed_topics` are `skipped` and left out of `failing` and of the 200/503 roll-up. The `mump2p_gateway_cl_health_status` and `mump2p_gateway_cl_peers` gauges have no such notion and still read 0 on those nodes, so exclude them from alerts there, including the "Status" panel below, which multiplies `cl_peers` by `mump2p_peers`.
 
 **Propagation:** `mump2p_gateway_propagation_state` reports whether the gateway is relaying mump2p traffic to your CL (`1` = on, `0` = disabled via Optimum dynamic config). The same state appears as `propagation_enabled` in `/api/v1/self_info`.
 
@@ -1877,7 +1883,7 @@ The Partner Dashboard includes the following sections:
 
 ### Gateway Info
 
-* **Status** - ON/OFF based on CL + mump2p peer connectivity
+* **Status** - ON/OFF based on CL + mump2p peer connectivity. Reads OFF on a `stream_only` gateway, which has no CL peers by design; judge those nodes by `/health` instead
 * **CL Peers** / **mump2p Peers** - current peer counts
 * **Hoodi Slot** - live slot number from Hoodi genesis
 * **Hoodi Epoch** - epoch index (32 slots per epoch)
