@@ -29,8 +29,9 @@ type Service struct {
 	authMgr *auth_token.Service
 	// knownValidators keep mapping between validator and target chunkID. also keep length of target chunk
 	// 1st number is chunkID, 2nd number is chunk length
-	knownValidators *syncx.RWMap[uint64, [2]uint64]
-	accelerate      atomic.Pointer[accelerateWindow] // nil = ADR-0012 fail-open
+	knownValidators  *syncx.RWMap[uint64, [2]uint64]
+	accelerateSlots  *syncx.TTLMap[uint64, struct{}]
+	accelerateToSlot atomic.Uint64 // 0 = ADR-0012 fail-open
 }
 
 func NewService(ctx context.Context, cfg *config.AppConfig, log logger.AppLogger, authMgr *auth_token.Service) (*Service, error) {
@@ -39,6 +40,7 @@ func NewService(ctx context.Context, cfg *config.AppConfig, log logger.AppLogger
 		log:             log.With(logger.WithService("message_router")),
 		authMgr:         authMgr,
 		knownValidators: syncx.NewRWMap[uint64, [2]uint64](),
+		accelerateSlots: syncx.NewTTLMapWithContext[uint64, struct{}](ctx, accelerateSlotTTL, accelerateSlotCleanup),
 	}
 	srv.SetKnownValidators(authMgr.ValidatorIndexes())
 	go srv.bgSync(ctx)

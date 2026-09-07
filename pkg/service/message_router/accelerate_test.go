@@ -49,6 +49,33 @@ func TestShouldAccelerateBlock(t *testing.T) {
 	require.True(t, srv.ShouldAccelerateBlock(100))
 }
 
+func TestAccelerateSlotsMergeKeepsPrevious(t *testing.T) {
+	var slots atomic.Value
+	slots.Store([]int64{100})
+	var toSlot atomic.Int64
+	toSlot.Store(120)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"to_slot":         toSlot.Load(),
+			"slots":           slots.Load(),
+			"generated_at_ms": 1,
+		})
+	}))
+	t.Cleanup(ts.Close)
+
+	srv := newTestServiceAt(t, commonentities.GatewayTypePartner, ts.URL)
+	srv.RefreshAccelerateSlots(t.Context())
+	require.True(t, srv.ShouldAccelerateBlock(100))
+
+	slots.Store([]int64{110})
+	toSlot.Store(140)
+	srv.RefreshAccelerateSlots(t.Context())
+	require.True(t, srv.ShouldAccelerateBlock(100), "previous on-list slot must survive a rolled window")
+	require.True(t, srv.ShouldAccelerateBlock(110))
+	require.False(t, srv.ShouldAccelerateBlock(130), "examined, not selected")
+	require.True(t, srv.ShouldAccelerateBlock(141), "past to_slot fail-opens")
+}
+
 func TestAccelerateSlotsPrimedAtStartup(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{

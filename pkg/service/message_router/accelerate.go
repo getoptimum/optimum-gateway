@@ -11,10 +11,12 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/utils"
 )
 
-type accelerateWindow struct {
-	toSlot uint64
-	slots  map[uint64]struct{}
-}
+const (
+	// 3 epochs: published list is at most 2, plus one epoch so a late block for a
+	// previously-selected slot is still on_list after the window rolls.
+	accelerateSlotTTL     = 3 * 32 * 12 * time.Second
+	accelerateSlotCleanup = time.Minute
+)
 
 type accelerateSlotsResponse struct {
 	ToSlot        int64   `json:"to_slot"`
@@ -32,22 +34,24 @@ const (
 // ShouldAccelerateBlock is ADR-0012: accelerate unless the slot was examined and
 // not selected. Header slot, not the clock. No list / past to_slot fail-opens.
 func (s *Service) ShouldAccelerateBlock(slot uint64) bool {
-	decision := decideAccelerate(s.accelerate.Load(), slot)
+	_, onList := s.accelerateSlots.Get(slot)
+	decision := decideAccelerate(s.accelerateToSlot.Load(), onList, slot)
 	telemetry.IncAccelerateDecision(decision)
 	return decision != accelerateNotOnList
 }
 
-func decideAccelerate(w *accelerateWindow, slot uint64) string {
-	if w == nil || w.toSlot == 0 || slot > w.toSlot {
-		return accelerateFailOpen
-	}
-	if _, ok := w.slots[slot]; ok {
+func decideAccelerate(toSlot uint64, onList bool, slot uint64) string {
+	if onList {
 		return accelerateOnList
+	}
+	if toSlot == 0 || slot > toSlot {
+		return accelerateFailOpen
 	}
 	return accelerateNotOnList
 }
 
-// RefreshAccelerateSlots runs one poll and swaps the whole window. A failed poll keeps the previous one.
+// RefreshAccelerateSlots runs one poll and upserts selected slots into the TTL map.
+// A failed poll keeps the previous set. Previously-selected slots stay until TTL.
 func (s *Service) RefreshAccelerateSlots(ctx context.Context) {
 	chainID := s.authMgr.Chain()
 	if chainID == "" || s.cfg.RemoteBootstrapURL == "" {
@@ -72,15 +76,15 @@ func (s *Service) RefreshAccelerateSlots(ctx context.Context) {
 		s.log.Error("accelerate_slots poll failed, keeping previous list", err, logger.WithInt("status_code", code))
 		return
 	}
-	w := &accelerateWindow{slots: make(map[uint64]struct{}, len(res.Slots))}
-	if res.ToSlot > 0 {
-		w.toSlot = uint64(res.ToSlot)
-	}
+	// Put slots before advancing to_slot so a slot on the new list that is
+	// still past the old horizon fail-opens rather than reading as not_on_list.
 	for _, slot := range res.Slots {
 		if slot >= 0 {
-			w.slots[uint64(slot)] = struct{}{}
+			s.accelerateSlots.Put(uint64(slot), struct{}{})
 		}
 	}
-	s.accelerate.Store(w)
-	telemetry.SetAccelerateWindow(w.toSlot, res.GeneratedAtMs)
+	if res.ToSlot > 0 {
+		s.accelerateToSlot.Store(uint64(res.ToSlot))
+	}
+	telemetry.SetAccelerateWindow(s.accelerateToSlot.Load(), res.GeneratedAtMs)
 }
