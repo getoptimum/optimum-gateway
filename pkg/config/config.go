@@ -135,15 +135,7 @@ func LoadConfig(confFile string) (*AppConfig, error) {
 	}
 	cfg.Version = version.GetVersion()
 	cfg.CommitHash = version.GetCommitHash()
-	cfg.propagationEnabled.Store(cfg.PropagationEnabledRaw)
-	cfg.skipMessageFromSelf.Store(true)
-	var aggMs int64
-	if cfg.AggregationIntervalMs == 0 {
-		aggMs = DefaultAggregationIntervalMs
-	} else {
-		aggMs = cfg.AggregationIntervalMs
-	}
-	cfg.aggregationIntervalMs.Store(aggMs)
+	cfg.InitDerived()
 
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("failed to validate config: %w", err)
@@ -226,6 +218,23 @@ func (c *AppConfig) GetDCRotator() *commonconfig.Rotator {
 	return c.rotator
 }
 
+// InitDerived seeds atomics from yaml/env fields. Required for hand-built configs;
+// unsafe after dynamic-config rotation, which owns those atomics afterwards.
+func (c *AppConfig) InitDerived() {
+	c.propagationEnabled.Store(c.PropagationEnabledRaw)
+	c.skipMessageFromSelf.Store(true)
+	c.aggregationIntervalMs.Store(c.effectiveAggregationIntervalMs())
+}
+
+// effectiveAggregationIntervalMs resolves the zero-means-default rule shared by
+// InitDerived and Validate.
+func (c *AppConfig) effectiveAggregationIntervalMs() int64 {
+	if c.AggregationIntervalMs == 0 {
+		return DefaultAggregationIntervalMs
+	}
+	return c.AggregationIntervalMs
+}
+
 // Validate ensures the AppConfig has valid and complete values
 func (c *AppConfig) Validate() error {
 	if c.IdentityLibP2PDir == "" {
@@ -291,13 +300,7 @@ func (c *AppConfig) Validate() error {
 	if c.AggregationIntervalMs < 0 {
 		return fmt.Errorf("aggregation_interval_ms must be non-negative")
 	}
-	var effectiveAggMs int64
-	if c.AggregationIntervalMs == 0 {
-		effectiveAggMs = DefaultAggregationIntervalMs
-	} else {
-		effectiveAggMs = c.AggregationIntervalMs
-	}
-	if effectiveAggMs > maxAggregationIntervalMs {
+	if c.effectiveAggregationIntervalMs() > maxAggregationIntervalMs {
 		return fmt.Errorf("aggregation_interval_ms must be <= %d", maxAggregationIntervalMs)
 	}
 

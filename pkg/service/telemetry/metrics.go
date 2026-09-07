@@ -161,6 +161,7 @@ func InitMetricsWithRegistry(log logger.AppLogger, pairedWith string) {
 	initProcessingSpeedMetrics()
 	initAggregationMetrics()
 	initAttestationMetrics()
+	initAccelerateMetrics()
 	initAuthMetrics()
 	initGatewayHealthMetrics()
 	initMump2pTraceMetrics()

@@ -83,6 +83,31 @@ func TestBootstrapExposeNodesURL(t *testing.T) {
 	}
 }
 
+func TestBootstrapAccelerateSlotsURL(t *testing.T) {
+	tests := map[string]struct {
+		host    string
+		chainID chain.Chain
+		want    string
+	}{
+		"hostname": {
+			host:    "bootstrap.example.com",
+			chainID: chain.ChainHoodi,
+			want:    "https://bootstrap.example.com/api/v2/hoodi/accelerate_slots",
+		},
+		"base url with trailing slash": {
+			host:    "https://bootstrap.example.com/",
+			chainID: chain.ChainMainnet,
+			want:    "https://bootstrap.example.com/api/v2/mainnet/accelerate_slots",
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			require.Equal(t, tt.want, utils.BootstrapAccelerateSlotsURL(tt.host, tt.chainID))
+		})
+	}
+}
+
 func TestBootstrapForkDigestURL(t *testing.T) {
 	tests := map[string]struct {
 		host    string

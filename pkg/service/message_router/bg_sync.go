@@ -16,6 +16,9 @@ import (
 // and the per-tick work degenerates to a single comparison, so we don't
 // bother short-circuiting here.
 func (s *Service) bgSync(ctx context.Context) {
+	// Prime so a restart is not fail-open until the first 30s tick.
+	s.RefreshAccelerateSlots(ctx)
+
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 	for {
@@ -24,6 +27,7 @@ func (s *Service) bgSync(ctx context.Context) {
 			return
 		case <-ticker.C:
 			s.SetKnownValidators(s.authMgr.ValidatorIndexes())
+			s.RefreshAccelerateSlots(ctx)
 		}
 	}
 }

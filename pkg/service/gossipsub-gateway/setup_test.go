@@ -10,7 +10,8 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
 )
 
-func newGateway(t *testing.T) (*Service, *test_utils.LocalBootstrapServer) {
+// prepare seeds the stub before any service polls it.
+func newGateway(t *testing.T, prepare ...func(*test_utils.LocalBootstrapServer)) (*Service, *test_utils.LocalBootstrapServer) {
 	t.Helper()
 
 	cnt := test_utils.GetClean(t)
@@ -21,6 +22,9 @@ func newGateway(t *testing.T) (*Service, *test_utils.LocalBootstrapServer) {
 		"fork_digest": "deadbeef",
 		"future_fork": "DDEEFF00",
 	})
+	for _, p := range prepare {
+		p(bootstrap)
+	}
 	cfg := rig.AppCfg(t)
 	cfg.RemoteBootstrapURL = bootstrap.URL()
 	srvAuth, err := auth_token.New(t.Context(), cnt.Log, cfg)
