@@ -27,10 +27,6 @@ const (
 const (
 	EnrollmentResultSuccess = "success" // enrolled and persisted a new credential
 	EnrollmentResultReused  = "reused"  // loaded an existing credential from disk
-	EnrollmentResultInvalid = "invalid_enrollment"
-	EnrollmentResultFailed  = "failed" // network, server, or persistence failure
-	// Terminal and operator-fixable: duplicate label, or the org at its key cap.
-	EnrollmentResultConflict = "conflict"
 )
 
 // Result label values for p2p_handshake_cluster_claim_total: the outcome of the

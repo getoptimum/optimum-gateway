@@ -81,6 +81,8 @@ type AppConfig struct {
 	// env values are only used in dev mode (OPT_ENABLE_AUTH=false); a yaml
 	// or OPT_GATEWAY_ID value in a prod-auth setup is silently replaced by
 	// the JWT subject at boot.
+	// It is no longer inert under join_key: EnrollmentLabel reads it before the
+	// mint, and that label is unique per org, so it must be unique per host.
 	GatewayID string `yaml:"gateway_id" env:"OPT_GATEWAY_ID" default:"dev-gateway"`
 	// GatewayType is JWT-sourced — InitRuntime sets it from the `type` claim
 	// (hermes|partner|relay) once the auth manager has minted. Empty in dev
@@ -244,7 +246,7 @@ func (c *AppConfig) effectiveAggregationIntervalMs() int64 {
 }
 
 // DefaultGatewayID is the GatewayID placeholder, not an identity: every
-// unconfigured node carries it. Pinned to the struct tag by TestDefaultGatewayID.
+// unconfigured node carries it. Pinned to the struct tag by TestGatewayCredentialConfig.
 const DefaultGatewayID = "dev-gateway"
 
 // EnrollmentLabel is the label recorded against an enrolled credential, empty on the

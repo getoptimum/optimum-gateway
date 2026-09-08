@@ -142,7 +142,7 @@ func TestEnrollmentGrant_SendsAConfiguredLabel(t *testing.T) {
 
 	_, err := auth_token.New(t.Context(), logger.NewAppSLogger(logger.Debug), cfg)
 	require.NoError(t, err)
-	require.Equal(t, "optimum-dev-hoodi-spot-us-central-hermes-2", rig.EnrolledLabel)
+	require.Equal(t, "optimum-dev-hoodi-spot-us-central-hermes-2", rig.EnrolledLabelValue())
 }
 
 func TestEnrollmentGrant_ReusesCredentialAcrossRestarts(t *testing.T) {

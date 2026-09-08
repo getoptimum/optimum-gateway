@@ -8,7 +8,7 @@ gateway_cluster_id: optimum_hoodi_v0_2
 # Exactly one gateway credential; setting both is a startup error. api_key is the
 # legacy per-host secret, join_key is one org-wide key every gateway self-enrolls with.
 api_key: your-api-key # or set OPT_API_KEY env var
-# join_key: ojk_live_...                   # or set OPT_JOIN_KEY env var
+# join_key: ojk_live_...                   # or set OPT_JOIN_KEY env var; remove api_key above
 
 # ─── Telemetry ────────────────────────────────────────────────────────────────
 telemetry_enable: true
@@ -22,7 +22,7 @@ telemetry_port: 48123
 # jwks_refresh_interval_sec: 3600          # bounds revocation-propagation lag
 # jwks_cache_path: /gateway/cache/jwks.json
 # enroll_cred_dir: /tmp/mump2p             # default: identity_mump2p_dir. Holds the
-#                                          # enrollment credential; MUST be persistent.
+#                                          # credential + pending key; MUST persist.
 
 # ─── Consumer block-stream (ADR-0011, opt-in, off by default) ────────────────
 # Exposes decoded beacon blocks to your own consumers over WebSocket + gRPC.

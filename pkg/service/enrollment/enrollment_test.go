@@ -352,6 +352,28 @@ func TestLoadRejectsAThumbprintMismatch(t *testing.T) {
 	require.Contains(t, err.Error(), "not the recorded")
 }
 
+// Load demands a thumbprint, so Save has to establish it: a credential saved
+// without one would otherwise load clean and 401 on every mint.
+func TestSaveFillsTheThumbprint(t *testing.T) {
+	dir := t.TempDir()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	pkcs8, err := x509.MarshalPKCS8PrivateKey(key)
+	require.NoError(t, err)
+	require.NoError(t, enrollment.Save(dir, &enrollment.Credential{
+		ClientID:   "ag_1",
+		PrivateKey: pkcs8,
+	}))
+
+	cred, err := enrollment.Load(dir)
+	require.NoError(t, err)
+	jwk, err := cred.PublicJWK()
+	require.NoError(t, err)
+	want, err := jwk.Thumbprint()
+	require.NoError(t, err)
+	require.Equal(t, want, cred.Thumbprint)
+}
+
 func TestEnrollRejectedJoinKey(t *testing.T) {
 	auth := newStubAuth(t)
 	auth.status = http.StatusUnauthorized
@@ -366,6 +388,131 @@ func TestEnrollRejectedJoinKey(t *testing.T) {
 
 	_, statErr := os.Stat(filepath.Join(dir, enrollment.CredentialFile))
 	require.ErrorIs(t, statErr, os.ErrNotExist, "a failed enrollment must not leave a credential behind")
+}
+
+// A response lost after the server committed leaves no credential. The retry has to
+// present the same public key, or it enrolls again under a label that is already
+// live and the gateway never boots.
+func TestEnrollReusesThePendingKeyAfterAFailure(t *testing.T) {
+	auth := newStubAuth(t)
+	auth.status = http.StatusInternalServerError
+	auth.body = []byte(`{"error":"internal_error"}`)
+
+	dir := t.TempDir()
+	_, err := enrollment.Enroll(t.Context(), testLogger(), &enrollment.Options{
+		Issuer: auth.server.URL, Dir: dir, JoinKey: testJoinKey,
+	})
+	require.Error(t, err)
+	first := auth.seen.jwk
+
+	pending := filepath.Join(dir, enrollment.PendingKeyFile)
+	info, statErr := os.Stat(pending)
+	require.NoError(t, statErr, "the keypair must outlive a failed attempt")
+	require.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+
+	auth.status, auth.body = 0, nil
+	cred, err := enrollment.Enroll(t.Context(), testLogger(), &enrollment.Options{
+		Issuer: auth.server.URL, Dir: dir, JoinKey: testJoinKey,
+	})
+	require.NoError(t, err)
+	require.Equal(t, first, auth.seen.jwk, "the retry must present the same public key")
+
+	jwk, err := cred.PublicJWK()
+	require.NoError(t, err)
+	require.Equal(t, first, jwk)
+
+	_, statErr = os.Stat(pending)
+	require.ErrorIs(t, statErr, os.ErrNotExist, "a persisted credential makes the pending key redundant")
+}
+
+// A 409 is refused at the insert, which is only reached once the thumbprint matched
+// nothing, so the keypair provably enrolled nothing and can go.
+func TestEnrollDropsThePendingKeyOnAConflict(t *testing.T) {
+	auth := newStubAuth(t)
+	auth.status = http.StatusConflict
+	auth.body = []byte(`{"error":"label_conflict"}`)
+
+	dir := t.TempDir()
+	_, err := enrollment.Enroll(t.Context(), testLogger(), &enrollment.Options{
+		Issuer: auth.server.URL, Dir: dir, JoinKey: testJoinKey,
+	})
+	require.ErrorIs(t, err, enrollment.ErrEnrollmentConflict)
+
+	_, statErr := os.Stat(filepath.Join(dir, enrollment.PendingKeyFile))
+	require.ErrorIs(t, statErr, os.ErrNotExist)
+}
+
+// A 401 is raised for an unknown join key before the thumbprint lookup, so it cannot
+// prove nothing was committed. Keeping the key is what allows a later retry to
+// recover the credential instead of stranding it.
+func TestEnrollKeepsThePendingKeyOnA401(t *testing.T) {
+	auth := newStubAuth(t)
+	auth.status = http.StatusUnauthorized
+	auth.body = []byte(`{"error":"invalid_enrollment"}`)
+
+	dir := t.TempDir()
+	_, err := enrollment.Enroll(t.Context(), testLogger(), &enrollment.Options{
+		Issuer: auth.server.URL, Dir: dir, JoinKey: "ojk_test_bad",
+	})
+	require.ErrorIs(t, err, enrollment.ErrInvalidEnrollment)
+
+	info, statErr := os.Stat(filepath.Join(dir, enrollment.PendingKeyFile))
+	require.NoError(t, statErr, "a 401 must not destroy the key a credential may be bound to")
+	require.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+}
+
+// Deleting the credential is how an operator moves a host to a different join key.
+// A surviving pending key would be resubmitted and hand back the old credential.
+func TestLoadOrEnrollDropsAStalePendingKey(t *testing.T) {
+	auth := newStubAuth(t)
+	dir := t.TempDir()
+	opts := &enrollment.Options{Issuer: auth.server.URL, Dir: dir, JoinKey: testJoinKey}
+
+	_, reused, err := enrollment.LoadOrEnroll(t.Context(), testLogger(), opts)
+	require.NoError(t, err)
+	require.False(t, reused)
+
+	pending := filepath.Join(dir, enrollment.PendingKeyFile)
+	require.NoError(t, os.WriteFile(pending, []byte("stale"), 0o600))
+
+	_, reused, err = enrollment.LoadOrEnroll(t.Context(), testLogger(), opts)
+	require.NoError(t, err)
+	require.True(t, reused)
+
+	_, statErr := os.Stat(pending)
+	require.ErrorIs(t, statErr, os.ErrNotExist, "reuse must not leave a resubmittable key behind")
+}
+
+// The atomic writer copies the destination's mode when overwriting, so a key file
+// restored at a looser mode would keep it. Both writes must force 0600.
+func TestOverwritingAPrivateKeyFileForces0600(t *testing.T) {
+	auth := newStubAuth(t)
+	dir := t.TempDir()
+	pending := filepath.Join(dir, enrollment.PendingKeyFile)
+	require.NoError(t, os.WriteFile(pending, []byte("junk"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, enrollment.CredentialFile), []byte("junk"), 0o644))
+
+	_, err := enrollment.Enroll(t.Context(), testLogger(), &enrollment.Options{
+		Issuer: auth.server.URL, Dir: dir, JoinKey: testJoinKey,
+	})
+	require.NoError(t, err)
+
+	info, err := os.Stat(filepath.Join(dir, enrollment.CredentialFile))
+	require.NoError(t, err)
+	require.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+}
+
+// An unreadable pending key must cost a join-key use, not the ability to boot.
+func TestEnrollReplacesAnUnusablePendingKey(t *testing.T) {
+	auth := newStubAuth(t)
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, enrollment.PendingKeyFile), []byte("junk"), 0o600))
+
+	cred, err := enrollment.Enroll(t.Context(), testLogger(), &enrollment.Options{
+		Issuer: auth.server.URL, Dir: dir, JoinKey: testJoinKey,
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, cred.ClientID)
 }
 
 func TestEnrollLabelConflictIsTerminal(t *testing.T) {

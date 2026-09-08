@@ -28,7 +28,9 @@ var (
 )
 
 const (
-	mintPath = "/api/v1/auth/token" // mintPath is appended to AppConfig.RemoteAuthURL to form the mint endpoint.
+	// mintPath is appended to RemoteAuthURL for the endpoint; the same constant
+	// builds the signed audience, so the two cannot drift apart.
+	mintPath = enrollment.TokenPath
 	// clientAssertionType is the RFC 7523 grant identifier optimum-auth requires
 	// alongside a client_assertion; omitting it is a 400, not a 401.
 	clientAssertionType = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
@@ -146,7 +148,6 @@ func New(ctx context.Context, log logger.AppLogger, appCfg *config.AppConfig) (*
 			Label:   appCfg.EnrollmentLabel(),
 		})
 		if enrollErr != nil {
-			telemetry.IncEnrollmentResult(enrollmentResultFor(enrollErr))
 			return nil, fmt.Errorf("auth_token: enroll gateway: %w", enrollErr)
 		}
 		svc.enrollResult = telemetry.EnrollmentResultSuccess
@@ -157,17 +158,6 @@ func New(ctx context.Context, log logger.AppLogger, appCfg *config.AppConfig) (*
 	}
 
 	return svc, nil
-}
-
-// enrollmentResultFor maps an enrollment failure to a metric label.
-func enrollmentResultFor(err error) string {
-	if errors.Is(err, enrollment.ErrInvalidEnrollment) {
-		return telemetry.EnrollmentResultInvalid
-	}
-	if errors.Is(err, enrollment.ErrEnrollmentConflict) {
-		return telemetry.EnrollmentResultConflict
-	}
-	return telemetry.EnrollmentResultFailed
 }
 
 // buildMintPayload returns the body for one mint call. The assertion is signed per
@@ -472,20 +462,32 @@ func (m *Service) mint(ctx context.Context) (string, error) {
 func (m *Service) refreshLoop(ctx context.Context) {
 	backoff := time.Duration(0)
 	for {
-		if backoff > 0 {
-			time.Sleep(backoff)
-		} else {
-			sleepSec, _ := randutil.RandBetween(refreshIntervalMinSec, refreshIntervalMaxSec)
-			time.Sleep(time.Duration(sleepSec) * time.Second)
+		wait := backoff
+		if wait == 0 {
+			// A failed draw returns 0, and waiting 0 would re-mint continuously.
+			sleepSec, err := randutil.RandBetween(refreshIntervalMinSec, refreshIntervalMaxSec)
+			if err != nil || sleepSec <= 0 {
+				sleepSec = refreshIntervalMinSec
+			}
+			wait = time.Duration(sleepSec) * time.Second
+		}
+		// Wake on cancellation, not just on the timer: the backoff retries every
+		// 30m at worst, so a bare sleep logs mint failures all the way to exit.
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(wait):
 		}
 		if _, err := m.mint(ctx); err != nil {
+			if ctx.Err() != nil {
+				return
+			}
 			if m.MintErrorIsTerminal(err) {
 				m.log.Error("credential terminal failure, refresh loop exiting", err)
 				return
 			}
-			// Retry sooner than the next full interval: another 3h sleep can land
-			// after the cached 6h token has already expired, and the gateway would
-			// serve a dead JWT in the meantime.
+			// Bound how long a stale token can be served: Token() does not check exp,
+			// and another 3h sleep can land after the cached 6h token has expired.
 			backoff = NextRetryBackoff(backoff)
 			m.log.Error("auth refresh failed; retrying sooner", err)
 			continue

@@ -32,6 +32,11 @@ const (
 	// CredentialFile is the credential's name inside the enrollment directory.
 	CredentialFile = "enrollment.json"
 
+	// PendingKeyFile holds the keypair between generating it and persisting the
+	// credential it belongs to. Reusing it keeps the thumbprint stable, which is
+	// what makes the server's idempotency reachable after a lost response.
+	PendingKeyFile = "enrollment.key"
+
 	// EnrollPath and TokenPath are appended to the auth ISSUER (not the request
 	// URL) to form assertion audiences. optimum-auth derives both from
 	// SIGNER_ISSUER, so anything else fails the audience check.
@@ -83,9 +88,8 @@ type Credential struct {
 
 // Options configures a single enrollment attempt.
 type Options struct {
-	// Issuer is the auth service issuer, trailing slash trimmed. Assertion
-	// audiences are built from it, NOT from the URL we post to: the two differ
-	// whenever the worker runs somewhere other than its canonical host.
+	// Issuer is both the base URL and the audience root, trailing slash trimmed. It
+	// must equal the auth service's own issuer or every assertion fails the aud check.
 	Issuer string
 	Dir    string
 	// JoinKey is the raw ojk_ credential. Only needed to enroll.
@@ -259,7 +263,7 @@ func Load(dir string) (*Credential, error) {
 	if err != nil {
 		return nil, err
 	}
-	if c.Thumbprint != "" && derived != c.Thumbprint {
+	if derived != c.Thumbprint {
 		return nil, fmt.Errorf(
 			"enrollment: %s pairs client_id %s with a key whose thumbprint is %s, not the recorded %s",
 			credentialPath(dir), c.ClientID, derived, c.Thumbprint)
@@ -273,6 +277,17 @@ func Save(dir string, c *Credential) error {
 	if err := os.MkdirAll(dir, 0o750); err != nil {
 		return fmt.Errorf("enrollment: create %s: %w", dir, err)
 	}
+	// Fill the thumbprint here so Load can demand it: a credential without one
+	// would load clean and then 401 on every mint.
+	if c.Thumbprint == "" {
+		jwk, err := c.PublicJWK()
+		if err != nil {
+			return err
+		}
+		if c.Thumbprint, err = jwk.Thumbprint(); err != nil {
+			return err
+		}
+	}
 	raw, err := json.Marshal(c) //nolint:gosec // persisting the private key is the point
 	if err != nil {
 		return fmt.Errorf("enrollment: marshal credential: %w", err)
@@ -280,7 +295,60 @@ func Save(dir string, c *Credential) error {
 	if err := optio.AtomicallySaveToFile(credentialPath(dir), raw); err != nil {
 		return fmt.Errorf("enrollment: write %s: %w", credentialPath(dir), err)
 	}
+	// The writer copies the destination's mode when overwriting, so an existing
+	// file at a looser mode would keep it. The private key must not inherit that.
+	if err := os.Chmod(credentialPath(dir), 0o600); err != nil {
+		return fmt.Errorf("enrollment: chmod %s: %w", credentialPath(dir), err)
+	}
 	return nil
+}
+
+// clearPendingKey drops the pending keypair. Called wherever it can no longer be
+// enrolled, so a private key does not outlive its purpose on disk.
+func clearPendingKey(log logger.AppLogger, dir string) {
+	path := filepath.Join(dir, PendingKeyFile)
+	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+		log.Info("could not remove the pending enrollment keypair",
+			logger.WithString("path", path), logger.WithError(err))
+	}
+}
+
+// pendingKey returns the keypair to enroll with, reusing the one left by a previous
+// attempt so the thumbprint survives a restart. A pending key that will not load is
+// replaced rather than fatal: the cost is one join-key use, not a dead gateway.
+func pendingKey(log logger.AppLogger, dir string) (*ecdsa.PrivateKey, []byte, error) {
+	path := filepath.Join(dir, PendingKeyFile)
+	switch pkcs8, err := optio.LoadFromFile(path); {
+	case err == nil:
+		parsed, parseErr := x509.ParsePKCS8PrivateKey(pkcs8)
+		if ec, ok := parsed.(*ecdsa.PrivateKey); parseErr == nil && ok && ec.Curve == elliptic.P256() {
+			log.Info("resuming enrollment with the pending keypair", logger.WithString("path", path))
+			return ec, pkcs8, nil
+		}
+		log.Info("pending enrollment keypair is unusable; generating a new one",
+			logger.WithString("path", path), logger.WithError(parseErr))
+	case !errors.Is(err, os.ErrNotExist):
+		log.Info("pending enrollment keypair could not be read; generating a new one",
+			logger.WithString("path", path), logger.WithError(err))
+	}
+
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, nil, fmt.Errorf("enrollment: generate keypair: %w", err)
+	}
+	pkcs8, err := x509.MarshalPKCS8PrivateKey(key)
+	if err != nil {
+		return nil, nil, fmt.Errorf("enrollment: marshal private key: %w", err)
+	}
+	// Persist before the POST. Without this a lost response strands the credential
+	// upstream, and the next boot re-enrolls under a label that is already live.
+	if err := optio.AtomicallySaveToFile(path, pkcs8); err != nil {
+		return nil, nil, fmt.Errorf("enrollment: write %s: %w", path, err)
+	}
+	if err := os.Chmod(path, 0o600); err != nil {
+		return nil, nil, fmt.Errorf("enrollment: chmod %s: %w", path, err)
+	}
+	return key, pkcs8, nil
 }
 
 // Enroll generates a keypair, registers its public half, and persists the result. The
@@ -296,14 +364,9 @@ func Enroll(ctx context.Context, log logger.AppLogger, opts *Options) (*Credenti
 	if err := ensureWritable(opts.Dir); err != nil {
 		return nil, err
 	}
-
-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	key, pkcs8, err := pendingKey(log, opts.Dir)
 	if err != nil {
-		return nil, fmt.Errorf("enrollment: generate keypair: %w", err)
-	}
-	pkcs8, err := x509.MarshalPKCS8PrivateKey(key)
-	if err != nil {
-		return nil, fmt.Errorf("enrollment: marshal private key: %w", err)
+		return nil, err
 	}
 
 	jwk, err := jwkFromPublic(&key.PublicKey)
@@ -337,11 +400,18 @@ func Enroll(ctx context.Context, log logger.AppLogger, opts *Options) (*Credenti
 		nil,
 		terminalEnrollStatuses...,
 	)
-	// Status 0 is the only case with no response to classify. An unparseable body still
-	// carries its status, and the status is what decides terminal-and-typed, so classify
-	// first: otherwise a 409 behind an HTML error page degrades to an untyped failure.
+	// Classify on status before the error: an unparseable body keeps its status, so a
+	// 409 behind an HTML page stays typed. A body that fails mid-read reports status 0
+	// and cannot be classified at all.
 	if status == 0 {
 		return nil, fmt.Errorf("enrollment: POST enroll: %w", err)
+	}
+	// Drop the keypair only where nothing can have been committed with it: a 400 is
+	// refused before the database, and a 409 is refused at the insert, which is only
+	// reached when the thumbprint matched nothing. A 401 is raised for an unknown
+	// join key before that lookup, so the key is kept in case a credential exists.
+	if status == http.StatusBadRequest || status == http.StatusConflict {
+		clearPendingKey(log, opts.Dir)
 	}
 
 	switch status {
@@ -381,6 +451,7 @@ func Enroll(ctx context.Context, log logger.AppLogger, opts *Options) (*Credenti
 	if err := Save(opts.Dir, cred); err != nil {
 		return nil, err
 	}
+	clearPendingKey(log, opts.Dir)
 
 	log.Info("enrolled gateway credential",
 		logger.WithString("client_id", cred.ClientID),
@@ -405,8 +476,16 @@ func LoadOrEnroll(ctx context.Context, log logger.AppLogger, opts *Options) (cre
 				"enrollment: %s was enrolled for peer %s but this node is %s; the mumP2P identity changed",
 				credentialPath(opts.Dir), cred.PeerID, opts.PeerID)
 		}
+		// A credential makes any pending key stale. Left in place it would be
+		// resubmitted if the credential were ever deleted to force re-enrollment,
+		// and upstream idempotency would hand back the old one.
+		clearPendingKey(log, opts.Dir)
+		// chain_id and type come from the credential, not the configured join key:
+		// a stale credential keeps its own and nothing else would reveal it.
 		log.Info("reusing enrolled gateway credential",
 			logger.WithString("client_id", cred.ClientID),
+			logger.WithString("type", cred.Type),
+			logger.WithString("chain_id", cred.ChainID),
 			logger.WithString("path", credentialPath(opts.Dir)),
 		)
 		return cred, true, nil
