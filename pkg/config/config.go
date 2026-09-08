@@ -247,10 +247,8 @@ func (c *AppConfig) effectiveAggregationIntervalMs() int64 {
 // unconfigured node carries it. Pinned to the struct tag by TestDefaultGatewayID.
 const DefaultGatewayID = "dev-gateway"
 
-// EnrollmentLabel is the label recorded against an enrolled credential, empty when
-// GatewayID is still the placeholder. The label is unique per org among live
-// credentials, so a shared default would fail the second gateway's enrollment;
-// empty labels are exempt.
+// EnrollmentLabel is the label recorded against an enrolled credential, empty on the
+// placeholder: labels are unique per org among live credentials, and empty is exempt.
 func (c *AppConfig) EnrollmentLabel() string {
 	if c.GatewayID == DefaultGatewayID {
 		return ""

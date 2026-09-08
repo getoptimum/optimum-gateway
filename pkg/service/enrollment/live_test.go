@@ -13,19 +13,13 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/service/enrollment"
 )
 
-// TestLiveEnroll drives a real enrollment against a deployed optimum-auth. It is
-// skipped unless OPT_LIVE_JOIN_KEY is set, so it never runs in CI.
-//
-// This is the only check that exercises the cross-implementation pieces the unit
-// tests can only approximate: that our RFC 7638 thumbprint matches jose's, that
-// the JWK survives the Worker's 43-char coordinate validation, and that the PoP
-// audience is what the Worker derives from SIGNER_ISSUER.
+// TestLiveEnroll drives a real enrollment against a deployed optimum-auth, and is the
+// only check covering thumbprint, coordinate and audience agreement with the server.
+// Each run with a fresh credential directory consumes one join-key use.
 //
 //	OPT_LIVE_JOIN_KEY=ojk_test_... \
 //	OPT_LIVE_AUTH_URL=https://dev-auth.getoptimum.io \
 //	go test ./pkg/service/enrollment -run TestLiveEnroll -v -count=1
-//
-// Each run with a fresh credential directory consumes one use of the join key.
 func TestLiveEnroll(t *testing.T) {
 	joinKey := os.Getenv("OPT_LIVE_JOIN_KEY")
 	if joinKey == "" {
@@ -88,9 +82,8 @@ func TestLiveEnroll(t *testing.T) {
 
 	require.Equal(t, cred.ClientID, claims["sub"])
 
-	// The claim the mumP2P handshake gates on. Empty here means the join key was
-	// minted without cluster_ids, or the DB migration has not been applied: the
-	// gateway would authenticate and then fail every handshake.
+	// The claim the mumP2P handshake gates on. Empty means the gateway would
+	// authenticate and then fail every handshake.
 	clusters, _ := claims["cluster_ids"].([]any)
 	require.NotEmpty(t, clusters,
 		"cluster_ids is empty: this gateway would be rejected at every mesh handshake")

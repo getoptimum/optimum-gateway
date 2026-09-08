@@ -1,17 +1,6 @@
-// Package enrollment implements gateway self-enrollment against optimum-auth.
-//
-// Instead of a human pre-minting one ogw_ secret per host, an operator mints a
-// single reusable org join credential (ojk_) and every gateway configured with it
-// registers its own keypair:
-//
-//  1. generate a P-256 keypair, kept on disk and never sent anywhere;
-//  2. POST the public JWK to /api/v1/gateways/enroll along with the join token and
-//     a proof-of-possession assertion signed by the private half, receiving a
-//     client_id back (no secret in the response);
-//  3. mint tokens at /api/v1/auth/token with an RFC 7523 client assertion.
-//
-// After enrollment no shared secret crosses the wire, and the join key can be
-// revoked without touching gateways already enrolled through it.
+// Package enrollment implements gateway self-enrollment: an org-wide ojk_ join key
+// registers a per-host keypair, which then mints tokens by client assertion.
+// See docs/adr/0013-gateway-self-enrollment.md.
 package enrollment
 
 import (
@@ -59,10 +48,8 @@ const (
 	AssertionValidityBudget = 30 * time.Second
 )
 
-// ErrInvalidEnrollment is the 401 from the enroll endpoint. Unknown, expired, exhausted
-// and revoked join keys, a cross-org thumbprint and a bad proof all collapse to one
-// 401 upstream to defeat enumeration, so the cause cannot be recovered here; check
-// uses_count / expires_at / status on the join key instead.
+// ErrInvalidEnrollment is the enroll endpoint's 401. Every join-key rejection collapses
+// into it upstream to defeat enumeration, so the cause is not recoverable here.
 var ErrInvalidEnrollment = errors.New("enrollment: join credential rejected (401)")
 
 // ErrEnrollmentConflict means the join key was accepted but the credential could not
@@ -70,12 +57,9 @@ var ErrInvalidEnrollment = errors.New("enrollment: join credential rejected (401
 // key cap. Operator action, not a retry, so treat it as terminal.
 var ErrEnrollmentConflict = errors.New("enrollment: credential conflict (409)")
 
-// PublicJWK is a P-256 public key in the exact shape optimum-auth accepts.
-//
-// Field order is load-bearing: encoding/json emits struct fields in declaration
-// order, and the RFC 7638 thumbprint is the SHA-256 of the JSON with members in
-// lexicographic order (crv, kty, x, y). Reordering these silently changes every
-// thumbprint we compute.
+// PublicJWK is a P-256 public key in the shape optimum-auth accepts. Field order is
+// the RFC 7638 canonical order and json.Marshal depends on it: reordering silently
+// changes every thumbprint. Pinned by TestCanonicalJWKMemberOrder.
 type PublicJWK struct {
 	Crv string `json:"crv"`
 	Kty string `json:"kty"`
@@ -299,12 +283,8 @@ func Save(dir string, c *Credential) error {
 	return nil
 }
 
-// Enroll generates a keypair, registers its public half, and persists the result.
-//
-// The proof-of-possession is signed as the JWK thumbprint because that is the only
-// identity that exists before optimum-auth issues a client_id. Its audience is the
-// enroll endpoint, distinct from the token endpoint's, so an enrollment proof
-// cannot be replayed to mint.
+// Enroll generates a keypair, registers its public half, and persists the result. The
+// proof is signed as the thumbprint, the only identity there is before a client_id.
 func Enroll(ctx context.Context, log logger.AppLogger, opts *Options) (*Credential, error) {
 	if opts.JoinKey == "" {
 		return nil, errors.New("enrollment: join key is required")
@@ -412,12 +392,8 @@ func Enroll(ctx context.Context, log logger.AppLogger, opts *Options) (*Credenti
 	return cred, nil
 }
 
-// LoadOrEnroll returns the persisted credential when one exists, enrolling only on
-// a genuine miss. Two processes sharing a directory would both enroll and orphan
-// one credential; there is no lock because the default directory also holds the
-// mumP2P identity, which they cannot share either. Enrollment is idempotent on the thumbprint upstream, but a lost
-// private key means a NEW keypair, which is a new enrollment and a burnt use, so
-// the on-disk credential is the thing that matters.
+// LoadOrEnroll returns the persisted credential when one exists, enrolling only on a
+// genuine miss. Concurrency and lost-credential trade-offs: see ADR-0013.
 func LoadOrEnroll(ctx context.Context, log logger.AppLogger, opts *Options) (cred *Credential, reused bool, err error) {
 	cred, err = Load(opts.Dir)
 	switch {

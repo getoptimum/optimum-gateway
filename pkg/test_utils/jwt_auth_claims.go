@@ -84,9 +84,8 @@ func (r *AuthTestRig) EnrolledLabelValue() string {
 	return r.EnrolledLabel
 }
 
-// PublicKeyFromJWK rebuilds a P-256 public key from its JWK, the verification side
-// of what a gateway submits at enrollment. ParseUncompressedPublicKey also checks
-// the point is on the curve, as optimum-auth's importJWK does.
+// PublicKeyFromJWK rebuilds a P-256 public key from its JWK, checking the point is on
+// the curve as optimum-auth's importJWK does.
 func PublicKeyFromJWK(t *testing.T, j enrollment.PublicJWK) *ecdsa.PublicKey {
 	t.Helper()
 	x, err := base64.RawURLEncoding.DecodeString(j.X)

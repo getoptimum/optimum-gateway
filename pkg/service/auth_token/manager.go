@@ -503,12 +503,9 @@ func NextRetryBackoff(current time.Duration) time.Duration {
 	return min(current*2, 30*time.Minute)
 }
 
-// MintErrorIsTerminal reports whether a mint failure should stop the refresh loop.
-//
-// A 403 names the credential as revoked or suspended, which is unambiguous on both
-// grants. A 401 is opaque: for a shared secret it means the key is dead, but on the
-// assertion path it is also every verification failure, including one that expired
-// in flight, so retiring the node on it would let a clock slip cost a restart.
+// MintErrorIsTerminal reports whether a mint failure should stop the refresh loop. A
+// 403 is unambiguous on both grants; a 401 is terminal only for a shared secret,
+// since on the assertion path it is also every verification failure.
 func (m *Service) MintErrorIsTerminal(err error) bool {
 	if errors.Is(err, ErrKeyRevoked) || errors.Is(err, ErrKeySuspended) {
 		return true

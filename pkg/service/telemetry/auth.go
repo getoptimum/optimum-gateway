@@ -22,10 +22,8 @@ const (
 	AuthMintResultAssertionFailed = "assertion_failed"
 )
 
-// Result label values for auth_enrollment_total, the outcome of resolving this
-// gateway's own credential at boot. "reused" is the steady state after the first
-// successful enrollment; a fleet showing repeated "success" is losing its
-// credential directory and burning a join-key use on every restart.
+// Result label values for auth_enrollment_total. "reused" is the steady state; repeated
+// "success" across a fleet means credential directories are not persisting.
 const (
 	EnrollmentResultSuccess = "success" // enrolled and persisted a new credential
 	EnrollmentResultReused  = "reused"  // loaded an existing credential from disk

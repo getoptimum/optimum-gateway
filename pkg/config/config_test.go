@@ -350,11 +350,8 @@ func TestGatewayCredentialConfig(t *testing.T) {
 		t.Setenv("OPT_TELEMETRY_PORT", "8888")
 	}
 
-	// A missed env tag would leave JoinKey empty, which degrades to a disabled auth
-	// manager rather than erroring, so it would not be obvious in production.
-	// Nothing else stops DefaultGatewayID drifting from the tag it mirrors, and the
-	// consequence is specific: every unconfigured node would send the same label,
-	// and the second to enroll would fail on the per-org unique index.
+	// A missed env tag leaves JoinKey empty, which disables auth rather than erroring.
+	// Nothing else stops DefaultGatewayID drifting from the tag it mirrors.
 	t.Run("DefaultGatewayID matches the struct tag default", func(t *testing.T) {
 		base(t)
 		cfg, err := config.LoadConfig("")

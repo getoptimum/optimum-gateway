@@ -45,10 +45,8 @@ func publicKeyFromJWK(t *testing.T, j enrollment.PublicJWK) *ecdsa.PublicKey {
 	return pub
 }
 
-// TestThumbprintMatchesJose pins the RFC 7638 thumbprint against a value computed
-// by jose's calculateJwkThumbprint, the implementation optimum-auth uses. A drift
-// here means every enrollment is rejected, so the fixture is deliberately a
-// hardcoded cross-implementation constant rather than a recomputation.
+// TestThumbprintMatchesJose pins the thumbprint against jose's, the implementation
+// optimum-auth uses. Hardcoded, not recomputed: a drift rejects every enrollment.
 func TestThumbprintMatchesJose(t *testing.T) {
 	jwk := enrollment.PublicJWK{
 		Crv: "P-256",
@@ -70,10 +68,8 @@ func TestCanonicalJWKMemberOrder(t *testing.T) {
 	require.Equal(t, `{"crv":"P-256","kty":"EC","x":"xx","y":"yy"}`, string(raw), "member order is load-bearing")
 }
 
-// TestCoordinatesAreFixedWidth is the regression test for the leading-zero trap:
-// big.Int.Bytes() drops leading zero bytes, which yields a coordinate shorter than
-// the 43 base64url characters optimum-auth requires. Roughly 1 key in 256 has a
-// zero high byte, so without fixed-width padding enrollment fails intermittently.
+// TestCoordinatesAreFixedWidth guards the leading-zero trap: big.Int.Bytes() yields a
+// 42-char coordinate the server rejects, for roughly 1 key in 256.
 func TestCoordinatesAreFixedWidth(t *testing.T) {
 	var withLeadingZero *ecdsa.PrivateKey
 	for range 4000 {
@@ -318,10 +314,8 @@ func TestEnrollNeverSendsPrivateMaterial(t *testing.T) {
 	}
 }
 
-// Enrolling and then failing to persist leaves a credential upstream that this node
-// can never present, and a crashlooping container repeats it every restart, draining
-// the join key's uses. The directory existing is not evidence it is writable, so the
-// check has to be a real probe and it has to happen before the POST.
+// Enrolling then failing to persist orphans a credential upstream, and a crashlooping
+// container drains the join key. The probe must be real, and must precede the POST.
 func TestEnrollRefusesAnUnwritableDirBeforeContactingTheServer(t *testing.T) {
 	if os.Geteuid() == 0 {
 		t.Skip("running as root; mode bits do not deny access")

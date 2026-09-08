@@ -5,11 +5,8 @@ identity_mump2p_dir: /tmp/mump2p
 agent_lib_p2p_port: 33212
 agent_mump2p_port: 43213
 gateway_cluster_id: optimum_hoodi_v0_2
-# Exactly one gateway credential. Setting both is a startup error.
-#   api_key  (legacy): one ogw_ secret per host, minted by an operator.
-#   join_key (self-enrollment): one org-wide ojk_ key shared by every gateway.
-#              On first boot the gateway generates its own keypair, registers the
-#              public half once, and mints with a signed assertion thereafter.
+# Exactly one gateway credential; setting both is a startup error. api_key is the
+# legacy per-host secret, join_key is one org-wide key every gateway self-enrolls with.
 api_key: your-api-key # or set OPT_API_KEY env var
 # join_key: ojk_live_...                   # or set OPT_JOIN_KEY env var
 
@@ -25,10 +22,7 @@ telemetry_port: 48123
 # jwks_refresh_interval_sec: 3600          # bounds revocation-propagation lag
 # jwks_cache_path: /gateway/cache/jwks.json
 # enroll_cred_dir: /tmp/mump2p             # default: identity_mump2p_dir. Holds the
-#                                          # enrollment keypair + client_id when
-#                                          # join_key is set. MUST be persistent:
-#                                          # losing it re-enrolls under a new key
-#                                          # and burns a join-key use.
+#                                          # enrollment credential; MUST be persistent.
 
 # ─── Consumer block-stream (ADR-0011, opt-in, off by default) ────────────────
 # Exposes decoded beacon blocks to your own consumers over WebSocket + gRPC.
