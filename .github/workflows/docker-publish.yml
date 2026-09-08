@@ -9,8 +9,6 @@ on:
   push:
     branches:
       - main
-       # Remove before merge.
-      - tmp/adr-0012-accelerate-decision-log
     tags:
       - v*
 
