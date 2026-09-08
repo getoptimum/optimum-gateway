@@ -35,8 +35,13 @@ const (
 // not selected. Header slot, not the clock. No list / past to_slot fail-opens.
 func (s *Service) ShouldAccelerateBlock(slot uint64) bool {
 	_, onList := s.accelerateSlots.Get(slot)
-	decision := decideAccelerate(s.accelerateToSlot.Load(), onList, slot)
+	toSlot := s.accelerateToSlot.Load()
+	decision := decideAccelerate(toSlot, onList, slot)
 	telemetry.IncAccelerateDecision(decision)
+	s.log.Debug("accelerate decision",
+		logger.WithUint64("slot", slot),
+		logger.WithString("decision", decision),
+		logger.WithUint64("to_slot", toSlot))
 	return decision != accelerateNotOnList
 }
 
