@@ -11,6 +11,7 @@ import (
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	"github.com/getoptimum/optimum-common/pkg/version"
 	"github.com/getoptimum/optimum-gateway/pkg/config"
+	"github.com/getoptimum/optimum-gateway/pkg/service/stream"
 )
 
 const (
@@ -336,5 +337,67 @@ func TestStreamValidation(t *testing.T) {
 		cfg, err := config.LoadConfig("")
 		require.NoError(t, err)
 		require.True(t, cfg.StreamOnly)
+	})
+
+	t.Run("liveness and reauth defaults", func(t *testing.T) {
+		base(t)
+		t.Setenv("OPT_STREAM_ENABLE", "true")
+		cfg, err := config.LoadConfig("")
+		require.NoError(t, err)
+		// On by default: a stream that can starve silently is the failure this
+		// exists to prevent, so it must not need opting in.
+		require.Equal(t, 20, cfg.StreamHeartbeatIntervalSec)
+		require.Equal(t, 20, cfg.StreamKeepaliveMinTimeSec)
+		require.Equal(t, 60, cfg.StreamReauthIntervalSec)
+		// Observe, not enforce: existing consumers cannot refresh in-band yet.
+		require.Equal(t, stream.ReauthObserve, cfg.StreamReauthMode)
+	})
+
+	t.Run("heartbeat may be disabled but not negative", func(t *testing.T) {
+		base(t)
+		t.Setenv("OPT_STREAM_ENABLE", "true")
+		t.Setenv("OPT_STREAM_HEARTBEAT_INTERVAL_SEC", "0")
+		_, err := config.LoadConfig("")
+		require.NoError(t, err)
+
+		t.Setenv("OPT_STREAM_HEARTBEAT_INTERVAL_SEC", "-1")
+		_, err = config.LoadConfig("")
+		require.ErrorContains(t, err, "stream_heartbeat_interval_sec")
+	})
+
+	// Pins Validate's literals to the stream package's constants.
+	// pkg/service/stream imports this package, so the non-test code cannot
+	// share them and only this test stops them drifting.
+	t.Run("reauth mode accepts exactly the three modes", func(t *testing.T) {
+		for _, mode := range []string{stream.ReauthOff, stream.ReauthObserve, stream.ReauthEnforce} {
+			t.Run(mode, func(t *testing.T) {
+				base(t)
+				t.Setenv("OPT_STREAM_ENABLE", "true")
+				t.Setenv("OPT_STREAM_REAUTH_MODE", mode)
+				cfg, err := config.LoadConfig("")
+				require.NoError(t, err)
+				require.Equal(t, mode, cfg.StreamReauthMode)
+			})
+		}
+	})
+
+	t.Run("reauth mode rejects a near miss", func(t *testing.T) {
+		base(t)
+		t.Setenv("OPT_STREAM_ENABLE", "true")
+		t.Setenv("OPT_STREAM_REAUTH_MODE", "enforced")
+		_, err := config.LoadConfig("")
+		require.ErrorContains(t, err, "stream_reauth_mode")
+	})
+
+	t.Run("zero intervals rejected", func(t *testing.T) {
+		for _, key := range []string{"OPT_STREAM_KEEPALIVE_MIN_TIME_SEC", "OPT_STREAM_REAUTH_INTERVAL_SEC"} {
+			t.Run(key, func(t *testing.T) {
+				base(t)
+				t.Setenv("OPT_STREAM_ENABLE", "true")
+				t.Setenv(key, "0")
+				_, err := config.LoadConfig("")
+				require.Error(t, err)
+			})
+		}
 	})
 }

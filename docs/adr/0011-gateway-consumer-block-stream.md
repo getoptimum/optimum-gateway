@@ -1,6 +1,7 @@
 # ADR-0011: Gateway consumer block-stream API (WebSocket + gRPC)
 
 **Status:** Approved (implemented)  
+Amended 2026-09-08: liveness heartbeat, bidirectional `Subscribe` for in-band token refresh, and mid-stream re-authentication (see §6).  
 **Date:** 2026-08-05  
 
 ## Context
@@ -172,6 +173,73 @@ Signing events gateway-side would close this without confidentiality, and the
 gateway already holds an identity key — but it puts per-event crypto on a hot
 path to reimplement, worse, what the proxy already provides. Not doing it.
 
+### 6. Liveness and in-band re-auth (amended 2026-09-08)
+
+Two properties of the design above fail a stream held open for weeks, which is
+how the consumer endpoint is actually used.
+
+**A starved stream is indistinguishable from a quiet one.** The frame union is
+`BlockEvent` and `lagged` only, so silence carries no information. If ingest
+stops, the gateway emits nothing while the connection stays healthy on transport
+PINGs, and the consumer waits indefinitely with no data and no error. Nothing in
+the path can backstop this: measured against nginx 1.24, `grpc_read_timeout` is
+reset by the gateway's own PINGs, so on an established stream it never fires
+regardless of its value. Only an in-band frame closes this gap.
+
+The frame union therefore gains a third member:
+
+* `heartbeat` — sent every `stream_heartbeat_interval_sec` whether or not blocks
+  are flowing, carrying `last_slot` (the last slot written to that connection),
+  `expected_slot` (from the wall clock) and `silence_ms`.
+
+It is emitted from each transport's send loop, never from the hub. A
+hub-sourced heartbeat would be dropped by the ring buffer exactly when liveness
+proof matters most, would increment that connection's `dropped` counter and fire
+a **false** `lagged` frame, and would need a frame-kind field on
+`streamhub.BlockEvent`, polluting the ingest hot path.
+
+**Auth is checked once and never again.** `Authenticate` runs at subscribe time
+only, so a weeks-long stream honors a one-hour token for weeks and a revoked
+key keeps streaming. `Subscribe` therefore becomes bidirectional: the client
+stream carries the selection message first, then a refreshed JWT whenever the
+consumer has one. The token a connection last presented is re-verified every
+`stream_reauth_interval_sec`, gated by `stream_reauth_mode` (`off` | `observe` |
+`enforce`). Re-verification needs no new interface: the verifier checks `exp`,
+so re-running `Authenticate` on the current token surfaces expiry as a failure.
+
+This does **not** create a consumer write path, which stays a non-goal. The
+client stream accepts exactly one field, `token`; nothing a consumer sends
+reaches the hub, the mesh, or another subscriber.
+
+Server-streaming to bidirectional streaming is wire-compatible: a client built
+against the earlier stub sends one message and half-closes, which the new
+handler serves unchanged. This is asserted by a test rather than assumed.
+`buf breaking` flags the change under `RPC_SAME_CLIENT_STREAMING`; no
+per-rule exception was added, because an exception would permanently permit
+future client-streaming changes instead of recording this one.
+
+Config gains four keys:
+
+| Env / yaml                                                            | Default   | Purpose                                                                  |
+| --------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------ |
+| `OPT_STREAM_HEARTBEAT_INTERVAL_SEC` / `stream_heartbeat_interval_sec` | `20`      | Liveness frame interval; `0` disables.                                   |
+| `OPT_STREAM_KEEPALIVE_MIN_TIME_SEC` / `stream_keepalive_min_time_sec` | `20`      | Shortest client ping interval accepted.                                  |
+| `OPT_STREAM_REAUTH_MODE` / `stream_reauth_mode`                       | `observe` | `off`, `observe` (count failures), or `enforce` (close `Unauthenticated`). |
+| `OPT_STREAM_REAUTH_INTERVAL_SEC` / `stream_reauth_interval_sec`       | `60`      | Re-verification interval.                                                |
+
+`stream_keepalive_min_time_sec` also sets gRPC's `EnforcementPolicy.MinTime`
+with `PermitWithoutStream: true`. The library defaults are `MinTime` 5m and
+`PermitWithoutStream` false, while this server pings every 54s, so a consumer
+that enabled keepalive at any useful rate was answered with GOAWAY
+`too_many_pings`. That asymmetry made the obvious client-side mitigation for a
+long-lived stream actively harmful.
+
+**`MaxConnectionAge` was considered and rejected** as a way to force
+re-authentication. Because there is no replay, every forced rotation is a
+permanent, customer-visible gap in the consumer's data. Paying a guaranteed data
+loss on a fixed schedule to bound token staleness is the wrong trade for this
+feed; in-band refresh bounds it without dropping a single frame.
+
 ## Architecture
 
 ```mermaid
@@ -210,6 +278,15 @@ flowchart LR
 * Drop-on-lag means slow consumers miss events — surfaced via `lagged`/`dropped`
   rather than silently.
 * Requires the auth service to mint `aud=stream` tokens.
+* **Revocation lag is now bounded by connection lifetime, not token lifetime**
+  (amended 2026-09-08). In `observe` mode, the default, a connection whose token
+  has stopped verifying keeps streaming and is only counted, so
+  `mump2p_stream_reauth_failures_total` measures how many consumers have not
+  adopted in-band refresh, and `mump2p_stream_oldest_connection_started_seconds`
+  bounds how stale a still-honored token can be. Only `enforce` closes the gap,
+  and it cannot be turned on until consumers refresh.
+* Heartbeats cost one frame per connection per interval: at the 256-connection
+  cap and a 20s default, negligible against block traffic.
 
 ## Non-goals (v1)
 

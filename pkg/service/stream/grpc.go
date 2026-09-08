@@ -2,8 +2,11 @@ package stream
 
 import (
 	"context"
+	"errors"
+	"io"
 	"net"
 	"strings"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -35,17 +38,26 @@ const maxConcurrentStreams = 256
 
 // NewGRPCServer builds the consumer gRPC server. It does not start listening;
 // call Run.
-func NewGRPCServer(hub *streamhub.Service, auth ConsumerAuthenticator, cfg Config, log logger.AppLogger) *GRPCServer {
-	cfg = withDefaults(cfg)
+func NewGRPCServer(hub *streamhub.Service, auth ConsumerAuthenticator, cfg *Config, log logger.AppLogger) *GRPCServer {
+	conf := withDefaults(cfg)
 	g := &GRPCServer{
 		hub:     hub,
 		auth:    auth,
-		cfg:     cfg,
+		cfg:     conf,
 		log:     log.With(logger.WithService("stream-grpc")),
-		limiter: cfg.Limiter,
+		limiter: conf.Limiter,
 		grpcSrv: grpc.NewServer(
 			// Reap dead peers on the WS clock; the gRPC default is a 2h ping.
 			grpc.KeepaliveParams(keepalive.ServerParameters{Time: pingPeriod, Timeout: writeWait}),
+			// Without this the gRPC-Go defaults apply, MinTime 5m and
+			// PermitWithoutStream false, so a consumer that enables client
+			// keepalive at any useful rate is GOAWAY'd for too_many_pings while
+			// this server pings it every 54s. That asymmetry made the obvious
+			// client-side mitigation actively harmful.
+			grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+				MinTime:             conf.KeepaliveMinTime,
+				PermitWithoutStream: true,
+			}),
 			grpc.MaxConcurrentStreams(maxConcurrentStreams),
 		),
 	}
@@ -68,9 +80,21 @@ func (g *GRPCServer) Run() error {
 // does not block on long-lived consumers.
 func (g *GRPCServer) Stop() { g.grpcSrv.Stop() }
 
-// Subscribe authenticates and enforces caps before opening the stream, then
-// drains the buffer as proto frames (metadata omits Raw); lagged on overflow.
-func (g *GRPCServer) Subscribe(req *streamv1.SubscribeRequest, stream grpc.ServerStreamingServer[streamv1.BlockEvent]) error {
+// Subscribe serves the consumer block stream.
+//
+// The client stream is only a token channel: the first message selects mode
+// and topics, later ones carry a refreshed JWT. A client that sends one
+// message and half-closes, which is what a server-streaming stub does, is
+// served exactly as before, so the shape change is wire compatible.
+func (g *GRPCServer) Subscribe(stream grpc.BidiStreamingServer[streamv1.SubscribeRequest, streamv1.BlockEvent]) error {
+	req, err := stream.Recv()
+	if err != nil {
+		if errors.Is(err, io.EOF) {
+			// Half-closed without selecting anything, so there is nothing to serve.
+			return status.Error(codes.InvalidArgument, "no subscribe request received")
+		}
+		return err
+	}
 	mode, ok := normalizeMode(req.GetMode())
 	if !ok {
 		return status.Error(codes.InvalidArgument, "invalid mode")
@@ -80,25 +104,84 @@ func (g *GRPCServer) Subscribe(req *streamv1.SubscribeRequest, stream grpc.Serve
 	}
 
 	ctx := stream.Context()
-	subject, err := g.auth.Authenticate(metadataToken(ctx))
+	// The first token still comes from the header, so nothing changes for a
+	// consumer that never refreshes.
+	token := metadataToken(ctx)
+	subject, err := g.auth.Authenticate(token)
 	if err != nil {
 		telemetry.RecordStreamAuthFailure()
 		return status.Error(codes.Unauthenticated, "unauthorized")
 	}
-	if !g.limiter.acquire(subject) {
+	connID, ok := g.limiter.acquire(subject)
+	if !ok {
 		return status.Error(codes.ResourceExhausted, "too many connections")
 	}
-	defer g.limiter.release(subject)
+	defer g.limiter.release(subject, connID)
 
 	sub := g.hub.Subscribe(g.cfg.BufferSize)
 	defer sub.Close()
 
+	// Refreshed tokens arrive on their own goroutine because Recv blocks, but
+	// they are applied on the send loop, which stays the only writer.
+	refresh := make(chan string, 1)
+	go recvTokens(stream, refresh)
+
+	hb, hbC := heartbeatTicker(g.cfg.HeartbeatInterval)
+	if hb != nil {
+		defer hb.Stop()
+	}
+	ra, raC := reauthTicker(&g.cfg)
+	if ra != nil {
+		defer ra.Stop()
+	}
+
+	var live livenessState
+	var reauthFailing bool
 	raw := mode == modeRaw
 	var lastDropped uint64
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
+		case t := <-refresh:
+			// Verified on the send loop, which owns token, so a rejected
+			// refresh cannot change who this connection is authenticated as.
+			if _, err := g.auth.Authenticate(t); err != nil {
+				telemetry.RecordStreamAuthFailure()
+				continue
+			}
+			token = t
+		case <-raC:
+			// Re-verifying the token the connection last presented is what
+			// makes expiry visible: the verifier checks exp, so no expiry
+			// needs tracking here.
+			if _, rerr := g.auth.Authenticate(token); rerr != nil {
+				telemetry.RecordStreamReauthFailure()
+				if g.cfg.ReauthMode == ReauthEnforce {
+					g.log.Error("closing consumer stream, token no longer verifies (enforce mode)", rerr,
+						logger.WithString("subject", subject))
+					return status.Error(codes.Unauthenticated, "token expired, refresh required")
+				}
+				// Logged on the transition only: observe mode exists to learn
+				// which consumers have not adopted refresh, and the metric
+				// alone does not name them.
+				if !reauthFailing {
+					reauthFailing = true
+					g.log.Error("consumer stream token no longer verifies, keeping stream (observe mode)", rerr,
+						logger.WithString("subject", subject))
+				}
+			} else {
+				reauthFailing = false
+			}
+		case <-hbC:
+			last, expected, silence := live.snapshot(time.Now())
+			f := &streamv1.BlockEvent{Frame: &streamv1.BlockEvent_Heartbeat{Heartbeat: &streamv1.Heartbeat{
+				LastSlot: last, ExpectedSlot: expected, SilenceMs: silence,
+			}}}
+			if err := stream.Send(f); err != nil {
+				return err
+			}
+			telemetry.RecordStreamHeartbeatSent()
 		case ev, ok := <-sub.Events():
 			if !ok {
 				return nil
@@ -113,7 +196,23 @@ func (g *GRPCServer) Subscribe(req *streamv1.SubscribeRequest, stream grpc.Serve
 			if err := stream.Send(toProto(ev, raw)); err != nil {
 				return err
 			}
+			live.observe(ev.Slot)
 			telemetry.RecordStreamEventSent()
+		}
+	}
+}
+
+// recvTokens forwards refreshed tokens until the client stops sending. io.EOF
+// is the normal end for a consumer that half-closes and never refreshes, so it
+// ends this goroutine without disturbing the stream.
+func recvTokens(stream grpc.BidiStreamingServer[streamv1.SubscribeRequest, streamv1.BlockEvent], out chan string) {
+	for {
+		m, err := stream.Recv()
+		if err != nil {
+			return
+		}
+		if t := m.GetToken(); t != "" {
+			offerLatest(out, t)
 		}
 	}
 }

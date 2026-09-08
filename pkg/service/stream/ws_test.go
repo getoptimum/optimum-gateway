@@ -33,7 +33,7 @@ func testAuth(t *testing.T, requireAuth bool) (ConsumerAuthenticator, *test_util
 	return NewConsumerAuthenticator(m, true), rig
 }
 
-func newWSTestServer(t *testing.T, cfg Config, requireAuth bool) (ts *httptest.Server, s *Server, hub *streamhub.Service, rig *test_utils.AuthTestRig) {
+func newWSTestServer(t *testing.T, cfg *Config, requireAuth bool) (ts *httptest.Server, s *Server, hub *streamhub.Service, rig *test_utils.AuthTestRig) {
 	t.Helper()
 	var authenticator ConsumerAuthenticator
 	authenticator, rig = testAuth(t, requireAuth)
@@ -42,6 +42,19 @@ func newWSTestServer(t *testing.T, cfg Config, requireAuth bool) (ts *httptest.S
 	ts = httptest.NewServer(s.httpSrv.Handler)
 	t.Cleanup(ts.Close)
 	return ts, s, hub, rig
+}
+
+// newWSTestServerWithAuth is the same rig with a caller-supplied
+// authenticator, for the re-auth modes: they need authentication to start
+// succeeding and then fail, which no real token can be made to do quickly
+// because the verifier allows 30s of clock skew.
+func newWSTestServerWithAuth(t *testing.T, cfg *Config, authenticator ConsumerAuthenticator) (*httptest.Server, *streamhub.Service) {
+	t.Helper()
+	hub := streamhub.New()
+	s := NewServer(hub, authenticator, cfg, logger.NewAppSLogger(logger.Debug))
+	ts := httptest.NewServer(s.httpSrv.Handler)
+	t.Cleanup(ts.Close)
+	return ts, hub
 }
 
 func streamToken(t *testing.T, rig *test_utils.AuthTestRig, subject string) string {
@@ -102,7 +115,7 @@ func waitSubscribed(t *testing.T, hub *streamhub.Service, n int) {
 }
 
 func TestWS_RejectsBeforeUpgrade(t *testing.T) {
-	ts, _, hub, _ := newWSTestServer(t, Config{}, true)
+	ts, _, hub, _ := newWSTestServer(t, &Config{}, true)
 	for _, token := range []string{"not-a-jwt", ""} {
 		conn, code, err := dial(ts, "", token)
 		require.Equal(t, websocket.ErrBadHandshake, err)
@@ -122,7 +135,7 @@ func TestWS_BlockFraming(t *testing.T) {
 		{"raw includes bytes", "?mode=raw", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			ts, _, hub, rig := newWSTestServer(t, Config{}, true)
+			ts, _, hub, rig := newWSTestServer(t, &Config{}, true)
 			conn, _, err := dial(ts, tc.query, streamToken(t, rig, "sub-1"))
 			require.NoError(t, err)
 			defer conn.Close()
@@ -143,7 +156,7 @@ func TestWS_BlockFraming(t *testing.T) {
 }
 
 func TestWS_LaggedOnOverflow(t *testing.T) {
-	ts, _, hub, rig := newWSTestServer(t, Config{BufferSize: 1}, true)
+	ts, _, hub, rig := newWSTestServer(t, &Config{BufferSize: 1}, true)
 	conn, _, err := dial(ts, "", streamToken(t, rig, "sub-1"))
 	require.NoError(t, err)
 	defer conn.Close()
@@ -168,7 +181,7 @@ func TestWS_LaggedOnOverflow(t *testing.T) {
 
 func TestWS_ConnectionCaps(t *testing.T) {
 	t.Run("global", func(t *testing.T) {
-		ts, _, _, rig := newWSTestServer(t, Config{MaxConns: 1}, true)
+		ts, _, _, rig := newWSTestServer(t, &Config{MaxConns: 1}, true)
 		c1, _, err := dial(ts, "", streamToken(t, rig, "sub-a"))
 		require.NoError(t, err)
 		defer c1.Close()
@@ -179,7 +192,7 @@ func TestWS_ConnectionCaps(t *testing.T) {
 	})
 
 	t.Run("per subject", func(t *testing.T) {
-		ts, _, _, rig := newWSTestServer(t, Config{MaxConnsPerSub: 1}, true)
+		ts, _, _, rig := newWSTestServer(t, &Config{MaxConnsPerSub: 1}, true)
 		c1, _, err := dial(ts, "", streamToken(t, rig, "same"))
 		require.NoError(t, err)
 		defer c1.Close()
@@ -196,7 +209,7 @@ func TestWS_ConnectionCaps(t *testing.T) {
 }
 
 func TestWS_LoopbackNoAuthAccepts(t *testing.T) {
-	ts, _, hub, _ := newWSTestServer(t, Config{}, false)
+	ts, _, hub, _ := newWSTestServer(t, &Config{}, false)
 	conn, _, err := dial(ts, "", "")
 	require.NoError(t, err)
 	defer conn.Close()
@@ -207,7 +220,7 @@ func TestWS_LoopbackNoAuthAccepts(t *testing.T) {
 }
 
 func TestWS_SubprotocolTokenNegotiatesMarkerOnly(t *testing.T) {
-	ts, _, hub, rig := newWSTestServer(t, Config{}, true)
+	ts, _, hub, rig := newWSTestServer(t, &Config{}, true)
 	tok := streamToken(t, rig, "sub-1")
 
 	d := websocket.Dialer{Subprotocols: []string{wsSubprotocol, bearerSubproto + tok}}
@@ -223,7 +236,7 @@ func TestWS_SubprotocolTokenNegotiatesMarkerOnly(t *testing.T) {
 }
 
 func TestWS_CleanupOnClose(t *testing.T) {
-	ts, s, hub, rig := newWSTestServer(t, Config{}, true)
+	ts, s, hub, rig := newWSTestServer(t, &Config{}, true)
 	conn, _, err := dial(ts, "", streamToken(t, rig, "sub-1"))
 	require.NoError(t, err)
 
@@ -238,4 +251,133 @@ func TestWS_CleanupOnClose(t *testing.T) {
 		defer s.limiter.mu.Unlock()
 		return s.limiter.conns == 0 && len(s.limiter.perSub) == 0
 	}, 2*time.Second, 10*time.Millisecond)
+}
+
+// readFrameUntil returns the first frame of the given type, so a test can
+// assert on one kind without depending on what precedes it.
+func readFrameUntil(t *testing.T, conn *websocket.Conn, frameType string) map[string]any {
+	t.Helper()
+	for deadline := time.Now().Add(3 * time.Second); time.Now().Before(deadline); {
+		if f := readFrame(t, conn); f["type"] == frameType {
+			return f
+		}
+	}
+	t.Fatalf("no %q frame before deadline", frameType)
+	return nil
+}
+
+// TestWS_HeartbeatDuringSilence covers the reason the WS heartbeat is a data
+// frame and not the existing control ping: browsers cannot observe WebSocket
+// ping/pong, so a control frame is invisible to exactly the consumers most
+// likely to sit idle.
+func TestWS_HeartbeatDuringSilence(t *testing.T) {
+	ts, _, hub, rig := newWSTestServer(t, &Config{HeartbeatInterval: 20 * time.Millisecond}, true)
+	conn, _, err := dial(ts, "", streamToken(t, rig, "sub-1"))
+	require.NoError(t, err)
+	defer conn.Close()
+
+	waitSubscribed(t, hub, 1)
+
+	f := readFrameUntil(t, conn, frameTypeHeartbeat)
+	require.Zero(t, f["last_slot"], "no block has been delivered yet")
+	require.Zero(t, f["silence_ms"], "silence is unmeasurable before the first block")
+	require.Positive(t, f["expected_slot"], "expected_slot comes from the wall clock, not the feed")
+}
+
+func TestWS_HeartbeatReportsLastDeliveredSlot(t *testing.T) {
+	ts, _, hub, rig := newWSTestServer(t, &Config{HeartbeatInterval: 20 * time.Millisecond}, true)
+	conn, _, err := dial(ts, "", streamToken(t, rig, "sub-1"))
+	require.NoError(t, err)
+	defer conn.Close()
+
+	waitSubscribed(t, hub, 1)
+	hub.Emit(sampleEvent())
+
+	require.EqualValues(t, 42, readFrameUntil(t, conn, frameTypeBlock)["slot"])
+	f := readFrameUntil(t, conn, frameTypeHeartbeat)
+	require.EqualValues(t, 42, f["last_slot"], "the heartbeat must report the last slot actually written")
+	require.Greater(t, f["expected_slot"], f["last_slot"], "sampleEvent is a historical slot, so the feed reads as behind")
+}
+
+// TestWS_IgnoresNonRefreshMessages keeps the read pump's original contract:
+// consumers are read-only apart from a token refresh, and anything else they
+// send must not disturb the connection.
+func TestWS_IgnoresNonRefreshMessages(t *testing.T) {
+	ts, _, hub, rig := newWSTestServer(t, &Config{HeartbeatInterval: 20 * time.Millisecond}, true)
+	conn, _, err := dial(ts, "", streamToken(t, rig, "sub-1"))
+	require.NoError(t, err)
+	defer conn.Close()
+
+	waitSubscribed(t, hub, 1)
+	require.NoError(t, conn.WriteMessage(websocket.TextMessage, []byte("not json at all")))
+	require.NoError(t, conn.WriteMessage(websocket.TextMessage, []byte(`{"unrelated":true}`)))
+
+	hub.Emit(sampleEvent())
+	require.EqualValues(t, 42, readFrameUntil(t, conn, frameTypeBlock)["slot"])
+	require.Equal(t, 1, hub.SubscriberCount())
+}
+
+func TestWS_AcceptsRefreshedTokenMidStream(t *testing.T) {
+	ts, _, hub, rig := newWSTestServer(t, &Config{HeartbeatInterval: 20 * time.Millisecond}, true)
+	conn, _, err := dial(ts, "", streamToken(t, rig, "sub-1"))
+	require.NoError(t, err)
+	defer conn.Close()
+
+	waitSubscribed(t, hub, 1)
+	refresh, err := json.Marshal(map[string]string{"token": streamToken(t, rig, "sub-1")})
+	require.NoError(t, err)
+	require.NoError(t, conn.WriteMessage(websocket.TextMessage, refresh))
+
+	// Applied on the writer, so the proof it did not disturb delivery is that
+	// frames keep arriving afterwards.
+	require.NotNil(t, readFrameUntil(t, conn, frameTypeHeartbeat))
+	hub.Emit(sampleEvent())
+	require.EqualValues(t, 42, readFrameUntil(t, conn, frameTypeBlock)["slot"])
+	require.Equal(t, 1, hub.SubscriberCount(), "a refresh must not churn the subscription")
+}
+
+// TestWS_ReauthEnforceClosesWithReason covers the only close frame this
+// transport sends. A consumer holding a stream for weeks has to tell an auth
+// cut from a dead network, and the close code is the only thing that says so.
+func TestWS_ReauthEnforceClosesWithReason(t *testing.T) {
+	auth := &revocableAuth{}
+	ts, hub := newWSTestServerWithAuth(t, &Config{
+		ReauthMode: ReauthEnforce, ReauthInterval: 20 * time.Millisecond,
+	}, auth)
+	conn, _, err := dial(ts, "", "any-token")
+	require.NoError(t, err)
+	defer conn.Close()
+
+	waitSubscribed(t, hub, 1)
+	auth.revoked.Store(true)
+
+	_ = conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+	for {
+		if _, _, rerr := conn.ReadMessage(); rerr != nil {
+			require.True(t, websocket.IsCloseError(rerr, websocket.ClosePolicyViolation),
+				"expected a 1008 close, got %v", rerr)
+			require.ErrorContains(t, rerr, "token expired, refresh required")
+			break
+		}
+	}
+	waitSubscribed(t, hub, 0)
+}
+
+func TestWS_ReauthObserveKeepsStream(t *testing.T) {
+	auth := &revocableAuth{}
+	ts, hub := newWSTestServerWithAuth(t, &Config{
+		ReauthMode: ReauthObserve, ReauthInterval: 20 * time.Millisecond,
+		HeartbeatInterval: 20 * time.Millisecond,
+	}, auth)
+	conn, _, err := dial(ts, "", "any-token")
+	require.NoError(t, err)
+	defer conn.Close()
+
+	waitSubscribed(t, hub, 1)
+	auth.revoked.Store(true)
+
+	require.NotNil(t, readFrameUntil(t, conn, frameTypeHeartbeat))
+	hub.Emit(sampleEvent())
+	require.EqualValues(t, 42, readFrameUntil(t, conn, frameTypeBlock)["slot"])
+	require.Equal(t, 1, hub.SubscriberCount())
 }

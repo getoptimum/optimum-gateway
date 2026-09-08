@@ -109,6 +109,22 @@ type AppConfig struct {
 	StreamMaxConnsPerSub int    `yaml:"stream_max_conns_per_sub" env:"OPT_STREAM_MAX_CONNS_PER_SUB" default:"8"`
 	StreamBufferSize     int    `yaml:"stream_buffer_size" env:"OPT_STREAM_BUFFER_SIZE" default:"64"`
 
+	// StreamHeartbeatIntervalSec paces the in-band liveness frame. Nothing
+	// below the transport reveals a feed that has gone quiet: the connection
+	// stays healthy on PINGs while no blocks arrive, so without this a stalled
+	// ingest is indistinguishable from a quiet chain. 0 disables it.
+	StreamHeartbeatIntervalSec int `yaml:"stream_heartbeat_interval_sec" env:"OPT_STREAM_HEARTBEAT_INTERVAL_SEC" default:"20"`
+	// StreamKeepaliveMinTimeSec is the shortest client ping interval accepted.
+	// It must stay below the interval consumers are told to use, or they are
+	// GOAWAY'd for too_many_pings.
+	StreamKeepaliveMinTimeSec int `yaml:"stream_keepalive_min_time_sec" env:"OPT_STREAM_KEEPALIVE_MIN_TIME_SEC" default:"20"`
+	// StreamReauthMode is off, observe or enforce. Ships as observe so a
+	// weeks-long stream is measured before anything is cut.
+	StreamReauthMode string `yaml:"stream_reauth_mode" env:"OPT_STREAM_REAUTH_MODE" default:"observe"`
+	// StreamReauthIntervalSec paces re-verification of the token the
+	// connection last presented.
+	StreamReauthIntervalSec int `yaml:"stream_reauth_interval_sec" env:"OPT_STREAM_REAUTH_INTERVAL_SEC" default:"60"`
+
 	RemotePushEnable   bool   `yaml:"remote_push_enable" env:"OPT_REMOTE_PUSH_ENABLE" default:"false"`
 	RemotePushMimirURL string `yaml:"remote_push_mimir_url" env:"OPT_REMOTE_PUSH_MIMIR_URL" default:"https://v2-mimir.getoptimum.io"`
 	RemotePushLokiURL  string `yaml:"remote_push_loki_url" env:"OPT_REMOTE_PUSH_LOKI_URL" default:"https://v2-loki.getoptimum.io"`
@@ -291,6 +307,23 @@ func (c *AppConfig) Validate() error {
 		}
 		if c.StreamBufferSize <= 0 {
 			return fmt.Errorf("stream_buffer_size must be > 0")
+		}
+		if c.StreamHeartbeatIntervalSec < 0 {
+			return fmt.Errorf("stream_heartbeat_interval_sec must be >= 0 (0 disables)")
+		}
+		if c.StreamKeepaliveMinTimeSec <= 0 {
+			return fmt.Errorf("stream_keepalive_min_time_sec must be > 0")
+		}
+		if c.StreamReauthIntervalSec <= 0 {
+			return fmt.Errorf("stream_reauth_interval_sec must be > 0")
+		}
+		// Literals rather than the stream package's constants: pkg/service/stream
+		// depends on this package, so importing it back would cycle. The stream
+		// package pins these against its constants in a test.
+		switch c.StreamReauthMode {
+		case "off", "observe", "enforce":
+		default:
+			return fmt.Errorf("stream_reauth_mode must be one of \"off\", \"observe\", \"enforce\", got %q", c.StreamReauthMode)
 		}
 	}
 	if c.StreamOnly && !c.StreamEnable {
