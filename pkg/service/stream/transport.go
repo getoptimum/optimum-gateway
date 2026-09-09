@@ -30,10 +30,8 @@ func withDefaults(in *Config) Config {
 	if cfg.BufferSize <= 0 {
 		cfg.BufferSize = streamhub.DefaultBufferSize
 	}
-	// Zero is meaningful here and disables the heartbeat, so an unset field
-	// cannot mean "use the default" the way the caps do. Config validation
-	// rejects a negative, and clamping one to 0 keeps this layer's contract the
-	// same rather than quietly substituting the default.
+	// Zero disables the heartbeat, so unset cannot mean "use the default" as it
+	// does for the caps; a negative clamps to disabled, never to the default.
 	if cfg.HeartbeatInterval < 0 {
 		cfg.HeartbeatInterval = 0
 	}
