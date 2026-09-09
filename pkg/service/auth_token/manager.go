@@ -28,9 +28,6 @@ var (
 )
 
 const (
-	// mintPath is appended to RemoteAuthURL for the endpoint; the same constant
-	// builds the signed audience, so the two cannot drift apart.
-	mintPath = enrollment.TokenPath
 	// clientAssertionType is the RFC 7523 grant identifier optimum-auth requires
 	// alongside a client_assertion; omitting it is a 400, not a 401.
 	clientAssertionType = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
@@ -137,8 +134,8 @@ func New(ctx context.Context, log logger.AppLogger, appCfg *config.AppConfig) (*
 		log:      log.With(logger.WithService("auth_token")),
 		apiKey:   appCfg.APIKey,
 		peerID:   identityKey.ID.String(),
-		mintURL:  issuer + mintPath,
-		mintAud:  issuer + enrollment.TokenPath,
+		mintURL:  issuer + enrollment.MintPath,
+		mintAud:  issuer + enrollment.MintPath,
 		verifier: verifier,
 	}
 

@@ -37,11 +37,11 @@ const (
 	// what makes the server's idempotency reachable after a lost response.
 	PendingKeyFile = "enrollment.key"
 
-	// EnrollPath and TokenPath are appended to the auth ISSUER (not the request
+	// EnrollPath and MintPath are appended to the auth ISSUER (not the request
 	// URL) to form assertion audiences. optimum-auth derives both from
 	// SIGNER_ISSUER, so anything else fails the audience check.
 	EnrollPath = "/api/v1/gateways/enroll"
-	TokenPath  = "/api/v1/auth/token"
+	MintPath   = "/api/v1/auth/token"
 
 	// assertionLifetime is well inside the 120s ceiling optimum-auth enforces on
 	// exp - iat. The server also allows 60s of clock tolerance, so a client clock up

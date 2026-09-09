@@ -71,7 +71,7 @@ func TestEnrollmentGrant_EnrollsThenMintsWithClientAssertion(t *testing.T) {
 	require.NoError(t, err, "the mint assertion must verify against the enrolled public key")
 	require.Equal(t, "ag_test", claims["sub"])
 	require.Equal(t, "ag_test", claims["iss"])
-	require.Equal(t, rig.ServerURL()+enrollment.TokenPath, claims["aud"],
+	require.Equal(t, rig.ServerURL()+enrollment.MintPath, claims["aud"],
 		"aud is derived from the auth issuer, not the mint URL")
 	require.Equal(t, rig.DefaultPeerID, claims["peer_id"],
 		"peer_id inside the signature is what binds the token to this node")
@@ -93,7 +93,7 @@ func TestEnrollmentGrant_AudienceIsNormalized(t *testing.T) {
 	_, err = jwt.ParseWithClaims(rig.MintPayload()["client_assertion"], claims,
 		func(*jwt.Token) (any, error) { return test_utils.PublicKeyFromJWK(t, rig.EnrolledKey()), nil })
 	require.NoError(t, err)
-	require.Equal(t, rig.ServerURL()+enrollment.TokenPath, claims["aud"],
+	require.Equal(t, rig.ServerURL()+enrollment.MintPath, claims["aud"],
 		"a trailing slash on remote_auth_url must not produce a doubled slash in aud")
 }
 

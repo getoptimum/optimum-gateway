@@ -64,10 +64,10 @@ func TestLiveEnroll(t *testing.T) {
 	require.True(t, reusedAgain)
 
 	// The credential must be able to authenticate: mint a real token pair.
-	assertion, err := cred.SignAssertion(enrollment.NormalizeIssuer(issuer)+enrollment.TokenPath, peerID)
+	assertion, err := cred.SignAssertion(enrollment.NormalizeIssuer(issuer)+enrollment.MintPath, peerID)
 	require.NoError(t, err)
 
-	resp := mintLive(t, enrollment.NormalizeIssuer(issuer)+enrollment.TokenPath, map[string]string{
+	resp := mintLive(t, enrollment.NormalizeIssuer(issuer)+enrollment.MintPath, map[string]string{
 		"client_assertion":      assertion,
 		"client_assertion_type": "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",
 		"peer_id":               peerID,
