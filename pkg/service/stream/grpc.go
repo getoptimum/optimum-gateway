@@ -91,11 +91,11 @@ func (g *GRPCServer) Subscribe(req *streamv1.SubscribeRequest, stream grpc.Serve
 		telemetry.RecordStreamAuthFailure()
 		return status.Error(codes.Unauthenticated, "unauthorized")
 	}
-	connID, ok := g.limiter.acquire(subject)
+	release, ok := g.limiter.acquire(subject)
 	if !ok {
 		return status.Error(codes.ResourceExhausted, "too many connections")
 	}
-	defer g.limiter.release(subject, connID)
+	defer release()
 
 	sub := g.hub.Subscribe(g.cfg.BufferSize)
 	defer sub.Close()
