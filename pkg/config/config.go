@@ -109,6 +109,11 @@ type AppConfig struct {
 	StreamMaxConnsPerSub int    `yaml:"stream_max_conns_per_sub" env:"OPT_STREAM_MAX_CONNS_PER_SUB" default:"8"`
 	StreamBufferSize     int    `yaml:"stream_buffer_size" env:"OPT_STREAM_BUFFER_SIZE" default:"64"`
 
+	// StreamKeepaliveMinTimeSec is the shortest client ping interval accepted.
+	// It must stay below the interval consumers are told to use, or they are
+	// GOAWAY'd for too_many_pings.
+	StreamKeepaliveMinTimeSec int `yaml:"stream_keepalive_min_time_sec" env:"OPT_STREAM_KEEPALIVE_MIN_TIME_SEC" default:"20"`
+
 	RemotePushEnable   bool   `yaml:"remote_push_enable" env:"OPT_REMOTE_PUSH_ENABLE" default:"false"`
 	RemotePushMimirURL string `yaml:"remote_push_mimir_url" env:"OPT_REMOTE_PUSH_MIMIR_URL" default:"https://v2-mimir.getoptimum.io"`
 	RemotePushLokiURL  string `yaml:"remote_push_loki_url" env:"OPT_REMOTE_PUSH_LOKI_URL" default:"https://v2-loki.getoptimum.io"`
@@ -291,6 +296,9 @@ func (c *AppConfig) Validate() error {
 		}
 		if c.StreamBufferSize <= 0 {
 			return fmt.Errorf("stream_buffer_size must be > 0")
+		}
+		if c.StreamKeepaliveMinTimeSec <= 0 {
+			return fmt.Errorf("stream_keepalive_min_time_sec must be > 0")
 		}
 	}
 	if c.StreamOnly && !c.StreamEnable {
