@@ -1,9 +1,9 @@
 package gossipsub_gateway
 
 import (
+	"fmt"
 	"time"
 
-	commonhash "github.com/getoptimum/optimum-common/pkg/hash"
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
 	chainstate "github.com/getoptimum/optimum-gateway/pkg/protocol/chain_state"
@@ -14,6 +14,8 @@ import (
 )
 
 const staleSlotThreshold = 3 // max slots behind current before we skip forwarding the block
+
+const streamDedupTTL = 30 * time.Second // how long a (source, slot, proposer, state_root) key is remembered
 
 // processBeaconBlockArrival decodes a beacon block exactly once, hands the
 // observation to the bootstrapper for asynchronous latency telemetry and reports
@@ -53,9 +55,14 @@ func (s *Service) processBeaconBlockArrival(
 	stale := diff > staleSlotThreshold
 
 	// Stream every observation, stale flagged rather than dropped (ADR-0011).
-	// Peek only; isDuplicateMessage would Put and skip forwarding.
+	// Collapse same-source re-encodings on (source, slot, proposer, state_root);
+	// distinct sources and equivocations still emit as separate events. Dedicated
+	// map so forwarding via messagesMap stays untouched.
 	if s.streamHub != nil {
-		if _, exists := s.messagesMap.Get(commonhash.XXHash(msg)); !exists {
+		dedupKey := fmt.Sprintf("%s|%d|%d|%x", source,
+			blockDecoded.Header.Slot, blockDecoded.Header.ProposerIndex, blockDecoded.Header.StateRoot)
+		if _, dup := s.streamDedup.Get(dedupKey); !dup {
+			s.streamDedup.Put(dedupKey, struct{}{})
 			s.streamHub.Emit(&streamhub.BlockEvent{
 				Slot:           blockDecoded.Header.Slot,
 				ProposerIndex:  blockDecoded.Header.ProposerIndex,

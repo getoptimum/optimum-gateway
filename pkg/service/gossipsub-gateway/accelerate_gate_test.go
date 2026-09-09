@@ -37,6 +37,17 @@ func blockAtSlot(t *testing.T, hexBlock string, slot uint64) []byte {
 	return encoded
 }
 
+// reencodeBody flips a body byte so raw bytes change while slot/proposer/state_root stay the same.
+func reencodeBody(t *testing.T, encoded []byte) []byte {
+	t.Helper()
+	ssz, err := utils.DecodeSnappy(encoded, utils.MaxGossipPayloadSize)
+	require.NoError(t, err)
+	off := 4 + 96 + 112 // SSZ prefix + signature + fixed header => first byte past the identity fields
+	require.Greater(t, len(ssz), off, "fixture body too short to mutate")
+	ssz[off] ^= 0xFF
+	return snappy.Encode(nil, ssz)
+}
+
 // joinCLTopic subscribes to a real gossipsub topic so CL publishes can be read back.
 func joinCLTopic(t *testing.T, svc *Service, topic string) *libp2ppubsub.Subscription {
 	t.Helper()
@@ -100,8 +111,8 @@ func TestMumP2PBeaconBlockAccelerateGate(t *testing.T) {
 	require.Len(t, sub.Events(), 2, "both blocks are streamed regardless of the verdict")
 }
 
-// Same raw bytes a second time are already in messagesMap, so the stream does not re-emit.
-func TestStreamSkipsAlreadySeenBytes(t *testing.T) {
+// Two mump2p deliveries of one block with different raw bytes (same state_root) emit one event.
+func TestStreamDedupCollapsesReencodedBlock(t *testing.T) {
 	cur := chainstate.CurrentSlot(time.Now())
 	svc, _ := newGateway(t)
 	topic := "/eth2/deadbeef/beacon_block/ssz_snappy"
@@ -110,10 +121,14 @@ func TestStreamSkipsAlreadySeenBytes(t *testing.T) {
 	sub := hub.Subscribe(4)
 	t.Cleanup(sub.Close)
 	t.Cleanup(svc.messagesMap.Close)
+	t.Cleanup(svc.streamDedup.Close)
 
 	block := blockAtSlot(t, test_utils.HoodiBeaconBlockMessage1, cur)
-	svc.processMumP2PMessage(svc.log, &commonentities.P2PMessage{SourceNodeID: "peer-1", Topic: topic, Message: block})
-	svc.processMumP2PMessage(svc.log, &commonentities.P2PMessage{SourceNodeID: "peer-2", Topic: topic, Message: block})
+	variant := reencodeBody(t, block)
+	require.NotEqual(t, block, variant, "variant must differ in raw bytes to bypass the byte-hash dedup")
 
-	require.Len(t, sub.Events(), 1, "identical raw bytes emit once")
+	svc.processMumP2PMessage(svc.log, &commonentities.P2PMessage{SourceNodeID: "peer-1", Topic: topic, Message: block})
+	svc.processMumP2PMessage(svc.log, &commonentities.P2PMessage{SourceNodeID: "peer-2", Topic: topic, Message: variant})
+
+	require.Len(t, sub.Events(), 1, "re-encodings of one block collapse to a single stream event")
 }
