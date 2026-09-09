@@ -40,18 +40,8 @@ jobs:
           persist-credentials: false
       - run: go mod download
       - run: make lint
-      - name: Log in to Docker Hub
-        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
-        with:
-          username: getoptimum
-          password: ${{ secrets.OPT_DOCKER_ACCESS_TOKEN }}
-      - name: Start RLNC shared-memory server
-        run: make dev_up_ci
       - run: CI_RUN="true" PROMETHEUS_VALIDATION_SCHEME=legacy make test
       - run: make coverage
-      - name: Stop RLNC shared-memory server
-        if: always()
-        run: make dev_down_ci
       # Post the branch-protection check that the skipped reusable job never emits.
       - name: Report required golangci check
         env:

@@ -23,9 +23,8 @@ var (
 )
 
 // newCapabilityNode builds a Node with only the state the admission path touches. ps is
-// left nil on purpose: constructing a real PubSub requires /dev/shm, which macOS does not
-// provide, so these tests pin the cached state that drives AllowPeerWithCapability rather
-// than the pubsub call itself.
+// left nil on purpose: these tests pin the cached state that drives
+// AllowPeerWithCapability rather than spinning up a full PubSub stack.
 func newCapabilityNode(t *testing.T) *Node {
 	t.Helper()
 
