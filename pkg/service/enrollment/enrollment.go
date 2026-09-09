@@ -440,6 +440,11 @@ func Enroll(ctx context.Context, log logger.AppLogger, opts *Options) (*Credenti
 		if parsed != nil {
 			detail = parsed.Error
 		}
+		// Carry err: an HTML body from a proxy leaves detail empty, and then the
+		// transport or decode failure is the only thing that explains the boot.
+		if err != nil {
+			return nil, fmt.Errorf("enrollment: enroll returned %d (error=%q): %w", status, detail, err)
+		}
 		return nil, fmt.Errorf("enrollment: enroll returned %d (error=%q)", status, detail)
 	}
 	if parsed == nil || parsed.ClientID == "" {

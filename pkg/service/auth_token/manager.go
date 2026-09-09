@@ -106,6 +106,9 @@ func New(ctx context.Context, log logger.AppLogger, appCfg *config.AppConfig) (*
 	switch {
 	case !appCfg.EnableAuth:
 		log.Info("OPT_ENABLE_AUTH=false — gateway JWT mint disabled; LOCAL DEV ONLY")
+		if appCfg.APIKey != "" || appCfg.JoinKey != "" {
+			log.Info("a gateway credential is configured but ignored because auth is disabled")
+		}
 		return NewDisabled(log), nil
 	case appCfg.APIKey == "" && appCfg.JoinKey == "":
 		log.Info("neither OPT_API_KEY nor OPT_JOIN_KEY set: auth_token disabled")

@@ -31,8 +31,12 @@ func joinKeyCfg(t *testing.T, rig *test_utils.AuthTestRig, dir string) *config.A
 // node's mumP2P identity, which the enrolled credential is bound to.
 func restartOf(t *testing.T, rig *test_utils.AuthTestRig, prev *config.AppConfig) *config.AppConfig {
 	t.Helper()
+	// AppCfg makes a fresh identity and repoints rig.DefaultPeerID at it. A restart
+	// keeps the old identity, so put the rig back or it describes a discarded one.
+	peerID := rig.DefaultPeerID
 	cfg := joinKeyCfg(t, rig, prev.EnrollCredDir)
 	cfg.IdentityMumP2PDir = prev.IdentityMumP2PDir
+	rig.DefaultPeerID = peerID
 	return cfg
 }
 
