@@ -13,14 +13,12 @@ const (
 	defaultMaxConnsPerSub = 8
 )
 
-// defaultKeepaliveMinTime is the shortest client ping interval the gRPC server
-// accepts. The library default is 5m, which GOAWAYs any consumer that enables
-// keepalive at a rate useful to a long-lived stream.
+// defaultKeepaliveMinTime is the shortest client ping interval accepted. The
+// library default of 5m GOAWAYs any consumer that pings at a useful rate.
 const defaultKeepaliveMinTime = 20 * time.Second
 
 // withDefaults fills unset (<=0) caps so both transports share the same limits.
-// Takes a pointer only to stay under gocritic's hugeParam threshold; it works on
-// a copy, so the caller's Config is never mutated.
+// Pointer only for gocritic's hugeParam; it copies, so the caller is unaffected.
 func withDefaults(in *Config) Config {
 	cfg := *in
 	if cfg.MaxConns <= 0 {
@@ -122,9 +120,8 @@ func (l *ConnLimiter) acquire(subject string) (uint64, bool) {
 func (l *ConnLimiter) release(subject string, id uint64) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	// Idempotent: the id is the record that this connection is still counted,
-	// so a repeated release cannot decrement the caps twice and hand out a slot
-	// that was never freed.
+	// Idempotent: the id records that this connection is still counted, so a
+	// repeated release cannot decrement the caps twice.
 	if _, live := l.starts[id]; !live {
 		return
 	}
@@ -139,8 +136,7 @@ func (l *ConnLimiter) release(subject string, id uint64) {
 }
 
 // oldestStart returns the earliest live connection's start, or the zero time
-// when none are open. Caller holds l.mu. O(conns) against a cap of a few
-// hundred.
+// when none are open. Caller holds l.mu.
 func (l *ConnLimiter) oldestStart() time.Time {
 	var oldest time.Time
 	for _, t := range l.starts {
@@ -155,9 +151,8 @@ func (l *ConnLimiter) oldestStart() time.Time {
 // itself is asserted rather than assumed.
 var publishOldestStart = telemetry.SetStreamOldestConnectionStart
 
-// publishOldest republishes the oldest start time. Called under l.mu on every
-// membership change, which is the only time the answer can change, so the
-// gauge never needs a ticker.
+// publishOldest republishes the oldest start. Called on every membership
+// change, the only time the answer can change, so no ticker is needed.
 func (l *ConnLimiter) publishOldest() {
 	oldest := l.oldestStart()
 	if oldest.IsZero() {
