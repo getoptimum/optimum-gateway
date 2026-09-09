@@ -55,9 +55,7 @@ func (s *Service) processBeaconBlockArrival(
 	stale := diff > staleSlotThreshold
 
 	// Stream every observation, stale flagged rather than dropped (ADR-0011).
-	// Collapse same-source re-encodings on (source, slot, proposer, state_root);
-	// distinct sources and equivocations still emit as separate events. Dedicated
-	// map so forwarding via messagesMap stays untouched.
+	// Collapse same-source re-encodings on (source, slot, proposer, state_root).
 	if s.streamHub != nil {
 		dedupKey := fmt.Sprintf("%s|%d|%d|%x", source,
 			blockDecoded.Header.Slot, blockDecoded.Header.ProposerIndex, blockDecoded.Header.StateRoot)
