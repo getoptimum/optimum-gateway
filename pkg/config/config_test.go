@@ -352,6 +352,7 @@ func TestStreamValidation(t *testing.T) {
 
 	t.Run("heartbeat on by default, may be disabled, never negative", func(t *testing.T) {
 		base(t)
+		requireUnset(t, "OPT_STREAM_HEARTBEAT_INTERVAL_SEC")
 		t.Setenv("OPT_STREAM_ENABLE", "true")
 		cfg, err := config.LoadConfig("")
 		require.NoError(t, err)
@@ -360,8 +361,9 @@ func TestStreamValidation(t *testing.T) {
 		require.Equal(t, 20, cfg.StreamHeartbeatIntervalSec)
 
 		t.Setenv("OPT_STREAM_HEARTBEAT_INTERVAL_SEC", "0")
-		_, err = config.LoadConfig("")
+		cfg, err = config.LoadConfig("")
 		require.NoError(t, err, "0 is a valid way to disable it")
+		require.Zero(t, cfg.StreamHeartbeatIntervalSec, "0 must survive, not become the default")
 
 		t.Setenv("OPT_STREAM_HEARTBEAT_INTERVAL_SEC", "-1")
 		_, err = config.LoadConfig("")
