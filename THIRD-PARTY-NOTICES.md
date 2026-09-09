@@ -12,7 +12,7 @@ distributed with this binary.
 Attribution notices required by these licenses (Apache-2.0 §4 and the upstream
 `NOTICE` files it references) are reproduced in the accompanying `NOTICE` file.
 
-Total distributed third-party packages: 234
+Total distributed third-party packages: 235
 
 ## Summary
 
@@ -22,7 +22,7 @@ Total distributed third-party packages: 234
 | Apache-2.0 | 78 |
 | BSD-3-Clause | 42 |
 | BSD-2-Clause | 6 |
-| ISC | 4 |
+| ISC | 5 |
 | MPL-2.0 | 4 |
 | Apache-2.0 OR MIT | 1 |
 
@@ -116,7 +116,7 @@ Total distributed third-party packages: 234
 - [github.com/quic-go/qpack](https://github.com/quic-go/qpack/blob/v0.6.0/LICENSE.md)
 - [github.com/quic-go/quic-go](https://github.com/quic-go/quic-go/blob/v0.60.0/LICENSE)
 - [github.com/quic-go/webtransport-go](https://github.com/quic-go/webtransport-go/blob/v0.11.1/LICENSE)
-- [github.com/stretchr/testify](https://github.com/stretchr/testify/blob/v1.11.1/LICENSE)
+- [github.com/stretchr/testify](https://github.com/stretchr/testify/blob/v1.12.1/LICENSE)
 - [github.com/tinylib/msgp/msgp](https://github.com/tinylib/msgp/blob/v1.6.4/LICENSE)
 - [github.com/valyala/bytebufferpool](https://github.com/valyala/bytebufferpool/blob/v1.0.0/LICENSE)
 - [github.com/valyala/fasthttp](https://github.com/valyala/fasthttp/blob/v1.72.0/LICENSE)
@@ -129,7 +129,7 @@ Total distributed third-party packages: 234
 - [go.uber.org/goleak](https://github.com/uber-go/goleak/blob/v1.3.0/LICENSE)
 - [go.uber.org/multierr](https://github.com/uber-go/multierr/blob/v1.11.0/LICENSE.txt)
 - [go.uber.org/zap](https://github.com/uber-go/zap/blob/v1.28.0/LICENSE)
-- [go.yaml.in/yaml/v3](https://github.com/yaml/go-yaml/blob/v3.0.4/LICENSE)
+- [go.yaml.in/yaml/v3](https://github.com/yaml/go-yaml/blob/v3.0.5/LICENSE)
 - [gopkg.in/yaml.v3](https://github.com/go-yaml/yaml/blob/v3.0.1/LICENSE)
 - [lukechampine.com/blake3](https://github.com/lukechampine/blake3/blob/v1.4.1/LICENSE)
 
@@ -178,7 +178,7 @@ Total distributed third-party packages: 234
 - [github.com/opentracing/opentracing-go](https://github.com/opentracing/opentracing-go/blob/v1.2.0/LICENSE)
 - [github.com/prometheus/client_golang/exp](https://github.com/prometheus/client_golang/blob/d8591d0db856/exp/LICENSE)
 - [github.com/prometheus/client_golang/prometheus](https://github.com/prometheus/client_golang/blob/v1.24.1/LICENSE)
-- [github.com/prometheus/client_model/go](https://github.com/prometheus/client_model/blob/v0.6.2/LICENSE)
+- [github.com/prometheus/client_model/go](https://github.com/prometheus/client_model/blob/v0.6.3/LICENSE)
 - [github.com/prometheus/common](https://github.com/prometheus/common/blob/v0.70.1/LICENSE)
 - [github.com/prometheus/otlptranslator](https://github.com/prometheus/otlptranslator/blob/v1.0.0/LICENSE)
 - [github.com/prometheus/procfs](https://github.com/prometheus/procfs/blob/v0.21.1/LICENSE)
@@ -239,9 +239,9 @@ Total distributed third-party packages: 234
 - [github.com/multiformats/go-base32](https://github.com/multiformats/go-base32/blob/v0.1.0/LICENSE)
 - [github.com/munnerz/goautoneg](https://github.com/munnerz/goautoneg/blob/a7dc8b61c822/LICENSE)
 - [github.com/pbnjay/memory](https://github.com/pbnjay/memory/blob/7b4eea64cf58/LICENSE)
-- [github.com/pmezard/go-difflib/difflib](https://github.com/pmezard/go-difflib/blob/5d4384ee4fb2/LICENSE)
 - [github.com/prometheus/client_golang/internal/github.com/golang/gddo/httputil](https://github.com/prometheus/client_golang/blob/v1.24.1/internal/github.com/golang/gddo/LICENSE)
 - [github.com/spaolacci/murmur3](https://github.com/spaolacci/murmur3/blob/v1.1.0/LICENSE)
+- [github.com/stretchr/testify/internal/difflib](https://github.com/stretchr/testify/blob/v1.12.1/internal/difflib/LICENSE)
 - [github.com/wlynxg/anet](https://github.com/wlynxg/anet/blob/v0.0.5/LICENSE)
 - [golang.org/x/crypto](https://cs.opensource.google/go/x/crypto/+/v0.55.0:LICENSE)
 - [golang.org/x/exp](https://cs.opensource.google/go/x/exp/+/74f9aab9:LICENSE)
@@ -254,7 +254,7 @@ Total distributed third-party packages: 234
 - [golang.org/x/time/rate](https://cs.opensource.google/go/x/time/+/v0.15.0:LICENSE)
 - [gonum.org/v1/gonum/mathext](https://github.com/gonum/gonum/blob/v0.17.0/LICENSE)
 - [google.golang.org/api](https://github.com/googleapis/google-api-go-client/blob/v0.272.0/LICENSE)
-- [google.golang.org/protobuf](https://github.com/protocolbuffers/protobuf-go/blob/v1.36.11/LICENSE)
+- [google.golang.org/protobuf](https://github.com/protocolbuffers/protobuf-go/blob/v1.36.12/LICENSE)
 - [gopkg.in/inf.v0](https://github.com/go-inf/inf/blob/v0.9.1/LICENSE)
 - [k8s.io/apimachinery/third_party/forked/golang/reflect](https://github.com/kubernetes/apimachinery/blob/v0.35.3/third_party/forked/golang/LICENSE)
 - [k8s.io/utils/internal/third_party/forked/golang/net](https://github.com/kubernetes/utils/blob/bc988d571ff4/internal/third_party/forked/golang/LICENSE)
@@ -274,6 +274,7 @@ Total distributed third-party packages: 234
 - [github.com/davecgh/go-spew/spew](https://github.com/davecgh/go-spew/blob/d8f796af33cc/LICENSE)
 - [github.com/decred/dcrd/dcrec/secp256k1/v4](https://github.com/decred/dcrd/blob/dcrec/secp256k1/v4.4.0/dcrec/secp256k1/LICENSE)
 - [github.com/libp2p/go-reuseport](https://github.com/libp2p/go-reuseport/blob/v0.4.0/LICENSE)
+- [github.com/stretchr/testify/internal/spew](https://github.com/stretchr/testify/blob/v1.12.1/internal/spew/LICENSE)
 
 ## MPL-2.0
 
