@@ -63,6 +63,7 @@ type Service struct {
 	authMgr                     *auth_token.Service // always non-nil; degrades to no-op when auth is disabled. Used for Bearer on outbound bootstrap calls and JWT in peer handshake.
 
 	messagesMap   *syncx.TTLMap[uint64, struct{}]
+	streamDedup   *syncx.TTLMap[string, struct{}] // stream emit dedup: (source, slot, proposer, state_root)
 	sszEncoder    *consensus.SSZSnappyCodec
 	networkStatus atomic.Pointer[networkBeaconStatus]
 
@@ -123,6 +124,7 @@ func NewService(
 		clMessages:        make(chan *entities.CLMessage, 1_000),
 		mumP2PMessages:    make(chan *commonentities.P2PMessage, 1_000),
 		messagesMap:       syncx.NewTTLMap[uint64, struct{}](30*time.Second, 30*time.Second),
+		streamDedup:       syncx.NewTTLMap[string, struct{}](streamDedupTTL, streamDedupTTL),
 		sszEncoder:        &consensus.SSZSnappyCodec{},
 		statSendMum:       syncx.NewRWMap[string, int](),
 		statSendLib:       syncx.NewRWMap[string, int](),

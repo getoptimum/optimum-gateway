@@ -33,7 +33,7 @@ func testAuth(t *testing.T, requireAuth bool) (ConsumerAuthenticator, *test_util
 	return NewConsumerAuthenticator(m, true), rig
 }
 
-func newWSTestServer(t *testing.T, cfg Config, requireAuth bool) (ts *httptest.Server, s *Server, hub *streamhub.Service, rig *test_utils.AuthTestRig) {
+func newWSTestServer(t *testing.T, cfg *Config, requireAuth bool) (ts *httptest.Server, s *Server, hub *streamhub.Service, rig *test_utils.AuthTestRig) {
 	t.Helper()
 	var authenticator ConsumerAuthenticator
 	authenticator, rig = testAuth(t, requireAuth)
@@ -102,7 +102,7 @@ func waitSubscribed(t *testing.T, hub *streamhub.Service, n int) {
 }
 
 func TestWS_RejectsBeforeUpgrade(t *testing.T) {
-	ts, _, hub, _ := newWSTestServer(t, Config{}, true)
+	ts, _, hub, _ := newWSTestServer(t, &Config{}, true)
 	for _, token := range []string{"not-a-jwt", ""} {
 		conn, code, err := dial(ts, "", token)
 		require.Equal(t, websocket.ErrBadHandshake, err)
@@ -122,7 +122,7 @@ func TestWS_BlockFraming(t *testing.T) {
 		{"raw includes bytes", "?mode=raw", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			ts, _, hub, rig := newWSTestServer(t, Config{}, true)
+			ts, _, hub, rig := newWSTestServer(t, &Config{}, true)
 			conn, _, err := dial(ts, tc.query, streamToken(t, rig, "sub-1"))
 			require.NoError(t, err)
 			defer conn.Close()
@@ -143,7 +143,7 @@ func TestWS_BlockFraming(t *testing.T) {
 }
 
 func TestWS_LaggedOnOverflow(t *testing.T) {
-	ts, _, hub, rig := newWSTestServer(t, Config{BufferSize: 1}, true)
+	ts, _, hub, rig := newWSTestServer(t, &Config{BufferSize: 1}, true)
 	conn, _, err := dial(ts, "", streamToken(t, rig, "sub-1"))
 	require.NoError(t, err)
 	defer conn.Close()
@@ -168,7 +168,7 @@ func TestWS_LaggedOnOverflow(t *testing.T) {
 
 func TestWS_ConnectionCaps(t *testing.T) {
 	t.Run("global", func(t *testing.T) {
-		ts, _, _, rig := newWSTestServer(t, Config{MaxConns: 1}, true)
+		ts, _, _, rig := newWSTestServer(t, &Config{MaxConns: 1}, true)
 		c1, _, err := dial(ts, "", streamToken(t, rig, "sub-a"))
 		require.NoError(t, err)
 		defer c1.Close()
@@ -179,7 +179,7 @@ func TestWS_ConnectionCaps(t *testing.T) {
 	})
 
 	t.Run("per subject", func(t *testing.T) {
-		ts, _, _, rig := newWSTestServer(t, Config{MaxConnsPerSub: 1}, true)
+		ts, _, _, rig := newWSTestServer(t, &Config{MaxConnsPerSub: 1}, true)
 		c1, _, err := dial(ts, "", streamToken(t, rig, "same"))
 		require.NoError(t, err)
 		defer c1.Close()
@@ -196,7 +196,7 @@ func TestWS_ConnectionCaps(t *testing.T) {
 }
 
 func TestWS_LoopbackNoAuthAccepts(t *testing.T) {
-	ts, _, hub, _ := newWSTestServer(t, Config{}, false)
+	ts, _, hub, _ := newWSTestServer(t, &Config{}, false)
 	conn, _, err := dial(ts, "", "")
 	require.NoError(t, err)
 	defer conn.Close()
@@ -207,7 +207,7 @@ func TestWS_LoopbackNoAuthAccepts(t *testing.T) {
 }
 
 func TestWS_SubprotocolTokenNegotiatesMarkerOnly(t *testing.T) {
-	ts, _, hub, rig := newWSTestServer(t, Config{}, true)
+	ts, _, hub, rig := newWSTestServer(t, &Config{}, true)
 	tok := streamToken(t, rig, "sub-1")
 
 	d := websocket.Dialer{Subprotocols: []string{wsSubprotocol, bearerSubproto + tok}}
@@ -223,7 +223,7 @@ func TestWS_SubprotocolTokenNegotiatesMarkerOnly(t *testing.T) {
 }
 
 func TestWS_CleanupOnClose(t *testing.T) {
-	ts, s, hub, rig := newWSTestServer(t, Config{}, true)
+	ts, s, hub, rig := newWSTestServer(t, &Config{}, true)
 	conn, _, err := dial(ts, "", streamToken(t, rig, "sub-1"))
 	require.NoError(t, err)
 

@@ -13,7 +13,10 @@ const (
 )
 
 // withDefaults fills unset (<=0) caps so both transports share the same limits.
-func withDefaults(cfg Config) Config {
+// Takes a pointer only to stay under gocritic's hugeParam threshold; it works on
+// a copy, so the caller's Config is never mutated.
+func withDefaults(in *Config) Config {
+	cfg := *in
 	if cfg.MaxConns <= 0 {
 		cfg.MaxConns = defaultMaxConns
 	}
