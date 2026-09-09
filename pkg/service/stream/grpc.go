@@ -35,14 +35,14 @@ const maxConcurrentStreams = 256
 
 // NewGRPCServer builds the consumer gRPC server. It does not start listening;
 // call Run.
-func NewGRPCServer(hub *streamhub.Service, auth ConsumerAuthenticator, cfg Config, log logger.AppLogger) *GRPCServer {
-	cfg = withDefaults(cfg)
+func NewGRPCServer(hub *streamhub.Service, auth ConsumerAuthenticator, cfg *Config, log logger.AppLogger) *GRPCServer {
+	conf := withDefaults(cfg)
 	g := &GRPCServer{
 		hub:     hub,
 		auth:    auth,
-		cfg:     cfg,
+		cfg:     conf,
 		log:     log.With(logger.WithService("stream-grpc")),
-		limiter: cfg.Limiter,
+		limiter: conf.Limiter,
 		grpcSrv: grpc.NewServer(
 			// Reap dead peers on the WS clock; the gRPC default is a 2h ping.
 			grpc.KeepaliveParams(keepalive.ServerParameters{Time: pingPeriod, Timeout: writeWait}),
