@@ -1,6 +1,7 @@
 package gossipsub_gateway
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/getoptimum/optimum-common/pkg/logger"
@@ -13,6 +14,8 @@ import (
 )
 
 const staleSlotThreshold = 3 // max slots behind current before we skip forwarding the block
+
+const streamDedupTTL = 30 * time.Second // how long a (source, signature) key is remembered
 
 // processBeaconBlockArrival decodes a beacon block exactly once, hands the
 // observation to the bootstrapper for asynchronous latency telemetry and reports
@@ -52,21 +55,32 @@ func (s *Service) processBeaconBlockArrival(
 	stale := diff > staleSlotThreshold
 
 	// Stream every observation, stale flagged rather than dropped (ADR-0011).
+	// Collapse same-source re-encodings on (source, slot, proposer, signature);
+	// distinct sources and equivocations still emit as separate events.
 	if s.streamHub != nil {
-		s.streamHub.Emit(&streamhub.BlockEvent{
-			Slot:           blockDecoded.Header.Slot,
-			ProposerIndex:  blockDecoded.Header.ProposerIndex,
-			ParentRoot:     blockDecoded.Header.ParentRoot,
-			StateRoot:      blockDecoded.Header.StateRoot,
-			BlockSizeBytes: uint64(len(msg)),
-			Topic:          topic,
-			Source:         source,
-			ReceivedAtMs:   recvAt,
-			GatewayID:      s.cfg.GatewayID,
-			ForkDigest:     s.srvForkMgr.ActiveDigest(),
-			Stale:          stale,
-			Raw:            msg,
-		})
+		dedupKey := fmt.Sprintf("%s|%d|%d|%x", source,
+			blockDecoded.Header.Slot, blockDecoded.Header.ProposerIndex, blockDecoded.Signature)
+		if _, dup := s.streamDedup.Get(dedupKey); dup {
+			l.Debug("stream dedup: dropping re-encoded block",
+				logger.WithString("source", string(source)),
+				logger.WithUint64("size", uint64(len(msg))))
+		} else {
+			s.streamDedup.Put(dedupKey, struct{}{})
+			s.streamHub.Emit(&streamhub.BlockEvent{
+				Slot:           blockDecoded.Header.Slot,
+				ProposerIndex:  blockDecoded.Header.ProposerIndex,
+				ParentRoot:     blockDecoded.Header.ParentRoot,
+				StateRoot:      blockDecoded.Header.StateRoot,
+				BlockSizeBytes: uint64(len(msg)),
+				Topic:          topic,
+				Source:         source,
+				ReceivedAtMs:   recvAt,
+				GatewayID:      s.cfg.GatewayID,
+				ForkDigest:     s.srvForkMgr.ActiveDigest(),
+				Stale:          stale,
+				Raw:            msg,
+			})
+		}
 	}
 
 	if stale {
