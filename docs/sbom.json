@@ -1239,18 +1239,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/getoptimum/optimum-p2p@v0.0.1-rc15?type=module",
+      "bom-ref": "pkg:golang/github.com/getoptimum/optimum-p2p@v0.0.1-rc16?type=module",
       "type": "library",
       "name": "github.com/getoptimum/optimum-p2p",
-      "version": "v0.0.1-rc15",
+      "version": "v0.0.1-rc16",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "84a0827257c1a95a71df8f9483e4452ffeaab9f88f91bcbf7f0c729e7c9ab26a"
+          "content": "0b67572e844082b3ef600f4c96f4a375eec6a93f5d25bde1f650d3afdc2cde2d"
         }
       ],
-      "purl": "pkg:golang/github.com/getoptimum/optimum-p2p@v0.0.1-rc15?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/getoptimum/optimum-p2p@v0.0.1-rc16?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/getoptimum/optimum-p2p",
@@ -1259,21 +1259,21 @@
       ]
     },
     {
-      "bom-ref": "pkg:golang/github.com/getoptimum/shm@v0.5.0?type=module",
+      "bom-ref": "pkg:golang/github.com/getoptimum/rlnc@v0.0.1-rc1.0.20260326154748-8ead5e1b16e5?type=module",
       "type": "library",
-      "name": "github.com/getoptimum/shm",
-      "version": "v0.5.0",
+      "name": "github.com/getoptimum/rlnc",
+      "version": "v0.0.1-rc1.0.20260326154748-8ead5e1b16e5",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "24a0050f619abf1fef556bc7c84a140b2675673449224d16c5c88f0132656b3f"
+          "content": "458255d793882377c90b0c717c3e86c5193ac4bebb698d5046b1a3894662f5dc"
         }
       ],
-      "purl": "pkg:golang/github.com/getoptimum/shm@v0.5.0?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/getoptimum/rlnc@v0.0.1-rc1.0.20260326154748-8ead5e1b16e5?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
-          "url": "https://github.com/getoptimum/shm",
+          "url": "https://github.com/getoptimum/rlnc",
           "type": "vcs"
         }
       ]
@@ -5744,18 +5744,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
+      "bom-ref": "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
       "type": "library",
       "name": "google.golang.org/genproto/googleapis/rpc",
-      "version": "v0.0.0-20260523011958-0a33c5d7ca68",
+      "version": "v0.0.0-20260610212136-7ab31c22f7ad",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "3ef1201897fd0bfd6ee421e4227320ed4158614a22690996d8b6ed1f4a6307bf"
+          "content": "e395a626f215e82dbe3bf8e32e43d41fe17768e8ffd66883a14d830f4f8d59b8"
         }
       ],
-      "purl": "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?goarch=amd64&goos=linux&type=module",
       "evidence": {
         "licenses": [
           {
@@ -6136,7 +6136,7 @@
       "dependsOn": [
         "pkg:golang/github.com/ferranbt/fastssz@v1.0.1-0.20251203093649-0b1f38e43198?type=module",
         "pkg:golang/github.com/getoptimum/optimum-common@v0.1.7?type=module",
-        "pkg:golang/github.com/getoptimum/optimum-p2p@v0.0.1-rc15?type=module",
+        "pkg:golang/github.com/getoptimum/optimum-p2p@v0.0.1-rc16?type=module",
         "pkg:golang/github.com/gofiber/fiber/v3@v3.4.0?type=module",
         "pkg:golang/github.com/golang-jwt/jwt/v5@v5.3.1?type=module",
         "pkg:golang/github.com/golang/snappy@v1.0.0?type=module",
@@ -6186,7 +6186,7 @@
         "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
         "pkg:golang/golang.org/x/text@v0.41.0?type=module",
         "pkg:golang/golang.org/x/time@v0.15.0?type=module",
-        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
+        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
         "pkg:golang/google.golang.org/grpc@v1.82.1?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module"
       ]
@@ -6202,7 +6202,7 @@
         "pkg:golang/golang.org/x/net@v0.57.0?type=module",
         "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
+        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
         "pkg:golang/google.golang.org/grpc@v1.82.1?type=module"
       ]
     },
@@ -6590,7 +6590,7 @@
         "pkg:golang/golang.org/x/text@v0.41.0?type=module",
         "pkg:golang/golang.org/x/time@v0.15.0?type=module",
         "pkg:golang/google.golang.org/api@v0.272.0?type=module",
-        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
+        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
         "pkg:golang/google.golang.org/grpc@v1.82.1?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module",
@@ -6599,32 +6599,26 @@
       ]
     },
     {
-      "ref": "pkg:golang/github.com/getoptimum/optimum-p2p@v0.0.1-rc15?type=module",
+      "ref": "pkg:golang/github.com/getoptimum/optimum-p2p@v0.0.1-rc16?type=module",
       "dependsOn": [
         "pkg:golang/github.com/andybalholm/brotli@v1.2.2?type=module",
         "pkg:golang/github.com/benbjohnson/clock@v1.3.5?type=module",
         "pkg:golang/github.com/beorn7/perks@v1.0.1?type=module",
         "pkg:golang/github.com/cespare/xxhash/v2@v2.3.0?type=module",
-        "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
         "pkg:golang/github.com/davidlazar/go-crypto@v0.0.0-20200604182044-b73af7476f6c?type=module",
         "pkg:golang/github.com/decred/dcrd/dcrec/secp256k1/v4@v4.4.0?type=module",
         "pkg:golang/github.com/dunglas/httpsfv@v1.1.0?type=module",
-        "pkg:golang/github.com/felixge/httpsnoop@v1.0.4?type=module",
         "pkg:golang/github.com/flynn/noise@v1.1.0?type=module",
         "pkg:golang/github.com/getoptimum/optimum-common@v0.1.7?type=module",
-        "pkg:golang/github.com/getoptimum/shm@v0.5.0?type=module",
+        "pkg:golang/github.com/getoptimum/rlnc@v0.0.1-rc1.0.20260326154748-8ead5e1b16e5?type=module",
         "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module",
         "pkg:golang/github.com/go-logr/stdr@v1.2.2?type=module",
-        "pkg:golang/github.com/go-viper/mapstructure/v2@v2.5.0?type=module",
-        "pkg:golang/github.com/gobwas/glob@v0.2.3?type=module",
         "pkg:golang/github.com/gogo/protobuf@v1.3.2?type=module",
         "pkg:golang/github.com/golang-jwt/jwt/v5@v5.3.1?type=module",
         "pkg:golang/github.com/golang/snappy@v1.0.0?type=module",
-        "pkg:golang/github.com/google/go-cmp@v0.7.0?type=module",
         "pkg:golang/github.com/google/gopacket@v1.1.19?type=module",
         "pkg:golang/github.com/google/uuid@v1.6.0?type=module",
         "pkg:golang/github.com/gorilla/websocket@v1.5.4-0.20250319132907-e064f32e3674?type=module",
-        "pkg:golang/github.com/hashicorp/go-version@v1.9.0?type=module",
         "pkg:golang/github.com/hashicorp/golang-lru@v1.0.2?type=module",
         "pkg:golang/github.com/hashicorp/golang-lru/v2@v2.0.7?type=module",
         "pkg:golang/github.com/huin/goupnp@v1.3.0?type=module",
@@ -6707,7 +6701,6 @@
         "pkg:golang/github.com/whyrusleeping/go-keyspace@v0.0.0-20160322163242-5b898ac5add1?type=module",
         "pkg:golang/github.com/wlynxg/anet@v0.0.5?type=module",
         "pkg:golang/go.opentelemetry.io/auto/sdk@v1.2.1?type=module",
-        "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.68.0?type=module",
         "pkg:golang/go.opentelemetry.io/otel@v1.43.0?type=module",
         "pkg:golang/go.opentelemetry.io/otel/metric@v1.43.0?type=module",
         "pkg:golang/go.opentelemetry.io/otel/trace@v1.43.0?type=module",
@@ -6721,11 +6714,10 @@
         "pkg:golang/golang.org/x/net@v0.57.0?type=module",
         "pkg:golang/golang.org/x/sync@v0.22.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/term@v0.45.0?type=module",
         "pkg:golang/golang.org/x/text@v0.41.0?type=module",
         "pkg:golang/golang.org/x/time@v0.15.0?type=module",
         "pkg:golang/gonum.org/v1/gonum@v0.17.0?type=module",
-        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
+        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
         "pkg:golang/google.golang.org/grpc@v1.82.1?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module",
         "pkg:golang/gopkg.in/yaml.v2@v2.4.0?type=module",
@@ -6734,7 +6726,15 @@
       ]
     },
     {
-      "ref": "pkg:golang/github.com/getoptimum/shm@v0.5.0?type=module"
+      "ref": "pkg:golang/github.com/getoptimum/rlnc@v0.0.1-rc1.0.20260326154748-8ead5e1b16e5?type=module",
+      "dependsOn": [
+        "pkg:golang/golang.org/x/net@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
+        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
+        "pkg:golang/google.golang.org/grpc@v1.82.1?type=module",
+        "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module"
+      ]
     },
     {
       "ref": "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module"
@@ -6837,7 +6837,7 @@
         "pkg:golang/golang.org/x/text@v0.41.0?type=module",
         "pkg:golang/golang.org/x/time@v0.15.0?type=module",
         "pkg:golang/google.golang.org/api@v0.272.0?type=module",
-        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
+        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
         "pkg:golang/google.golang.org/grpc@v1.82.1?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module"
       ]
@@ -6860,7 +6860,7 @@
         "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
         "pkg:golang/golang.org/x/text@v0.41.0?type=module",
         "pkg:golang/google.golang.org/api@v0.272.0?type=module",
-        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
+        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
         "pkg:golang/google.golang.org/grpc@v1.82.1?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module"
       ]
@@ -6999,7 +6999,7 @@
         "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
         "pkg:golang/golang.org/x/text@v0.41.0?type=module",
         "pkg:golang/gonum.org/v1/gonum@v0.17.0?type=module",
-        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
+        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
         "pkg:golang/google.golang.org/grpc@v1.82.1?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module",
@@ -8302,7 +8302,7 @@
         "pkg:golang/golang.org/x/text@v0.41.0?type=module",
         "pkg:golang/golang.org/x/time@v0.15.0?type=module",
         "pkg:golang/google.golang.org/api@v0.272.0?type=module",
-        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
+        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
         "pkg:golang/google.golang.org/grpc@v1.82.1?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module",
         "pkg:golang/gopkg.in/inf.v0@v0.9.1?type=module",
@@ -8576,7 +8576,7 @@
         "pkg:golang/golang.org/x/net@v0.57.0?type=module",
         "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
         "pkg:golang/golang.org/x/text@v0.41.0?type=module",
-        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
+        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
         "pkg:golang/google.golang.org/grpc@v1.82.1?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
@@ -8841,13 +8841,13 @@
         "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
         "pkg:golang/golang.org/x/text@v0.41.0?type=module",
         "pkg:golang/golang.org/x/time@v0.15.0?type=module",
-        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
+        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
         "pkg:golang/google.golang.org/grpc@v1.82.1?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
+      "ref": "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
       "dependsOn": [
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module"
       ]
@@ -8871,7 +8871,7 @@
         "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
         "pkg:golang/golang.org/x/text@v0.41.0?type=module",
         "pkg:golang/gonum.org/v1/gonum@v0.17.0?type=module",
-        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260523011958-0a33c5d7ca68?type=module",
+        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module"
       ]
     },
