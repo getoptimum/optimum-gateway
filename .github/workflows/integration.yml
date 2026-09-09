@@ -82,10 +82,20 @@ jobs:
           go-version: ${{ env.go-version }}
       - name: Install dependencies
         run: go mod download
+      - name: Log in to Docker Hub
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
+        with:
+          username: getoptimum
+          password: ${{ secrets.OPT_DOCKER_ACCESS_TOKEN }}
+      - name: Start RLNC shared-memory server
+        run: make dev_up_ci
       - name: Run tests
         run: CI_RUN="true" PROMETHEUS_VALIDATION_SCHEME=legacy make test
       - name: Measure test coverage
         run: make coverage
+      - name: Stop RLNC shared-memory server
+        if: always()
+        run: make dev_down_ci
       - name: Publish coverage report to wiki
         # Only on tag pushes (release cadence); PRs (incl. from forks) must not write to the wiki.
         if: github.event_name == 'push'

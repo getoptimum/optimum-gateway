@@ -17,7 +17,7 @@ import (
 // A peer's capability is derived from its verified `type` claim and nothing else, via
 // commonentities.GatewayType.CanPublish so that billing, auth and the gateway share one
 // definition. That helper is fail-CLOSED: only hermes/partner/relay publish, while stream,
-// empty and unrecognised roles do not. The unknown/empty cases below pin that deliberately —
+// empty and unrecognized roles do not. The unknown/empty cases below pin that deliberately —
 // they are safe only because the rollout rule forbids minting a role before the whole fleet
 // understands it. If these ever need to flip back to publish, the rollout rule changed.
 func TestHandshakeHandler_Capability(t *testing.T) {

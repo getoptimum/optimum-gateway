@@ -63,8 +63,12 @@ func (s *Service) handshakeHandler(peerID peer.ID, decoder *json.Decoder) (pubsu
 		}
 		return pubsub.PeerCapability{}, fmt.Errorf("invalid JWT token: empty claims")
 	}
-	if claims.CNF.PeerID != peerID.String() {
-		err = fmt.Errorf("peer ID mismatch: expected %s, got %s", peerID.String(), claims.CNF.PeerID)
+	gotPeerID := ""
+	if claims.CNF != nil {
+		gotPeerID = claims.CNF.PeerID
+	}
+	if gotPeerID != peerID.String() {
+		err = fmt.Errorf("peer ID mismatch: expected %s, got %s", peerID.String(), gotPeerID)
 		s.log.Error("got mismatch token for peer", err, logger.WithString("peer_commit_hash", h.CommitHash))
 		return pubsub.PeerCapability{}, err
 	}
