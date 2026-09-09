@@ -350,6 +350,24 @@ func TestStreamValidation(t *testing.T) {
 		require.True(t, cfg.StreamOnly)
 	})
 
+	t.Run("heartbeat on by default, may be disabled, never negative", func(t *testing.T) {
+		base(t)
+		t.Setenv("OPT_STREAM_ENABLE", "true")
+		cfg, err := config.LoadConfig("")
+		require.NoError(t, err)
+		// On by default: a stream that can starve silently is the failure this
+		// exists to prevent, so it must not need opting in.
+		require.Equal(t, 20, cfg.StreamHeartbeatIntervalSec)
+
+		t.Setenv("OPT_STREAM_HEARTBEAT_INTERVAL_SEC", "0")
+		_, err = config.LoadConfig("")
+		require.NoError(t, err, "0 is a valid way to disable it")
+
+		t.Setenv("OPT_STREAM_HEARTBEAT_INTERVAL_SEC", "-1")
+		_, err = config.LoadConfig("")
+		require.ErrorContains(t, err, "stream_heartbeat_interval_sec")
+	})
+
 	t.Run("keepalive min time defaults below the documented client interval", func(t *testing.T) {
 		base(t)
 		requireUnset(t, "OPT_STREAM_KEEPALIVE_MIN_TIME_SEC")

@@ -12,6 +12,7 @@ var (
 	streamAuthFailures  prometheus.Counter
 	streamConnections   prometheus.Gauge
 	streamOldestStart   prometheus.Gauge
+	streamHeartbeats    prometheus.Counter
 )
 
 func initStreamMetrics() {
@@ -34,6 +35,11 @@ func initStreamMetrics() {
 		"connections",
 		"stream",
 		"Currently open consumer stream connections",
+	)
+	streamHeartbeats = commonmetrics.NewCounter(
+		"heartbeats_sent_total",
+		"stream",
+		"Consumer block-stream liveness frames written to a subscriber connection",
 	)
 	streamOldestStart = commonmetrics.NewGauge(
 		"oldest_connection_started_seconds",
@@ -85,5 +91,12 @@ func DecStreamConnections() {
 func SetStreamOldestConnectionStart(unixSeconds float64) {
 	if enabledMetrics {
 		streamOldestStart.Set(unixSeconds)
+	}
+}
+
+// RecordStreamHeartbeatSent counts one liveness frame.
+func RecordStreamHeartbeatSent() {
+	if enabledMetrics {
+		streamHeartbeats.Inc()
 	}
 }

@@ -285,6 +285,38 @@ cumulative dropped count, then resumes. A slow consumer never stalls the gateway
 
 Over gRPC the same signal is a `lagged` frame: `{ "lagged": { "dropped": "12" } }`.
 
+### Liveness signal
+
+A quiet feed and a broken one look identical over a healthy connection: the
+transport stays up on its own pings while no blocks arrive. The gateway
+therefore emits a heartbeat every `stream_heartbeat_interval_sec` (default
+`20`), whether or not blocks are flowing.
+
+```json
+{ "type": "heartbeat", "last_slot": 3706300, "expected_slot": 3706302, "silence_ms": 24120 }
+```
+
+Over gRPC the same signal is a `heartbeat` frame:
+`{ "heartbeat": { "lastSlot": "3706300", "expectedSlot": "3706302", "silenceMs": "24120" } }`.
+
+| Field | Meaning |
+| --- | --- |
+| `last_slot` | Last slot actually written to **your** connection; `0` before the first block |
+| `expected_slot` | Slot the chain should be on now, derived from the wall clock |
+| `silence_ms` | Milliseconds since the last block was written to your connection; `0` before the first |
+
+`expected_slot - last_slot` is an **observation, not a verdict**. It also grows
+for slots the chain legitimately skipped, and it is meaningless before the
+first block, so correlate it against chain state before concluding anything. A
+large, sustained difference says the feed you are attached to is behind; it
+does not say which slots exist, and reconnecting will not recover a gap that
+happened on the gateway's ingest side.
+
+What the frame does prove is that the connection is alive and which slot was
+last delivered to it. So alert on heartbeats going **missing**, which is the
+failure this frame exists to expose, rather than on the arithmetic alone. For
+loss on *your* connection specifically, `lagged` is the signal.
+
 ### Holding a stream open for weeks
 
 Streams are meant to stay open indefinitely. Three obligations fall on the
@@ -312,8 +344,8 @@ configuration will not reconnect you.
 Nothing is buffered across connections and nothing is ever replayed. Every
 reconnect is a permanent hole. Detect holes rather than assuming their absence:
 track the slot sequence yourself and backfill from your own beacon node or an
-archive. A `lagged` frame tells you a hole is being created; only your own slot
-bookkeeping tells you which slots it cost.
+archive. A `lagged` frame tells you a hole is being created on this connection;
+only your own slot bookkeeping tells you which slots it cost.
 
 #### One event per observation, so deduplicate deliberately
 

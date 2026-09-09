@@ -2,6 +2,7 @@
 
 **Status:** Approved (implemented)  
 Amended 2026-09-08: gRPC keepalive enforcement and connection-age visibility.  
+Amended 2026-09-08: in-band liveness heartbeat frame.  
 **Date:** 2026-08-05  
 
 ## Context
@@ -204,6 +205,41 @@ The exported series is `mump2p_stream_oldest_connection_started_seconds`, a
 scrapes and needs no ticker to keep it fresh; the age is `time() - <value>` at
 query time. Zero means no connection is open. This follows the same convention
 as the terminator's `stream_tls_cert_not_after_seconds`.
+
+### Liveness heartbeat (amended 2026-09-08)
+
+**A starved stream was indistinguishable from a quiet one.** The frame union
+above is `BlockEvent` and `lagged` only, so silence carried no information. If
+ingest stops, the gateway emits nothing while the connection stays healthy on
+transport PINGs, and the consumer waits indefinitely with no data and no error.
+
+Nothing in the path can backstop this. Measured against nginx 1.24 with
+`grpc_read_timeout 10s` and a data-flowing control, the timer is reset by the
+gateway's own PINGs: with PINGs on, a stream that had delivered at least one
+block survived until the client's own 40s deadline; with PINGs off it was cut
+in 11s. The gateway PINGs every 54s, so on any established stream that timeout
+never fires regardless of its value. Only an in-band frame closes the gap.
+
+The frame union therefore gains a third member:
+
+* `heartbeat` — sent every `stream_heartbeat_interval_sec` whether or not
+  blocks are flowing, carrying `last_slot` (the last slot written to that
+  connection), `expected_slot` (from the wall clock) and `silence_ms`.
+
+It is emitted from each transport's send loop, **never from the hub**. A
+hub-sourced heartbeat would be dropped by the ring buffer exactly when liveness
+proof matters most, would increment that connection's `dropped` counter and
+fire a **false** `lagged` frame, and would need a frame-kind field on
+`streamhub.BlockEvent`, polluting the ingest hot path.
+
+| Env / yaml                                                            | Default | Purpose                                |
+| --------------------------------------------------------------------- | ------- | -------------------------------------- |
+| `OPT_STREAM_HEARTBEAT_INTERVAL_SEC` / `stream_heartbeat_interval_sec` | `20`    | Liveness frame interval; `0` disables. |
+
+The field shape follows the downstream `Heartbeat` record `optimum-stream`
+already synthesizes for its own consumers, rather than inventing a second
+vocabulary for the same idea, so it can pass the signal straight through
+instead of inferring silence locally.
 
 ## Architecture
 

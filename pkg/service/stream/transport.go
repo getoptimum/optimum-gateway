@@ -13,6 +13,9 @@ const (
 	defaultMaxConnsPerSub = 8
 )
 
+// defaultHeartbeatInterval paces the in-band liveness frame.
+const defaultHeartbeatInterval = 20 * time.Second
+
 // defaultKeepaliveMinTime is the shortest client ping interval the gRPC server
 // accepts. The library default is 5m, which GOAWAYs any consumer that enables
 // keepalive at a rate useful to a long-lived stream.
@@ -32,6 +35,10 @@ func withDefaults(in *Config) Config {
 	if cfg.BufferSize <= 0 {
 		cfg.BufferSize = streamhub.DefaultBufferSize
 	}
+	// Negative means unset; zero is meaningful and disables the heartbeat.
+	if cfg.HeartbeatInterval < 0 {
+		cfg.HeartbeatInterval = defaultHeartbeatInterval
+	}
 	if cfg.KeepaliveMinTime <= 0 {
 		cfg.KeepaliveMinTime = defaultKeepaliveMinTime
 	}
@@ -39,6 +46,16 @@ func withDefaults(in *Config) Config {
 		cfg.Limiter = NewConnLimiter(cfg.MaxConns, cfg.MaxConnsPerSub)
 	}
 	return cfg
+}
+
+// optionalTicker returns a ticker, or nil for a non-positive interval: a nil
+// channel blocks forever in a select, so a send loop opts out without branching.
+func optionalTicker(d time.Duration) (ticker *time.Ticker, tick <-chan time.Time) {
+	if d <= 0 {
+		return nil, nil
+	}
+	t := time.NewTicker(d)
+	return t, t.C
 }
 
 // normalizeMode defaults empty to metadata and reports whether the value is allowed.

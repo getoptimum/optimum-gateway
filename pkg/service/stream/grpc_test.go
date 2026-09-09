@@ -145,3 +145,75 @@ func TestGRPC_CleanupOnCancel(t *testing.T) {
 		return srv.limiter.conns == 0 && len(srv.limiter.perSub) == 0
 	}, 2*time.Second, 10*time.Millisecond)
 }
+
+// authCtxDeadline is authCtx with a deadline. Recv blocks, and a loop deadline
+// does not run while it waits, so without this a frame that never arrives hangs
+// the test until the package timeout instead of failing.
+func authCtxDeadline(t *testing.T, rig *test_utils.AuthTestRig, subject string) context.Context {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(authCtx(t, rig, subject), 5*time.Second)
+	t.Cleanup(cancel)
+	return ctx
+}
+
+// recvUntil returns the first frame satisfying want, so a test can assert on a
+// frame type without depending on how many blocks or heartbeats precede it.
+func recvUntil(t *testing.T, sub grpc.ServerStreamingClient[streamv1.BlockEvent], want func(*streamv1.BlockEvent) bool) *streamv1.BlockEvent {
+	t.Helper()
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		ev, err := sub.Recv()
+		require.NoError(t, err)
+		if want(ev) {
+			return ev
+		}
+	}
+	t.Fatal("no matching frame before deadline")
+	return nil
+}
+
+func TestGRPC_HeartbeatDuringSilence(t *testing.T) {
+	client, _, hub, rig := newGRPCTestServer(t, &Config{HeartbeatInterval: 20 * time.Millisecond})
+	sub, err := client.Subscribe(authCtxDeadline(t, rig, "sub-1"), &streamv1.SubscribeRequest{})
+	require.NoError(t, err)
+	waitSubscribed(t, hub, 1)
+
+	// No block is ever emitted: this is exactly the starvation the frame exists
+	// to make visible, and the only case where nothing else would arrive.
+	hb := recvUntil(t, sub, func(ev *streamv1.BlockEvent) bool { return ev.GetHeartbeat() != nil }).GetHeartbeat()
+	require.Zero(t, hb.GetLastSlot(), "no block has been delivered yet")
+	require.Zero(t, hb.GetSilenceMs(), "silence is unmeasurable before the first block")
+	require.Positive(t, hb.GetExpectedSlot(), "expected_slot comes from the wall clock, not the feed")
+}
+
+func TestGRPC_HeartbeatReportsLastDeliveredSlot(t *testing.T) {
+	client, _, hub, rig := newGRPCTestServer(t, &Config{HeartbeatInterval: 20 * time.Millisecond})
+	sub, err := client.Subscribe(authCtxDeadline(t, rig, "sub-1"), &streamv1.SubscribeRequest{})
+	require.NoError(t, err)
+	waitSubscribed(t, hub, 1)
+	hub.Emit(sampleEvent())
+
+	require.NotNil(t, recvUntil(t, sub, func(ev *streamv1.BlockEvent) bool { return ev.GetBlock() != nil }))
+	// Wait for silence to become measurable rather than reading the next frame:
+	// a heartbeat firing in the same millisecond as the block reports 0, and a
+	// regression that set lastSlot without lastBlock would report 0 forever.
+	hb := recvUntil(t, sub, func(ev *streamv1.BlockEvent) bool {
+		return ev.GetHeartbeat().GetSilenceMs() > 0
+	}).GetHeartbeat()
+	require.EqualValues(t, 42, hb.GetLastSlot(), "the heartbeat must report the last slot actually written")
+	require.Greater(t, hb.GetExpectedSlot(), hb.GetLastSlot(), "sampleEvent is a historical slot, so the feed reads as behind")
+}
+
+func TestGRPC_HeartbeatDisabledByZero(t *testing.T) {
+	client, _, hub, rig := newGRPCTestServer(t, &Config{HeartbeatInterval: 0})
+	sub, err := client.Subscribe(authCtxDeadline(t, rig, "sub-1"), &streamv1.SubscribeRequest{})
+	require.NoError(t, err)
+	waitSubscribed(t, hub, 1)
+	hub.Emit(sampleEvent())
+
+	// Only the block arrives; nothing synthesizes a heartbeat behind our back.
+	ev, err := sub.Recv()
+	require.NoError(t, err)
+	require.NotNil(t, ev.GetBlock())
+	require.Nil(t, ev.GetHeartbeat())
+}

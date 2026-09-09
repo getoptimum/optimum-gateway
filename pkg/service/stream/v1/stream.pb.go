@@ -74,7 +74,8 @@ func (x *SubscribeRequest) GetTopics() []string {
 	return nil
 }
 
-// BlockEvent is one frame: a block observation or a lag signal (ADR-0011).
+// BlockEvent is one frame: a block observation, a lag signal, or a liveness
+// heartbeat (ADR-0011).
 type BlockEvent struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// frame tells an observation apart from a control signal.
@@ -83,6 +84,7 @@ type BlockEvent struct {
 	//
 	//	*BlockEvent_Block
 	//	*BlockEvent_Lagged
+	//	*BlockEvent_Heartbeat
 	Frame         isBlockEvent_Frame `protobuf_oneof:"frame"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -143,6 +145,15 @@ func (x *BlockEvent) GetLagged() *Lagged {
 	return nil
 }
 
+func (x *BlockEvent) GetHeartbeat() *Heartbeat {
+	if x != nil {
+		if x, ok := x.Frame.(*BlockEvent_Heartbeat); ok {
+			return x.Heartbeat
+		}
+	}
+	return nil
+}
+
 type isBlockEvent_Frame interface {
 	isBlockEvent_Frame()
 }
@@ -155,9 +166,15 @@ type BlockEvent_Lagged struct {
 	Lagged *Lagged `protobuf:"bytes,2,opt,name=lagged,proto3,oneof"`
 }
 
+type BlockEvent_Heartbeat struct {
+	Heartbeat *Heartbeat `protobuf:"bytes,3,opt,name=heartbeat,proto3,oneof"`
+}
+
 func (*BlockEvent_Block) isBlockEvent_Frame() {}
 
 func (*BlockEvent_Lagged) isBlockEvent_Frame() {}
+
+func (*BlockEvent_Heartbeat) isBlockEvent_Frame() {}
 
 // Block is one block observation (fields mirror the streamhub hub type).
 type Block struct {
@@ -292,6 +309,70 @@ func (x *Block) GetRaw() []byte {
 	return nil
 }
 
+// Heartbeat proves the feed is alive during a quiet stretch, and says how far
+// behind it is. Without it a stalled ingest is indistinguishable from a chain
+// that has gone quiet: the transport stays healthy on keepalive PINGs and no
+// proxy timeout can tell the difference.
+type Heartbeat struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	LastSlot      uint64                 `protobuf:"varint,1,opt,name=last_slot,json=lastSlot,proto3" json:"last_slot,omitempty"`             // slot of the most recent block emitted, 0 if none yet
+	ExpectedSlot  uint64                 `protobuf:"varint,2,opt,name=expected_slot,json=expectedSlot,proto3" json:"expected_slot,omitempty"` // slot the chain should be on now, from wall clock
+	SilenceMs     uint64                 `protobuf:"varint,3,opt,name=silence_ms,json=silenceMs,proto3" json:"silence_ms,omitempty"`          // since the last block was emitted
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Heartbeat) Reset() {
+	*x = Heartbeat{}
+	mi := &file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Heartbeat) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Heartbeat) ProtoMessage() {}
+
+func (x *Heartbeat) ProtoReflect() protoreflect.Message {
+	mi := &file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Heartbeat.ProtoReflect.Descriptor instead.
+func (*Heartbeat) Descriptor() ([]byte, []int) {
+	return file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *Heartbeat) GetLastSlot() uint64 {
+	if x != nil {
+		return x.LastSlot
+	}
+	return 0
+}
+
+func (x *Heartbeat) GetExpectedSlot() uint64 {
+	if x != nil {
+		return x.ExpectedSlot
+	}
+	return 0
+}
+
+func (x *Heartbeat) GetSilenceMs() uint64 {
+	if x != nil {
+		return x.SilenceMs
+	}
+	return 0
+}
+
 // Lagged reports the cumulative drop count after a buffer overflow.
 type Lagged struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -302,7 +383,7 @@ type Lagged struct {
 
 func (x *Lagged) Reset() {
 	*x = Lagged{}
-	mi := &file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_msgTypes[3]
+	mi := &file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -314,7 +395,7 @@ func (x *Lagged) String() string {
 func (*Lagged) ProtoMessage() {}
 
 func (x *Lagged) ProtoReflect() protoreflect.Message {
-	mi := &file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_msgTypes[3]
+	mi := &file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -327,7 +408,7 @@ func (x *Lagged) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Lagged.ProtoReflect.Descriptor instead.
 func (*Lagged) Descriptor() ([]byte, []int) {
-	return file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_rawDescGZIP(), []int{3}
+	return file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Lagged) GetDropped() uint64 {
@@ -344,11 +425,12 @@ const file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_rawDesc = "
 	"9getoptimum/optimum_gateway/service/stream/v1/stream.proto\x12,getoptimum.optimum_gateway.service.stream.v1\">\n" +
 	"\x10SubscribeRequest\x12\x12\n" +
 	"\x04mode\x18\x01 \x01(\tR\x04mode\x12\x16\n" +
-	"\x06topics\x18\x02 \x03(\tR\x06topics\"\xb2\x01\n" +
+	"\x06topics\x18\x02 \x03(\tR\x06topics\"\x8b\x02\n" +
 	"\n" +
 	"BlockEvent\x12K\n" +
 	"\x05block\x18\x01 \x01(\v23.getoptimum.optimum_gateway.service.stream.v1.BlockH\x00R\x05block\x12N\n" +
-	"\x06lagged\x18\x02 \x01(\v24.getoptimum.optimum_gateway.service.stream.v1.LaggedH\x00R\x06laggedB\a\n" +
+	"\x06lagged\x18\x02 \x01(\v24.getoptimum.optimum_gateway.service.stream.v1.LaggedH\x00R\x06lagged\x12W\n" +
+	"\theartbeat\x18\x03 \x01(\v27.getoptimum.optimum_gateway.service.stream.v1.HeartbeatH\x00R\theartbeatB\a\n" +
 	"\x05frame\"\xe8\x02\n" +
 	"\x05Block\x12\x12\n" +
 	"\x04slot\x18\x01 \x01(\x04R\x04slot\x12%\n" +
@@ -367,7 +449,12 @@ const file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_rawDesc = "
 	" \x01(\tR\n" +
 	"forkDigest\x12\x14\n" +
 	"\x05stale\x18\v \x01(\bR\x05stale\x12\x10\n" +
-	"\x03raw\x18\f \x01(\fR\x03raw\"\"\n" +
+	"\x03raw\x18\f \x01(\fR\x03raw\"l\n" +
+	"\tHeartbeat\x12\x1b\n" +
+	"\tlast_slot\x18\x01 \x01(\x04R\blastSlot\x12#\n" +
+	"\rexpected_slot\x18\x02 \x01(\x04R\fexpectedSlot\x12\x1d\n" +
+	"\n" +
+	"silence_ms\x18\x03 \x01(\x04R\tsilenceMs\"\"\n" +
 	"\x06Lagged\x12\x18\n" +
 	"\adropped\x18\x01 \x01(\x04R\adropped2\x9e\x01\n" +
 	"\x12BlockStreamService\x12\x87\x01\n" +
@@ -385,23 +472,25 @@ func file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_rawDescGZIP(
 	return file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_rawDescData
 }
 
-var file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_goTypes = []any{
 	(*SubscribeRequest)(nil), // 0: getoptimum.optimum_gateway.service.stream.v1.SubscribeRequest
 	(*BlockEvent)(nil),       // 1: getoptimum.optimum_gateway.service.stream.v1.BlockEvent
 	(*Block)(nil),            // 2: getoptimum.optimum_gateway.service.stream.v1.Block
-	(*Lagged)(nil),           // 3: getoptimum.optimum_gateway.service.stream.v1.Lagged
+	(*Heartbeat)(nil),        // 3: getoptimum.optimum_gateway.service.stream.v1.Heartbeat
+	(*Lagged)(nil),           // 4: getoptimum.optimum_gateway.service.stream.v1.Lagged
 }
 var file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_depIdxs = []int32{
 	2, // 0: getoptimum.optimum_gateway.service.stream.v1.BlockEvent.block:type_name -> getoptimum.optimum_gateway.service.stream.v1.Block
-	3, // 1: getoptimum.optimum_gateway.service.stream.v1.BlockEvent.lagged:type_name -> getoptimum.optimum_gateway.service.stream.v1.Lagged
-	0, // 2: getoptimum.optimum_gateway.service.stream.v1.BlockStreamService.Subscribe:input_type -> getoptimum.optimum_gateway.service.stream.v1.SubscribeRequest
-	1, // 3: getoptimum.optimum_gateway.service.stream.v1.BlockStreamService.Subscribe:output_type -> getoptimum.optimum_gateway.service.stream.v1.BlockEvent
-	3, // [3:4] is the sub-list for method output_type
-	2, // [2:3] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	4, // 1: getoptimum.optimum_gateway.service.stream.v1.BlockEvent.lagged:type_name -> getoptimum.optimum_gateway.service.stream.v1.Lagged
+	3, // 2: getoptimum.optimum_gateway.service.stream.v1.BlockEvent.heartbeat:type_name -> getoptimum.optimum_gateway.service.stream.v1.Heartbeat
+	0, // 3: getoptimum.optimum_gateway.service.stream.v1.BlockStreamService.Subscribe:input_type -> getoptimum.optimum_gateway.service.stream.v1.SubscribeRequest
+	1, // 4: getoptimum.optimum_gateway.service.stream.v1.BlockStreamService.Subscribe:output_type -> getoptimum.optimum_gateway.service.stream.v1.BlockEvent
+	4, // [4:5] is the sub-list for method output_type
+	3, // [3:4] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_init() }
@@ -412,6 +501,7 @@ func file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_init() {
 	file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_msgTypes[1].OneofWrappers = []any{
 		(*BlockEvent_Block)(nil),
 		(*BlockEvent_Lagged)(nil),
+		(*BlockEvent_Heartbeat)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -419,7 +509,7 @@ func file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_rawDesc), len(file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
