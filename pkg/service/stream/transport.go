@@ -13,9 +13,6 @@ const (
 	defaultMaxConnsPerSub = 8
 )
 
-// defaultHeartbeatInterval paces the in-band liveness frame.
-const defaultHeartbeatInterval = 20 * time.Second
-
 // defaultKeepaliveMinTime is the shortest client ping interval the gRPC server
 // accepts. The library default is 5m, which GOAWAYs any consumer that enables
 // keepalive at a rate useful to a long-lived stream.
@@ -35,9 +32,12 @@ func withDefaults(in *Config) Config {
 	if cfg.BufferSize <= 0 {
 		cfg.BufferSize = streamhub.DefaultBufferSize
 	}
-	// Negative means unset; zero is meaningful and disables the heartbeat.
+	// Zero is meaningful here and disables the heartbeat, so an unset field
+	// cannot mean "use the default" the way the caps do. Config validation
+	// rejects a negative, and clamping one to 0 keeps this layer's contract the
+	// same rather than quietly substituting the default.
 	if cfg.HeartbeatInterval < 0 {
-		cfg.HeartbeatInterval = defaultHeartbeatInterval
+		cfg.HeartbeatInterval = 0
 	}
 	if cfg.KeepaliveMinTime <= 0 {
 		cfg.KeepaliveMinTime = defaultKeepaliveMinTime

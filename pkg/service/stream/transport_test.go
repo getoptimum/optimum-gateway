@@ -155,3 +155,23 @@ func TestConnLimiterReleaseIsIdempotent(t *testing.T) {
 	_, ok = l.acquire("sub-a")
 	require.False(t, ok, "a double release must not have created a spare slot")
 }
+
+// TestWithDefaultsHeartbeatInterval: 0 is a real value here, not "unset", so it
+// must survive; a negative cannot silently become the default, because config
+// validation rejects negatives and the two layers would then disagree.
+func TestWithDefaultsHeartbeatInterval(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		in   time.Duration
+		want time.Duration
+	}{
+		{"explicit interval survives", 5 * time.Second, 5 * time.Second},
+		{"zero stays disabled", 0, 0},
+		{"negative clamps to disabled", -time.Second, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			in := Config{HeartbeatInterval: tc.in}
+			require.Equal(t, tc.want, withDefaults(&in).HeartbeatInterval)
+		})
+	}
+}
