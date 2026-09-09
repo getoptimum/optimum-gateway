@@ -309,11 +309,14 @@ configuration will not reconnect you.
 
 #### Gaps are permanent
 
-Nothing is buffered across connections and nothing is ever replayed. Every
-reconnect is a permanent hole. Detect holes rather than assuming their absence:
-track the slot sequence yourself and backfill from your own beacon node or an
-archive. A `lagged` frame tells you a hole is being created; only your own slot
-bookkeeping tells you which slots it cost.
+Nothing is buffered across connections and nothing is ever replayed, so every
+reconnect is a permanent hole. Detect holes rather than assuming their absence.
+
+But **a gap in the slot sequence is not by itself evidence of loss**: slots the
+network left empty are normal and produce no block at all. A jump from 100 to
+102 may mean slot 101 was missed, or that nobody proposed it. Reconcile against
+your own beacon node or an archive to tell the two apart. A `lagged` frame is
+the one signal that says this connection definitely dropped events.
 
 #### One event per observation, so deduplicate deliberately
 
@@ -322,20 +325,28 @@ block seen over both libp2p and mump2p arrives twice, distinguished by
 `source`. Those two are not redundant, they are the cross-path comparison, and
 collapsing them throws away the per-path arrival timing.
 
-Separately, **a single source can deliver the same block twice.** That has been
-measured on the live feed: one slot arrived twice over `mump2p` 9ms apart. So
-repeats exist within a `source`, not only across sources.
+Same-source repeats used to reach consumers as well: one slot was measured
+arriving twice over `mump2p` 9ms apart, with `block_size_bytes` differing
+between the two (35053 vs 35047) because the block had been re-encoded. The
+gateway now collapses those at the source on
+`(source, slot, proposer_index, state_root)`, so you should not normally see
+them. Do not treat that as absolute: the window is 30 seconds and the state is
+per-process, so a gateway restart or a very late repeat can still let one
+through.
 
 Pick the key for what you are counting:
 
-| You want | Key on | Note |
-| --- | --- | --- |
-| Unique blocks | `(slot, proposer_index)` | Discards the per-source views |
-| Per-path observations | `(slot, proposer_index, source)` | Still expect repeats within a key |
+| You want | Key on |
+| --- | --- |
+| Unique blocks | `(slot, proposer_index, state_root)` |
+| Per-path observations | `(slot, proposer_index, state_root, source)` |
 
-Either way, never key on `block_size_bytes` or `received_at_ms`. Both are
-per-observation and were measured differing between two deliveries of the same
-block (35053 vs 35047 bytes), so they are not stable identity.
+`state_root` belongs in both. A proposer can equivocate and publish two
+genuinely different blocks for one slot, so `(slot, proposer_index)` alone is
+not a block identity and would silently discard the second one.
+
+Never key on `block_size_bytes` or `received_at_ms`. Both are per-observation
+and legitimately differ between paths, so they are not stable identity.
 
 ## Errors
 
