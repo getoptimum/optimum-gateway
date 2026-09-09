@@ -48,7 +48,11 @@ func TestService_ShouldForwardMessageToMumP2P(t *testing.T) {
 		service *message_router.Service
 		topic   string
 		payload []byte
-		want    bool
+		// freshSlot rebuilds the payload at assert time. The gate accepts only
+		// the current slot (MaxSlotAge 0), so a payload frozen at map-build time
+		// goes stale if a slot boundary passes before this case runs.
+		freshSlot bool
+		want      bool
 	}{
 		"partner forwards beacon block": {
 			service: newTestService(t, commonentities.GatewayTypePartner),
@@ -81,10 +85,10 @@ func TestService_ShouldForwardMessageToMumP2P(t *testing.T) {
 			want:    false,
 		},
 		"known validator with fresh slot forwards": {
-			service: newTestService(t, commonentities.GatewayTypePartner, 42),
-			topic:   testBeaconAttestationTopic,
-			payload: buildAttestationPayload(t, 42, chainstate.CurrentSlot(time.Now())),
-			want:    true,
+			service:   newTestService(t, commonentities.GatewayTypePartner, 42),
+			topic:     testBeaconAttestationTopic,
+			freshSlot: true,
+			want:      true,
 		},
 		"unknown validator is blocked": {
 			service: newTestService(t, commonentities.GatewayTypePartner, 42),
@@ -126,7 +130,11 @@ func TestService_ShouldForwardMessageToMumP2P(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.want, tc.service.ShouldForwardMessageToMumP2P(log, topics.ParseTopicMeta(tc.topic).Kind, tc.topic, tc.payload))
+			payload := tc.payload
+			if tc.freshSlot {
+				payload = buildAttestationPayload(t, 42, chainstate.CurrentSlot(time.Now()))
+			}
+			require.Equal(t, tc.want, tc.service.ShouldForwardMessageToMumP2P(log, topics.ParseTopicMeta(tc.topic).Kind, tc.topic, payload))
 		})
 	}
 }
