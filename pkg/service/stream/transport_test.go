@@ -127,3 +127,31 @@ func TestConnLimiterOldestStart(t *testing.T) {
 		require.NotContains(t, ids, next, "a recycled id would make release ambiguous")
 	})
 }
+
+// TestConnLimiterReleaseIsIdempotent: a double release would otherwise
+// decrement the caps twice and let the limiter admit a connection beyond
+// maxConns.
+func TestConnLimiterReleaseIsIdempotent(t *testing.T) {
+	published := capturePublished(t)
+	l := NewConnLimiter(1, 1)
+
+	id, ok := l.acquire("sub-a")
+	require.True(t, ok)
+	l.release("sub-a", id)
+	before := len(*published)
+
+	l.release("sub-a", id)
+	require.Len(t, *published, before, "a repeated release is a no-op, not another publish")
+
+	l.mu.Lock()
+	conns, perSub := l.conns, l.perSub["sub-a"]
+	l.mu.Unlock()
+	require.Zero(t, conns, "conns must not go negative")
+	require.Zero(t, perSub)
+
+	// The cap is still 1, so exactly one connection may be admitted.
+	_, ok = l.acquire("sub-a")
+	require.True(t, ok)
+	_, ok = l.acquire("sub-a")
+	require.False(t, ok, "a double release must not have created a spare slot")
+}

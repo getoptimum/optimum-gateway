@@ -122,6 +122,12 @@ func (l *ConnLimiter) acquire(subject string) (uint64, bool) {
 func (l *ConnLimiter) release(subject string, id uint64) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	// Idempotent: the id is the record that this connection is still counted,
+	// so a repeated release cannot decrement the caps twice and hand out a slot
+	// that was never freed.
+	if _, live := l.starts[id]; !live {
+		return
+	}
 	l.conns--
 	l.perSub[subject]--
 	if l.perSub[subject] <= 0 {
