@@ -58,14 +58,14 @@ type Server struct {
 
 // NewServer builds the consumer WebSocket server. It does not start listening;
 // call Run.
-func NewServer(hub *streamhub.Service, auth ConsumerAuthenticator, cfg Config, log logger.AppLogger) *Server {
-	cfg = withDefaults(cfg)
+func NewServer(hub *streamhub.Service, auth ConsumerAuthenticator, cfg *Config, log logger.AppLogger) *Server {
+	conf := withDefaults(cfg)
 	s := &Server{
 		hub:     hub,
 		auth:    auth,
-		cfg:     cfg,
+		cfg:     conf,
 		log:     log.With(logger.WithService("stream-ws")),
-		limiter: cfg.Limiter,
+		limiter: conf.Limiter,
 		upgrader: websocket.Upgrader{
 			// JWT gates access (not Origin; TLS/proxy is the exposure control).
 			// Offering only the marker means gorilla never selects bearer.<jwt>.
