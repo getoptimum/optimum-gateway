@@ -48,9 +48,7 @@ func TestService_ShouldForwardMessageToMumP2P(t *testing.T) {
 		service *message_router.Service
 		topic   string
 		payload []byte
-		// freshSlot rebuilds the payload at assert time. The gate accepts only
-		// the current slot (MaxSlotAge 0), so a payload frozen at map-build time
-		// goes stale if a slot boundary passes before this case runs.
+		// freshSlot rebuilds at assert time so a 12s slot boundary cannot stale it.
 		freshSlot bool
 		want      bool
 	}{
