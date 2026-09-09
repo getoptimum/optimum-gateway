@@ -98,12 +98,13 @@ func NewConnLimiter(maxConns, maxConnsPerSub int) *ConnLimiter {
 }
 
 // acquire admits a connection for subject when both caps allow it, returning
-// the id that release must be given.
-func (l *ConnLimiter) acquire(subject string) (uint64, bool) {
+// the closer that frees it. Handing back a closure rather than an id keeps the
+// bookkeeping here instead of threading it through every caller.
+func (l *ConnLimiter) acquire(subject string) (release func(), ok bool) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.conns >= l.maxConns || l.perSub[subject] >= l.maxConnsPerSub {
-		return 0, false
+		return nil, false
 	}
 	l.conns++
 	l.perSub[subject]++
@@ -112,7 +113,7 @@ func (l *ConnLimiter) acquire(subject string) (uint64, bool) {
 	l.starts[id] = time.Now()
 	l.publishOldest()
 	telemetry.IncStreamConnections()
-	return id, true
+	return func() { l.release(subject, id) }, true
 }
 
 func (l *ConnLimiter) release(subject string, id uint64) {

@@ -49,21 +49,21 @@ func TestConnLimiterPublishesOldestStart(t *testing.T) {
 	published := capturePublished(t)
 	l := NewConnLimiter(10, 10)
 
-	id1, ok := l.acquire("sub-a")
+	releaseA, ok := l.acquire("sub-a")
 	require.True(t, ok)
 	require.Len(t, *published, 1, "acquire must publish")
 
-	id2, ok := l.acquire("sub-b")
+	releaseB, ok := l.acquire("sub-b")
 	require.True(t, ok)
 	require.Len(t, *published, 2, "every membership change must publish")
 	first := (*published)[0]
 	require.Equal(t, first, (*published)[1], "a newer connection does not change the oldest")
 
-	l.release("sub-b", id2)
+	releaseB()
 	require.Len(t, *published, 3, "release must publish")
 	require.Equal(t, first, (*published)[2], "releasing the newer one leaves the oldest published")
 
-	l.release("sub-a", id1)
+	releaseA()
 	require.Len(t, *published, 4)
 	require.Zero(t, (*published)[3], "an empty limiter publishes 0, not a stale start")
 }
@@ -74,22 +74,24 @@ func TestConnLimiterPublishesOldestStart(t *testing.T) {
 // than taken from the clock, so the ordering is not at the mercy of timer
 // resolution.
 func TestConnLimiterOldestStart(t *testing.T) {
-	newRig := func(t *testing.T) (*ConnLimiter, [3]uint64, time.Time) {
+	// ids are handed out sequentially, so the nth acquire owns start n. Setting
+	// the times explicitly keeps the ordering off the clock's resolution.
+	newRig := func(t *testing.T) (*ConnLimiter, [3]func(), time.Time) {
 		t.Helper()
 		l := NewConnLimiter(10, 10)
-		var ids [3]uint64
+		var closers [3]func()
 		for i, subject := range []string{"sub-a", "sub-b", "sub-c"} {
-			id, ok := l.acquire(subject)
+			release, ok := l.acquire(subject)
 			require.True(t, ok)
-			ids[i] = id
+			closers[i] = release
 		}
 		base := time.Now().Truncate(time.Second)
 		l.mu.Lock()
-		l.starts[ids[0]] = base
-		l.starts[ids[1]] = base.Add(time.Minute)
-		l.starts[ids[2]] = base.Add(2 * time.Minute)
+		for i, offset := range []time.Duration{0, time.Minute, 2 * time.Minute} {
+			l.starts[uint64(i)] = base.Add(offset)
+		}
 		l.mu.Unlock()
-		return l, ids, base
+		return l, closers, base
 	}
 
 	t.Run("reports the earliest start", func(t *testing.T) {
@@ -98,33 +100,35 @@ func TestConnLimiterOldestStart(t *testing.T) {
 	})
 
 	t.Run("releasing a newer connection leaves the oldest", func(t *testing.T) {
-		l, ids, base := newRig(t)
-		l.release("sub-c", ids[2])
+		l, closers, base := newRig(t)
+		closers[2]()
 		require.Equal(t, base, oldestStartOf(l))
-		l.release("sub-b", ids[1])
+		closers[1]()
 		require.Equal(t, base, oldestStartOf(l))
 	})
 
 	t.Run("releasing the oldest promotes the next", func(t *testing.T) {
-		l, ids, base := newRig(t)
-		l.release("sub-a", ids[0])
+		l, closers, base := newRig(t)
+		closers[0]()
 		require.Equal(t, base.Add(time.Minute), oldestStartOf(l))
 	})
 
 	t.Run("zero once the last connection closes", func(t *testing.T) {
-		l, ids, _ := newRig(t)
-		for i, subject := range []string{"sub-a", "sub-b", "sub-c"} {
-			l.release(subject, ids[i])
+		l, closers, _ := newRig(t)
+		for _, release := range closers {
+			release()
 		}
 		require.True(t, oldestStartOf(l).IsZero(), "an empty limiter must publish 0, not a stale start")
 	})
 
 	t.Run("ids are not reused after release", func(t *testing.T) {
-		l, ids, _ := newRig(t)
-		l.release("sub-a", ids[0])
-		next, ok := l.acquire("sub-a")
+		l, closers, _ := newRig(t)
+		closers[0]()
+		_, ok := l.acquire("sub-a")
 		require.True(t, ok)
-		require.NotContains(t, ids, next, "a recycled id would make release ambiguous")
+		l.mu.Lock()
+		defer l.mu.Unlock()
+		require.EqualValues(t, 4, l.nextID, "a recycled id would make release ambiguous")
 	})
 }
 
@@ -135,12 +139,12 @@ func TestConnLimiterReleaseIsIdempotent(t *testing.T) {
 	published := capturePublished(t)
 	l := NewConnLimiter(1, 1)
 
-	id, ok := l.acquire("sub-a")
+	release, ok := l.acquire("sub-a")
 	require.True(t, ok)
-	l.release("sub-a", id)
+	release()
 	before := len(*published)
 
-	l.release("sub-a", id)
+	release()
 	require.Len(t, *published, before, "a repeated release is a no-op, not another publish")
 
 	l.mu.Lock()
