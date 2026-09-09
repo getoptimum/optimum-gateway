@@ -40,8 +40,7 @@ type Config struct {
 	MaxConnsPerSub int
 	BufferSize     int
 	// KeepaliveMinTime is the shortest client ping interval the gRPC server
-	// tolerates. The library default of 5m GOAWAYs any consumer that enables
-	// keepalive at a useful rate.
+	// tolerates; the library default of 5m rejects any useful rate.
 	KeepaliveMinTime time.Duration
 	// Limiter is shared across transports so caps stay global; withDefaults
 	// creates one if nil.

@@ -46,11 +46,8 @@ func NewGRPCServer(hub *streamhub.Service, auth ConsumerAuthenticator, cfg *Conf
 		grpcSrv: grpc.NewServer(
 			// Reap dead peers on the WS clock; the gRPC default is a 2h ping.
 			grpc.KeepaliveParams(keepalive.ServerParameters{Time: pingPeriod, Timeout: writeWait}),
-			// Without this the gRPC-Go defaults apply, MinTime 5m and
-			// PermitWithoutStream false, so a consumer that enables client
-			// keepalive at any useful rate is GOAWAY'd for too_many_pings while
-			// this server pings it every 54s. That asymmetry made the obvious
-			// client-side mitigation actively harmful.
+			// The defaults, MinTime 5m and PermitWithoutStream false, GOAWAY
+			// any consumer that pings usefully while this server pings at 54s.
 			grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 				MinTime:             conf.KeepaliveMinTime,
 				PermitWithoutStream: true,
