@@ -97,6 +97,11 @@ which is what stops an enrollment proof being replayed to mint tokens.
 
 **`client_assertion_type` is required.** Omitting the URN is a 400, not a 401.
 
+**One assertion covers a request and its retries.** The server requires `jti` for
+audit but keeps no replay cache, which `jwk-assert.ts` calls a future add. Whoever
+adds that cache has to make the client re-sign per attempt, or a transient 5xx will
+retry into a replay rejection and surface as a rejected join key.
+
 **`peer_id` travels inside the signature** on the mint, where the server prefers
 the signed claim and rejects a mismatch against the body.
 

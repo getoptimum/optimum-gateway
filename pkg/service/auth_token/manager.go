@@ -140,6 +140,11 @@ func New(ctx context.Context, log logger.AppLogger, appCfg *config.AppConfig) (*
 	}
 
 	if appCfg.JoinKey != "" {
+		// An empty label is exempt from the per-org unique index, so nothing stops a
+		// lost credential directory re-enrolling on every boot until the key cap.
+		if appCfg.EnrollmentLabel() == "" {
+			svc.log.Info("enrolling without a label: set gateway_id so a re-enrollment is refused rather than silently duplicating")
+		}
 		cred, reused, enrollErr := enrollment.LoadOrEnroll(ctx, svc.log, &enrollment.Options{
 			Issuer:  issuer,
 			Dir:     appCfg.EnrollmentDir(),
@@ -486,8 +491,9 @@ func (m *Service) refreshLoop(ctx context.Context) {
 				m.log.Error("credential terminal failure, refresh loop exiting", err)
 				return
 			}
-			// Bound how long a stale token can be served: Token() does not check exp,
-			// and another 3h sleep can land after the cached 6h token has expired.
+			// Retry sooner than the next full interval so recovery is quick. It does
+			// not bound staleness: Token() never checks exp, so an outage past the
+			// 6h token lifetime keeps serving an expired JWT.
 			backoff = NextRetryBackoff(backoff)
 			m.log.Error("auth refresh failed; retrying sooner", err)
 			continue

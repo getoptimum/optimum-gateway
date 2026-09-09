@@ -22,7 +22,9 @@ telemetry_port: 48123
 # jwks_refresh_interval_sec: 3600          # bounds revocation-propagation lag
 # jwks_cache_path: /gateway/cache/jwks.json
 # enroll_cred_dir: /tmp/mump2p             # default: identity_mump2p_dir. Holds the
-#                                          # credential + pending key; MUST persist.
+#                                          # credential + pending key, so whichever path
+#                                          # you use must be a persistent mount, as the
+#                                          # identity dirs above already are.
 
 # ─── Consumer block-stream (ADR-0011, opt-in, off by default) ────────────────
 # Exposes decoded beacon blocks to your own consumers over WebSocket + gRPC.
@@ -59,7 +61,9 @@ telemetry_port: 48123
 
 # ─── Dev-mode only (ignored when enable_auth=true) ───────────────────────────
 # chain: hoodi                             # OPT_DEV_CHAIN — overridden by JWT chain_id claim
-# gateway_id: dev-gateway                  # OPT_GATEWAY_ID — overridden by JWT sub claim
+# gateway_id: dev-gateway                  # OPT_GATEWAY_ID — overridden by JWT sub claim,
+#                                          # EXCEPT under join_key: it is read before the
+#                                          # mint as the enrollment label, so set it per host
 
 # ─── Direct CL peers (optional) ──────────────────────────────────────────────
 # direct_cl_peers:

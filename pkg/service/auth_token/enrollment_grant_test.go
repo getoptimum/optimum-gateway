@@ -99,18 +99,16 @@ func TestEnrollmentGrant_SignsAFreshAssertionPerMint(t *testing.T) {
 	rig := test_utils.NewAuthTestRig(t)
 	dir := t.TempDir()
 
+	// Two mints on ONE manager. Comparing two boots would pass even with the
+	// payload fixed at construction, which is the regression this guards.
 	cfg := joinKeyCfg(t, rig, dir)
-	first, err := auth_token.New(t.Context(), logger.NewAppSLogger(logger.Debug), cfg)
+	m, err := auth_token.New(t.Context(), logger.NewAppSLogger(logger.Debug), cfg)
 	require.NoError(t, err)
-	_, err = first.Token(t.Context())
-	require.NoError(t, err)
+	require.NoError(t, m.MintForTest(t.Context()))
 	firstAssertion := rig.MintPayload()["client_assertion"]
 	require.NotEmpty(t, firstAssertion)
 
-	second, err := auth_token.New(t.Context(), logger.NewAppSLogger(logger.Debug), restartOf(t, rig, cfg))
-	require.NoError(t, err)
-	_, err = second.Token(t.Context())
-	require.NoError(t, err)
+	require.NoError(t, m.MintForTest(t.Context()))
 
 	require.NotEqual(t, firstAssertion, rig.MintPayload()["client_assertion"],
 		"each mint must carry a freshly signed assertion")

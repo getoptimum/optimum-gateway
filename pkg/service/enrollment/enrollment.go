@@ -292,13 +292,21 @@ func Save(dir string, c *Credential) error {
 	if err != nil {
 		return fmt.Errorf("enrollment: marshal credential: %w", err)
 	}
+	if err := tightenBeforeWrite(credentialPath(dir)); err != nil {
+		return err
+	}
 	if err := optio.AtomicallySaveToFile(credentialPath(dir), raw); err != nil {
 		return fmt.Errorf("enrollment: write %s: %w", credentialPath(dir), err)
 	}
-	// The writer copies the destination's mode when overwriting, so an existing
-	// file at a looser mode would keep it. The private key must not inherit that.
-	if err := os.Chmod(credentialPath(dir), 0o600); err != nil {
-		return fmt.Errorf("enrollment: chmod %s: %w", credentialPath(dir), err)
+	return nil
+}
+
+// tightenBeforeWrite forces 0600 on an existing target. optio copies the
+// destination's mode onto its temp file, so doing this first means the rename
+// publishes a locked-down key rather than one loosened for a moment afterwards.
+func tightenBeforeWrite(path string) error {
+	if err := os.Chmod(path, 0o600); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("enrollment: chmod %s: %w", path, err)
 	}
 	return nil
 }
@@ -342,11 +350,11 @@ func pendingKey(log logger.AppLogger, dir string) (*ecdsa.PrivateKey, []byte, er
 	}
 	// Persist before the POST. Without this a lost response strands the credential
 	// upstream, and the next boot re-enrolls under a label that is already live.
+	if err := tightenBeforeWrite(path); err != nil {
+		return nil, nil, err
+	}
 	if err := optio.AtomicallySaveToFile(path, pkcs8); err != nil {
 		return nil, nil, fmt.Errorf("enrollment: write %s: %w", path, err)
-	}
-	if err := os.Chmod(path, 0o600); err != nil {
-		return nil, nil, fmt.Errorf("enrollment: chmod %s: %w", path, err)
 	}
 	return key, pkcs8, nil
 }
