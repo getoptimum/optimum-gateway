@@ -173,10 +173,10 @@ func (c *AppConfig) InitRuntime(ctx context.Context, log logger.AppLogger, chain
 		log,
 		&commonentities.OptimumConfig{
 			MaxMessageSize:           DefaultMaxMessageSize,
-			RandomMessageSize:        DefaultRandomMessageSize,
-			ShardFactor:              DefaultShardFactor,
-			PublisherShardMultiplier: DefaultPublisherShardMultiplier,
-			ForwardShardThreshold:    DefaultForwardShardThreshold,
+			RandomMessageSize:        uint32(DefaultRandomMessageSize),
+			ShardFactor:              uint32(DefaultShardFactor),
+			PublisherShardMultiplier: float64(DefaultPublisherShardMultiplier),
+			ForwardShardThreshold:    float64(DefaultForwardShardThreshold),
 			MeshDegreeTarget:         DefaultMeshDegreeTarget,
 			MeshDegreeMin:            DefaultMeshDegreeMin,
 			MeshDegreeMax:            DefaultMeshDegreeMax,
@@ -387,7 +387,7 @@ func (c *AppConfig) LogConfigState() {
 			logger.WithInt64("mesh_degree_target", optCfg.MeshDegreeTarget),
 			logger.WithInt64("mesh_degree_min", optCfg.MeshDegreeMin),
 			logger.WithInt64("mesh_degree_max", optCfg.MeshDegreeMax),
-			logger.WithInt64("shard_factor", optCfg.ShardFactor),
+			logger.WithUint64("shard_factor", uint64(optCfg.ShardFactor)),
 			logger.WithInt64("aggregation_interval_ms", c.aggregationIntervalMs.Load()),
 		)
 	}
