@@ -46,12 +46,13 @@ type Node struct {
 	broadcaster    *syncx.Broadcaster[*entities.MumP2PResponse]
 
 	peersMap         *syncx.TTLMap[peer.ID, entities.PeerState]
-	peersApprovedMap *syncx.RWMap[peer.ID, struct{}] // list of peers which can be used for message publish
+	peersApprovedMap *syncx.RWMap[peer.ID, struct{}]              // list of peers which can be used for message publish
+	peerCapabilities *syncx.RWMap[peer.ID, pubsub.PeerCapability] // peer capabilities derived from the handshake
 
 	tk *topics_keeper.Service // Topics keeper for persisting subscribed topics. Using on node startup.
 
-	handshakeBuilder func() any                                        // function that create handshake message
-	handshakeHandler func(peerID peer.ID, decoder *json.Decoder) error // function that parse and validate handshake message
+	handshakeBuilder func() any                                                                 // function that create handshake message
+	handshakeHandler func(peerID peer.ID, decoder *json.Decoder) (pubsub.PeerCapability, error) // function that parse and validate handshake message
 
 	oncer sync.Once
 }
@@ -148,20 +149,22 @@ func NewNodeWithHost(
 		broadcaster:      syncx.NewBroadcaster[*entities.MumP2PResponse](),
 		peersMap:         syncx.NewTTLMap[peer.ID, entities.PeerState](15*time.Second, 15*time.Second),
 		peersApprovedMap: syncx.NewRWMap[peer.ID, struct{}](), // list of peers which can be used for message publish
+		peerCapabilities: syncx.NewRWMap[peer.ID, pubsub.PeerCapability](),
 		tk:               topics_keeper.NewService(ctx, log.With(logger.WithService("topic_keeper")), identityDir),
 
 		handshakeBuilder: func() any {
 			return entities.NewHandshake(cfg.ClusterID)
 		},
-		handshakeHandler: func(_ peer.ID, decoder *json.Decoder) error {
+		handshakeHandler: func(_ peer.ID, decoder *json.Decoder) (pubsub.PeerCapability, error) {
 			var handshake entities.Handshake
 			if errD := decoder.Decode(&handshake); errD != nil {
-				return errD
+				return pubsub.PeerCapability{}, errD
 			}
 			if errV := handshake.Validate(cfg.ClusterID); errV != nil {
-				return fmt.Errorf("validating handshake response, remote cluster `%s`: %w", handshake.ClusterID, errV)
+				return pubsub.PeerCapability{}, fmt.Errorf(
+					"validating handshake response, remote cluster `%s`: %w", handshake.ClusterID, errV)
 			}
-			return nil
+			return pubsub.PeerCapability{CanPublish: true}, nil
 		},
 	}
 	ret.tracer = tracer.NewTracerMumP2P(ret.broadcaster, entities.OptimumTraceEventSet(cfg.TraceMesh, cfg.TraceRPC, cfg.TraceShard))
@@ -289,13 +292,15 @@ func (n *Node) getPeerState(peerID peer.ID) (entities.PeerState, bool) {
 	return n.peersMap.Get(peerID)
 }
 
-func (n *Node) setPeerState(peerID peer.ID, state entities.PeerState) {
+func (n *Node) setPeerState(peerID peer.ID, state entities.PeerState, capability pubsub.PeerCapability) {
 	n.peersMap.Put(peerID, state)
 	switch state {
 	case entities.PeerStateHandshakeValid:
 		n.peersApprovedMap.Store(peerID, struct{}{})
+		n.peerCapabilities.Store(peerID, capability)
 	case entities.PeerStateHandshakeInvalid:
 		n.peersMap.Delete(peerID)
 		n.peersApprovedMap.Delete(peerID)
+		n.peerCapabilities.Delete(peerID)
 	}
 }

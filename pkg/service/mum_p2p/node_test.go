@@ -15,6 +15,7 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
 	"github.com/getoptimum/optimum-gateway/pkg/service/mum_p2p"
 	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
+	pubsub "github.com/getoptimum/optimum-p2p/optimum-pubsub"
 )
 
 func TestNodePublishMessageAutoSubscribes(t *testing.T) {
@@ -131,16 +132,16 @@ func customHandshakeOptions(counter *atomic.Int32) []mum_p2p.NodeOption {
 		mum_p2p.WithCustomHandshakeBuilder(func() any {
 			return customHandshake{Kind: "custom"}
 		}),
-		mum_p2p.WithCustomHandshakeHandler(func(_ peer.ID, decoder *json.Decoder) error {
+		mum_p2p.WithCustomHandshakeHandler(func(_ peer.ID, decoder *json.Decoder) (pubsub.PeerCapability, error) {
 			var handshake customHandshake
 			if err := decoder.Decode(&handshake); err != nil {
-				return err
+				return pubsub.PeerCapability{}, err
 			}
 			if handshake.Kind != "custom" {
-				return fmt.Errorf("unexpected handshake kind %q", handshake.Kind)
+				return pubsub.PeerCapability{}, fmt.Errorf("unexpected handshake kind %q", handshake.Kind)
 			}
 			counter.Add(1)
-			return nil
+			return pubsub.PeerCapability{CanPublish: true}, nil
 		}),
 	}
 }
