@@ -44,6 +44,17 @@ func newWSTestServer(t *testing.T, cfg *Config, requireAuth bool) (ts *httptest.
 	return ts, s, hub, rig
 }
 
+// newWSTestServerWithAuth is the same rig with a caller-supplied
+// authenticator, for the re-auth modes.
+func newWSTestServerWithAuth(t *testing.T, cfg *Config, authenticator ConsumerAuthenticator) (*httptest.Server, *streamhub.Service) {
+	t.Helper()
+	hub := streamhub.New()
+	s := NewServer(hub, authenticator, cfg, logger.NewAppSLogger(logger.Debug))
+	ts := httptest.NewServer(s.httpSrv.Handler)
+	t.Cleanup(ts.Close)
+	return ts, hub
+}
+
 func streamToken(t *testing.T, rig *test_utils.AuthTestRig, subject string) string {
 	t.Helper()
 	return rig.MustSignToken(t, rig.PrivateKey, func(c *jwks_verifier.Claims) {
@@ -293,4 +304,135 @@ func TestWS_HeartbeatReportsLastDeliveredSlot(t *testing.T) {
 	})
 	require.EqualValues(t, 42, f["last_slot"], "the heartbeat must report the last slot actually written")
 	require.Greater(t, f["expected_slot"], f["last_slot"], "sampleEvent is a historical slot, so the feed reads as behind")
+}
+
+// TestWS_IgnoresNonRefreshMessages: consumers are read-only apart from a token
+// refresh, so anything else they send must not disturb the connection.
+func TestWS_IgnoresNonRefreshMessages(t *testing.T) {
+	ts, _, hub, rig := newWSTestServer(t, &Config{HeartbeatInterval: 20 * time.Millisecond}, true)
+	conn, _, err := dial(ts, "", streamToken(t, rig, "sub-1"))
+	require.NoError(t, err)
+	defer conn.Close()
+
+	waitSubscribed(t, hub, 1)
+	require.NoError(t, conn.WriteMessage(websocket.TextMessage, []byte("not json at all")))
+	require.NoError(t, conn.WriteMessage(websocket.TextMessage, []byte(`{"unrelated":true}`)))
+
+	hub.Emit(sampleEvent())
+	require.EqualValues(t, 42, readFrameUntil(t, conn, frameTypeBlock)["slot"])
+	require.Equal(t, 1, hub.SubscriberCount())
+}
+
+func TestWS_AcceptsRefreshedTokenMidStream(t *testing.T) {
+	ts, _, hub, rig := newWSTestServer(t, &Config{HeartbeatInterval: 20 * time.Millisecond}, true)
+	conn, _, err := dial(ts, "", streamToken(t, rig, "sub-1"))
+	require.NoError(t, err)
+	defer conn.Close()
+
+	waitSubscribed(t, hub, 1)
+	refresh, err := json.Marshal(map[string]string{"token": streamToken(t, rig, "sub-1")})
+	require.NoError(t, err)
+	require.NoError(t, conn.WriteMessage(websocket.TextMessage, refresh))
+
+	require.NotNil(t, readFrameUntil(t, conn, frameTypeHeartbeat))
+	hub.Emit(sampleEvent())
+	require.EqualValues(t, 42, readFrameUntil(t, conn, frameTypeBlock)["slot"])
+	require.Equal(t, 1, hub.SubscriberCount(), "a refresh must not churn the subscription")
+}
+
+// TestWS_ReauthEnforceClosesWithReason covers the only close frame this
+// transport sends; the code is all that distinguishes an auth cut from a drop.
+func TestWS_ReauthEnforceClosesWithReason(t *testing.T) {
+	auth := &revocableAuth{}
+	ts, hub := newWSTestServerWithAuth(t, &Config{
+		ReauthMode: ReauthEnforce, ReauthInterval: 20 * time.Millisecond,
+	}, auth)
+	conn, _, err := dial(ts, "", "any-token")
+	require.NoError(t, err)
+	defer conn.Close()
+
+	waitSubscribed(t, hub, 1)
+	auth.revoked.Store(true)
+
+	_ = conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+	for {
+		if _, _, rerr := conn.ReadMessage(); rerr != nil {
+			require.True(t, websocket.IsCloseError(rerr, websocket.ClosePolicyViolation),
+				"expected a 1008 close, got %v", rerr)
+			require.ErrorContains(t, rerr, "token expired, refresh required")
+			break
+		}
+	}
+	waitSubscribed(t, hub, 0)
+}
+
+func TestWS_ReauthObserveKeepsStream(t *testing.T) {
+	auth := &revocableAuth{}
+	ts, hub := newWSTestServerWithAuth(t, &Config{
+		ReauthMode: ReauthObserve, ReauthInterval: 20 * time.Millisecond,
+		HeartbeatInterval: 20 * time.Millisecond,
+	}, auth)
+	conn, _, err := dial(ts, "", "any-token")
+	require.NoError(t, err)
+	defer conn.Close()
+
+	waitSubscribed(t, hub, 1)
+	auth.revoked.Store(true)
+
+	require.NotNil(t, readFrameUntil(t, conn, frameTypeHeartbeat))
+	hub.Emit(sampleEvent())
+	require.EqualValues(t, 42, readFrameUntil(t, conn, frameTypeBlock)["slot"])
+	require.Equal(t, 1, hub.SubscriberCount())
+}
+
+// TestWS_RefreshRejectsInvalidToken reaches the writer's Authenticate failure
+// branch: a token that does not verify is counted, dropped, and not fatal.
+func TestWS_RefreshRejectsInvalidToken(t *testing.T) {
+	auth := newSubjectAuth(map[string]string{"tok-1": testSubject})
+	ts, hub := newWSTestServerWithAuth(t, &Config{HeartbeatInterval: 20 * time.Millisecond}, auth)
+	conn, _, err := dial(ts, "", "tok-1")
+	require.NoError(t, err)
+	defer conn.Close()
+
+	waitSubscribed(t, hub, 1)
+	bad, err := json.Marshal(map[string]string{"token": "not-a-token"})
+	require.NoError(t, err)
+	require.NoError(t, conn.WriteMessage(websocket.TextMessage, bad))
+
+	// WriteMessage does not wait for the read pump, so the authentication
+	// attempt is the only proof the branch ran.
+	require.Eventually(t, func() bool { return auth.authenticated("not-a-token") > 0 },
+		3*time.Second, 5*time.Millisecond, "the refresh was never read")
+
+	hub.Emit(sampleEvent())
+	require.EqualValues(t, 42, readFrameUntil(t, conn, frameTypeBlock)["slot"])
+	require.Equal(t, 1, hub.SubscriberCount(), "a bad refresh must not sever a working stream")
+}
+
+// TestWS_RefreshAcceptsALargeToken is the read limit's boundary: at the old
+// 1 KiB an envelope this size closed the connection instead of refreshing.
+func TestWS_RefreshAcceptsALargeToken(t *testing.T) {
+	big := "tok-" + strings.Repeat("x", 1400)
+	auth := newSubjectAuth(map[string]string{"tok-1": testSubject, big: testSubject})
+	ts, hub := newWSTestServerWithAuth(t, &Config{HeartbeatInterval: 20 * time.Millisecond}, auth)
+	conn, _, err := dial(ts, "", "tok-1")
+	require.NoError(t, err)
+	defer conn.Close()
+
+	waitSubscribed(t, hub, 1)
+	env, err := json.Marshal(map[string]string{"token": big})
+	require.NoError(t, err)
+	require.Greater(t, len(env), 1<<10, "the point of the test is an envelope past the old limit")
+	require.LessOrEqual(t, int64(len(env)), int64(maxReadBytes))
+	require.NoError(t, conn.WriteMessage(websocket.TextMessage, env))
+
+	// Under the old limit the connection would be closed instead, so this never
+	// becomes true.
+	require.Eventually(t, func() bool { return auth.authenticated(big) > 0 },
+		3*time.Second, 5*time.Millisecond, "the large envelope was never read")
+
+	hub.Emit(sampleEvent())
+	require.EqualValues(t, 42, readFrameUntil(t, conn, frameTypeBlock)["slot"],
+		"the connection must survive a large but valid refresh")
+	require.Equal(t, 1, hub.SubscriberCount())
 }

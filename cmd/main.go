@@ -183,6 +183,8 @@ func main() {
 			BufferSize:        appConf.StreamBufferSize,
 			HeartbeatInterval: time.Duration(appConf.StreamHeartbeatIntervalSec) * time.Second,
 			KeepaliveMinTime:  time.Duration(appConf.StreamKeepaliveMinTimeSec) * time.Second,
+			ReauthMode:        appConf.StreamReauthMode,
+			ReauthInterval:    time.Duration(appConf.StreamReauthIntervalSec) * time.Second,
 			Limiter:           limiter,
 		}
 		streamCfg.Addr = appConf.StreamAddr

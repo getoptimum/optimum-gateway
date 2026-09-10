@@ -3,6 +3,7 @@
 **Status:** Approved (implemented)  
 Amended 2026-09-08: gRPC keepalive enforcement and connection-age visibility.  
 Amended 2026-09-08: in-band liveness heartbeat frame.  
+Amended 2026-09-08: bidirectional `Subscribe` for in-band token refresh, and mid-stream re-authentication.  
 **Date:** 2026-08-05  
 
 ## Context
@@ -241,6 +242,47 @@ already synthesizes for its own consumers, rather than inventing a second
 vocabulary for the same idea, so it can pass the signal straight through
 instead of inferring silence locally.
 
+### Bidirectional Subscribe and mid-stream re-auth (amended 2026-09-08)
+
+**Auth was checked once and never again.** `Authenticate` runs at subscribe
+time only (§3), so a weeks-long stream honors a one-hour token for weeks and a
+revoked key keeps streaming. Connection age bounds the exposure, which is why
+it is now published, but nothing shortened it.
+
+`Subscribe` therefore becomes bidirectional: the client stream carries the
+selection message first, then a refreshed JWT whenever the consumer has one.
+The token a connection last presented is re-verified every
+`stream_reauth_interval_sec`, gated by `stream_reauth_mode`. Re-verification
+needs no new interface: the verifier already checks `exp`, so re-running
+`Authenticate` on the current token surfaces expiry as a failure.
+
+| Env / yaml                                                      | Default   | Purpose                                                                    |
+| --------------------------------------------------------------- | --------- | -------------------------------------------------------------------------- |
+| `OPT_STREAM_REAUTH_MODE` / `stream_reauth_mode`                 | `observe` | `off`, `observe` (count failures), or `enforce` (close `Unauthenticated`).  |
+| `OPT_STREAM_REAUTH_INTERVAL_SEC` / `stream_reauth_interval_sec` | `60`      | Re-verification interval.                                                  |
+
+It ships as `observe` because no existing consumer can refresh in-band yet;
+`enforce` can only be turned on once they do.
+
+This does **not** create a consumer write path, which stays a non-goal. The
+client stream accepts exactly one field, `token`; nothing a consumer sends
+reaches the hub, the mesh, or another subscriber.
+
+Server-streaming to bidirectional streaming is wire-compatible: a client built
+against the earlier stub sends one message and half-closes, which the new
+handler serves unchanged. This is asserted by a test rather than assumed.
+`buf breaking` flags the change under `RPC_SAME_CLIENT_STREAMING`; no per-rule
+exception was added, because an exception would permanently permit future
+client-streaming changes instead of recording this one. Regenerating against
+the new proto *is* source-breaking at the call site, since `Subscribe` no
+longer takes the request as an argument.
+
+**`MaxConnectionAge` was considered and rejected** as a way to force
+re-authentication. Because there is no replay (Non-goals), every forced
+rotation is a permanent, customer-visible gap in the consumer's data. Paying a
+guaranteed data loss on a fixed schedule to bound token staleness is the wrong
+trade for this feed; in-band refresh bounds it without dropping a frame.
+
 ## Architecture
 
 ```mermaid
@@ -282,7 +324,10 @@ flowchart LR
 * Authentication is checked once per connection, so revocation lag is bounded
   by connection lifetime rather than token lifetime (amended 2026-09-08).
   `mump2p_stream_oldest_connection_started_seconds` is what makes that bound
-  observable.
+  observable. Mid-stream re-auth shortens it, but only in `enforce`; in
+  `observe`, the default, a connection whose token has stopped verifying keeps
+  streaming and `mump2p_stream_reauth_failures_total` measures how many
+  consumers have not adopted in-band refresh.
 
 ## Non-goals (v1)
 

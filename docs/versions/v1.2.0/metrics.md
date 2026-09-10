@@ -105,8 +105,9 @@ These series appear when `stream_enable: true`. They use the `mump2p_stream_` pr
 | `mump2p_stream_connections`             | Gauge   | Currently open consumer connections                      |
 | `mump2p_stream_events_sent_total`       | Counter | Events written to consumers                              |
 | `mump2p_stream_events_dropped_total`    | Counter | Events dropped on buffer overflow (lag)                  |
-| `mump2p_stream_auth_failures_total`     | Counter | Connections rejected for bad or missing tokens           |
+| `mump2p_stream_auth_failures_total`     | Counter | Tokens rejected, at connect or on an in-band refresh     |
 | `mump2p_stream_heartbeats_sent_total`   | Counter | Liveness frames written to a consumer connection         |
+| `mump2p_stream_reauth_failures_total`   | Counter | Re-verifications that failed; the only signal in `observe` mode |
 | `mump2p_stream_oldest_connection_started_seconds` | Gauge | Unix start time of the longest-running connection, `0` when none. Query as `time() - <this>` |
 
 ## mump2p Trace (debug)

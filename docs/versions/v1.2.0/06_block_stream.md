@@ -381,6 +381,37 @@ not a block identity and would silently discard the second one.
 Never key on `block_size_bytes` or `received_at_ms`. Both are per-observation
 and legitimately differ between paths, so they are not stable identity.
 
+### Refreshing the token in-band
+
+A stream held for weeks outlives its JWT. The gRPC request stream stays open
+for exactly this: send another `SubscribeRequest` carrying only a `token` at
+any time and the connection adopts it. Over WebSocket, send the same as a text
+frame.
+
+```json
+{ "token": "eyJhbGciOi..." }
+```
+
+Refresh well before `exp`; every 45 minutes for a one-hour token is ample. A
+refresh that fails to verify is counted and ignored, leaving the previous token
+in force, so a malformed refresh cannot sever a working stream.
+
+`stream_reauth_mode` decides what happens when the token a connection last
+presented stops verifying:
+
+| Mode | Behavior |
+| --- | --- |
+| `off` | Never re-verified; a connection outlives its token indefinitely |
+| `observe` (default) | Re-verified every `stream_reauth_interval_sec`; failures counted, stream kept |
+| `enforce` | Failures close the stream with `Unauthenticated` |
+
+`observe` ships as the default so streams are measured before anything is cut.
+Build for `enforce`: implement refresh now.
+
+> `grpcurl -d '{"mode":"..."}'` sends one message and half-closes, so it cannot
+> refresh. That is a supported shape for a short session, and it is also how
+> clients built against the previous server-streaming signature behave.
+
 ## Errors
 
 Connection-time (gateway WebSocket / gRPC):
@@ -390,6 +421,14 @@ Connection-time (gateway WebSocket / gRPC):
 | Missing / bad token | `401 Unauthorized` | `Unauthenticated` |
 | Invalid `mode` | `400 Bad Request` | `InvalidArgument` |
 | Connection cap reached | `503 Service Unavailable` | `ResourceExhausted` |
+
+Mid-stream:
+
+| Condition | WebSocket | gRPC |
+| --- | --- | --- |
+| Presented token stopped verifying, `stream_reauth_mode: enforce` | close `1008`, reason `token expired, refresh required` | `Unauthenticated` |
+| Gateway or terminator restarted | close | GOAWAY, then `Unavailable` |
+| Stream cut after the first block | close | `Internal` |
 
 Token exchange (`POST /api/v1/stream/token` on the auth service) is a different call. Unknown, suspended, or revoked `osc_` keys fail there as `401 invalid_key` — the gateway never sees that status on the stream.
 

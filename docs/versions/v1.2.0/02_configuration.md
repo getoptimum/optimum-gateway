@@ -128,6 +128,8 @@ The gateway receives automatic config updates from bootstrap.
 | `stream_buffer_size` | `OPT_STREAM_BUFFER_SIZE` | 64 | Per-connection ring buffer (drop-on-overflow) |
 | `stream_heartbeat_interval_sec` | `OPT_STREAM_HEARTBEAT_INTERVAL_SEC` | 20 | In-band liveness frame; `0` disables, leaving a stalled feed indistinguishable from a quiet one |
 | `stream_keepalive_min_time_sec` | `OPT_STREAM_KEEPALIVE_MIN_TIME_SEC` | 20 | Shortest accepted client ping interval; faster pings get GOAWAY `too_many_pings` |
+| `stream_reauth_mode` | `OPT_STREAM_REAUTH_MODE` | observe | `off` \| `observe` \| `enforce`; re-verify the presented token mid-stream |
+| `stream_reauth_interval_sec` | `OPT_STREAM_REAUTH_INTERVAL_SEC` | 60 | How often the presented token is re-verified |
 
 See [Consumer Block Stream](06_block_stream.md) for minting consumer tokens and
 opening a stream.
