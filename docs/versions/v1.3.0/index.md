@@ -1,8 +1,8 @@
 # Optimum Gateway - User Guide
 
-> **Recommended upgrade:** [v1.3.0](../v1.3.0/) is the current release. Partners on v1.2.0 should upgrade when convenient — networking and CL peering are unchanged.
+> **Recommended upgrade:** v1.3.0 is the current release. Partners on v1.2.0 should upgrade when convenient — networking and CL peering are unchanged.
 
-> **Release Notes:** [What's new in v1.2.0](./release_notes.md) · [v1.3.0 release notes](../v1.3.0/release_notes.md)
+> **Release Notes:** [What's new in v1.3.0](./release_notes.md)
 
 > **Security audit:** ProbeLab, 2026 - [Full report](https://cdn.probelab.io/media/documents/2026-08-ProbeLab-Security_Audit_Report_Optimum_Gateway.pdf)
 
@@ -13,7 +13,8 @@ The **Optimum Gateway** bridges your **Ethereum Consensus Layer (CL) client** wi
 * **Problem**: Validators rely on CL gossip (libp2p) for block and attestation propagation. Latency variance hurts performance.
 * **Gateway Role**: Bridges your local CL client to the **mump2p** network for both blocks and attestations.
 * **Result**: Faster block and attestation propagation, reduced latency, improved validator rewards.
-* **Consumer block stream** (opt-in): expose decoded beacon blocks to your own consumers over WebSocket or gRPC. See [Consumer Block Stream](06_block_stream.md).
+* **Consumer block stream** (opt-in): expose decoded beacon blocks to your own consumers over WebSocket or gRPC, with production-grade support for long-running connections. See [Consumer Block Stream](06_block_stream.md).
+* **Slot-prioritized acceleration:** during your validators' proposed slots, acceleration is prioritized automatically — no configuration required.
 
 ## Architecture
 
