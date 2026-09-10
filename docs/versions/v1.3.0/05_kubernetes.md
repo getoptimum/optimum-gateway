@@ -132,7 +132,7 @@ Add it to your client and restart it:
 | client | flag |
 |---|---|
 | Prysm | `--peer=<multiaddr>` |
-| Lighthouse | `--libp2p-addresses=<multiaddr>` and `--trusted-peers=<gateway-peer-id>` |
+| Lighthouse | `--boot-nodes=<multiaddr>` and `--trusted-peers=<gateway-peer-id>` |
 | Teku | `--p2p-direct-peers=<multiaddr>` |
 | Nimbus | `--direct-peer=<multiaddr>` |
 

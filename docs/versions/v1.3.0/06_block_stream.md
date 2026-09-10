@@ -95,7 +95,7 @@ is required; the rest have the defaults shown.
 
 ```yaml
 stream_enable: true            # default: false
-stream_only: false             # default: false — skip CL; never publishes (requires stream_enable)
+stream_only: false             # default: false — full gateway (CL + mesh publish)
 stream_addr: 127.0.0.1:9600    # default — WebSocket listener (own port, off /metrics)
 stream_grpc_addr: 127.0.0.1:9601 # default — gRPC listener
 stream_require_auth: true      # verify consumer JWTs; false = loopback only
