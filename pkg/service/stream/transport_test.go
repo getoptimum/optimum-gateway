@@ -121,14 +121,20 @@ func TestConnLimiterOldestStart(t *testing.T) {
 		require.True(t, oldestStartOf(l).IsZero(), "an empty limiter must publish 0, not a stale start")
 	})
 
-	t.Run("ids are not reused after release", func(t *testing.T) {
-		l, closers, _ := newRig(t)
-		closers[0]()
-		_, ok := l.acquire("sub-a")
+	// What the id is actually for: a closure that has already been used must not
+	// free the slot a later connection now holds.
+	t.Run("a stale release does not free a newer connection", func(t *testing.T) {
+		l := NewConnLimiter(1, 1)
+		stale, ok := l.acquire("sub-a")
 		require.True(t, ok)
-		l.mu.Lock()
-		defer l.mu.Unlock()
-		require.EqualValues(t, 4, l.nextID, "a recycled id would make release ambiguous")
+		stale()
+
+		_, ok = l.acquire("sub-a")
+		require.True(t, ok, "the slot was freed, so a new connection takes it")
+
+		stale()
+		_, ok = l.acquire("sub-a")
+		require.False(t, ok, "a stale release must not free the newer connection's slot")
 	})
 }
 
