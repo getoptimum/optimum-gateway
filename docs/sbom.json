@@ -1210,18 +1210,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/getoptimum/optimum-common@v0.1.7?type=module",
+      "bom-ref": "pkg:golang/github.com/getoptimum/optimum-common@v0.1.8?type=module",
       "type": "library",
       "name": "github.com/getoptimum/optimum-common",
-      "version": "v0.1.7",
+      "version": "v0.1.8",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "5a01ecd492f60c25b87d7926082135a1172ba8847182e39d5dc1e6c19883e553"
+          "content": "61094d9e1730051330370ad3ec5a0949a862dc84bd1b78858a661fe05cc91cd2"
         }
       ],
-      "purl": "pkg:golang/github.com/getoptimum/optimum-common@v0.1.7?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/getoptimum/optimum-common@v0.1.8?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/getoptimum/optimum-common",
@@ -6135,7 +6135,7 @@
       "ref": "pkg:golang/github.com/getoptimum/optimum-gateway@0.0.0-dev?type=module#cmd",
       "dependsOn": [
         "pkg:golang/github.com/ferranbt/fastssz@v1.0.1-0.20251203093649-0b1f38e43198?type=module",
-        "pkg:golang/github.com/getoptimum/optimum-common@v0.1.7?type=module",
+        "pkg:golang/github.com/getoptimum/optimum-common@v0.1.8?type=module",
         "pkg:golang/github.com/getoptimum/optimum-p2p@v0.0.1-rc16?type=module",
         "pkg:golang/github.com/gofiber/fiber/v3@v3.4.0?type=module",
         "pkg:golang/github.com/golang-jwt/jwt/v5@v5.3.1?type=module",
@@ -6495,7 +6495,7 @@
       ]
     },
     {
-      "ref": "pkg:golang/github.com/getoptimum/optimum-common@v0.1.7?type=module",
+      "ref": "pkg:golang/github.com/getoptimum/optimum-common@v0.1.8?type=module",
       "dependsOn": [
         "pkg:golang/cloud.google.com/go/auth@v0.18.2?type=module",
         "pkg:golang/cloud.google.com/go/auth/oauth2adapt@v0.2.8?type=module",
@@ -6609,7 +6609,7 @@
         "pkg:golang/github.com/decred/dcrd/dcrec/secp256k1/v4@v4.4.0?type=module",
         "pkg:golang/github.com/dunglas/httpsfv@v1.1.0?type=module",
         "pkg:golang/github.com/flynn/noise@v1.1.0?type=module",
-        "pkg:golang/github.com/getoptimum/optimum-common@v0.1.7?type=module",
+        "pkg:golang/github.com/getoptimum/optimum-common@v0.1.8?type=module",
         "pkg:golang/github.com/getoptimum/rlnc@v0.0.1-rc1.0.20260326154748-8ead5e1b16e5?type=module",
         "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module",
         "pkg:golang/github.com/go-logr/stdr@v1.2.2?type=module",
