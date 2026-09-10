@@ -54,6 +54,31 @@ test: ## Runs tests (unit tests and integration tests)
 	sed -i '/\.pb\.go:/d' cover.out
 	go tool cover -func cover.out | grep total
 
+dev_up_ci: ## Start the RLNC shared-memory server sidecar used by tests
+	-docker rm -f go-rlnc-ci >/dev/null 2>&1 || true
+	rm -f /tmp/go-rlnc.sock
+	docker run -d \
+		--name go-rlnc-ci \
+		--user "$$(id -u):$$(id -g)" \
+		-e RLNC_IPC_SOCKET=/tmp/go-rlnc.sock \
+		-v /tmp:/tmp \
+		-v /dev/shm:/dev/shm \
+		${DOCKER_HUB_USER}/rlnc-server:dev-latest \
+		-lanes 20 \
+		-name optimum-p2p
+	@echo "Waiting for RLNC server to be ready (checking for shared memory files)..."; \
+	for i in $$(seq 1 30); do \
+		[ -f /dev/shm/go_shm_rlnc_semaphore_optimum-p2p_lane_0 ] && echo "RLNC server is ready (shared memory files created)" && exit 0; \
+		sleep 1; \
+	done; \
+	echo "RLNC server failed to start (shared memory files not created)"; \
+	docker logs go-rlnc-ci || true; \
+	exit 1
+
+dev_down_ci: ## Stop the RLNC shared-memory server sidecar
+	-docker rm -f go-rlnc-ci >/dev/null 2>&1 || true
+	rm -f /tmp/go-rlnc.sock
+
 coverage: ## Check test coverage is enough
 	@echo "Threshold:                ${COVERAGE_THRESHOLD}%"
 	@echo "Current test coverage is: ${COVERAGE_TOTAL}%"
@@ -132,5 +157,5 @@ fastssz-generate: ## Vendor fastssz spectests SSZ types into pkg/protocol/fastss
 	@echo "fastssz code vendored at pkg/protocol/fastssz_codegen/"
 
 .PHONY: fastssz-generate
-.PHONY: help test lint coverage vulcheck build deps proto run run_cl build_hermes_image run_gateway_with_sidecar license-check license-check-test notices sbom sbom-binary sbom-full
+.PHONY: help test lint coverage dev_up_ci dev_down_ci vulcheck build deps proto run run_cl build_hermes_image run_gateway_with_sidecar license-check license-check-test notices sbom sbom-binary sbom-full
 .DEFAULT_GOAL := help

@@ -64,12 +64,14 @@ func TestHandshakeHandler(t *testing.T) {
 		payload := mustMarshalHandshake(t, srv.handshakeBuilder().(*Handshake))
 
 		// then
-		require.NoError(t, srv.handshakeHandler(expectedPeerID, json.NewDecoder(bytes.NewReader(payload))))
+		_, gotErr := srv.handshakeHandler(expectedPeerID, json.NewDecoder(bytes.NewReader(payload)))
+		require.NoError(t, gotErr)
 	})
 
 	t.Run("ReturnsDecodeErrorForInvalidJSON", func(t *testing.T) {
 		// when, then
-		require.Error(t, srv.handshakeHandler(expectedPeerID, json.NewDecoder(bytes.NewBufferString("{"))))
+		_, gotErr := srv.handshakeHandler(expectedPeerID, json.NewDecoder(bytes.NewBufferString("{")))
+		require.Error(t, gotErr)
 	})
 
 	t.Run("RejectsMismatchedCluster", func(t *testing.T) {
@@ -78,7 +80,7 @@ func TestHandshakeHandler(t *testing.T) {
 		handshake.ClusterID = "different-cluster"
 
 		// when
-		err := srv.handshakeHandler(expectedPeerID, json.NewDecoder(bytes.NewReader(mustMarshalHandshake(t, handshake))))
+		_, err := srv.handshakeHandler(expectedPeerID, json.NewDecoder(bytes.NewReader(mustMarshalHandshake(t, handshake))))
 
 		// then
 		require.EqualError(t, err, "invalid cluster ID: different-cluster")
@@ -90,7 +92,8 @@ func TestHandshakeHandler(t *testing.T) {
 		handshake.JWTToken = "not-a-jwt"
 
 		// when, then
-		require.Error(t, srv.handshakeHandler(expectedPeerID, json.NewDecoder(bytes.NewReader(mustMarshalHandshake(t, handshake)))))
+		_, gotErr := srv.handshakeHandler(expectedPeerID, json.NewDecoder(bytes.NewReader(mustMarshalHandshake(t, handshake))))
+		require.Error(t, gotErr)
 	})
 
 	t.Run("RejectsExpiredToken", func(t *testing.T) {
@@ -104,7 +107,8 @@ func TestHandshakeHandler(t *testing.T) {
 
 		// when, then
 		require.Equal(t, handshake.CommitHash, version.GetCommitHash())
-		require.Error(t, srv.handshakeHandler(expectedPeerID, json.NewDecoder(bytes.NewReader(mustMarshalHandshake(t, handshake)))))
+		_, gotErr := srv.handshakeHandler(expectedPeerID, json.NewDecoder(bytes.NewReader(mustMarshalHandshake(t, handshake))))
+		require.Error(t, gotErr)
 	})
 
 	t.Run("RejectsTokenSignedWithAnotherKey", func(t *testing.T) {
@@ -116,7 +120,8 @@ func TestHandshakeHandler(t *testing.T) {
 
 		// when, then
 		require.Equal(t, handshake.CommitHash, version.GetCommitHash())
-		require.Error(t, srv.handshakeHandler(expectedPeerID, json.NewDecoder(bytes.NewReader(mustMarshalHandshake(t, handshake)))))
+		_, gotErr := srv.handshakeHandler(expectedPeerID, json.NewDecoder(bytes.NewReader(mustMarshalHandshake(t, handshake))))
+		require.Error(t, gotErr)
 	})
 
 	t.Run("RejectsPeerIDMismatch", func(t *testing.T) {
@@ -125,7 +130,7 @@ func TestHandshakeHandler(t *testing.T) {
 		otherPeerID := mustPeerIDFromIdentityDir(t, t.TempDir())
 
 		// when
-		err := srv.handshakeHandler(otherPeerID, json.NewDecoder(bytes.NewReader(mustMarshalHandshake(t, handshake))))
+		_, err := srv.handshakeHandler(otherPeerID, json.NewDecoder(bytes.NewReader(mustMarshalHandshake(t, handshake))))
 
 		// then
 		require.EqualError(t, err, "peer ID mismatch: expected "+otherPeerID.String()+", got "+expectedPeerID.String())
@@ -138,7 +143,8 @@ func TestHandshakeHandler(t *testing.T) {
 		handshake := NewHandshake(disabled.cfg.GatewayClusterID, "", version.GetCommitHash())
 		otherPeerID := mustPeerIDFromIdentityDir(t, t.TempDir())
 
-		require.NoError(t, disabled.handshakeHandler(otherPeerID, json.NewDecoder(bytes.NewReader(mustMarshalHandshake(t, handshake)))))
+		_, gotErr := disabled.handshakeHandler(otherPeerID, json.NewDecoder(bytes.NewReader(mustMarshalHandshake(t, handshake))))
+		require.NoError(t, gotErr)
 	})
 
 	t.Run("ChainID", func(t *testing.T) {
@@ -156,7 +162,7 @@ func TestHandshakeHandler(t *testing.T) {
 				h := NewHandshake(srv.cfg.GatewayClusterID, rig.MustSignToken(t, rig.PrivateKey, func(c *jwks_verifier.Claims) {
 					c.ChainID = tc.chainID
 				}), version.GetCommitHash())
-				err := srv.handshakeHandler(expectedPeerID, json.NewDecoder(bytes.NewReader(mustMarshalHandshake(t, h))))
+				_, err := srv.handshakeHandler(expectedPeerID, json.NewDecoder(bytes.NewReader(mustMarshalHandshake(t, h))))
 				if tc.wantErr == "" {
 					require.NoError(t, err)
 					return
@@ -192,7 +198,7 @@ func TestHandshakeHandler_Audience(t *testing.T) {
 			h := NewHandshake(srv.cfg.GatewayClusterID, rig.MustSignToken(t, rig.PrivateKey, func(c *jwks_verifier.Claims) {
 				c.Audience = tc.aud
 			}), version.GetCommitHash())
-			err := srv.handshakeHandler(peerID, json.NewDecoder(bytes.NewReader(mustMarshalHandshake(t, h))))
+			_, err := srv.handshakeHandler(peerID, json.NewDecoder(bytes.NewReader(mustMarshalHandshake(t, h))))
 			if tc.wantErr == "" {
 				require.NoError(t, err)
 				return
@@ -223,7 +229,7 @@ func TestHandshakeHandler_Cluster(t *testing.T) {
 			h := NewHandshake(srv.cfg.GatewayClusterID, rig.MustSignToken(t, rig.PrivateKey, func(c *jwks_verifier.Claims) {
 				c.ClusterIDs = tc.clusterIDs
 			}), version.GetCommitHash())
-			err := srv.handshakeHandler(peerID, json.NewDecoder(bytes.NewReader(mustMarshalHandshake(t, h))))
+			_, err := srv.handshakeHandler(peerID, json.NewDecoder(bytes.NewReader(mustMarshalHandshake(t, h))))
 			if tc.wantErr == "" {
 				require.NoError(t, err)
 				return

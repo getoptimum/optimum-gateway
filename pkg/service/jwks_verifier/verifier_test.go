@@ -84,15 +84,17 @@ func (f *jwksFixture) sign(t *testing.T, mods ...func(*jwks_verifier.Claims)) st
 	t.Helper()
 	now := time.Now()
 	claims := jwks_verifier.Claims{
-		ScopeVersion: 1,
-		Type:         "partner",
-		ChainID:      "hoodi",
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    f.baseURL,
-			Subject:   "gw-test",
-			IssuedAt:  jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(now.Add(1 * time.Hour)),
-			Audience:  jwt.ClaimStrings{jwks_verifier.AudP2P},
+		GatewayClaims: commonentities.GatewayClaims{
+			ScopeVersion: 1,
+			Type:         "partner",
+			ChainID:      "hoodi",
+			RegisteredClaims: jwt.RegisteredClaims{
+				Issuer:    f.baseURL,
+				Subject:   "gw-test",
+				IssuedAt:  jwt.NewNumericDate(now),
+				ExpiresAt: jwt.NewNumericDate(now.Add(1 * time.Hour)),
+				Audience:  jwt.ClaimStrings{jwks_verifier.AudP2P},
+			},
 		},
 	}
 	for _, m := range mods {
@@ -185,13 +187,15 @@ func TestVerify_WrongSigningAlg(t *testing.T) {
 	require.NoError(t, err)
 
 	claims := jwks_verifier.Claims{
-		Type:    "partner",
-		ChainID: "hoodi",
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    f.baseURL,
-			Subject:   "gw-test",
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)),
-			Audience:  jwt.ClaimStrings{jwks_verifier.AudP2P},
+		GatewayClaims: commonentities.GatewayClaims{
+			Type:    "partner",
+			ChainID: "hoodi",
+			RegisteredClaims: jwt.RegisteredClaims{
+				Issuer:    f.baseURL,
+				Subject:   "gw-test",
+				ExpiresAt: jwt.NewNumericDate(time.Now().Add(1 * time.Hour)),
+				Audience:  jwt.ClaimStrings{jwks_verifier.AudP2P},
+			},
 		},
 	}
 	tok := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

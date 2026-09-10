@@ -18,10 +18,10 @@ type Config struct {
 	MaxMessageSize int64  `yaml:"max_message_size_bytes"`
 
 	// RLNC and message settings
-	RandomMessageSize        int64   `yaml:"random_message_size_bytes"`
-	ShardFactor              int     `yaml:"rlnc_shard_factor"`
-	PublisherShardMultiplier float32 `yaml:"publisher_shard_multiplier"`
-	ForwardShardThreshold    float32 `yaml:"forward_shard_threshold"`
+	RandomMessageSize        uint32  `yaml:"random_message_size_bytes"`
+	ShardFactor              uint32  `yaml:"rlnc_shard_factor"`
+	PublisherShardMultiplier float64 `yaml:"publisher_shard_multiplier"`
+	ForwardShardThreshold    float64 `yaml:"forward_shard_threshold"`
 
 	// Mesh topology settings
 	MeshDegreeTarget int `yaml:"mesh_degree_target"`
