@@ -285,6 +285,133 @@ cumulative dropped count, then resumes. A slow consumer never stalls the gateway
 
 Over gRPC the same signal is a `lagged` frame: `{ "lagged": { "dropped": "12" } }`.
 
+### Liveness signal
+
+A quiet feed and a broken one look identical over a healthy connection: the
+transport stays up on its own pings while no blocks arrive. The gateway
+therefore emits a heartbeat every `stream_heartbeat_interval_sec` (default
+`20`), whether or not blocks are flowing. Setting it to `0` disables the frame
+entirely, which puts you back to not being able to tell those two apart.
+
+```json
+{ "type": "heartbeat", "last_slot": 3706300, "expected_slot": 3706302, "silence_ms": 24120 }
+```
+
+Over gRPC the same signal is a `heartbeat` frame:
+`{ "heartbeat": { "lastSlot": "3706300", "expectedSlot": "3706302", "silenceMs": "24120" } }`.
+
+| Field | Meaning |
+| --- | --- |
+| `last_slot` | Last slot actually written to **your** connection; `0` before the first block |
+| `expected_slot` | Slot the chain should be on now, derived from the wall clock |
+| `silence_ms` | Milliseconds since the last block was written to your connection; `0` before the first |
+
+`expected_slot - last_slot` is an **observation, not a verdict**. It also grows
+for slots the chain legitimately skipped, and it is meaningless before the
+first block, so correlate it against chain state before concluding anything. A
+large, sustained difference says the feed you are attached to is behind; it
+does not say which slots exist, and reconnecting will not recover a gap that
+happened on the gateway's ingest side.
+
+What the frame does prove is that the connection is alive and which slot was
+last delivered to it. So alert on heartbeats going **missing**, which is the
+failure this frame exists to expose, rather than on the arithmetic alone. For
+loss on *your* connection specifically, `lagged` is the signal.
+
+### Holding a stream open for weeks
+
+Streams are meant to stay open indefinitely. Three obligations fall on the
+client.
+
+**Send transport keepalives.** During a quiet stretch nothing between you and
+the gateway generates traffic, and NAT and conntrack entries expire. The
+gateway accepts client pings as often as every `stream_keepalive_min_time_sec`
+(default `20`) and permits them with no active stream. Ping somewhat less often
+than that, for example every 30s: pings faster than the minimum are answered
+with GOAWAY `too_many_pings`. gRPC clients send no keepalives at all unless
+configured, so this must be set explicitly.
+
+**Reconnect on GOAWAY.** A gateway restart, or a reload of the TLS terminator
+in front of it, sends GOAWAY. Reconnect, and account for the gap.
+
+**Retry `Internal`, not only `Unavailable`.** A stream cut *after* its first
+block ends as `Internal`, because response headers are already sent and a reset
+is all that remains; cut *before* the first block it ends as `Unavailable`.
+Most gRPC retry policies treat `Internal` as non-retryable, so a default
+configuration will not reconnect you.
+
+#### Gaps are permanent
+
+Nothing is buffered across connections and nothing is ever replayed, so every
+reconnect is a permanent hole. Detect holes rather than assuming their absence.
+
+But **a gap in the slot sequence is not by itself evidence of loss**: slots the
+network left empty are normal and produce no block at all. A jump from 100 to
+102 may mean slot 101 was missed, or that nobody proposed it. Reconcile against
+your own beacon node or an archive to tell the two apart. A `lagged` frame is
+the one signal that says this connection definitely dropped events.
+
+#### One event per observation, so deduplicate deliberately
+
+The stream carries one event **per source observation**, by design: the same
+block seen over both libp2p and mump2p arrives twice, distinguished by
+`source`. Those two are not redundant, they are the cross-path comparison, and
+collapsing them throws away the per-path arrival timing.
+
+Same-source repeats used to reach consumers as well: one slot was measured
+arriving twice over `mump2p` 9ms apart, with `block_size_bytes` differing
+between the two (35053 vs 35047) because the block had been re-encoded. The
+gateway now collapses those at the source on
+`(source, slot, proposer_index, state_root)`, so you should not normally see
+them. Do not treat that as absolute: the window is 30 seconds and the state is
+per-process, so a gateway restart or a very late repeat can still let one
+through.
+
+Pick the key for what you are counting:
+
+| You want | Key on |
+| --- | --- |
+| Unique blocks | `(slot, proposer_index, state_root)` |
+| Per-path observations | `(slot, proposer_index, state_root, source)` |
+
+`state_root` belongs in both. A proposer can equivocate and publish two
+genuinely different blocks for one slot, so `(slot, proposer_index)` alone is
+not a block identity and would silently discard the second one.
+
+Never key on `block_size_bytes` or `received_at_ms`. Both are per-observation
+and legitimately differ between paths, so they are not stable identity.
+
+### Refreshing the token in-band
+
+A stream held for weeks outlives its JWT. The gRPC request stream stays open
+for exactly this: send another `SubscribeRequest` carrying only a `token` at
+any time and the connection adopts it. Over WebSocket, send the same as a text
+frame.
+
+```json
+{ "token": "eyJhbGciOi..." }
+```
+
+Refresh well before `exp`; every 45 minutes for a one-hour token is ample. A
+refresh that fails to verify is counted and ignored, leaving the previous token
+in force, so a malformed refresh cannot sever a working stream.
+
+`stream_reauth_mode` decides what happens when the token a connection last
+presented stops verifying:
+
+| Mode | Behavior |
+| --- | --- |
+| `off` | Never re-verified; a connection outlives its token indefinitely |
+| `observe` (default) | Re-verified every `stream_reauth_interval_sec`; failures counted, stream kept |
+| `enforce` | Failures close the stream with `Unauthenticated` |
+
+`observe` ships as the default so streams are measured before anything is cut.
+Build for `enforce`: implement refresh now.
+
+> `grpcurl -d '{"mode":"..."}'` sends one message and half-closes, so it cannot
+> refresh. That is a supported shape for a short session, and it is also how
+> clients built against the previous server-streaming signature behave.
+
 ## Errors
 
 Connection-time (gateway WebSocket / gRPC):
@@ -294,6 +421,14 @@ Connection-time (gateway WebSocket / gRPC):
 | Missing / bad token | `401 Unauthorized` | `Unauthenticated` |
 | Invalid `mode` | `400 Bad Request` | `InvalidArgument` |
 | Connection cap reached | `503 Service Unavailable` | `ResourceExhausted` |
+
+Mid-stream:
+
+| Condition | WebSocket | gRPC |
+| --- | --- | --- |
+| Presented token stopped verifying, `stream_reauth_mode: enforce` | close `1008`, reason `token expired, refresh required` | `Unauthenticated` |
+| Gateway or terminator restarted | close | GOAWAY, then `Unavailable` |
+| Stream cut after the first block | close | `Internal` |
 
 Token exchange (`POST /api/v1/stream/token` on the auth service) is a different call. Unknown, suspended, or revoked `osc_` keys fail there as `401 invalid_key` — the gateway never sees that status on the stream.
 

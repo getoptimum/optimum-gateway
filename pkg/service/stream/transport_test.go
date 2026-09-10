@@ -1,0 +1,187 @@
+package stream
+
+import (
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/getoptimum/optimum-gateway/pkg/service/streamhub"
+)
+
+// TestWithDefaultsDoesNotMutateCaller pins the copy-on-entry: without it, a
+// default applied through the pointer would mutate caller-owned state.
+func TestWithDefaultsDoesNotMutateCaller(t *testing.T) {
+	in := Config{}
+	got := withDefaults(&in)
+
+	require.Equal(t, defaultMaxConns, got.MaxConns)
+	require.Equal(t, defaultMaxConnsPerSub, got.MaxConnsPerSub)
+	require.Equal(t, streamhub.DefaultBufferSize, got.BufferSize)
+	require.NotNil(t, got.Limiter, "a nil Limiter is filled in on the copy")
+
+	require.Equal(t, Config{}, in, "the caller's Config must come back untouched")
+}
+
+// oldestStartOf reads the limiter's answer under its own lock, which is how
+// publishOldest reads it.
+func oldestStartOf(l *ConnLimiter) time.Time {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.oldestStart()
+}
+
+// capturePublished swaps the telemetry seam so a test sees what the limiter
+// actually published, not just what it computed.
+func capturePublished(t *testing.T) *[]float64 {
+	t.Helper()
+	prev := publishOldestStart
+	var got []float64
+	publishOldestStart = func(v float64) { got = append(got, v) }
+	t.Cleanup(func() { publishOldestStart = prev })
+	return &got
+}
+
+// TestConnLimiterPublishesOldestStart pins the wiring, not the computation:
+// dropping either publishOldest call would leave the value correct in memory
+// while the gauge operators read went stale.
+func TestConnLimiterPublishesOldestStart(t *testing.T) {
+	published := capturePublished(t)
+	l := NewConnLimiter(10, 10)
+
+	releaseA, ok := l.acquire("sub-a")
+	require.True(t, ok)
+	require.Len(t, *published, 1, "acquire must publish")
+
+	releaseB, ok := l.acquire("sub-b")
+	require.True(t, ok)
+	require.Len(t, *published, 2, "every membership change must publish")
+	first := (*published)[0]
+	require.Equal(t, first, (*published)[1], "a newer connection does not change the oldest")
+
+	releaseB()
+	require.Len(t, *published, 3, "release must publish")
+	require.Equal(t, first, (*published)[2], "releasing the newer one leaves the oldest published")
+
+	releaseA()
+	require.Len(t, *published, 4)
+	require.Zero(t, (*published)[3], "an empty limiter publishes 0, not a stale start")
+}
+
+// TestConnLimiterOldestStart covers what the published gauge is for: it must
+// track the *oldest* live connection, which means a release has to be matched
+// to the connection that actually ended. Start times are set explicitly rather
+// than taken from the clock, so the ordering is not at the mercy of timer
+// resolution.
+func TestConnLimiterOldestStart(t *testing.T) {
+	// ids are handed out sequentially, so the nth acquire owns start n. Setting
+	// the times explicitly keeps the ordering off the clock's resolution.
+	newRig := func(t *testing.T) (*ConnLimiter, [3]func(), time.Time) {
+		t.Helper()
+		l := NewConnLimiter(10, 10)
+		var closers [3]func()
+		for i, subject := range []string{"sub-a", "sub-b", "sub-c"} {
+			release, ok := l.acquire(subject)
+			require.True(t, ok)
+			closers[i] = release
+		}
+		base := time.Now().Truncate(time.Second)
+		l.mu.Lock()
+		for i, offset := range []time.Duration{0, time.Minute, 2 * time.Minute} {
+			l.starts[uint64(i)] = base.Add(offset)
+		}
+		l.mu.Unlock()
+		return l, closers, base
+	}
+
+	t.Run("reports the earliest start", func(t *testing.T) {
+		l, _, base := newRig(t)
+		require.Equal(t, base, oldestStartOf(l))
+	})
+
+	t.Run("releasing a newer connection leaves the oldest", func(t *testing.T) {
+		l, closers, base := newRig(t)
+		closers[2]()
+		require.Equal(t, base, oldestStartOf(l))
+		closers[1]()
+		require.Equal(t, base, oldestStartOf(l))
+	})
+
+	t.Run("releasing the oldest promotes the next", func(t *testing.T) {
+		l, closers, base := newRig(t)
+		closers[0]()
+		require.Equal(t, base.Add(time.Minute), oldestStartOf(l))
+	})
+
+	t.Run("zero once the last connection closes", func(t *testing.T) {
+		l, closers, _ := newRig(t)
+		for _, release := range closers {
+			release()
+		}
+		require.True(t, oldestStartOf(l).IsZero(), "an empty limiter must publish 0, not a stale start")
+	})
+
+	// What the id is actually for: a closure that has already been used must not
+	// free the slot a later connection now holds.
+	t.Run("a stale release does not free a newer connection", func(t *testing.T) {
+		l := NewConnLimiter(1, 1)
+		stale, ok := l.acquire("sub-a")
+		require.True(t, ok)
+		stale()
+
+		_, ok = l.acquire("sub-a")
+		require.True(t, ok, "the slot was freed, so a new connection takes it")
+
+		stale()
+		_, ok = l.acquire("sub-a")
+		require.False(t, ok, "a stale release must not free the newer connection's slot")
+	})
+}
+
+// TestConnLimiterReleaseIsIdempotent: a double release would otherwise
+// decrement the caps twice and let the limiter admit a connection beyond
+// maxConns.
+func TestConnLimiterReleaseIsIdempotent(t *testing.T) {
+	published := capturePublished(t)
+	l := NewConnLimiter(1, 1)
+
+	release, ok := l.acquire("sub-a")
+	require.True(t, ok)
+	release()
+	before := len(*published)
+
+	release()
+	require.Len(t, *published, before, "a repeated release is a no-op, not another publish")
+
+	l.mu.Lock()
+	conns, perSub := l.conns, l.perSub["sub-a"]
+	l.mu.Unlock()
+	require.Zero(t, conns, "conns must not go negative")
+	require.Zero(t, perSub)
+
+	// The cap is still 1, so exactly one connection may be admitted.
+	_, ok = l.acquire("sub-a")
+	require.True(t, ok)
+	_, ok = l.acquire("sub-a")
+	require.False(t, ok, "a double release must not have created a spare slot")
+}
+
+// TestWithDefaultsHeartbeatInterval: 0 is a real value here, not "unset", so it
+// must survive; a negative cannot silently become the default, because config
+// validation rejects negatives and the two layers would then disagree.
+func TestWithDefaultsHeartbeatInterval(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		in   time.Duration
+		want time.Duration
+	}{
+		{"explicit interval survives", 5 * time.Second, 5 * time.Second},
+		{"zero stays disabled", 0, 0},
+		{"negative clamps to disabled", -time.Second, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			in := Config{HeartbeatInterval: tc.in}
+			require.Equal(t, tc.want, withDefaults(&in).HeartbeatInterval)
+		})
+	}
+}

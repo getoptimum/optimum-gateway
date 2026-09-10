@@ -19,7 +19,7 @@ numbered and immutable once `Accepted` — supersede rather than rewrite.
 | [0008](./0008-attestation-subnet-boost.md)             | Attestation subnet boost via validator-scoped filtering        | Accepted                          | 2026-04-17 |
 | [0009](./0009-slot-aware-attestation-gate.md)          | Slot-aware attestation aggregation gate                        | Accepted                          | 2026-04-27 |
 | [0010](./0010-attestation-synchronization.md)          | Deterministic attestation synchronization for partner clusters | Approved (implementation pending) | 2026-06-10 |
-| [0011](./0011-gateway-consumer-block-stream.md)        | Gateway consumer block-stream API (WebSocket + gRPC)           | Accepted.                         | 2026-08-05 |
+| [0011](./0011-gateway-consumer-block-stream.md)        | Gateway consumer block-stream API (WebSocket + gRPC)           | Accepted (amended 2026-09-08).    | 2026-08-05 |
 | [0012](./0012-slot-based-block-acceleration.md)        | Slot-based beacon block acceleration                           | Draft                             | 2026-08-18 |
 | [0013](./0013-gateway-self-enrollment.md)              | Gateway self-enrollment with an org join key                   | Draft                             | 2026-09-08 |
 
