@@ -85,13 +85,14 @@ func (s *Service) handshakeHandler(peerID peer.ID, decoder *json.Decoder) (pubsu
 	}
 	telemetry.IncClusterClaimResult(telemetry.ClusterClaimAuthorized)
 
-	// The capability is derived from the role claim, which is authoritative and verified by the JWT signature.
-	capability := pubsub.PeerCapability{CanPublish: claims.Type.CanPublish()}
+	// `scope` grants decide publish rights; role is the fallback for pre-scope tokens.
+	capability := pubsub.PeerCapability{CanPublish: claims.CanPublish()}
 	if !capability.CanPublish {
 		// The only operator-visible signal that read-only admission is in effect.
 		s.log.Info("admitting peer read-only",
 			logger.WithPeerID(peerID),
 			logger.WithString("gateway_type", claims.Type.String()),
+			logger.WithString("scope", claims.Scope),
 		)
 	}
 	return capability, nil

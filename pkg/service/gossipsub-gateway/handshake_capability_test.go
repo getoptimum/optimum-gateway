@@ -14,12 +14,8 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
 )
 
-// A peer's capability is derived from its verified `type` claim and nothing else, via
-// commonentities.GatewayType.CanPublish so that billing, auth and the gateway share one
-// definition. That helper is fail-CLOSED: only hermes/partner/relay publish, while stream,
-// empty and unrecognized roles do not. The unknown/empty cases below pin that deliberately —
-// they are safe only because the rollout rule forbids minting a role before the whole fleet
-// understands it. If these ever need to flip back to publish, the rollout rule changed.
+// Scope grants decide publish rights when present; role is the fallback for pre-scope tokens.
+// Unrecognized grants or roles fail closed.
 func TestHandshakeHandler_Capability(t *testing.T) {
 	srv, rig := newHandshakeTestService(t, nil)
 	peerID := mustPeerID(t, rig.DefaultPeerID)
@@ -27,19 +23,26 @@ func TestHandshakeHandler_Capability(t *testing.T) {
 
 	cases := map[string]struct {
 		gatewayType    commonentities.GatewayType
+		scope          string
 		wantCanPublish bool
 	}{
-		"stream is read-only":       {gatewayType: commonentities.GatewayTypeStream, wantCanPublish: false},
-		"partner can publish":       {gatewayType: commonentities.GatewayTypePartner, wantCanPublish: true},
-		"hermes can publish":        {gatewayType: commonentities.GatewayTypeHermes, wantCanPublish: true},
-		"relay can publish":         {gatewayType: commonentities.GatewayTypeRelay, wantCanPublish: true},
-		"unknown type fails closed": {gatewayType: "some-future-role", wantCanPublish: false},
-		"empty type fails closed":   {gatewayType: "", wantCanPublish: false},
+		// scope present is authoritative, regardless of role.
+		"scope publish can publish":         {gatewayType: commonentities.GatewayTypePartner, scope: commonentities.GrantP2PPublish, wantCanPublish: true},
+		"scope subscribe-only is read-only": {gatewayType: commonentities.GatewayTypePartner, scope: commonentities.GrantP2PSubscribe, wantCanPublish: false},
+		"scope both can publish":            {gatewayType: commonentities.GatewayTypeHermes, scope: commonentities.GrantP2PPublish + " " + commonentities.GrantP2PSubscribe, wantCanPublish: true},
+		"unknown grant fails closed":        {gatewayType: commonentities.GatewayTypeHermes, scope: "p2p:frobnicate", wantCanPublish: false},
+		// no scope falls back to the role.
+		"no scope partner publishes":      {gatewayType: commonentities.GatewayTypePartner, scope: "", wantCanPublish: true},
+		"no scope hermes publishes":       {gatewayType: commonentities.GatewayTypeHermes, scope: "", wantCanPublish: true},
+		"no scope relay publishes":        {gatewayType: commonentities.GatewayTypeRelay, scope: "", wantCanPublish: true},
+		"no scope unknown type read-only": {gatewayType: "some-future-role", scope: "", wantCanPublish: false},
+		"no scope empty type read-only":   {gatewayType: "", scope: "", wantCanPublish: false},
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			h := NewHandshake(srv.cfg.GatewayClusterID, rig.MustSignToken(t, rig.PrivateKey, func(c *jwks_verifier.Claims) {
 				c.Type = tc.gatewayType
+				c.Scope = tc.scope
 			}), version.GetCommitHash())
 
 			capability, err := srv.handshakeHandler(peerID, json.NewDecoder(bytes.NewReader(mustMarshalHandshake(t, h))))
