@@ -178,10 +178,11 @@ func main() {
 		// constructor copies what it is given, so reassigning Addr between the
 		// two calls is safe.
 		streamCfg := stream.Config{
-			MaxConns:       appConf.StreamMaxConns,
-			MaxConnsPerSub: appConf.StreamMaxConnsPerSub,
-			BufferSize:     appConf.StreamBufferSize,
-			Limiter:        limiter,
+			MaxConns:         appConf.StreamMaxConns,
+			MaxConnsPerSub:   appConf.StreamMaxConnsPerSub,
+			BufferSize:       appConf.StreamBufferSize,
+			KeepaliveMinTime: time.Duration(appConf.StreamKeepaliveMinTimeSec) * time.Second,
+			Limiter:          limiter,
 		}
 		streamCfg.Addr = appConf.StreamAddr
 		streamServer = stream.NewServer(hub, authenticator, &streamCfg, l)

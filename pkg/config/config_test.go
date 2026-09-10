@@ -272,6 +272,18 @@ gateway_id: local-dockerized
 
 // The stream is off by default, and when enabled auth may be disabled only on
 // a loopback bind (ADR-0011 exposure rule).
+// requireUnset clears env vars for the duration of a subtest, so a default
+// assertion cannot silently read a value inherited from the test process.
+func requireUnset(t *testing.T, keys ...string) {
+	t.Helper()
+	for _, k := range keys {
+		if prev, ok := os.LookupEnv(k); ok {
+			require.NoError(t, os.Unsetenv(k))
+			t.Cleanup(func() { require.NoError(t, os.Setenv(k, prev)) })
+		}
+	}
+}
+
 func TestStreamValidation(t *testing.T) {
 	base := func(t *testing.T) {
 		t.Helper()
@@ -336,5 +348,24 @@ func TestStreamValidation(t *testing.T) {
 		cfg, err := config.LoadConfig("")
 		require.NoError(t, err)
 		require.True(t, cfg.StreamOnly)
+	})
+
+	t.Run("keepalive min time defaults below the documented client interval", func(t *testing.T) {
+		base(t)
+		requireUnset(t, "OPT_STREAM_KEEPALIVE_MIN_TIME_SEC")
+		t.Setenv("OPT_STREAM_ENABLE", "true")
+		cfg, err := config.LoadConfig("")
+		require.NoError(t, err)
+		// Consumers are told to ping every ~30s, so the accepted minimum has to
+		// sit below that or they are GOAWAY'd for pinging too often.
+		require.Equal(t, 20, cfg.StreamKeepaliveMinTimeSec)
+	})
+
+	t.Run("keepalive min time rejects zero", func(t *testing.T) {
+		base(t)
+		t.Setenv("OPT_STREAM_ENABLE", "true")
+		t.Setenv("OPT_STREAM_KEEPALIVE_MIN_TIME_SEC", "0")
+		_, err := config.LoadConfig("")
+		require.ErrorContains(t, err, "stream_keepalive_min_time_sec")
 	})
 }

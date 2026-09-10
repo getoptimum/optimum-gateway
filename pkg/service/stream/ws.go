@@ -39,6 +39,9 @@ type Config struct {
 	MaxConns       int
 	MaxConnsPerSub int
 	BufferSize     int
+	// KeepaliveMinTime is the shortest client ping interval the gRPC server
+	// tolerates; the library default of 5m rejects any useful rate.
+	KeepaliveMinTime time.Duration
 	// Limiter is shared across transports so caps stay global; withDefaults
 	// creates one if nil.
 	Limiter *ConnLimiter
@@ -116,7 +119,8 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 
 	// Enforce caps before the upgrade too, so a rejected connection allocates
 	// no subscriber.
-	if !s.limiter.acquire(subject) {
+	release, ok := s.limiter.acquire(subject)
+	if !ok {
 		http.Error(w, "too many connections", http.StatusServiceUnavailable)
 		return
 	}
@@ -124,21 +128,21 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		// Upgrade already wrote the error response.
-		s.limiter.release(subject)
+		release()
 		return
 	}
 
 	sub := s.hub.Subscribe(s.cfg.BufferSize)
-	go s.serve(conn, sub, subject, mode == modeRaw)
+	go s.serve(conn, sub, release, mode == modeRaw)
 }
 
-func (s *Server) serve(conn *websocket.Conn, sub *streamhub.Subscription, subject string, raw bool) {
+func (s *Server) serve(conn *websocket.Conn, sub *streamhub.Subscription, release func(), raw bool) {
 	// sub.Close() deletes the per-connection drop counter, so it can't leak;
 	// release() frees the cap slot. Both run on every exit path.
 	defer func() {
 		_ = conn.Close()
 		sub.Close()
-		s.limiter.release(subject)
+		release()
 	}()
 
 	conn.SetReadLimit(maxReadBytes)

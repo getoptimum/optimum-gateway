@@ -46,6 +46,12 @@ func NewGRPCServer(hub *streamhub.Service, auth ConsumerAuthenticator, cfg *Conf
 		grpcSrv: grpc.NewServer(
 			// Reap dead peers on the WS clock; the gRPC default is a 2h ping.
 			grpc.KeepaliveParams(keepalive.ServerParameters{Time: pingPeriod, Timeout: writeWait}),
+			// The defaults, MinTime 5m and PermitWithoutStream false, GOAWAY
+			// any consumer that pings usefully while this server pings at 54s.
+			grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+				MinTime:             conf.KeepaliveMinTime,
+				PermitWithoutStream: true,
+			}),
 			grpc.MaxConcurrentStreams(maxConcurrentStreams),
 		),
 	}
@@ -85,10 +91,11 @@ func (g *GRPCServer) Subscribe(req *streamv1.SubscribeRequest, stream grpc.Serve
 		telemetry.RecordStreamAuthFailure()
 		return status.Error(codes.Unauthenticated, "unauthorized")
 	}
-	if !g.limiter.acquire(subject) {
+	release, ok := g.limiter.acquire(subject)
+	if !ok {
 		return status.Error(codes.ResourceExhausted, "too many connections")
 	}
-	defer g.limiter.release(subject)
+	defer release()
 
 	sub := g.hub.Subscribe(g.cfg.BufferSize)
 	defer sub.Close()

@@ -2,6 +2,7 @@ package stream
 
 import (
 	"sync"
+	"time"
 
 	"github.com/getoptimum/optimum-gateway/pkg/service/streamhub"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
@@ -12,9 +13,12 @@ const (
 	defaultMaxConnsPerSub = 8
 )
 
+// defaultKeepaliveMinTime is the shortest client ping interval accepted. The
+// library default of 5m GOAWAYs any consumer that pings at a useful rate.
+const defaultKeepaliveMinTime = 20 * time.Second
+
 // withDefaults fills unset (<=0) caps so both transports share the same limits.
-// Takes a pointer only to stay under gocritic's hugeParam threshold; it works on
-// a copy, so the caller's Config is never mutated.
+// Pointer only for gocritic's hugeParam; it copies, so the caller is unaffected.
 func withDefaults(in *Config) Config {
 	cfg := *in
 	if cfg.MaxConns <= 0 {
@@ -25,6 +29,9 @@ func withDefaults(in *Config) Config {
 	}
 	if cfg.BufferSize <= 0 {
 		cfg.BufferSize = streamhub.DefaultBufferSize
+	}
+	if cfg.KeepaliveMinTime <= 0 {
+		cfg.KeepaliveMinTime = defaultKeepaliveMinTime
 	}
 	if cfg.Limiter == nil {
 		cfg.Limiter = NewConnLimiter(cfg.MaxConns, cfg.MaxConnsPerSub)
@@ -59,6 +66,10 @@ type ConnLimiter struct {
 	mu     sync.Mutex
 	conns  int
 	perSub map[string]int
+	// starts is keyed by the id acquire returns, so releasing a newer
+	// connection cannot be mistaken for releasing the oldest.
+	nextID uint64
+	starts map[uint64]time.Time
 }
 
 // NewConnLimiter returns a limiter for the given caps.
@@ -67,29 +78,70 @@ func NewConnLimiter(maxConns, maxConnsPerSub int) *ConnLimiter {
 		maxConns:       maxConns,
 		maxConnsPerSub: maxConnsPerSub,
 		perSub:         make(map[string]int),
+		starts:         make(map[uint64]time.Time),
 	}
 }
 
-// acquire admits a connection for subject when both caps allow it.
-func (l *ConnLimiter) acquire(subject string) bool {
+// acquire admits a connection for subject when both caps allow it, returning
+// the closer that frees it. Handing back a closure rather than an id keeps the
+// bookkeeping here instead of threading it through every caller.
+func (l *ConnLimiter) acquire(subject string) (release func(), ok bool) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.conns >= l.maxConns || l.perSub[subject] >= l.maxConnsPerSub {
-		return false
+		return nil, false
 	}
 	l.conns++
 	l.perSub[subject]++
+	id := l.nextID
+	l.nextID++
+	l.starts[id] = time.Now()
+	l.publishOldest()
 	telemetry.IncStreamConnections()
-	return true
+	return func() { l.release(subject, id) }, true
 }
 
-func (l *ConnLimiter) release(subject string) {
+func (l *ConnLimiter) release(subject string, id uint64) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	// Idempotent: the id records that this connection is still counted, so a
+	// repeated release cannot decrement the caps twice.
+	if _, live := l.starts[id]; !live {
+		return
+	}
 	l.conns--
 	l.perSub[subject]--
 	if l.perSub[subject] <= 0 {
 		delete(l.perSub, subject)
 	}
+	delete(l.starts, id)
+	l.publishOldest()
 	telemetry.DecStreamConnections()
+}
+
+// oldestStart returns the earliest live connection's start, or the zero time
+// when none are open. Caller holds l.mu.
+func (l *ConnLimiter) oldestStart() time.Time {
+	var oldest time.Time
+	for _, t := range l.starts {
+		if oldest.IsZero() || t.Before(oldest) {
+			oldest = t
+		}
+	}
+	return oldest
+}
+
+// publishOldestStart is the telemetry seam, swapped in tests so the publish
+// itself is asserted rather than assumed.
+var publishOldestStart = telemetry.SetStreamOldestConnectionStart
+
+// publishOldest republishes the oldest start. Called on every membership
+// change, the only time the answer can change, so no ticker is needed.
+func (l *ConnLimiter) publishOldest() {
+	oldest := l.oldestStart()
+	if oldest.IsZero() {
+		publishOldestStart(0)
+		return
+	}
+	publishOldestStart(float64(oldest.Unix()))
 }

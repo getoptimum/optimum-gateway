@@ -11,6 +11,7 @@ var (
 	streamEventsSent    prometheus.Counter
 	streamAuthFailures  prometheus.Counter
 	streamConnections   prometheus.Gauge
+	streamOldestStart   prometheus.Gauge
 )
 
 func initStreamMetrics() {
@@ -33,6 +34,11 @@ func initStreamMetrics() {
 		"connections",
 		"stream",
 		"Currently open consumer stream connections",
+	)
+	streamOldestStart = commonmetrics.NewGauge(
+		"oldest_connection_started_seconds",
+		"stream",
+		"Unix start time of the longest-running consumer stream connection, 0 when none are open",
 	)
 }
 
@@ -68,5 +74,16 @@ func IncStreamConnections() {
 func DecStreamConnections() {
 	if enabledMetrics {
 		streamConnections.Dec()
+	}
+}
+
+// SetStreamOldestConnectionStart publishes when the longest-running consumer
+// connection opened. A timestamp rather than an age so the value stays correct
+// between scrapes; query it as time() - <this>. Zero means nothing is
+// connected. It bounds how long a connection has been trusted on the strength
+// of a single subscribe-time authentication.
+func SetStreamOldestConnectionStart(unixSeconds float64) {
+	if enabledMetrics {
+		streamOldestStart.Set(unixSeconds)
 	}
 }

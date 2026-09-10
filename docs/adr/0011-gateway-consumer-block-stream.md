@@ -1,6 +1,7 @@
 # ADR-0011: Gateway consumer block-stream API (WebSocket + gRPC)
 
 **Status:** Approved (implemented)  
+Amended 2026-09-08: gRPC keepalive enforcement and connection-age visibility.  
 **Date:** 2026-08-05  
 
 ## Context
@@ -172,6 +173,38 @@ Signing events gateway-side would close this without confidentiality, and the
 gateway already holds an identity key — but it puts per-event crypto on a hot
 path to reimplement, worse, what the proxy already provides. Not doing it.
 
+### Keepalive enforcement and connection-age visibility (amended 2026-09-08)
+
+Two gaps that only matter once a consumer holds a stream for weeks.
+
+**Client keepalives were rejected.** gRPC-Go's `EnforcementPolicy` defaults to
+`MinTime` 5m with `PermitWithoutStream` false, while this server pings every
+54s. A consumer that enabled client keepalive at any rate useful to a
+long-lived stream was therefore answered with GOAWAY `too_many_pings`: the
+obvious mitigation for a stream dying to NAT or conntrack expiry made things
+worse. `stream_keepalive_min_time_sec` now sets `MinTime`, with
+`PermitWithoutStream: true`.
+
+| Env / yaml                                                            | Default | Purpose                                 |
+| --------------------------------------------------------------------- | ------- | --------------------------------------- |
+| `OPT_STREAM_KEEPALIVE_MIN_TIME_SEC` / `stream_keepalive_min_time_sec` | `20`    | Shortest client ping interval accepted. |
+
+It has to stay below the interval consumers are documented to use, so the
+documented 30s and this 20s move together.
+
+**Connection lifetime was invisible.** Authentication happens once, at
+subscribe time (§3), so the age of the oldest live connection is the upper
+bound on how long the gateway has trusted a single check. Nothing published
+that. `ConnLimiter` now records each admitted connection's start time, keyed by
+an id returned from `acquire` and passed back to `release`, so releasing a
+newer connection cannot be mistaken for releasing the oldest.
+
+The exported series is `mump2p_stream_oldest_connection_started_seconds`, a
+**start timestamp rather than an age**. A timestamp stays correct between
+scrapes and needs no ticker to keep it fresh; the age is `time() - <value>` at
+query time. Zero means no connection is open. This follows the same convention
+as the terminator's `stream_tls_cert_not_after_seconds`.
+
 ## Architecture
 
 ```mermaid
@@ -210,6 +243,10 @@ flowchart LR
 * Drop-on-lag means slow consumers miss events — surfaced via `lagged`/`dropped`
   rather than silently.
 * Requires the auth service to mint `aud=stream` tokens.
+* Authentication is checked once per connection, so revocation lag is bounded
+  by connection lifetime rather than token lifetime (amended 2026-09-08).
+  `mump2p_stream_oldest_connection_started_seconds` is what makes that bound
+  observable.
 
 ## Non-goals (v1)
 

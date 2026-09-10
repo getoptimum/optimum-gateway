@@ -285,6 +285,69 @@ cumulative dropped count, then resumes. A slow consumer never stalls the gateway
 
 Over gRPC the same signal is a `lagged` frame: `{ "lagged": { "dropped": "12" } }`.
 
+### Holding a stream open for weeks
+
+Streams are meant to stay open indefinitely. Three obligations fall on the
+client.
+
+**Send transport keepalives.** During a quiet stretch nothing between you and
+the gateway generates traffic, and NAT and conntrack entries expire. The
+gateway accepts client pings as often as every `stream_keepalive_min_time_sec`
+(default `20`) and permits them with no active stream. Ping somewhat less often
+than that, for example every 30s: pings faster than the minimum are answered
+with GOAWAY `too_many_pings`. gRPC clients send no keepalives at all unless
+configured, so this must be set explicitly.
+
+**Reconnect on GOAWAY.** A gateway restart, or a reload of the TLS terminator
+in front of it, sends GOAWAY. Reconnect, and account for the gap.
+
+**Retry `Internal`, not only `Unavailable`.** A stream cut *after* its first
+block ends as `Internal`, because response headers are already sent and a reset
+is all that remains; cut *before* the first block it ends as `Unavailable`.
+Most gRPC retry policies treat `Internal` as non-retryable, so a default
+configuration will not reconnect you.
+
+#### Gaps are permanent
+
+Nothing is buffered across connections and nothing is ever replayed, so every
+reconnect is a permanent hole. Detect holes rather than assuming their absence.
+
+But **a gap in the slot sequence is not by itself evidence of loss**: slots the
+network left empty are normal and produce no block at all. A jump from 100 to
+102 may mean slot 101 was missed, or that nobody proposed it. Reconcile against
+your own beacon node or an archive to tell the two apart. A `lagged` frame is
+the one signal that says this connection definitely dropped events.
+
+#### One event per observation, so deduplicate deliberately
+
+The stream carries one event **per source observation**, by design: the same
+block seen over both libp2p and mump2p arrives twice, distinguished by
+`source`. Those two are not redundant, they are the cross-path comparison, and
+collapsing them throws away the per-path arrival timing.
+
+Same-source repeats used to reach consumers as well: one slot was measured
+arriving twice over `mump2p` 9ms apart, with `block_size_bytes` differing
+between the two (35053 vs 35047) because the block had been re-encoded. The
+gateway now collapses those at the source on
+`(source, slot, proposer_index, state_root)`, so you should not normally see
+them. Do not treat that as absolute: the window is 30 seconds and the state is
+per-process, so a gateway restart or a very late repeat can still let one
+through.
+
+Pick the key for what you are counting:
+
+| You want | Key on |
+| --- | --- |
+| Unique blocks | `(slot, proposer_index, state_root)` |
+| Per-path observations | `(slot, proposer_index, state_root, source)` |
+
+`state_root` belongs in both. A proposer can equivocate and publish two
+genuinely different blocks for one slot, so `(slot, proposer_index)` alone is
+not a block identity and would silently discard the second one.
+
+Never key on `block_size_bytes` or `received_at_ms`. Both are per-observation
+and legitimately differ between paths, so they are not stable identity.
+
 ## Errors
 
 Connection-time (gateway WebSocket / gRPC):

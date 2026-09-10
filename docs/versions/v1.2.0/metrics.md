@@ -106,6 +106,7 @@ These series appear when `stream_enable: true`. They use the `mump2p_stream_` pr
 | `mump2p_stream_events_sent_total`       | Counter | Events written to consumers                              |
 | `mump2p_stream_events_dropped_total`    | Counter | Events dropped on buffer overflow (lag)                  |
 | `mump2p_stream_auth_failures_total`     | Counter | Connections rejected for bad or missing tokens           |
+| `mump2p_stream_oldest_connection_started_seconds` | Gauge | Unix start time of the longest-running connection, `0` when none. Query as `time() - <this>` |
 
 ## mump2p Trace (debug)
 
