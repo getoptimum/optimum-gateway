@@ -30,6 +30,7 @@ telemetry_port: 48123
 # stream_max_conns: 256                    # default: 256 — global connection cap
 # stream_max_conns_per_sub: 8              # default: 8 — per-consumer-key connection cap
 # stream_buffer_size: 64                   # default: 64 — per-connection ring buffer (drop-on-overflow)
+# stream_heartbeat_interval_sec: 20        # default: 20 — in-band liveness frame; 0 disables, and a quiet feed then reads as a stalled one
 # stream_keepalive_min_time_sec: 20        # default: 20 — shortest accepted client ping interval; faster pings get GOAWAY too_many_pings
 
 # ─── Bootstrap ────────────────────────────────────────────────────────────────

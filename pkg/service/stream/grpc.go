@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"strings"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -100,12 +101,27 @@ func (g *GRPCServer) Subscribe(req *streamv1.SubscribeRequest, stream grpc.Serve
 	sub := g.hub.Subscribe(g.cfg.BufferSize)
 	defer sub.Close()
 
+	hb, hbC := optionalTicker(g.cfg.HeartbeatInterval)
+	if hb != nil {
+		defer hb.Stop()
+	}
+
+	var live livenessState
 	raw := mode == modeRaw
 	var lastDropped uint64
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
+		case <-hbC:
+			last, expected, silence := live.snapshot(time.Now())
+			f := &streamv1.BlockEvent{Frame: &streamv1.BlockEvent_Heartbeat{Heartbeat: &streamv1.Heartbeat{
+				LastSlot: last, ExpectedSlot: expected, SilenceMs: silence,
+			}}}
+			if err := stream.Send(f); err != nil {
+				return err
+			}
+			telemetry.RecordStreamHeartbeatSent()
 		case ev, ok := <-sub.Events():
 			if !ok {
 				return nil
@@ -120,6 +136,7 @@ func (g *GRPCServer) Subscribe(req *streamv1.SubscribeRequest, stream grpc.Serve
 			if err := stream.Send(toProto(ev, raw)); err != nil {
 				return err
 			}
+			live.observe(ev.Slot)
 			telemetry.RecordStreamEventSent()
 		}
 	}

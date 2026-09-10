@@ -30,6 +30,11 @@ func withDefaults(in *Config) Config {
 	if cfg.BufferSize <= 0 {
 		cfg.BufferSize = streamhub.DefaultBufferSize
 	}
+	// Zero disables the heartbeat, so unset cannot mean "use the default" as it
+	// does for the caps; a negative clamps to disabled, never to the default.
+	if cfg.HeartbeatInterval < 0 {
+		cfg.HeartbeatInterval = 0
+	}
 	if cfg.KeepaliveMinTime <= 0 {
 		cfg.KeepaliveMinTime = defaultKeepaliveMinTime
 	}
@@ -37,6 +42,16 @@ func withDefaults(in *Config) Config {
 		cfg.Limiter = NewConnLimiter(cfg.MaxConns, cfg.MaxConnsPerSub)
 	}
 	return cfg
+}
+
+// optionalTicker returns a ticker, or nil for a non-positive interval: a nil
+// channel blocks forever in a select, so a send loop opts out without branching.
+func optionalTicker(d time.Duration) (ticker *time.Ticker, tick <-chan time.Time) {
+	if d <= 0 {
+		return nil, nil
+	}
+	t := time.NewTicker(d)
+	return t, t.C
 }
 
 // normalizeMode defaults empty to metadata and reports whether the value is allowed.

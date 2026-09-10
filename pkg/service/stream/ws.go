@@ -18,13 +18,14 @@ const (
 	streamPath = "/api/v1/stream/blocks"
 	// wsSubprotocol is the marker the server negotiates; the bearer token is
 	// carried alongside it but never echoed back as the selected subprotocol.
-	wsSubprotocol   = "optimum.stream.v1"
-	bearerSubproto  = "bearer."
-	defaultTopic    = "beacon_block"
-	modeMetadata    = "metadata"
-	modeRaw         = "raw"
-	frameTypeBlock  = "block"
-	frameTypeLagged = "lagged"
+	wsSubprotocol      = "optimum.stream.v1"
+	bearerSubproto     = "bearer."
+	defaultTopic       = "beacon_block"
+	modeMetadata       = "metadata"
+	modeRaw            = "raw"
+	frameTypeBlock     = "block"
+	frameTypeLagged    = "lagged"
+	frameTypeHeartbeat = "heartbeat"
 
 	writeWait    = 10 * time.Second
 	pongWait     = 60 * time.Second
@@ -39,6 +40,9 @@ type Config struct {
 	MaxConns       int
 	MaxConnsPerSub int
 	BufferSize     int
+	// HeartbeatInterval paces the liveness frame each transport emits from its
+	// own send loop. Zero disables it.
+	HeartbeatInterval time.Duration
 	// KeepaliveMinTime is the shortest client ping interval the gRPC server
 	// tolerates; the library default of 5m rejects any useful rate.
 	KeepaliveMinTime time.Duration
@@ -165,7 +169,12 @@ func (s *Server) serve(conn *websocket.Conn, sub *streamhub.Subscription, releas
 
 	ping := time.NewTicker(pingPeriod)
 	defer ping.Stop()
+	hb, hbC := optionalTicker(s.cfg.HeartbeatInterval)
+	if hb != nil {
+		defer hb.Stop()
+	}
 
+	var live livenessState
 	var lastDropped uint64
 	for {
 		select {
@@ -186,7 +195,16 @@ func (s *Server) serve(conn *websocket.Conn, sub *streamhub.Subscription, releas
 			if err := s.writeBlock(conn, ev, raw); err != nil {
 				return
 			}
+			live.observe(ev.Slot)
 			telemetry.RecordStreamEventSent()
+		case <-hbC:
+			last, expected, silence := live.snapshot(time.Now())
+			if err := s.writeJSON(conn, heartbeatFrame{
+				Type: frameTypeHeartbeat, LastSlot: last, ExpectedSlot: expected, SilenceMs: silence,
+			}); err != nil {
+				return
+			}
+			telemetry.RecordStreamHeartbeatSent()
 		case <-ping.C:
 			_ = conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
@@ -200,6 +218,15 @@ func (s *Server) serve(conn *websocket.Conn, sub *streamhub.Subscription, releas
 type blockFrame struct {
 	Type string `json:"type"`
 	*streamhub.BlockEvent
+}
+
+// heartbeatFrame proves the feed is alive during a quiet stretch. A data frame,
+// not a control ping: browsers cannot observe WebSocket ping/pong at all.
+type heartbeatFrame struct {
+	Type         string `json:"type"`
+	LastSlot     uint64 `json:"last_slot"`
+	ExpectedSlot uint64 `json:"expected_slot"`
+	SilenceMs    uint64 `json:"silence_ms"`
 }
 
 // laggedFrame reports the connection's cumulative dropped count after overflow.

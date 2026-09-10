@@ -239,3 +239,58 @@ func TestWS_CleanupOnClose(t *testing.T) {
 		return s.limiter.conns == 0 && len(s.limiter.perSub) == 0
 	}, 2*time.Second, 10*time.Millisecond)
 }
+
+// readFrameUntil returns the first frame of the given type, so a test can
+// assert on one kind without depending on what precedes it.
+func readFrameUntil(t *testing.T, conn *websocket.Conn, frameType string) map[string]any {
+	t.Helper()
+	return readFrameUntilFunc(t, conn, func(m map[string]any) bool { return m["type"] == frameType })
+}
+
+// readFrameUntilFunc is readFrameUntil for a predicate over the whole frame.
+func readFrameUntilFunc(t *testing.T, conn *websocket.Conn, want func(map[string]any) bool) map[string]any {
+	t.Helper()
+	for deadline := time.Now().Add(3 * time.Second); time.Now().Before(deadline); {
+		if f := readFrame(t, conn); want(f) {
+			return f
+		}
+	}
+	t.Fatal("no matching frame before deadline")
+	return nil
+}
+
+// TestWS_HeartbeatDuringSilence covers why the WS heartbeat is a data frame and
+// not the existing control ping: browsers cannot observe WebSocket ping/pong.
+func TestWS_HeartbeatDuringSilence(t *testing.T) {
+	ts, _, hub, rig := newWSTestServer(t, &Config{HeartbeatInterval: 20 * time.Millisecond}, true)
+	conn, _, err := dial(ts, "", streamToken(t, rig, "sub-1"))
+	require.NoError(t, err)
+	defer conn.Close()
+
+	waitSubscribed(t, hub, 1)
+
+	f := readFrameUntil(t, conn, frameTypeHeartbeat)
+	require.Zero(t, f["last_slot"], "no block has been delivered yet")
+	require.Zero(t, f["silence_ms"], "silence is unmeasurable before the first block")
+	require.Positive(t, f["expected_slot"], "expected_slot comes from the wall clock, not the feed")
+}
+
+func TestWS_HeartbeatReportsLastDeliveredSlot(t *testing.T) {
+	ts, _, hub, rig := newWSTestServer(t, &Config{HeartbeatInterval: 20 * time.Millisecond}, true)
+	conn, _, err := dial(ts, "", streamToken(t, rig, "sub-1"))
+	require.NoError(t, err)
+	defer conn.Close()
+
+	waitSubscribed(t, hub, 1)
+	hub.Emit(sampleEvent())
+
+	require.EqualValues(t, 42, readFrameUntil(t, conn, frameTypeBlock)["slot"])
+	// Wait for silence to become measurable: a regression that set lastSlot
+	// without lastBlock would report 0 forever and still pass.
+	f := readFrameUntilFunc(t, conn, func(m map[string]any) bool {
+		v, ok := m["silence_ms"].(float64)
+		return m["type"] == frameTypeHeartbeat && ok && v > 0
+	})
+	require.EqualValues(t, 42, f["last_slot"], "the heartbeat must report the last slot actually written")
+	require.Greater(t, f["expected_slot"], f["last_slot"], "sampleEvent is a historical slot, so the feed reads as behind")
+}

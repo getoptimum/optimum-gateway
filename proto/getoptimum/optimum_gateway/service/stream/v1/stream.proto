@@ -16,12 +16,14 @@ message SubscribeRequest {
   repeated string topics = 2; // validated only; v1 has one topic, so nothing is filtered
 }
 
-// BlockEvent is one frame: a block observation or a lag signal (ADR-0011).
+// BlockEvent is one frame: a block observation, a lag signal, or a liveness
+// heartbeat (ADR-0011).
 message BlockEvent {
   // frame tells an observation apart from a control signal.
   oneof frame {
     Block block = 1;
     Lagged lagged = 2;
+    Heartbeat heartbeat = 3;
   }
 }
 
@@ -39,6 +41,16 @@ message Block {
   string fork_digest = 10;
   bool stale = 11;
   bytes raw = 12; // present only in raw mode
+}
+
+// Heartbeat proves the feed is alive during a quiet stretch, and says how far
+// behind it is. Without it a stalled ingest is indistinguishable from a chain
+// that has gone quiet: the transport stays healthy on keepalive PINGs and no
+// proxy timeout can tell the difference.
+message Heartbeat {
+  uint64 last_slot = 1; // slot of the most recent block emitted, 0 if none yet
+  uint64 expected_slot = 2; // slot the chain should be on now, from wall clock
+  uint64 silence_ms = 3; // since the last block was emitted
 }
 
 // Lagged reports the cumulative drop count after a buffer overflow.
