@@ -24,7 +24,7 @@ func (s *Service) setupMumP2PHost() error {
 		ListenPort:               s.cfg.AgentMumP2PPort,
 		MaxMessageSize:           config.DefaultMaxMessageSize,
 		RandomMessageSize:        config.DefaultRandomMessageSize,
-		ShardFactor:              int(config.DefaultShardFactor),
+		ShardFactor:              config.DefaultShardFactor,
 		PublisherShardMultiplier: config.DefaultPublisherShardMultiplier,
 		ForwardShardThreshold:    config.DefaultForwardShardThreshold,
 		MeshDegreeTarget:         int(config.DefaultMeshDegreeTarget),

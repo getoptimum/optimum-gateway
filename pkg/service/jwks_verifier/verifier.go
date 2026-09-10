@@ -26,9 +26,9 @@ const (
 // AudServices is the audience for the services token that carries operator_id to centralized services.
 // AudStream is the audience for consumer block-stream JWTs (ADR-0011).
 const (
-	AudP2P      = "p2p"
-	AudServices = "services"
-	AudStream   = "stream"
+	AudP2P      = string(commonentities.TokenAudienceP2P)
+	AudServices = string(commonentities.TokenAudienceServices)
+	AudStream   = string(commonentities.TokenAudienceStream)
 )
 
 // maxTokenLifetime caps exp - iat at the value the upstream auth service
@@ -46,25 +46,21 @@ const maxTokenLifetimeSkew = 60 * time.Second
 // already-expired or not-yet-valid tokens.
 const clockSkew = 30 * time.Second
 
+// Claims is the gateway's view of a verified gateway JWT. It embeds the shared
+// optimum-common GatewayClaims (scope_version, type, chain_id, operator_id, cnf,
+// and the standard registered claims) and adds the fields the gateway needs but
+// that are not (yet) part of the shared superset.
 type Claims struct {
-	ScopeVersion int64                      `json:"scope_version"`
-	Type         commonentities.GatewayType `json:"type"`
-	ChainID      string                     `json:"chain_id"`
+	commonentities.GatewayClaims
 	// ClusterIDs is the set of clusters the token authorizes (finding #707).
 	// Enforced at the handshake, not here (mirrors chain_id).
-	ClusterIDs []string     `json:"cluster_ids"`
-	CNF        Confirmation `json:"cnf"`
+	ClusterIDs []string `json:"cluster_ids"`
 	// Gateway metadata (services token only), used for metric self-labeling.
 	Label           string `json:"label"`
 	Region          string `json:"region"`
 	ConsensusClient string `json:"consensus_client"`
 	HostingProvider string `json:"hosting_provider"`
 	DVT             string `json:"dvt"`
-	jwt.RegisteredClaims
-}
-
-type Confirmation struct {
-	PeerID string `json:"peer_id"`
 }
 
 // Verifier validates JWTs locally using a cached JWKS document.

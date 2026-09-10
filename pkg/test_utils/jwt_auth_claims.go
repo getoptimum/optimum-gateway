@@ -17,6 +17,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
 
+	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
 	"github.com/getoptimum/optimum-common/pkg/identity"
 	"github.com/getoptimum/optimum-gateway/pkg/config"
 	"github.com/getoptimum/optimum-gateway/pkg/service/jwks_verifier"
@@ -78,18 +79,20 @@ func (r *AuthTestRig) MustSignToken(t *testing.T, key *ecdsa.PrivateKey, modify 
 
 	now := time.Now()
 	claims := jwks_verifier.Claims{
-		ScopeVersion: 1,
-		Type:         "partner",
-		ChainID:      "hoodi",
-		CNF: jwks_verifier.Confirmation{
-			PeerID: r.DefaultPeerID,
-		},
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    r.server.URL,
-			Subject:   "gw-test",
-			IssuedAt:  jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(now.Add(1 * time.Hour)),
-			Audience:  jwt.ClaimStrings{jwks_verifier.AudP2P},
+		GatewayClaims: commonentities.GatewayClaims{
+			ScopeVersion: 1,
+			Type:         "partner",
+			ChainID:      "hoodi",
+			CNF: &commonentities.GatewayConfirmation{
+				PeerID: r.DefaultPeerID,
+			},
+			RegisteredClaims: jwt.RegisteredClaims{
+				Issuer:    r.server.URL,
+				Subject:   "gw-test",
+				IssuedAt:  jwt.NewNumericDate(now),
+				ExpiresAt: jwt.NewNumericDate(now.Add(1 * time.Hour)),
+				Audience:  jwt.ClaimStrings{jwks_verifier.AudP2P},
+			},
 		},
 	}
 	// Apply the rig-wide ClaimMod first (parity with the mint stub), then the
@@ -168,18 +171,20 @@ func NewAuthTestRig(t *testing.T, opts ...Option) *AuthTestRig {
 		}
 		now := time.Now()
 		claims := jwks_verifier.Claims{
-			ScopeVersion: 1,
-			Type:         "partner",
-			ChainID:      "hoodi",
-			CNF: jwks_verifier.Confirmation{
-				PeerID: payload["peer_id"],
-			},
-			RegisteredClaims: jwt.RegisteredClaims{
-				Issuer:    rig.server.URL,
-				Subject:   "gw-test",
-				IssuedAt:  jwt.NewNumericDate(now),
-				ExpiresAt: jwt.NewNumericDate(now.Add(1 * time.Hour)),
-				Audience:  jwt.ClaimStrings{jwks_verifier.AudP2P},
+			GatewayClaims: commonentities.GatewayClaims{
+				ScopeVersion: 1,
+				Type:         "partner",
+				ChainID:      "hoodi",
+				CNF: &commonentities.GatewayConfirmation{
+					PeerID: payload["peer_id"],
+				},
+				RegisteredClaims: jwt.RegisteredClaims{
+					Issuer:    rig.server.URL,
+					Subject:   "gw-test",
+					IssuedAt:  jwt.NewNumericDate(now),
+					ExpiresAt: jwt.NewNumericDate(now.Add(1 * time.Hour)),
+					Audience:  jwt.ClaimStrings{jwks_verifier.AudP2P},
+				},
 			},
 		}
 		if claims.CNF.PeerID == "" {
