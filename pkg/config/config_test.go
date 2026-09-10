@@ -433,3 +433,64 @@ func TestStreamValidation(t *testing.T) {
 		require.ErrorContains(t, err, "stream_keepalive_min_time_sec")
 	})
 }
+
+func TestGatewayCredentialConfig(t *testing.T) {
+	base := func(t *testing.T) {
+		t.Helper()
+		t.Setenv("OPT_IDENTITY_LIBP2P_DIR", t.TempDir())
+		t.Setenv("OPT_IDENTITY_MUMP2P_DIR", t.TempDir())
+		t.Setenv("OPT_AGENT_LIB_P2P_PORT", "5000")
+		t.Setenv("OPT_AGENT_MUMP2P_PORT", "5001")
+		t.Setenv("OPT_GATEWAY_CLUSTER_ID", "gw-cluster")
+		t.Setenv("OPT_TELEMETRY_PORT", "8888")
+	}
+
+	// A missed env tag leaves JoinKey empty, which disables auth rather than erroring.
+	// Nothing else stops DefaultGatewayID drifting from the tag it mirrors.
+	t.Run("DefaultGatewayID matches the struct tag default", func(t *testing.T) {
+		base(t)
+		cfg, err := config.LoadConfig("")
+		require.NoError(t, err)
+		require.Equal(t, config.DefaultGatewayID, cfg.GatewayID)
+	})
+
+	t.Run("join_key and enroll_cred_dir bind from env", func(t *testing.T) {
+		base(t)
+		dir := t.TempDir()
+		t.Setenv("OPT_JOIN_KEY", "ojk_test_fromenv")
+		t.Setenv("OPT_ENROLL_CRED_DIR", dir)
+		cfg, err := config.LoadConfig("")
+		require.NoError(t, err)
+		require.Equal(t, "ojk_test_fromenv", cfg.JoinKey)
+		require.Equal(t, dir, cfg.EnrollCredDir)
+		require.Equal(t, dir, cfg.EnrollmentDir())
+	})
+
+	t.Run("enrollment dir defaults to the mump2p identity dir", func(t *testing.T) {
+		base(t)
+		t.Setenv("OPT_JOIN_KEY", "ojk_test_fromenv")
+		cfg, err := config.LoadConfig("")
+		require.NoError(t, err)
+		require.Equal(t, cfg.IdentityMumP2PDir, cfg.EnrollmentDir())
+		require.DirExists(t, cfg.EnrollmentDir())
+	})
+
+	// Mutually exclusive on purpose: a half-migrated host must fail loudly rather
+	// than silently authenticate with whichever credential wins a precedence rule.
+	t.Run("api_key and join_key together are rejected", func(t *testing.T) {
+		base(t)
+		t.Setenv("OPT_API_KEY", "ogw_test_secret")
+		t.Setenv("OPT_JOIN_KEY", "ojk_test_secret")
+		_, err := config.LoadConfig("")
+		require.ErrorContains(t, err, "mutually exclusive")
+	})
+
+	t.Run("either credential alone is accepted", func(t *testing.T) {
+		base(t)
+		t.Setenv("OPT_API_KEY", "ogw_test_secret")
+		cfg, err := config.LoadConfig("")
+		require.NoError(t, err)
+		require.Equal(t, "ogw_test_secret", cfg.APIKey)
+		require.Empty(t, cfg.JoinKey)
+	})
+}
