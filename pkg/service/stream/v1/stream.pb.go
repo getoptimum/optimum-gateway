@@ -23,9 +23,12 @@ const (
 
 // SubscribeRequest selects the payload mode and topics for a subscription.
 type SubscribeRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Mode          string                 `protobuf:"bytes,1,opt,name=mode,proto3" json:"mode,omitempty"`     // "metadata" (default) or "raw"
-	Topics        []string               `protobuf:"bytes,2,rep,name=topics,proto3" json:"topics,omitempty"` // validated only; v1 has one topic, so nothing is filtered
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Mode   string                 `protobuf:"bytes,1,opt,name=mode,proto3" json:"mode,omitempty"`     // "metadata" (default) or "raw"
+	Topics []string               `protobuf:"bytes,2,rep,name=topics,proto3" json:"topics,omitempty"` // validated only; v1 has one topic, so nothing is filtered
+	// token carries a refreshed aud=stream JWT on a later message. Ignored on
+	// the first, which authenticates from the authorization header as before.
+	Token         string `protobuf:"bytes,3,opt,name=token,proto3" json:"token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -72,6 +75,13 @@ func (x *SubscribeRequest) GetTopics() []string {
 		return x.Topics
 	}
 	return nil
+}
+
+func (x *SubscribeRequest) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
 }
 
 // BlockEvent is one frame: a block observation, a lag signal, or a liveness
@@ -422,10 +432,11 @@ var File_getoptimum_optimum_gateway_service_stream_v1_stream_proto protoreflect.
 
 const file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_rawDesc = "" +
 	"\n" +
-	"9getoptimum/optimum_gateway/service/stream/v1/stream.proto\x12,getoptimum.optimum_gateway.service.stream.v1\">\n" +
+	"9getoptimum/optimum_gateway/service/stream/v1/stream.proto\x12,getoptimum.optimum_gateway.service.stream.v1\"T\n" +
 	"\x10SubscribeRequest\x12\x12\n" +
 	"\x04mode\x18\x01 \x01(\tR\x04mode\x12\x16\n" +
-	"\x06topics\x18\x02 \x03(\tR\x06topics\"\x8b\x02\n" +
+	"\x06topics\x18\x02 \x03(\tR\x06topics\x12\x14\n" +
+	"\x05token\x18\x03 \x01(\tR\x05token\"\x8b\x02\n" +
 	"\n" +
 	"BlockEvent\x12K\n" +
 	"\x05block\x18\x01 \x01(\v23.getoptimum.optimum_gateway.service.stream.v1.BlockH\x00R\x05block\x12N\n" +
@@ -456,9 +467,9 @@ const file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_rawDesc = "
 	"\n" +
 	"silence_ms\x18\x03 \x01(\x04R\tsilenceMs\"\"\n" +
 	"\x06Lagged\x12\x18\n" +
-	"\adropped\x18\x01 \x01(\x04R\adropped2\x9e\x01\n" +
-	"\x12BlockStreamService\x12\x87\x01\n" +
-	"\tSubscribe\x12>.getoptimum.optimum_gateway.service.stream.v1.SubscribeRequest\x1a8.getoptimum.optimum_gateway.service.stream.v1.BlockEvent0\x01B=Z;github.com/getoptimum/optimum-gateway/pkg/service/stream/v1b\x06proto3"
+	"\adropped\x18\x01 \x01(\x04R\adropped2\xa0\x01\n" +
+	"\x12BlockStreamService\x12\x89\x01\n" +
+	"\tSubscribe\x12>.getoptimum.optimum_gateway.service.stream.v1.SubscribeRequest\x1a8.getoptimum.optimum_gateway.service.stream.v1.BlockEvent(\x010\x01B=Z;github.com/getoptimum/optimum-gateway/pkg/service/stream/v1b\x06proto3"
 
 var (
 	file_getoptimum_optimum_gateway_service_stream_v1_stream_proto_rawDescOnce sync.Once

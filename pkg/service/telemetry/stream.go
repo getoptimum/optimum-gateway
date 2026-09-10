@@ -13,6 +13,7 @@ var (
 	streamConnections   prometheus.Gauge
 	streamOldestStart   prometheus.Gauge
 	streamHeartbeats    prometheus.Counter
+	streamReauthFailure prometheus.Counter
 )
 
 func initStreamMetrics() {
@@ -29,7 +30,7 @@ func initStreamMetrics() {
 	streamAuthFailures = commonmetrics.NewCounter(
 		"auth_failures_total",
 		"stream",
-		"Consumer stream connections rejected because authentication failed",
+		"Consumer stream tokens rejected, at connect or on an in-band refresh",
 	)
 	streamConnections = commonmetrics.NewGauge(
 		"connections",
@@ -40,6 +41,11 @@ func initStreamMetrics() {
 		"heartbeats_sent_total",
 		"stream",
 		"Consumer block-stream liveness frames written to a subscriber connection",
+	)
+	streamReauthFailure = commonmetrics.NewCounter(
+		"reauth_failures_total",
+		"stream",
+		"Consumer stream re-verifications that failed, meaning the presented token stopped verifying",
 	)
 	streamOldestStart = commonmetrics.NewGauge(
 		"oldest_connection_started_seconds",
@@ -98,5 +104,13 @@ func SetStreamOldestConnectionStart(unixSeconds float64) {
 func RecordStreamHeartbeatSent() {
 	if enabledMetrics {
 		streamHeartbeats.Inc()
+	}
+}
+
+// RecordStreamReauthFailure counts one failed re-verification. In observe mode
+// this is the only signal that a consumer would have been cut.
+func RecordStreamReauthFailure() {
+	if enabledMetrics {
+		streamReauthFailure.Inc()
 	}
 }

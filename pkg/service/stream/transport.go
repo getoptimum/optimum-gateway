@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/getoptimum/optimum-common/pkg/logger"
 	"github.com/getoptimum/optimum-gateway/pkg/service/streamhub"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
 )
@@ -12,6 +13,17 @@ const (
 	defaultMaxConns       = 256
 	defaultMaxConnsPerSub = 8
 )
+
+// Re-auth modes: off skips re-verification, observe counts a failure and keeps
+// the stream, enforce closes it. Observe ships first so a fleet is measured.
+const (
+	ReauthOff     = "off"
+	ReauthObserve = "observe"
+	ReauthEnforce = "enforce"
+)
+
+// defaultReauthInterval paces re-verification of the presented token.
+const defaultReauthInterval = 60 * time.Second
 
 // defaultKeepaliveMinTime is the shortest client ping interval accepted. The
 // library default of 5m GOAWAYs any consumer that pings at a useful rate.
@@ -38,6 +50,12 @@ func withDefaults(in *Config) Config {
 	if cfg.KeepaliveMinTime <= 0 {
 		cfg.KeepaliveMinTime = defaultKeepaliveMinTime
 	}
+	if cfg.ReauthInterval <= 0 {
+		cfg.ReauthInterval = defaultReauthInterval
+	}
+	if cfg.ReauthMode == "" {
+		cfg.ReauthMode = ReauthObserve
+	}
 	if cfg.Limiter == nil {
 		cfg.Limiter = NewConnLimiter(cfg.MaxConns, cfg.MaxConnsPerSub)
 	}
@@ -52,6 +70,80 @@ func optionalTicker(d time.Duration) (ticker *time.Ticker, tick <-chan time.Time
 	}
 	t := time.NewTicker(d)
 	return t, t.C
+}
+
+// stopTicker is nil-safe, so a disabled ticker needs no guard at the call site.
+func stopTicker(t *time.Ticker) {
+	if t != nil {
+		t.Stop()
+	}
+}
+
+// reauthInterval is 0 when re-auth is off, which optionalTicker reads as
+// disabled, so the mode needs no second branch at the call sites.
+func (c *Config) reauthInterval() time.Duration {
+	if c.ReauthMode == ReauthOff {
+		return 0
+	}
+	return c.ReauthInterval
+}
+
+// connAuth is one connection's auth policy, shared by both transports so only
+// the way a stream ends stays transport-specific.
+type connAuth struct {
+	cfg     *Config
+	auth    ConsumerAuthenticator
+	log     logger.AppLogger
+	subject string
+	failing bool
+}
+
+// accept reports whether a refresh may replace the current token. It may only
+// re-prove the admitted subject, which owns the cap slot and the log lines.
+func (c *connAuth) accept(candidate string) bool {
+	got, err := c.auth.Authenticate(candidate)
+	if err != nil || got != c.subject {
+		telemetry.RecordStreamAuthFailure()
+		return false
+	}
+	return true
+}
+
+// reverify re-checks the presented token and reports whether to cut the stream.
+// The verifier checks exp, so expiry needs no tracking here.
+func (c *connAuth) reverify(token string) (cut bool) {
+	_, err := c.auth.Authenticate(token)
+	if err == nil {
+		c.failing = false
+		return false
+	}
+	telemetry.RecordStreamReauthFailure()
+	if c.cfg.ReauthMode == ReauthEnforce {
+		c.log.Error("closing consumer stream, token no longer verifies (enforce mode)", err,
+			logger.WithString("subject", c.subject))
+		return true
+	}
+	// Transition only: observe mode exists to learn which consumers have not
+	// adopted refresh, and the metric cannot name them.
+	if !c.failing {
+		c.failing = true
+		c.log.Error("consumer stream token no longer verifies, keeping stream (observe mode)", err,
+			logger.WithString("subject", c.subject))
+	}
+	return false
+}
+
+// offerLatest replaces any queued value so the newest token wins, never
+// blocking: a dropped intermediate token costs nothing, the client refreshes.
+func offerLatest(ch chan string, v string) {
+	select {
+	case <-ch:
+	default:
+	}
+	select {
+	case ch <- v:
+	default:
+	}
 }
 
 // normalizeMode defaults empty to metadata and reports whether the value is allowed.
@@ -97,9 +189,8 @@ func NewConnLimiter(maxConns, maxConnsPerSub int) *ConnLimiter {
 	}
 }
 
-// acquire admits a connection for subject when both caps allow it, returning
-// the closer that frees it. Handing back a closure rather than an id keeps the
-// bookkeeping here instead of threading it through every caller.
+// acquire admits a connection when both caps allow it, returning the closer
+// that frees it so the bookkeeping stays here rather than in every caller.
 func (l *ConnLimiter) acquire(subject string) (release func(), ok bool) {
 	l.mu.Lock()
 	defer l.mu.Unlock()

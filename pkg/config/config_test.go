@@ -11,6 +11,7 @@ import (
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	"github.com/getoptimum/optimum-common/pkg/version"
 	"github.com/getoptimum/optimum-gateway/pkg/config"
+	"github.com/getoptimum/optimum-gateway/pkg/service/stream"
 )
 
 const (
@@ -379,6 +380,49 @@ func TestStreamValidation(t *testing.T) {
 		// Consumers are told to ping every ~30s, so the accepted minimum has to
 		// sit below that or they are GOAWAY'd for pinging too often.
 		require.Equal(t, 20, cfg.StreamKeepaliveMinTimeSec)
+	})
+
+	t.Run("reauth ships as observe", func(t *testing.T) {
+		base(t)
+		requireUnset(t, "OPT_STREAM_REAUTH_MODE", "OPT_STREAM_REAUTH_INTERVAL_SEC")
+		t.Setenv("OPT_STREAM_ENABLE", "true")
+		cfg, err := config.LoadConfig("")
+		require.NoError(t, err)
+		// Observe, not enforce: existing consumers cannot refresh in-band yet.
+		require.Equal(t, stream.ReauthObserve, cfg.StreamReauthMode)
+		require.Equal(t, 60, cfg.StreamReauthIntervalSec)
+	})
+
+	// Pins Validate's literals to the stream package's constants.
+	// pkg/service/stream imports this package, so the non-test code cannot
+	// share them and only this test stops them drifting.
+	t.Run("reauth mode accepts exactly the three modes", func(t *testing.T) {
+		for _, mode := range []string{stream.ReauthOff, stream.ReauthObserve, stream.ReauthEnforce} {
+			t.Run(mode, func(t *testing.T) {
+				base(t)
+				t.Setenv("OPT_STREAM_ENABLE", "true")
+				t.Setenv("OPT_STREAM_REAUTH_MODE", mode)
+				cfg, err := config.LoadConfig("")
+				require.NoError(t, err)
+				require.Equal(t, mode, cfg.StreamReauthMode)
+			})
+		}
+	})
+
+	t.Run("reauth mode rejects a near miss", func(t *testing.T) {
+		base(t)
+		t.Setenv("OPT_STREAM_ENABLE", "true")
+		t.Setenv("OPT_STREAM_REAUTH_MODE", "enforced")
+		_, err := config.LoadConfig("")
+		require.ErrorContains(t, err, "stream_reauth_mode")
+	})
+
+	t.Run("reauth interval rejects zero", func(t *testing.T) {
+		base(t)
+		t.Setenv("OPT_STREAM_ENABLE", "true")
+		t.Setenv("OPT_STREAM_REAUTH_INTERVAL_SEC", "0")
+		_, err := config.LoadConfig("")
+		require.ErrorContains(t, err, "stream_reauth_interval_sec")
 	})
 
 	t.Run("keepalive min time rejects zero", func(t *testing.T) {
