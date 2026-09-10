@@ -64,8 +64,12 @@ type AppConfig struct {
 	//
 	// Auth service that mints gateway JWTs (POST {url}/api/v1/auth/token) and
 	// hosts the JWKS used to verify peer JWTs (GET {issuer}/.well-known/jwks.json).
+	// AuthTokenURL moves only where tokens are requested, so a local credential
+	// helper can mint on this gateway's behalf; RemoteAuthURL still fixes the
+	// trusted issuer and the JWKS, whatever it is set to.
 	RemoteAuthURL          string `yaml:"remote_auth_url"    env:"OPT_REMOTE_AUTH_URL"    default:"https://auth.getoptimum.io"`
 	APIKey                 string `yaml:"api_key"            env:"OPT_API_KEY"            default:""`
+	AuthTokenURL           string `yaml:"auth_token_url"     env:"OPT_AUTH_TOKEN_URL"     default:""`
 	JWKSCachePath          string `yaml:"jwks_cache_path"            env:"OPT_JWKS_CACHE_PATH"            default:"/gateway/cache/jwks.json"`
 	JWKSRefreshIntervalSec int    `yaml:"jwks_refresh_interval_sec"  env:"OPT_JWKS_REFRESH_INTERVAL_SEC"  default:"3600"`
 	// GatewayID is JWT-sourced in production — InitRuntime overwrites this

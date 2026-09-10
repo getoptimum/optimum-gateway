@@ -25,9 +25,11 @@ import (
 
 // AuthTestRig provides a self-contained mint + JWKS environment for manager test.
 type AuthTestRig struct {
-	PrivateKey    *ecdsa.PrivateKey
-	server        *httptest.Server
-	diskPath      string // per-test JWKS disk-cache path, populated in newAuthTestRig
+	PrivateKey *ecdsa.PrivateKey
+	server     *httptest.Server
+	diskPath   string // per-test JWKS disk-cache path, populated in newAuthTestRig
+	// DefaultPeerID is populated by AppCfg, so call that before signing any token
+	// whose cnf must match the gateway under test.
 	DefaultPeerID string
 	Calls         atomic.Int32
 	// ClaimMod mutates the claims before signing on each mint (optional).
@@ -40,6 +42,9 @@ type AuthTestRig struct {
 	// ResponseStatus / ResponseBody override the mint reply for error-path tests.
 	ResponseStatus int
 	ResponseBody   []byte
+	// LastMintPayload is the body of the most recent mint request, so a test can
+	// assert which credential the gateway actually sent.
+	LastMintPayload atomic.Pointer[map[string]string]
 }
 
 // AppCfg returns a minimal AppConfig the Manager will accept (auth enabled,
@@ -157,6 +162,7 @@ func NewAuthTestRig(t *testing.T, opts ...Option) *AuthTestRig {
 		require.NoError(t, errR)
 		var payload map[string]string
 		require.NoError(t, json.Unmarshal(payloadBytes, &payload))
+		rig.LastMintPayload.Store(&payload)
 
 		if rig.ResponseStatus != 0 || rig.ResponseBody != nil {
 			status := rig.ResponseStatus

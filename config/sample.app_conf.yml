@@ -7,6 +7,10 @@ agent_mump2p_port: 43213
 gateway_cluster_id: optimum_hoodi_v0_2
 api_key: your-api-key # or set OPT_API_KEY env var
 
+# Set only when a local credential helper mints for this gateway; it then holds the
+# credential and api_key is unused. remote_auth_url still fixes the trusted issuer.
+# auth_token_url: http://127.0.0.1:33210
+
 # ─── Telemetry ────────────────────────────────────────────────────────────────
 telemetry_enable: true
 telemetry_port: 48123

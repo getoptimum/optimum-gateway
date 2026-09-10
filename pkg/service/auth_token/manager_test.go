@@ -239,6 +239,8 @@ func TestMint_RejectsTokenThatFailsLocalVerify(t *testing.T) {
 // from the handshake token returned by Token/HandshakeToken.
 func TestServicesToken_PreferredWhenPresent(t *testing.T) {
 	rig := test_utils.NewAuthTestRig(t)
+	// AppCfg first: it populates the rig's peer id, which the tokens below need.
+	cfg := rig.AppCfg(t)
 	accessTok := rig.MustSignToken(t, rig.PrivateKey, nil)
 	servicesTok := rig.MustSignToken(t, rig.PrivateKey, func(c *jwks_verifier.Claims) {
 		c.ScopeVersion = 2
@@ -255,7 +257,7 @@ func TestServicesToken_PreferredWhenPresent(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	m, err := auth_token.New(t.Context(), logger.NewAppSLogger(logger.Debug), rig.AppCfg(t))
+	m, err := auth_token.New(t.Context(), logger.NewAppSLogger(logger.Debug), cfg)
 	require.NoError(t, err)
 
 	gotHandshake, err := m.HandshakeToken(context.Background())
@@ -274,6 +276,8 @@ func TestServicesToken_PreferredWhenPresent(t *testing.T) {
 // call must reuse the same mint result rather than re-minting.
 func TestServicesToken_FirstCallMintsAndPrimesHandshake(t *testing.T) {
 	rig := test_utils.NewAuthTestRig(t)
+	// AppCfg first: it populates the rig's peer id, which the tokens below need.
+	cfg := rig.AppCfg(t)
 	accessTok := rig.MustSignToken(t, rig.PrivateKey, nil)
 	servicesTok := rig.MustSignToken(t, rig.PrivateKey, func(c *jwks_verifier.Claims) {
 		c.ScopeVersion = 2
@@ -290,7 +294,7 @@ func TestServicesToken_FirstCallMintsAndPrimesHandshake(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	m, err := auth_token.New(t.Context(), logger.NewAppSLogger(logger.Debug), rig.AppCfg(t))
+	m, err := auth_token.New(t.Context(), logger.NewAppSLogger(logger.Debug), cfg)
 	require.NoError(t, err)
 
 	gotServices, err := m.ServicesToken(context.Background())
@@ -327,6 +331,8 @@ func TestServicesToken_FallsBackToHandshakeWhenAbsent(t *testing.T) {
 // fall back to the handshake token and the mint as a whole still succeeds.
 func TestServicesToken_FallsBackWhenServicesTokenInvalid(t *testing.T) {
 	rig := test_utils.NewAuthTestRig(t)
+	// AppCfg first: it populates the rig's peer id, which the tokens below need.
+	cfg := rig.AppCfg(t)
 	accessTok := rig.MustSignToken(t, rig.PrivateKey, nil)
 	otherKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)
@@ -340,7 +346,7 @@ func TestServicesToken_FallsBackWhenServicesTokenInvalid(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	m, err := auth_token.New(t.Context(), logger.NewAppSLogger(logger.Debug), rig.AppCfg(t))
+	m, err := auth_token.New(t.Context(), logger.NewAppSLogger(logger.Debug), cfg)
 	require.NoError(t, err)
 
 	handshake, err := m.HandshakeToken(context.Background())
@@ -356,10 +362,13 @@ func TestServicesToken_FallsBackWhenServicesTokenInvalid(t *testing.T) {
 func newMintedManager(t *testing.T, configure func(*test_utils.AuthTestRig)) (*auth_token.Service, *test_utils.AuthTestRig) {
 	t.Helper()
 	rig := test_utils.NewAuthTestRig(t)
+	// Before configure: AppCfg populates the rig's peer id, which any token it signs
+	// needs in order to be bound to this gateway.
+	cfg := rig.AppCfg(t)
 	if configure != nil {
 		configure(rig)
 	}
-	m, err := auth_token.New(t.Context(), logger.NewAppSLogger(logger.Debug), rig.AppCfg(t))
+	m, err := auth_token.New(t.Context(), logger.NewAppSLogger(logger.Debug), cfg)
 	require.NoError(t, err)
 	_, err = m.Token(context.Background())
 	require.NoError(t, err)

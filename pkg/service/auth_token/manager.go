@@ -22,13 +22,13 @@ import (
 )
 
 var (
-	ErrUnknownKey   = errors.New("auth_token: api key not recognized (401)")
-	ErrKeyRevoked   = errors.New("auth_token: api key revoked (403)")
-	ErrKeySuspended = errors.New("auth_token: api key suspended (403)")
+	ErrUnknownKey   = errors.New("auth_token: credential not recognized (401)")
+	ErrKeyRevoked   = errors.New("auth_token: credential revoked (403)")
+	ErrKeySuspended = errors.New("auth_token: credential suspended (403)")
 )
 
 const (
-	mintPath = "/api/v1/auth/token" // mintPath is appended to AppConfig.RemoteAuthURL to form the mint endpoint.
+	mintPath = "/api/v1/auth/token" // mintPath is appended to the mint base URL to form the mint endpoint.
 	// Upstream issues 6h JWTs; refreshing around the 3h mark leaves a 3h
 	// fence for transient auth-service outages while still hitting the
 	// auth service only ~8 times/day.
@@ -37,8 +37,10 @@ const (
 )
 
 type Service struct {
-	log         logger.AppLogger
-	apiKey      string
+	log logger.AppLogger
+	// enabled is set only on the full path, so a disabled Manager stays recognizable
+	// once the credential itself is no longer what distinguishes one.
+	enabled     bool
 	mintURL     string
 	mintPayload map[string]string
 	verifier    *jwks_verifier.Verifier
@@ -72,10 +74,13 @@ type mintResponse struct {
 //
 // Resolution:
 //
-//	EnableAuth=false                — LOCAL DEV ONLY; disabled Manager.
-//	EnableAuth=true + APIKey empty  — same: disabled Manager with an info log.
-//	EnableAuth=true + APIKey set    — full path: build JWKS verifier and
-//	                                  return a ready-to-mint Manager.
+//	EnableAuth=false:                  LOCAL DEV ONLY; disabled Manager.
+//	EnableAuth=true, no credential:    same, disabled Manager with an info log.
+//	EnableAuth=true, with a credential: full path, build the JWKS verifier and
+//	                                   return a ready-to-mint Manager.
+//
+// A credential is either APIKey or AuthTokenURL: the latter names a local helper
+// that holds this gateway's own key and mints for it.
 //
 // The JWKS verifier is constructed internally so the auth wiring sits in
 // one place; verifier construction can be a slow network call, so it's
@@ -91,8 +96,8 @@ func New(ctx context.Context, log logger.AppLogger, appCfg *config.AppConfig) (*
 	case !appCfg.EnableAuth:
 		log.Info("OPT_ENABLE_AUTH=false — gateway JWT mint disabled; LOCAL DEV ONLY")
 		return NewDisabled(log), nil
-	case appCfg.APIKey == "":
-		log.Info("OPT_API_KEY not set — auth_token disabled")
+	case appCfg.APIKey == "" && appCfg.AuthTokenURL == "":
+		log.Info("neither OPT_API_KEY nor OPT_AUTH_TOKEN_URL set, auth_token disabled")
 		return NewDisabled(log), nil
 	}
 	if appCfg.RemoteAuthURL == "" {
@@ -111,15 +116,28 @@ func New(ctx context.Context, log logger.AppLogger, appCfg *config.AppConfig) (*
 		return nil, fmt.Errorf("auth_token: extract identity: %w", err)
 	}
 
+	// The mint endpoint may be local; the issuer and JWKS stay remote either way,
+	// so a helper cannot become something this gateway trusts.
+	mintBase := appCfg.RemoteAuthURL
+	if tokenURL := strings.TrimSpace(appCfg.AuthTokenURL); tokenURL != "" {
+		mintBase = tokenURL
+		if appCfg.APIKey != "" {
+			log.Info("OPT_AUTH_TOKEN_URL is set, so OPT_API_KEY is unused")
+		}
+	}
+
+	payload := map[string]string{"peer_id": identityKey.ID.String()}
+	// Omitted rather than sent empty: the helper supplies its own credential.
+	if appCfg.APIKey != "" && appCfg.AuthTokenURL == "" {
+		payload["api_key"] = appCfg.APIKey
+	}
+
 	return &Service{
-		log:      log.With(logger.WithService("auth_token")),
-		apiKey:   appCfg.APIKey,
-		mintURL:  strings.TrimRight(appCfg.RemoteAuthURL, "/") + mintPath,
-		verifier: verifier,
-		mintPayload: map[string]string{
-			"api_key": appCfg.APIKey,
-			"peer_id": identityKey.ID.String(),
-		},
+		log:         log.With(logger.WithService("auth_token")),
+		enabled:     true,
+		mintURL:     strings.TrimRight(mintBase, "/") + mintPath,
+		verifier:    verifier,
+		mintPayload: payload,
 	}, nil
 }
 
@@ -133,12 +151,31 @@ func NewDisabled(log logger.AppLogger) *Service {
 
 // IsEnabled reports whether the Manager will actually mint and verify JWTs.
 // Returns false for a "disabled" Manager (the one New returns when
-// EnableAuth=false or OPT_API_KEY is empty). Callers that need to
+// EnableAuth=false or no credential is configured). Callers that need to
 // distinguish "auth not configured" from "auth configured but token bad"
 // use this — most callers just call the regular methods, which degrade
 // gracefully on a disabled manager.
 func (m *Service) IsEnabled() bool {
-	return m.apiKey != ""
+	return m.enabled
+}
+
+// assertBoundToUs reports whether a minted token was issued for this gateway's own
+// libp2p identity, which is the only thing distinguishing it from a valid token
+// belonging to some other gateway.
+func (m *Service) assertBoundToUs(claims *jwks_verifier.Claims) error {
+	want := m.mintPayload["peer_id"]
+	if want == "" {
+		return nil
+	}
+	got := ""
+	if claims != nil && claims.CNF != nil {
+		got = claims.CNF.PeerID
+	}
+	if got != want {
+		return fmt.Errorf(
+			"auth_token: minted token is bound to peer %q, not this gateway's %q", got, want)
+	}
+	return nil
 }
 
 // Token returns the cached JWT, minting on first call. Returns ("", nil)
@@ -341,6 +378,15 @@ func (m *Service) mint(ctx context.Context) (string, error) {
 		telemetry.IncAuthMintResult(telemetry.AuthMintResultVerifyFailed)
 		return "", fmt.Errorf("auth_token: minted token failed local verify: %w", err)
 	}
+	// A token minted for another gateway is signed and valid, so only the cnf binding
+	// catches it. Peers reject a mismatch at the handshake anyway; refusing it here
+	// stops this gateway adopting another's sub and operator_id for its own labels
+	// first. An absent binding is refused too: the request always carries peer_id, and
+	// a token without cnf could not complete a handshake regardless.
+	if err := m.assertBoundToUs(claims); err != nil {
+		telemetry.IncAuthMintResult(telemetry.AuthMintResultVerifyFailed)
+		return "", err
+	}
 
 	m.token.Store(new(parsed.AccessToken))
 	m.claims.Store(claims)
@@ -352,8 +398,12 @@ func (m *Service) mint(ctx context.Context) (string, error) {
 	// fails verify, fall back to the handshake token so pushes keep working.
 	pushToken := parsed.AccessToken
 	if parsed.ServicesToken != "" {
-		if sClaims, verr := m.verifier.Verify(parsed.ServicesToken, jwks_verifier.AudServices); verr != nil {
-			m.log.Error("services token failed local verify; using handshake token for pushes", verr)
+		sClaims, verr := m.verifier.Verify(parsed.ServicesToken, jwks_verifier.AudServices)
+		if verr == nil {
+			verr = m.assertBoundToUs(sClaims)
+		}
+		if verr != nil {
+			m.log.Error("services token rejected; using handshake token for pushes", verr)
 			m.servicesToken.Store(new(""))
 			m.servicesClaims.Store(nil)
 		} else {
@@ -391,7 +441,7 @@ func (m *Service) refreshLoop(ctx context.Context) {
 			case errors.Is(err, ErrUnknownKey),
 				errors.Is(err, ErrKeyRevoked),
 				errors.Is(err, ErrKeySuspended):
-				m.log.Error("api key terminal failure — refresh loop exiting", err)
+				m.log.Error("credential terminal failure, refresh loop exiting", err)
 				return
 			default:
 				m.log.Error("auth refresh failed; will retry next tick", err)
