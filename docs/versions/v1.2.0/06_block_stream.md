@@ -285,24 +285,6 @@ cumulative dropped count, then resumes. A slow consumer never stalls the gateway
 
 Over gRPC the same signal is a `lagged` frame: `{ "lagged": { "dropped": "12" } }`.
 
-### Deduplicate deliberately
-
-The stream carries one event **per source observation**, by design: the same
-block seen over both libp2p and mump2p arrives twice, distinguished by
-`source`. Those two are not redundant — they are the cross-path comparison.
-
-| You want | Key on |
-| --- | --- |
-| Unique blocks | `(slot, proposer_index, state_root)` |
-| Per-path observations | `(slot, proposer_index, state_root, source)` |
-
-`state_root` belongs in both. A proposer can equivocate and publish two
-genuinely different blocks for one slot, so `(slot, proposer_index)` alone is
-not a block identity.
-
-Never key on `block_size_bytes` or `received_at_ms` — both differ per
-observation and are not stable identity.
-
 ### Token expiry
 
 Tokens are short-lived. When a stream outlives its JWT, mint a fresh token with
