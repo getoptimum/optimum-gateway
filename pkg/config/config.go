@@ -64,8 +64,16 @@ type AppConfig struct {
 	//
 	// Auth service that mints gateway JWTs (POST {url}/api/v1/auth/token) and
 	// hosts the JWKS used to verify peer JWTs (GET {issuer}/.well-known/jwks.json).
-	RemoteAuthURL          string `yaml:"remote_auth_url"    env:"OPT_REMOTE_AUTH_URL"    default:"https://auth.getoptimum.io"`
-	APIKey                 string `yaml:"api_key"            env:"OPT_API_KEY"            default:""`
+	RemoteAuthURL string `yaml:"remote_auth_url"    env:"OPT_REMOTE_AUTH_URL"    default:"https://auth.getoptimum.io"`
+	APIKey        string `yaml:"api_key"            env:"OPT_API_KEY"            default:""`
+	// JoinKey is the org-wide ojk_ enrollment credential: the gateway registers its
+	// own keypair once and mints with a client assertion thereafter, so there is no
+	// per-host secret to distribute. Mutually exclusive with APIKey.
+	JoinKey string `yaml:"join_key" env:"OPT_JOIN_KEY" default:""`
+	// EnrollCredDir holds the enrollment credential. Empty means IdentityMumP2PDir.
+	// MUST be persistent: losing it means a new keypair, a new enrollment, and a
+	// burnt join-key use.
+	EnrollCredDir          string `yaml:"enroll_cred_dir" env:"OPT_ENROLL_CRED_DIR" default:""`
 	JWKSCachePath          string `yaml:"jwks_cache_path"            env:"OPT_JWKS_CACHE_PATH"            default:"/gateway/cache/jwks.json"`
 	JWKSRefreshIntervalSec int    `yaml:"jwks_refresh_interval_sec"  env:"OPT_JWKS_REFRESH_INTERVAL_SEC"  default:"3600"`
 	// GatewayID is JWT-sourced in production — InitRuntime overwrites this
@@ -73,6 +81,8 @@ type AppConfig struct {
 	// env values are only used in dev mode (OPT_ENABLE_AUTH=false); a yaml
 	// or OPT_GATEWAY_ID value in a prod-auth setup is silently replaced by
 	// the JWT subject at boot.
+	// It is no longer inert under join_key: EnrollmentLabel reads it before the
+	// mint, and that label is unique per org, so it must be unique per host.
 	GatewayID string `yaml:"gateway_id" env:"OPT_GATEWAY_ID" default:"dev-gateway"`
 	// GatewayType is JWT-sourced — InitRuntime sets it from the `type` claim
 	// (hermes|partner|relay) once the auth manager has minted. Empty in dev
@@ -251,6 +261,28 @@ func (c *AppConfig) effectiveAggregationIntervalMs() int64 {
 	return c.AggregationIntervalMs
 }
 
+// DefaultGatewayID is the GatewayID placeholder, not an identity: every
+// unconfigured node carries it. Pinned to the struct tag by TestGatewayCredentialConfig.
+const DefaultGatewayID = "dev-gateway"
+
+// EnrollmentLabel is the label recorded against an enrolled credential, empty on the
+// placeholder: labels are unique per org among live credentials, and empty is exempt.
+func (c *AppConfig) EnrollmentLabel() string {
+	if c.GatewayID == DefaultGatewayID {
+		return ""
+	}
+	return c.GatewayID
+}
+
+// EnrollmentDir resolves where the enrollment credential lives, defaulting to the
+// mumP2P identity directory the credential's peer_id comes from.
+func (c *AppConfig) EnrollmentDir() string {
+	if c.EnrollCredDir != "" {
+		return c.EnrollCredDir
+	}
+	return c.IdentityMumP2PDir
+}
+
 // Validate ensures the AppConfig has valid and complete values
 func (c *AppConfig) Validate() error {
 	if c.IdentityLibP2PDir == "" {
@@ -287,6 +319,14 @@ func (c *AppConfig) Validate() error {
 	}
 	if c.GatewayClusterID == "" {
 		return fmt.Errorf("OPT_GATEWAY_CLUSTER_ID is required")
+	}
+	if c.APIKey != "" && c.JoinKey != "" {
+		return fmt.Errorf("api_key and join_key are mutually exclusive: set one (join_key self-enrolls, api_key is the legacy per-host secret)")
+	}
+	if c.JoinKey != "" {
+		if err := os.MkdirAll(c.EnrollmentDir(), 0o750); err != nil {
+			return fmt.Errorf("failed to create enrollment credential directory %s: %w", c.EnrollmentDir(), err)
+		}
 	}
 
 	if c.StreamEnable {
