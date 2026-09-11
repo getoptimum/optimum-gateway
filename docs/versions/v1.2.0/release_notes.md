@@ -1,6 +1,6 @@
 # v1.2.0
 
-> **Recommended upgrade.** v1.2.0 is the current release for all partners on v1.1.1. Networking and CL peering are unchanged — same ports and firewall rules as v1.1.1.
+> **Previous release.** Partners already on v1.2.0 can remain on this version, or upgrade to [v1.3.0](../v1.3.0/release_notes.md) for long-running stream improvements and slot-prioritized acceleration. Partners on v1.1.1 can upgrade to v1.2.0 and remain here. Networking and CL peering are unchanged — same ports and firewall rules as v1.1.1.
 
 ## Highlights
 
@@ -30,7 +30,8 @@ No firewall or CL peering changes are required. To enable the consumer stream, a
 
 | Version     | Status                    |
 | ----------- | ------------------------- |
-| v1.2.0      | **CURRENT - recommended** |
+| v1.3.0      | **CURRENT - recommended** |
+| v1.2.0      | Previous                  |
 | v1.1.1      | Previous                  |
 | v1.0.2      | DEPRECATED / unsupported  |
 | v0.0.1-rc12 | REMOVED / unsupported     |

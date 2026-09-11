@@ -95,7 +95,7 @@ is required; the rest have the defaults shown.
 
 ```yaml
 stream_enable: true            # default: false
-stream_only: false             # default: false — skip CL; never publishes (requires stream_enable)
+stream_only: false             # default: false — full gateway (CL + mesh publish)
 stream_addr: 127.0.0.1:9600    # default — WebSocket listener (own port, off /metrics)
 stream_grpc_addr: 127.0.0.1:9601 # default — gRPC listener
 stream_require_auth: true      # verify consumer JWTs; false = loopback only
@@ -285,12 +285,201 @@ cumulative dropped count, then resumes. A slow consumer never stalls the gateway
 
 Over gRPC the same signal is a `lagged` frame: `{ "lagged": { "dropped": "12" } }`.
 
-### Token expiry
+### Liveness signal
 
-Tokens are short-lived. When a stream outlives its JWT, mint a fresh token with
-`POST /api/v1/stream/token` and **open a new connection**. Nothing is buffered
-across connections, so reconnecting leaves a permanent gap in the feed — plan
-refreshes before `exp`, or accept the hole.
+A quiet feed and a broken one look identical over a healthy connection: the
+transport stays up on its own pings while no blocks arrive. The gateway
+therefore emits a heartbeat every `stream_heartbeat_interval_sec` (default
+`20`), whether or not blocks are flowing. Setting it to `0` disables the frame
+entirely, which puts you back to not being able to tell those two apart.
+
+```json
+{ "type": "heartbeat", "last_slot": 3706300, "expected_slot": 3706302, "silence_ms": 24120 }
+```
+
+Over gRPC the same signal is a `heartbeat` frame:
+`{ "heartbeat": { "lastSlot": "3706300", "expectedSlot": "3706302", "silenceMs": "24120" } }`.
+
+| Field | Meaning |
+| --- | --- |
+| `last_slot` | Last slot actually written to **your** connection; `0` before the first block |
+| `expected_slot` | Slot the chain should be on now, derived from the wall clock |
+| `silence_ms` | Milliseconds since the last block was written to your connection; `0` before the first |
+
+`expected_slot - last_slot` is an **observation, not a verdict**. It also grows
+for slots the chain legitimately skipped, and it is meaningless before the
+first block, so correlate it against chain state before concluding anything. A
+large, sustained difference says the feed you are attached to is behind; it
+does not say which slots exist, and reconnecting will not recover a gap that
+happened on the gateway's ingest side.
+
+What the frame does prove is that the connection is alive and which slot was
+last delivered to it. So alert on heartbeats going **missing**, which is the
+failure this frame exists to expose, rather than on the arithmetic alone. For
+loss on *your* connection specifically, `lagged` is the signal.
+
+### Holding a stream open for weeks
+
+Streams are meant to stay open indefinitely.
+
+<svg viewBox="0 0 1100 668" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Long-running stream lifecycle: connect with stream JWT, receive blocks and heartbeats, send keepalives and in-band token refresh on the same connection, then reconnect after gateway GOAWAY" style="width:100%;height:auto;max-width:1040px;display:block;margin:1.25rem auto;">
+  <defs>
+    <marker id="lifecycle-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+      <path d="M0,0 L10,5 L0,10 L2.2,5 Z" fill="currentColor" fill-opacity="0.55"></path>
+    </marker>
+    <marker id="lifecycle-arrow-open" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+      <path d="M0.5,0.5 L9,5 L0.5,9.5" fill="none" stroke="currentColor" stroke-opacity="0.35" stroke-width="1.25"></path>
+    </marker>
+  </defs>
+
+  <text x="550" y="28" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="12" font-weight="700" letter-spacing="1.1" fill="currentColor" fill-opacity="0.55" style="text-transform:uppercase">Long-running stream lifecycle</text>
+
+  <rect x="100" y="262" width="900" height="200" rx="8" fill="currentColor" fill-opacity="0.03" stroke="currentColor" stroke-opacity="0.18" stroke-width="1.25"></rect>
+
+  <line x1="220" y1="190" x2="220" y2="610" stroke="currentColor" stroke-opacity="0.2" stroke-width="1.25" stroke-dasharray="4 4"></line>
+  <line x1="880" y1="190" x2="880" y2="610" stroke="#B87CFF" stroke-opacity="0.35" stroke-width="1.25" stroke-dasharray="4 4"></line>
+
+  <path d="M 130,66 L 310,66 A 20,20 0 0 1 330,86 L 330,166 A 20,20 0 0 1 310,186 L 130,186 A 20,20 0 0 1 110,166 L 110,86 A 20,20 0 0 1 130,66 Z" fill="currentColor" fill-opacity="0.035" stroke="currentColor" stroke-opacity="0.32" stroke-width="1.25"></path>
+  <text x="220" y="96" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="700" letter-spacing="1.1" fill="currentColor" fill-opacity="0.55" style="text-transform:uppercase">Consumer</text>
+  <text x="220" y="130" text-anchor="middle" font-family="&#34;ABC Diatype&#34;, &#34;Inter Tight&#34;, system-ui, sans-serif" font-size="22" font-weight="400" letter-spacing="-0.5" fill="currentColor">Stream consumer</text>
+  <text x="220" y="156" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="500" fill="currentColor" fill-opacity="0.72">WS :9600</text>
+  <text x="220" y="176" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="500" fill="currentColor" fill-opacity="0.6">gRPC :9601</text>
+
+  <path d="M 780,46 L 1020,46 A 20,20 0 0 1 1040,66 L 1040,126 A 60,60 0 0 1 980,186 L 740,186 A 20,20 0 0 1 720,166 L 720,106 A 60,60 0 0 1 780,46 Z" fill="#B87CFF" fill-opacity="0.07" stroke="#B87CFF" stroke-opacity="1" stroke-width="2"></path>
+  <text x="756" y="86" text-anchor="start" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="700" letter-spacing="1.1" fill="#B87CFF" fill-opacity="1" style="text-transform:uppercase">Gateway</text>
+  <text x="756" y="122" text-anchor="start" font-family="&#34;ABC Diatype&#34;, &#34;Inter Tight&#34;, system-ui, sans-serif" font-size="28" font-weight="400" letter-spacing="-0.5" fill="currentColor">Optimum Gateway</text>
+  <circle cx="762" cy="148" r="2.5" fill="#B87CFF" fill-opacity="0.85"></circle>
+  <text x="778" y="152" text-anchor="start" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="15" font-weight="500" fill="currentColor" fill-opacity="0.78">Block stream listener</text>
+  <circle cx="762" cy="172" r="2.5" fill="#B87CFF" fill-opacity="0.85"></circle>
+  <text x="778" y="176" text-anchor="start" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="15" font-weight="500" fill="currentColor" fill-opacity="0.78">Verifies stream JWT</text>
+
+  <line x1="232" y1="228" x2="868" y2="228" stroke="currentColor" stroke-opacity="0.55" stroke-width="1.25" marker-end="url(#lifecycle-arrow)"></line>
+  <text x="550" y="216" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="700" letter-spacing="1.1" fill="currentColor" fill-opacity="0.7" style="text-transform:uppercase">1 · Connect</text>
+  <text x="550" y="248" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="500" fill="currentColor" fill-opacity="0.55">Bearer stream JWT · WS or gRPC</text>
+
+  <line x1="868" y1="300" x2="232" y2="300" stroke="currentColor" stroke-opacity="0.55" stroke-width="1.25" marker-end="url(#lifecycle-arrow)"></line>
+  <text x="550" y="288" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="700" letter-spacing="1.1" fill="currentColor" fill-opacity="0.7" style="text-transform:uppercase">Blocks</text>
+  <text x="550" y="320" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="500" fill="currentColor" fill-opacity="0.55">beacon blocks · blobs</text>
+
+  <line x1="868" y1="348" x2="232" y2="348" stroke="currentColor" stroke-opacity="0.45" stroke-width="1.25" marker-end="url(#lifecycle-arrow)"></line>
+  <text x="550" y="336" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="700" letter-spacing="1.1" fill="currentColor" fill-opacity="0.7" style="text-transform:uppercase">Heartbeats</text>
+  <text x="550" y="368" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="500" fill="currentColor" fill-opacity="0.55">every ~20s · alert if missing</text>
+
+  <line x1="232" y1="396" x2="868" y2="396" stroke="currentColor" stroke-opacity="0.45" stroke-width="1.25" marker-end="url(#lifecycle-arrow)"></line>
+  <text x="550" y="384" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="700" letter-spacing="1.1" fill="currentColor" fill-opacity="0.7" style="text-transform:uppercase">Keepalive pings</text>
+  <text x="550" y="416" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="500" fill="currentColor" fill-opacity="0.55">~every 30s · NAT / conntrack</text>
+
+  <text x="550" y="437" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="700" letter-spacing="0.4" fill="currentColor" fill-opacity="0.65">2 · same connection stays open (hours / weeks)</text>
+  <text x="550" y="455" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="12" font-weight="500" fill="currentColor" fill-opacity="0.45">alert on missing heartbeats — not on quiet slots</text>
+  <text x="988" y="288" text-anchor="end" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="12" font-weight="500" fill="currentColor" fill-opacity="0.4">↻ repeats</text>
+
+  <line x1="232" y1="500" x2="868" y2="500" stroke="currentColor" stroke-opacity="0.55" stroke-width="1.25" marker-end="url(#lifecycle-arrow)"></line>
+  <text x="550" y="488" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="700" letter-spacing="1.1" fill="currentColor" fill-opacity="0.7" style="text-transform:uppercase">3 · In-band token refresh</text>
+  <text x="550" y="520" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="500" fill="currentColor" fill-opacity="0.55">{ &#34;token&#34;: &#34;eyJ…&#34; } · before exp · no reconnect required</text>
+
+  <line x1="868" y1="552" x2="232" y2="552" stroke="currentColor" stroke-opacity="0.55" stroke-width="1.25" marker-end="url(#lifecycle-arrow)"></line>
+  <text x="550" y="540" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="700" letter-spacing="1.1" fill="currentColor" fill-opacity="0.7" style="text-transform:uppercase">GOAWAY</text>
+  <text x="550" y="572" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="500" fill="currentColor" fill-opacity="0.55">gateway restart or TLS reload</text>
+
+  <line x1="232" y1="604" x2="868" y2="604" stroke="currentColor" stroke-opacity="0.55" stroke-width="1.25" marker-end="url(#lifecycle-arrow)"></line>
+  <text x="550" y="592" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="700" letter-spacing="1.1" fill="currentColor" fill-opacity="0.7" style="text-transform:uppercase">4 · Reconnect</text>
+  <text x="550" y="624" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="500" fill="currentColor" fill-opacity="0.55">new Bearer JWT · gap not replayed</text>
+  <text x="550" y="650" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="12" font-weight="500" fill="currentColor" fill-opacity="0.45">Nothing is buffered across connections — detect gaps, do not assume replay</text>
+
+  <path d="M 214,612 C 70,612 46,600 46,420 C 46,240 118,228 208,228" fill="none" stroke="currentColor" stroke-opacity="0.35" stroke-width="1.25" stroke-dasharray="6 4" marker-end="url(#lifecycle-arrow-open)"></path>
+  <text x="38" y="420" text-anchor="middle" transform="rotate(-90 38 420)" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="12" font-weight="500" fill="currentColor" fill-opacity="0.45">repeat for weeks</text>
+</svg>
+
+Three obligations fall on the client.
+
+**Send transport keepalives.** During a quiet stretch nothing between you and
+the gateway generates traffic, and NAT and conntrack entries expire. The
+gateway accepts client pings as often as every `stream_keepalive_min_time_sec`
+(default `20`) and permits them with no active stream. Ping somewhat less often
+than that, for example every 30s: pings faster than the minimum are answered
+with GOAWAY `too_many_pings`. gRPC clients send no keepalives at all unless
+configured, so this must be set explicitly.
+
+**Reconnect on GOAWAY.** A gateway restart, or a reload of the TLS terminator
+in front of it, sends GOAWAY. Reconnect, and account for the gap.
+
+**Retry `Internal`, not only `Unavailable`.** A stream cut *after* its first
+block ends as `Internal`, because response headers are already sent and a reset
+is all that remains; cut *before* the first block it ends as `Unavailable`.
+Most gRPC retry policies treat `Internal` as non-retryable, so a default
+configuration will not reconnect you.
+
+#### Gaps are permanent
+
+Nothing is buffered across connections and nothing is ever replayed, so every
+reconnect is a permanent hole. Detect holes rather than assuming their absence.
+
+But **a gap in the slot sequence is not by itself evidence of loss**: slots the
+network left empty are normal and produce no block at all. A jump from 100 to
+102 may mean slot 101 was missed, or that nobody proposed it. Reconcile against
+your own beacon node or an archive to tell the two apart. A `lagged` frame is
+the one signal that says this connection definitely dropped events.
+
+#### One event per observation, so deduplicate deliberately
+
+The stream carries one event **per source observation**, by design: the same
+block seen over both libp2p and mump2p arrives twice, distinguished by
+`source`. Those two are not redundant, they are the cross-path comparison, and
+collapsing them throws away the per-path arrival timing.
+
+Same-source repeats used to reach consumers as well: one slot was measured
+arriving twice over `mump2p` 9ms apart, with `block_size_bytes` differing
+between the two (35053 vs 35047) because the block had been re-encoded. The
+gateway now collapses those at the source on
+`(source, slot, proposer_index, state_root)`, so you should not normally see
+them. Do not treat that as absolute: the window is 30 seconds and the state is
+per-process, so a gateway restart or a very late repeat can still let one
+through.
+
+Pick the key for what you are counting:
+
+| You want | Key on |
+| --- | --- |
+| Unique blocks | `(slot, proposer_index, state_root)` |
+| Per-path observations | `(slot, proposer_index, state_root, source)` |
+
+`state_root` belongs in both. A proposer can equivocate and publish two
+genuinely different blocks for one slot, so `(slot, proposer_index)` alone is
+not a block identity and would silently discard the second one.
+
+Never key on `block_size_bytes` or `received_at_ms`. Both are per-observation
+and legitimately differ between paths, so they are not stable identity.
+
+### Refreshing the token in-band
+
+A stream held for weeks outlives its JWT. The gRPC request stream stays open
+for exactly this: send another `SubscribeRequest` carrying only a `token` at
+any time and the connection adopts it. Over WebSocket, send the same as a text
+frame.
+
+```json
+{ "token": "eyJhbGciOi..." }
+```
+
+Refresh well before `exp`; every 45 minutes for a one-hour token is ample. A
+refresh that fails to verify is counted and ignored, leaving the previous token
+in force, so a malformed refresh cannot sever a working stream.
+
+`stream_reauth_mode` decides what happens when the token a connection last
+presented stops verifying:
+
+| Mode | Behavior |
+| --- | --- |
+| `off` | Never re-verified; a connection outlives its token indefinitely |
+| `observe` (default) | Re-verified every `stream_reauth_interval_sec`; failures counted, stream kept |
+| `enforce` | Failures close the stream with `Unauthenticated` |
+
+`observe` ships as the default so streams are measured before anything is cut.
+Build for `enforce`: implement refresh now.
+
+> `grpcurl -d '{"mode":"..."}'` sends one message and half-closes, so it cannot
+> refresh. That is a supported shape for a short session, and it is also how
+> clients built against the previous server-streaming signature behave.
 
 ## Errors
 
@@ -306,6 +495,7 @@ Mid-stream:
 
 | Condition | WebSocket | gRPC |
 | --- | --- | --- |
+| Presented token stopped verifying, `stream_reauth_mode: enforce` | close `1008`, reason `token expired, refresh required` | `Unauthenticated` |
 | Gateway or terminator restarted | close | GOAWAY, then `Unavailable` |
 | Stream cut after the first block | close | `Internal` |
 
