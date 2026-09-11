@@ -55,7 +55,7 @@ If any check fails, `status` becomes `"degraded"` and the failing checks are lis
   "chain": "hoodi",
   "commit_hash": "a0b2bc1",
   "fork_digest": "c6ecb76c",
-  "gateway_cluster_id": "optimum_ethereum_hoodi_v0_2",
+  "gateway_cluster_id": "optimum_ethereum_hoodi_v0_1",
   "gateway_id": "optimum-dev-hoodi-kubernetes-validator-lighthouse",
   "paired_with": "partner",
   "remote_url": "bootstrap.getoptimum.io",

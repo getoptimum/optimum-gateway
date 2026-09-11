@@ -61,7 +61,7 @@ A check can also be `skipped`, meaning it does not apply to this node's mode. A 
   "chain": "hoodi",
   "commit_hash": "a0b2bc1",
   "fork_digest": "c6ecb76c",
-  "gateway_cluster_id": "optimum_ethereum_hoodi_v0_2",
+  "gateway_cluster_id": "optimum_ethereum_hoodi_v0_1",
   "gateway_id": "optimum-dev-hoodi-kubernetes-validator-lighthouse",
   "paired_with": "partner",
   "remote_url": "bootstrap.getoptimum.io",
