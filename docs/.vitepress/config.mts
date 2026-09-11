@@ -43,6 +43,7 @@ const possibleItems = [
   { text: 'Kubernetes (Helm)', file: '05_kubernetes.md' },
   { text: 'Configuration', file: '02_configuration.md' },
   { text: 'Consumer Block Stream', file: '06_block_stream.md' },
+  { text: 'Gateway Self-Enrollment', file: '07_gateway_self_enrollment.md' },
   { text: 'Metrics & Grafana', file: '03_telemetry.md' },
   { text: 'Troubleshooting', file: '04_troubleshoot.md' }
 ]

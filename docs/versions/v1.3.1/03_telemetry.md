@@ -20,7 +20,7 @@
 {
   "status": "healthy",
   "gateway_id": "optimum-dev-hoodi-kubernetes-validator-lighthouse",
-  "version": "v1.2.0",
+  "version": "v1.3.1",
   "commit_hash": "a0b2bc1",
   "uptime_seconds": 1639,
   "checks": {
@@ -65,7 +65,7 @@ A check can also be `skipped`, meaning it does not apply to this node's mode. A 
   "gateway_id": "optimum-dev-hoodi-kubernetes-validator-lighthouse",
   "paired_with": "partner",
   "remote_url": "bootstrap.getoptimum.io",
-  "version": "v1.2.0",
+  "version": "v1.3.1",
   "skip_messages_from_self": true,
   "peer_id": "12D3KooWNKZuPvVw5Sfnbq3nvyukxmhBBPZUXHeqzwcehmmwnKcR",
   "libp2p": {
@@ -288,7 +288,7 @@ providers:
 Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
 
 <details>
-<summary><strong>Click to expand: Partner Dashboard JSON (v1.2.0)</strong></summary>
+<summary><strong>Click to expand: Partner Dashboard JSON (v1.3.1)</strong></summary>
 
 ```json
 {
@@ -308,7 +308,7 @@ Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
       }
     ]
   },
-  "description": "Partner-facing dashboard for Optimum Gateway v1.2.0. All metrics sourced from the gateway /metrics endpoint. Select your Prometheus datasource and Network (Hoodi or Mainnet), then your gateway (by gateway_label).",
+  "description": "Partner-facing dashboard for Optimum Gateway v1.3.1. All metrics sourced from the gateway /metrics endpoint. Select your Prometheus datasource and Network (Hoodi or Mainnet), then your gateway (by gateway_label).",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -1771,7 +1771,7 @@ Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
   "tags": [
     "optimum",
     "partner",
-    "v1.2.0"
+    "v1.3.1"
   ],
   "templating": {
     "list": [
@@ -1852,7 +1852,7 @@ Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Optimum Gateway - Partner Dashboard (v1.2.0)",
+  "title": "Optimum Gateway - Partner Dashboard (v1.3.1)",
   "uid": "partner-gateway-v1"
 }
 ```
