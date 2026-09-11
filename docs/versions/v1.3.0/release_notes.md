@@ -1,6 +1,6 @@
 # v1.3.0
 
-> **Recommended upgrade.** v1.3.0 is the current release for all partners on v1.2.0. Networking and CL peering are unchanged — same ports and firewall rules.
+> **Previous release.** Superseded by [v1.3.1](../v1.3.1/release_notes.md). Networking and CL peering are unchanged from v1.3.0 — same ports and firewall rules.
 
 ## Highlights
 
@@ -36,7 +36,8 @@ If you run consumer streams, review [Holding a stream open for weeks](06_block_s
 
 | Version     | Status                    |
 | ----------- | ------------------------- |
-| v1.3.0      | **CURRENT - recommended** |
+| v1.3.1      | **CURRENT - recommended** |
+| v1.3.0      | Previous                  |
 | v1.2.0      | Previous                  |
 | v1.1.1      | Previous                  |
 | v1.0.2      | DEPRECATED / unsupported  |

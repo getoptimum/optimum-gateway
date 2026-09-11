@@ -55,7 +55,7 @@ If any check fails, `status` becomes `"degraded"` and the failing checks are lis
   "chain": "hoodi",
   "commit_hash": "a0b2bc1",
   "fork_digest": "c6ecb76c",
-  "gateway_cluster_id": "optimum_hoodi_v0_2",
+  "gateway_cluster_id": "optimum_ethereum_hoodi_v0_1",
   "gateway_id": "optimum-dev-hoodi-kubernetes-validator-lighthouse",
   "paired_with": "partner",
   "remote_url": "bootstrap.getoptimum.io",
@@ -1784,7 +1784,7 @@ Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
       {
         "current": {
           "text": "Hoodi",
-          "value": "optimum_hoodi_.*"
+          "value": "optimum_ethereum_hoodi_.*"
         },
         "includeAll": false,
         "label": "Network",
@@ -1793,7 +1793,7 @@ Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
           {
             "selected": true,
             "text": "Hoodi",
-            "value": "optimum_hoodi_.*"
+            "value": "optimum_ethereum_hoodi_.*"
           },
           {
             "selected": false,
@@ -1801,7 +1801,7 @@ Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
             "value": "optimum_ethereum_mainnet_.*"
           }
         ],
-        "query": "Hoodi : optimum_hoodi_.*, Mainnet : optimum_ethereum_mainnet_.*",
+        "query": "Hoodi : optimum_ethereum_hoodi_.*, Mainnet : optimum_ethereum_mainnet_.*",
         "type": "custom"
       },
       {

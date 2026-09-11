@@ -1,21 +1,35 @@
 # Optimum Gateway - Version History & Changelog
 
-**Latest Release:** [v1.3.0](./versions/v1.3.0/release_notes.md)  
-**Latest Docs:** [v1.3.0 Documentation](./versions/v1.3.0/index.md)
+**Latest Release:** [v1.3.1](./versions/v1.3.1/release_notes.md)  
+**Latest Docs:** [v1.3.1 Documentation](./versions/v1.3.1/index.md)
 
 ## Supported Versions
 
 | Version | Status                | Docker Image                |
 | ------- | --------------------- | --------------------------- |
-| v1.3.0  | CURRENT — recommended | `getoptimum/gateway:v1.3.0` |
+| v1.3.1  | CURRENT — recommended | `getoptimum/gateway:v1.3.1` |
+| v1.3.0  | Previous — supported  | `getoptimum/gateway:v1.3.0` |
 | v1.2.0  | Previous — supported  | `getoptimum/gateway:v1.2.0` |
 | v1.1.1  | Previous — supported  | `getoptimum/gateway:v1.1.1` |
 
-## v1.3.0 (Current)
+## v1.3.1 (Current)
+
+**Docker Image:** `getoptimum/gateway:v1.3.1`
+
+Recommended upgrade for everyone on v1.3.0. Networking and CL peering are unchanged — same ports and firewall rules.
+
+### Highlights
+
+* **Gateway self-enrollment.** Fleet operators can use one org-wide join key (`ojk_`) instead of one API key per host. See [Gateway Self-Enrollment](./versions/v1.3.1/07_gateway_self_enrollment.md).
+* **Legacy API keys unchanged.** The `ogw_` quick-start path is still the default for single-gateway deployments.
+
+[Full release notes](./versions/v1.3.1/release_notes.md) · [Documentation](./versions/v1.3.1/index.md)
+
+## v1.3.0
 
 **Docker Image:** `getoptimum/gateway:v1.3.0`
 
-Recommended upgrade for everyone on v1.2.0. Networking and CL peering are unchanged — same ports and firewall rules.
+Introduced long-running consumer streams and slot-prioritized acceleration. Networking and CL peering are unchanged — same ports and firewall rules.
 
 ### Highlights
 
@@ -57,11 +71,11 @@ Recommended upgrade for everyone on v1.0.2. Networking and CL peering are unchan
 
 ## v1.0.2 (Deprecated)
 
-**v1.0.2 is deprecated.** Docs for this release have been removed. Partners still on v1.0.2 should upgrade to **[v1.3.0](./versions/v1.3.0/release_notes.md)** (`getoptimum/gateway:v1.3.0`). v1.1.1 and v1.2.0 remain supported as previous releases.
+**v1.0.2 is deprecated.** Docs for this release have been removed. Partners still on v1.0.2 should upgrade to **[v1.3.1](./versions/v1.3.1/release_notes.md)** (`getoptimum/gateway:v1.3.1`). v1.1.1, v1.2.0, and v1.3.0 remain supported as previous releases.
 
 ## Important: Deprecated Versions
 
-**The following versions are deprecated and no longer supported. Upgrade to v1.3.0.**
+**The following versions are deprecated and no longer supported. Upgrade to v1.3.1.**
 
 | Version     | Status     |
 | ----------- | ---------- |

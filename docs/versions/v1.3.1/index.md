@@ -1,8 +1,8 @@
 # Optimum Gateway - User Guide
 
-> **Previous release.** v1.3.0 is superseded by [v1.3.1](../v1.3.1/index.md). Partners should upgrade when convenient — networking and CL peering are unchanged.
+> **Recommended upgrade:** v1.3.1 is the current release. Partners on v1.3.0 or v1.2.0 should upgrade when convenient — networking and CL peering are unchanged.
 
-> **Release Notes:** [What's new in v1.3.0](./release_notes.md)
+> **Release Notes:** [What's new in v1.3.1](./release_notes.md)
 
 > **Security audit:** ProbeLab, 2026 - [Full report](https://cdn.probelab.io/media/documents/2026-08-ProbeLab-Security_Audit_Report_Optimum_Gateway.pdf)
 
@@ -14,6 +14,7 @@ The **Optimum Gateway** bridges your **Ethereum Consensus Layer (CL) client** wi
 * **Gateway Role**: Bridges your local CL client to the **mump2p** network for both blocks and attestations.
 * **Result**: Faster block and attestation propagation, reduced latency, improved validator rewards.
 * **Consumer block stream** (opt-in): expose decoded beacon blocks to your own consumers over WebSocket or gRPC, with production-grade support for long-running connections. See [Consumer Block Stream](06_block_stream.md).
+* **Gateway self-enrollment** (opt-in): fleet operators can use one org-wide join key (`ojk_`) instead of one API key per host. See [Gateway Self-Enrollment](07_gateway_self_enrollment.md).
 * **Slot-prioritized acceleration:** during your validators' proposed slots, acceleration is prioritized automatically — no configuration required.
 
 ## Architecture
@@ -77,13 +78,13 @@ The **Optimum Gateway** bridges your **Ethereum Consensus Layer (CL) client** wi
 
 * The Gateway subscribes to ETH CL topics (beacon_block + all 64 attestation subnets) and forwards messages to the Optimum mump2p network.
 * **Peer discovery and fork digest** are handled automatically. The gateway connects to the Optimum network on startup.
-* **Identity, chain, and validator scope** all come from your **API key** - there is no per-network YAML to edit.
+* **Identity, chain, and validator scope** come from your credential — an **API key** (`ogw_`, default) or a **join key** (`ojk_`, fleet self-enrollment). There is no per-network YAML to edit.
 * **Config:** See [Quick Start](01_quick_start.md) and [Configuration](02_configuration.md).
 
 ## Requirements
 
 * **CL Client**: Prysm, Lighthouse, Teku, Nimbus, or Lodestar running
-* **API key**: Issued from the [Optimum Partner Console](https://console.getoptimum.io/) after onboarding (see [Quick Start](01_quick_start.md#generate-your-api-key))
+* **Credential**: API key (`ogw_`) or join key (`ojk_`) from the [Optimum Partner Console](https://console.getoptimum.io/) after onboarding — see [Quick Start](01_quick_start.md#generate-your-api-key) or [Gateway Self-Enrollment](07_gateway_self_enrollment.md#mint-a-join-key)
 * **Docker**: Docker Desktop or Docker Engine
 * **Firewall**: Required ports open (see [Network Requirements](00_network_requirements.md))
 
