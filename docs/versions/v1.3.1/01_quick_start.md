@@ -19,7 +19,8 @@ Every gateway authenticates with an **API key**. The key binds your gateway's id
 
 1. **Get invited.** The Optimum team adds you as an operator. You receive a **"Welcome to Optimum"** email invite to the [Partner Console](https://console.getoptimum.io/).
 2. **Sign in.** Open the console and sign in **with the same email** the invite was sent to, using your **Google or Microsoft** account — no password.
-3. **Open Manage Gateways.** In the sidebar go to **Manage Gateways**, then select the **Gateway** tab.
+3. **Select your network.** Use the **Network** picker in the header (**Ethereum**, **Hoodi**, or **Mock Chain**). It defaults to **Ethereum**, and the key takes its chain from whatever is selected here — the generate dialog is titled for that network, with no chain field of its own.
+4. **Open Manage Gateways.** In the sidebar go to **Manage Gateways**, then select the **Gateway** tab.
 
 ### Generate one key
 
@@ -27,7 +28,7 @@ Every gateway authenticates with an **API key**. The key binds your gateway's id
    * **Clusters** — tick every cluster this key may join. At least one is required on any network that has clusters, and generation is refused without it.
    * **Gateway details (optional)** — pick from the dropdowns where available: **Region**, **Consensus client**, **Hosting provider**, **DVT**. These label the gateway in monitoring.
 
-   The modal confirms the new key is provisioned as a **partner gateway**.
+   The modal confirms the new key is provisioned as a **partner gateway**, and names it automatically. There is no name field, and the name cannot be changed afterwards.
 2. **Copy the key.** The key (format `ogw_live_...`) is **shown only once**. Copy and store it securely. If you lose it, generate a new one and revoke the old.
 
 ### Bulk generate many keys
@@ -36,11 +37,11 @@ Every gateway authenticates with an **API key**. The key binds your gateway's id
 
 Use **BULK GENERATE** when you need many gateway keys at once (for example a large fleet rollout). Each key is still **one per gateway** — bulk create saves clicking **GENERATE KEY** repeatedly.
 
-1. **Open Manage Gateways.** Same as above: sidebar **Manage Gateways** -> **Gateway** tab.
+1. **Select your network and open Manage Gateways.** Same as above: header **Network** picker, then sidebar **Manage Gateways** -> **Gateway** tab.
 2. **Start bulk generate.** Click **BULK GENERATE**.
-3. **Choose how many.** Enter the number of keys to create. Your operator quota is shown in the dialog (for example `0 of 1000 used`).
+3. **Choose how many.** Enter a count in **How many keys**, which is prefilled with `10`. Your operator quota is shown above it (for example `0 of 1000 used · 1000 remaining`).
 4. **Clusters and gateway details.** **Clusters** is required on any network that has them. **Region**, **Consensus client**, **Hosting provider**, and **DVT** are optional. All of them apply to **every** key in the batch — the same fields as single-key generation. Keys are **auto-named**; you do not enter a label per key.
-5. **Download your keys.** When creation finishes, download the batch as **CSV or JSON**. Raw keys (`ogw_live_...`) are **shown only once** — store the file securely before closing the dialog. **Keep the browser tab open** until the download completes.
+5. **Download your keys.** When creation finishes, download the batch as **CSV or JSON**. Raw keys (`ogw_live_...`) are **shown only once** — store the file securely before closing the dialog. **Keep the browser tab open until creation finishes**; that is when the secrets are at risk, and the dialog warns you if you try to close it without downloading.
 6. **Deploy one key per host.** Map each key to a gateway instance and set `OPT_API_KEY` on that host. Do not reuse a key across gateways.
 
 > **All-or-nothing.** If any key in a batch fails to create, the whole batch is rolled back — none of the keys are kept. Fix the issue (for example quota) and try again.

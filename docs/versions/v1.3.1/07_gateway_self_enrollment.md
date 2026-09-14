@@ -27,7 +27,7 @@ The legacy **API key** path is unchanged. Single-gateway and small deployments s
    * **Valid for (days)** — how long the key may enroll **new** gateways. Default **7**, maximum **365**. Gateways already enrolled are unaffected when it expires.
 
    The modal confirms that gateways enrolled with this key are provisioned as **partner gateways**.
-5. Click **Generate**, then copy the key (`ojk_live_...`). It is **shown only once**. Store it in your secret manager — the same way you would an API key.
+5. Click **Generate**, then copy the key (`ojk_live_...`). It is **shown only once**. Store it in your secret manager — the same way you would an API key. The same screen shows **Enrollment closes** with a date; check it, since that is where a shortened validity window would show up.
 
 Each enrollment key admits up to **1000** gateways. That ceiling is fixed and not configurable. Your organization is separately capped at **1000 live gateway credentials** in total, counting `ogw_` API keys, so a key can stop admitting gateways before its own use count runs out.
 
