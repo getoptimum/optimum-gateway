@@ -17,15 +17,16 @@ The legacy **API key** path is unchanged. Single-gateway and small deployments s
 
 ## Mint a join key
 
-1. Sign in to the [Partner Console](https://console.getoptimum.io/). Minting a key needs org write access; a read-only member does not see the tab.
+1. Sign in to the [Partner Console](https://console.getoptimum.io/).
 2. **Select your network** in the header picker (**Ethereum**, **Hoodi**, or **Mock Chain**; Ethereum is selected by default). The key inherits it.
 3. In the sidebar open **Manage Gateways**, then select the **Enrollment keys** tab.
 4. Click **Generate enrollment key** and fill in, in this order:
    * **Network** — read-only, inherited from the header picker. Change it there, not here.
-   * **Type** — only Optimum staff see this picker. Partner deployments are provisioned as `partner` automatically.
    * **Name** — identifies the key in the list, for example `hoodi-dev fleet`. A key with no name is listed by its raw ID.
    * **Clusters** — tick every cluster the enrolled gateways may join. On any network that has clusters at least one is required, and the selection must include the `gateway_cluster_id` you set on each host.
    * **Valid for (days)** — how long the key may enroll **new** gateways. Default **7**, maximum **365**. Gateways already enrolled are unaffected when it expires.
+
+   The modal confirms that gateways enrolled with this key will be provisioned as **partner gateways**. There is nothing to choose.
 5. Click **Generate**, then copy the key (`ojk_live_...`). It is **shown only once**. Store it in your secret manager — the same way you would an API key.
 
 Each enrollment key admits up to **1000** gateways. That ceiling is fixed and not configurable. Your organization is separately capped at **1000 live gateway credentials** in total, counting `ogw_` API keys, so a key can stop admitting gateways before its own use count runs out.

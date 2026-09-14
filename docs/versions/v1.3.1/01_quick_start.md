@@ -24,8 +24,10 @@ Every gateway authenticates with an **API key**. The key binds your gateway's id
 ### Generate one key
 
 1. **Generate a key.** Click **GENERATE KEY** and fill in:
-   * **Type** — choose **Partner** (this fixes the gateway's publish/subscribe role on mump2p and **cannot be changed after creation**).
-   * **Gateway Details** — pick from the dropdowns where available: **Region**, **Consensus Client**, **Hosting Provider**, **DVT**. These label the gateway in monitoring.
+   * **Clusters** — tick every cluster this key may join. At least one is required on any network that has clusters, and generation is refused without it.
+   * **Gateway details (optional)** — pick from the dropdowns where available: **Region**, **Consensus client**, **Hosting provider**, **DVT**. These label the gateway in monitoring.
+
+   The modal confirms the new key will be provisioned as a **partner gateway**. The type is fixed at creation and there is nothing to choose.
 2. **Copy the key.** The key (format `ogw_live_...`) is **shown only once**. Copy and store it securely. If you lose it, generate a new one and revoke the old.
 
 ### Bulk generate many keys
@@ -37,7 +39,7 @@ Use **BULK GENERATE** when you need many gateway keys at once (for example a lar
 1. **Open Manage Gateways.** Same as above: sidebar **Manage Gateways** -> **Gateway** tab.
 2. **Start bulk generate.** Click **BULK GENERATE**.
 3. **Choose how many.** Enter the number of keys to create. Your operator quota is shown in the dialog (for example `0 of 1000 used`).
-4. **Gateway details (optional).** **Region**, **Consensus Client**, **Hosting Provider**, and **DVT** apply to **every** key in the batch — the same dropdowns as single-key generation. Keys are **auto-named**; you do not enter a label per key.
+4. **Clusters and gateway details.** **Clusters** is required on any network that has them. **Region**, **Consensus client**, **Hosting provider**, and **DVT** are optional. All of them apply to **every** key in the batch — the same fields as single-key generation. Keys are **auto-named**; you do not enter a label per key.
 5. **Download your keys.** When creation finishes, download the batch as **CSV or JSON**. Raw keys (`ogw_live_...`) are **shown only once** — store the file securely before closing the dialog. **Keep the browser tab open** until the download completes.
 6. **Deploy one key per host.** Map each key to a gateway instance and set `OPT_API_KEY` on that host. Do not reuse a key across gateways.
 
