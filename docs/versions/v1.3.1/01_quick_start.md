@@ -13,7 +13,7 @@ Get the Optimum Gateway running with Docker.
 
 ## Generate your API key
 
-Every gateway authenticates with an **API key**. The key binds your gateway's identity, chain, operator, and validator scope — everything the gateway needs comes from this key, so there is no per-network YAML to edit.
+Every gateway authenticates with a credential. This section covers the **API key** path; fleets can use a join key instead, via [Gateway Self-Enrollment](07_gateway_self_enrollment.md). The key binds your gateway's identity, chain, operator, and validator scope — everything the gateway needs comes from this key, so there is no per-network YAML to edit.
 
 > **Access is invite-only.** You cannot self-register. The Optimum team must **onboard you first**. Anyone not invited cannot create an account or generate a key.
 

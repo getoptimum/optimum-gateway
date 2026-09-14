@@ -9,7 +9,7 @@ This guide covers the operational issues you can hit running the Optimum Gateway
 ### Provided by Optimum
 
 * Gateway **Docker image / binary**
-* An **API key** (`ogw_live_...`) — binds `gateway_id`, `chain`, operator, and validator scope
+* A credential — either an **API key** (`ogw_live_...`), which binds `gateway_id`, `chain`, operator, and validator scope, or an org **join key** (`ojk_live_...`) the gateway enrolls with, which binds chain, type, and cluster scope. See [Gateway Self-Enrollment](07_gateway_self_enrollment.md)
 * An assigned **`gateway_cluster_id`** (e.g. `optimum_ethereum_hoodi_v0_1` for Hoodi; Mainnet ID provided during onboarding)
 
 ### You configure (operational only)
@@ -17,6 +17,9 @@ This guide covers the operational issues you can hit running the Optimum Gateway
 | Field                                         | Notes                                                                      |
 | --------------------------------------------- | -------------------------------------------------------------------------- |
 | `api_key` (env `OPT_API_KEY`)                 | Wrong/revoked key -> gateway crashes at startup. **Set via env, not YAML** |
+| `join_key` (env `OPT_JOIN_KEY`)               | Fleet alternative to `api_key`; the two are mutually exclusive. **Set via env, not YAML** |
+| `gateway_id` (env `OPT_GATEWAY_ID`)           | Join-key path only: the enrollment label, unique per host. Ignored on the API-key path |
+| `enroll_cred_dir`                             | Join-key path only; **persist as a volume** — losing it re-enrolls and consumes a join-key use |
 | `gateway_cluster_id`                          | Must match onboarding (Hoodi vs Mainnet)                                   |
 | `identity_libp2p_dir` / `identity_mump2p_dir` | **Persist as volumes** — without them, peer ID changes every restart       |
 | `agent_lib_p2p_port`                          | Default `33212`; CL connects here                                          |
@@ -33,7 +36,7 @@ This guide covers the operational issues you can hit running the Optimum Gateway
 * Validator list — from the auth mint, refreshed periodically
 * Gossip topics (`beacon_block` + 64 attestation subnets) — baked into the binary
 
-> If `chain` looks wrong (e.g. "I want mainnet but it's hoodi"), the **API key is wrong** — chain cannot be changed via YAML. Get the matching key from Optimum.
+> If `chain` looks wrong (e.g. "I want mainnet but it's hoodi"), the **credential is wrong** — chain cannot be changed via YAML. Get the matching API key or join key from Optimum.
 
 
 ## First-line diagnosis (run this first)

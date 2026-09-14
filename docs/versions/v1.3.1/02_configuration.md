@@ -1,6 +1,6 @@
 # Configuration
 
-> **Prerequisites:** [Quick Start](01_quick_start.md) complete, including an [API key](01_quick_start.md#generate-your-api-key).
+> **Prerequisites:** [Quick Start](01_quick_start.md) complete, including a credential — an [API key](01_quick_start.md#generate-your-api-key), or a join key if you use [Gateway Self-Enrollment](07_gateway_self_enrollment.md).
 
 ## Basic Setup
 
