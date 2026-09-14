@@ -17,19 +17,20 @@ The legacy **API key** path is unchanged. Single-gateway and small deployments s
 
 ## Mint a join key
 
-1. Sign in to the [Partner Console](https://console.getoptimum.io/).
-2. **Select your network** in the header picker (**Hoodi** or **Ethereum**). The key inherits it — there is no chain field in the form.
+1. Sign in to the [Partner Console](https://console.getoptimum.io/). Minting a key needs org write access; a read-only member does not see the tab.
+2. **Select your network** in the header picker (**Ethereum**, **Hoodi**, or **Mock Chain**; Ethereum is selected by default). The key inherits it.
 3. In the sidebar open **Manage Gateways**, then select the **Enrollment keys** tab.
-4. Click **Generate enrollment key** and fill in:
-   * **Name** — identifies the key in the list, for example `hoodi-dev fleet`. A key with no name is listed by its raw ID.
-   * **Clusters** — tick every cluster the enrolled gateways may join. At least one is required, and the selection must include the `gateway_cluster_id` you set on each host.
-   * **Valid for (days)** — how long the key may enroll **new** gateways. Default **7**, maximum **365**. Gateways already enrolled are unaffected when it expires.
+4. Click **Generate enrollment key** and fill in, in this order:
+   * **Network** — read-only, inherited from the header picker. Change it there, not here.
    * **Type** — only Optimum staff see this picker. Partner deployments are provisioned as `partner` automatically.
+   * **Name** — identifies the key in the list, for example `hoodi-dev fleet`. A key with no name is listed by its raw ID.
+   * **Clusters** — tick every cluster the enrolled gateways may join. On any network that has clusters at least one is required, and the selection must include the `gateway_cluster_id` you set on each host.
+   * **Valid for (days)** — how long the key may enroll **new** gateways. Default **7**, maximum **365**. Gateways already enrolled are unaffected when it expires.
 5. Click **Generate**, then copy the key (`ojk_live_...`). It is **shown only once**. Store it in your secret manager — the same way you would an API key.
 
 Each enrollment key admits up to **1000** gateways. That ceiling is fixed and not configurable. Your organization is separately capped at **1000 live gateway credentials** in total, counting `ogw_` API keys, so a key can stop admitting gateways before its own use count runs out.
 
-The key list shows enrollments used and the expiry date, with a state badge of `active`, `expired`, `exhausted`, or `revoked`. Check that badge first when enrollment starts failing: the enroll endpoint deliberately returns the same opaque `401` for all of unknown, expired, exhausted, and revoked.
+The key list shows enrollments used and the expiry date, with a state badge of `active`, `expired`, or `exhausted`. A revoked key is removed from the list rather than badged. Check there first when enrollment starts failing: the enroll endpoint deliberately returns the same opaque `401` for all of unknown, expired, exhausted, and revoked, so the list is the only thing that tells them apart.
 
 Revoking an enrollment key stops **new** enrollments. Gateways already enrolled keep their own credentials and keep running. To cut one off, revoke it separately under **Manage Gateways** → **Gateway** tab, where enrolled credentials are listed alongside `ogw_` API keys. The console does not mark which rows came from enrollment, so find yours by the label you set in `OPT_GATEWAY_ID`.
 
@@ -65,7 +66,7 @@ export OPT_GATEWAY_ID=hoodi-validator-rack-03   # unique per host — enrollment
 | Key | Env | Default | Description |
 |---|---|---|---|
 | `join_key` | `OPT_JOIN_KEY` | *(empty)* | Org-wide join credential (`ojk_live_...`). **Set via env, not YAML.** |
-| `enroll_cred_dir` | `OPT_ENROLL_CRED_DIR` | `identity_mump2p_dir` | Directory for `enrollment.json`. Defaults to the mumP2P identity dir. **Must be persistent.** |
+| `enroll_cred_dir` | `OPT_ENROLL_CRED_DIR` | `identity_mump2p_dir` | Directory for `enrollment.json`, plus a transient `enrollment.key` during first boot. Defaults to the mumP2P identity dir. **Must be persistent.** |
 | `gateway_id` | `OPT_GATEWAY_ID` | `dev-gateway` | Under join key: used as the **enrollment label** at first boot only. Set a unique value per host. Left at the default, the label is empty — see [Troubleshooting](04_troubleshoot.md#gateway-self-enrollment). After enroll, runtime `gateway_id` in `/health` and metrics comes from the JWT `sub` claim (`client_id`), not this value. |
 | `gateway_cluster_id` | `OPT_GATEWAY_CLUSTER_ID` | *(required)* | Must match a cluster ID baked into the join key |
 | `identity_mump2p_dir` | `OPT_IDENTITY_MUMP2P_DIR` | `/tmp/mump2p` | mumP2P identity — **persist as a volume**. Holds enrollment credential when `enroll_cred_dir` is unset |
@@ -80,7 +81,7 @@ All other keys (`agent_*_port`, `telemetry_*`, `direct_cl_peers`, `stream_*`, et
 
 1. Gateway generates a P-256 keypair locally and writes it to `enrollment.key` under `enroll_cred_dir` **before** calling out. The private key never leaves the host.
 2. Gateway calls `POST https://auth.getoptimum.io/api/v1/gateways/enroll` with the join key and a proof-of-possession signature.
-3. Auth returns a `client_id` (no secret). Gateway writes `enrollment.json` under `enroll_cred_dir` (mode `0600`).
+3. Auth returns a `client_id` (no secret). Gateway writes `enrollment.json` under `enroll_cred_dir` (mode `0600`) and removes `enrollment.key`.
 4. Gateway mints JWTs by signing a client assertion — same bootstrap and mesh behaviour as the API-key path.
 
 **Every restart after that:** gateway loads `enrollment.json` from disk and mints directly. No enroll call, no join-key use consumed.
@@ -105,9 +106,9 @@ docker run -d --name optimum-gateway \
 
 The enrollment credential lives alongside the mumP2P identity:
 
-* Default location: `identity_mump2p_dir`, holding both `enrollment.json` (the credential) and `enrollment.key` (the keypair)
+* Default location: `identity_mump2p_dir`, holding `enrollment.json` — the credential, including its private key
 * Override with `enroll_cred_dir` only if you need a separate mount — both dirs must survive restarts
-* Mount and back up the **whole directory**. `enrollment.json` on its own is not enough: `enrollment.key` is what makes an interrupted first boot recoverable
+* Mount the **whole directory**, not just the credential file. During first boot the gateway also keeps a transient `enrollment.key` there, between generating its keypair and persisting the credential; if the host restarts inside that window, that file is what lets it resume. It is removed once `enrollment.json` is written, so a steady-state backup of `enrollment.json` alone is sufficient
 
 Losing the credential directory means a new keypair, a new enrollment, and a consumed join-key use. With a stable enrollment label (`OPT_GATEWAY_ID` set per host), re-enrollment under the same label is refused with `409 label_conflict` while the old credential is still live — recovery is to revoke the orphan as described under [Mint a join key](#mint-a-join-key).
 
@@ -121,7 +122,7 @@ A gateway cannot elevate itself:
 * **`chain_id`** — Hoodi vs Mainnet
 * **`cluster_ids`** — must include the cluster you set in `gateway_cluster_id`
 
-Mint a join key whose cluster scope matches your deployment. The console requires at least one cluster, so this is normally enforced for you; a key that reaches auth with no `cluster_ids` produces gateways that authenticate and then fail every mesh handshake.
+Mint a join key whose cluster scope matches your deployment. The console requires at least one cluster on any network that has them, so this is normally enforced for you; a key that reaches auth with no `cluster_ids` produces gateways that authenticate and then fail every mesh handshake.
 
 ## Verify enrollment
 

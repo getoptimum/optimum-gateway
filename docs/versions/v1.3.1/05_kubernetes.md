@@ -198,7 +198,7 @@ For large fleets, use one org **join key** (`ojk_`) instead of one API key per p
 
 * Store the join key in a Secret and inject it as `OPT_JOIN_KEY` (not `OPT_API_KEY`).
 * Set a **unique** `OPT_GATEWAY_ID` per pod — for example the pod name via the downward API — as the enrollment label.
-* The chart's identity PVC already covers `identity_mump2p_dir`, where `enrollment.json` and `enrollment.key` are written by default. Both must survive a pod restart, so keep the PVC, not an `emptyDir`.
+* The chart's identity PVC already covers `identity_mump2p_dir`, where `enrollment.json` is written by default, along with a transient `enrollment.key` during first boot. Keep the PVC rather than an `emptyDir` so an interrupted enrollment can resume.
 
 > The published Helm chart documents the `apiKey` values block for the legacy path. If you adopt join-key enrollment, wire `OPT_JOIN_KEY` through your values or workload overrides instead of the API key secret. Contact Optimum if you need chart guidance for your fleet size.
 

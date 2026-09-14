@@ -359,11 +359,11 @@ Applies when `OPT_JOIN_KEY` is set. See [Gateway Self-Enrollment](07_gateway_sel
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Startup fails with `enroll gateway` / `401` | Join key unknown, expired, exhausted, or revoked; or host clock >~2 min slow | The `401` is deliberately the same for all four, so read the key's state badge under **Manage Gateways** → **Enrollment keys**. Sync NTP. Generate a new key if needed |
+| Startup fails with `enroll gateway` / `401` | Join key unknown, expired, exhausted, or revoked; or host clock >~2 min slow | The `401` is deliberately the same for all four, so check the key under **Manage Gateways** → **Enrollment keys**: expired and exhausted show as a badge, revoked keys are removed from the list. Sync NTP. Generate a new key if needed |
 | Startup fails with `label_conflict` / `409` | Enrollment label already live in the org | Set a unique `OPT_GATEWAY_ID` per host, or revoke the orphan under **Manage Gateways** → **Gateway** tab, finding it by that label |
 | Startup fails with `gateway_key_limit` / `409` | Org at the 1000-gateway cap | Revoke unused credentials or contact Optimum |
 | Startup fails: peer ID mismatch | mumP2P identity changed under an existing credential. Raised by the gateway, not by auth | Restore the original `identity_mump2p_dir` volume, or revoke the enrolled credential and enroll fresh |
-| Corrupt credential on disk | `enrollment.json` unreadable, or its thumbprint does not match `enrollment.key`. Raised by the gateway, not by auth | Do not delete and re-enroll blindly — that burns a join-key use. Restore the whole credential directory from backup, or revoke the credential in the console first |
+| Corrupt credential on disk | `enrollment.json` unreadable, or the thumbprint recorded in it does not match the private key it carries. Raised by the gateway, not by auth | Do not delete and re-enroll blindly — that burns a join-key use. Restore `enrollment.json` from backup, or revoke the credential in the console first |
 | `auth_enrollment_total{result="success"}` on every restart | Credential directory not persisting | Mount `identity_mump2p_dir` (or `enroll_cred_dir`) as a volume. Repeated `success` across a fleet means enrollments are not being reused |
 | Log line `enrolling without a label` at startup | `OPT_GATEWAY_ID` left at default (`dev-gateway`), which sends an empty label | Set a unique `OPT_GATEWAY_ID` per host before first enroll. An empty label is exempt from the conflict check, so the host silently re-enrolls and burns a join-key use every time it loses its credential dir |
 | Mesh peers stay at 0 after enroll | Join key minted without matching `cluster_ids` | Mint a join key whose cluster scope includes your `gateway_cluster_id` |
