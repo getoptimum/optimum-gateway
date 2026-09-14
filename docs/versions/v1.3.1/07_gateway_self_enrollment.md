@@ -108,7 +108,7 @@ The enrollment credential lives alongside the mumP2P identity:
 
 * Default location: `identity_mump2p_dir`, holding `enrollment.json` — the credential, including its private key
 * Override with `enroll_cred_dir` only if you need a separate mount — both dirs must survive restarts
-* Mount the **whole directory**, not just the credential file. During first boot the gateway also keeps a transient `enrollment.key` there, between generating its keypair and persisting the credential; if the host restarts inside that window, that file is what lets it resume. It is removed once `enrollment.json` is written, so a steady-state backup of `enrollment.json` alone is sufficient
+* Mount the **whole directory**, not just the credential file. During first boot the gateway also keeps a transient `enrollment.key` there, between generating its keypair and persisting the credential; if the host restarts inside that window, that file is what lets it resume. It is removed once `enrollment.json` is written, so there is no need to back it up — but restore `enrollment.json` **together with the mumP2P identity it was enrolled against**. The credential records its peer ID, and a credential restored beside a fresh identity fails at startup with a peer ID mismatch
 
 Losing the credential directory means a new keypair, a new enrollment, and a consumed join-key use. With a stable enrollment label (`OPT_GATEWAY_ID` set per host), re-enrollment under the same label is refused with `409 label_conflict` while the old credential is still live — recovery is to revoke the orphan as described under [Mint a join key](#mint-a-join-key).
 

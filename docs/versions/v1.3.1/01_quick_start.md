@@ -19,7 +19,7 @@ Every gateway authenticates with an **API key**. The key binds your gateway's id
 
 1. **Get invited.** The Optimum team adds you as an operator. You receive a **"Welcome to Optimum"** email invite to the [Partner Console](https://console.getoptimum.io/).
 2. **Sign in.** Open the console and sign in **with the same email** the invite was sent to, using your **Google or Microsoft** account — no password.
-3. **Open API Keys.** In the sidebar go to **API Keys**, then select the **GATEWAY** tab.
+3. **Open Manage Gateways.** In the sidebar go to **Manage Gateways**, then select the **Gateway** tab.
 
 ### Generate one key
 
@@ -30,11 +30,11 @@ Every gateway authenticates with an **API key**. The key binds your gateway's id
 
 ### Bulk generate many keys
 
-> **Running a fleet?** You do not need one key per host at all. Mint a single org **join key** and let each gateway enrol itself on first boot — see [Gateway Self-Enrollment](07_gateway_self_enrollment.md). Bulk generation below remains supported for operators who prefer one key per gateway.
+> **Running a fleet?** You do not need one key per host at all. Mint a single org **join key** and let each gateway enroll itself on first boot — see [Gateway Self-Enrollment](07_gateway_self_enrollment.md). Bulk generation below remains supported for operators who prefer one key per gateway.
 
 Use **BULK GENERATE** when you need many gateway keys at once (for example a large fleet rollout). Each key is still **one per gateway** — bulk create saves clicking **GENERATE KEY** repeatedly.
 
-1. **Open API Keys.** Same as above: sidebar **API Keys** -> **GATEWAY** tab.
+1. **Open Manage Gateways.** Same as above: sidebar **Manage Gateways** -> **Gateway** tab.
 2. **Start bulk generate.** Click **BULK GENERATE**.
 3. **Choose how many.** Enter the number of keys to create. Your operator quota is shown in the dialog (for example `0 of 1000 used`).
 4. **Gateway details (optional).** **Region**, **Consensus Client**, **Hosting Provider**, and **DVT** apply to **every** key in the batch — the same dropdowns as single-key generation. Keys are **auto-named**; you do not enter a label per key.
