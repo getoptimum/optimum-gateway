@@ -26,7 +26,7 @@ The legacy **API key** path is unchanged. Single-gateway and small deployments s
    * **Clusters** — tick every cluster the enrolled gateways may join. On any network that has clusters at least one is required, and the selection must include the `gateway_cluster_id` you set on each host.
    * **Valid for (days)** — how long the key may enroll **new** gateways. Default **7**, maximum **365**. Gateways already enrolled are unaffected when it expires.
 
-   The modal confirms that gateways enrolled with this key will be provisioned as **partner gateways**. There is nothing to choose.
+   The modal confirms that gateways enrolled with this key are provisioned as **partner gateways**.
 5. Click **Generate**, then copy the key (`ojk_live_...`). It is **shown only once**. Store it in your secret manager — the same way you would an API key.
 
 Each enrollment key admits up to **1000** gateways. That ceiling is fixed and not configurable. Your organization is separately capped at **1000 live gateway credentials** in total, counting `ogw_` API keys, so a key can stop admitting gateways before its own use count runs out.

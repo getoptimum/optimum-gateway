@@ -27,7 +27,7 @@ Every gateway authenticates with an **API key**. The key binds your gateway's id
    * **Clusters** — tick every cluster this key may join. At least one is required on any network that has clusters, and generation is refused without it.
    * **Gateway details (optional)** — pick from the dropdowns where available: **Region**, **Consensus client**, **Hosting provider**, **DVT**. These label the gateway in monitoring.
 
-   The modal confirms the new key will be provisioned as a **partner gateway**. The type is fixed at creation and there is nothing to choose.
+   The modal confirms the new key is provisioned as a **partner gateway**.
 2. **Copy the key.** The key (format `ogw_live_...`) is **shown only once**. Copy and store it securely. If you lose it, generate a new one and revoke the old.
 
 ### Bulk generate many keys
