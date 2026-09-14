@@ -100,7 +100,7 @@ recreate the container:
 
 ```bash
 export OPT_API_KEY=ogw_live_xxx
-docker pull getoptimum/gateway:v1.3.0
+docker pull getoptimum/gateway:v1.3.1
 docker rm -f optimum-gateway
 docker run --name optimum-gateway --rm \
   -p 33212:33212/tcp \
@@ -109,7 +109,7 @@ docker run --name optimum-gateway --rm \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data/libp2p:/tmp/libp2p \
   -v $(pwd)/data/mump2p:/tmp/mump2p \
-  getoptimum/gateway:v1.3.0 \
+  getoptimum/gateway:v1.3.1 \
   -config=/app/config/app_conf.yml
 ```
 

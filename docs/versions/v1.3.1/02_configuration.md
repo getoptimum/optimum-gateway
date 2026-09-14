@@ -1,6 +1,6 @@
 # Configuration
 
-> **Prerequisites:** [Quick Start](01_quick_start.md) complete, including an [API key](01_quick_start.md#generate-your-api-key).
+> **Prerequisites:** [Quick Start](01_quick_start.md) complete, including a credential — an [API key](01_quick_start.md#generate-your-api-key), or a join key if you use [Gateway Self-Enrollment](07_gateway_self_enrollment.md).
 
 ## Basic Setup
 
@@ -43,7 +43,7 @@ Both tokens are ES256-signed and valid for 6 hours; the gateway refreshes them w
 
 ## Networks (Hoodi / Mainnet)
 
-The network is selected by your **API key**, not by config. A Hoodi key runs Hoodi; a Mainnet key runs Mainnet. Set the matching `gateway_cluster_id` you were assigned during onboarding (Hoodi partners use `optimum_ethereum_hoodi_v0_1`; Mainnet cluster ID is provided by Optimum during onboarding). To move a gateway to Mainnet, obtain a Mainnet API key from Optimum and set the assigned Mainnet `gateway_cluster_id`, then restart.
+The network is selected by your **credential**, not by config. A Hoodi API key or join key runs Hoodi; a Mainnet one runs Mainnet. Set the matching `gateway_cluster_id` you were assigned during onboarding (Hoodi partners use `optimum_ethereum_hoodi_v0_1`; Mainnet cluster ID is provided by Optimum during onboarding). To move a gateway to Mainnet, obtain a Mainnet credential from Optimum and set the assigned Mainnet `gateway_cluster_id`, then restart.
 
 Confirm the active network after start:
 
@@ -96,7 +96,7 @@ This is fully automatic — no extra config. Until the first successful validato
 
 ## Remote Push
 
-Remote push streams your gateway's logs to Optimum's Loki and metrics to Optimum's Mimir, giving the Optimum team visibility to help support you. Both `telemetry_enable` and `remote_push_enable` must be `true`. v1.3.0 uses standard **Prometheus remote write** for metrics push — same setup as v1.1.1.
+Remote push streams your gateway's logs to Optimum's Loki and metrics to Optimum's Mimir, giving the Optimum team visibility to help support you. Both `telemetry_enable` and `remote_push_enable` must be `true`. v1.3.1 uses standard **Prometheus remote write** for metrics push — same setup as v1.1.1.
 
 ```yaml
 telemetry_enable: true
@@ -117,7 +117,7 @@ The gateway receives automatic config updates from bootstrap.
 
 | Key | Env Variable | Default | Description |
 |---|---|---|---|
-| `api_key` | `OPT_API_KEY` | *(empty)* | Gateway API key (`ogw_live_...`). **Set via env, not YAML.** Required unless `join_key` is set. Drives gateway_id, chain, and validator scope |
+| `api_key` | `OPT_API_KEY` | *(empty)* | Gateway API key (`ogw_live_...`). **Set via env, not YAML.** Set this or `join_key`; with neither, the gateway starts with authentication disabled and cannot join the Optimum mesh. Drives gateway_id, chain, and validator scope |
 | `join_key` | `OPT_JOIN_KEY` | *(empty)* | Org-wide join key (`ojk_live_...`). **Set via env, not YAML.** Mutually exclusive with `api_key`. See [Gateway Self-Enrollment](07_gateway_self_enrollment.md) |
 | `enroll_cred_dir` | `OPT_ENROLL_CRED_DIR` | `identity_mump2p_dir` | Enrollment credential directory (`enrollment.json`). **Must be persistent** |
 | `gateway_id` | `OPT_GATEWAY_ID` | `dev-gateway` | Join-key path only: enrollment label at first boot (unique per host). Overwritten by JWT `sub` after mint. Ignored for API-key path |
