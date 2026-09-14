@@ -4,7 +4,7 @@
 
 This guide covers the operational issues you can hit running the Optimum Gateway binary: config, network, CL pairing, and telemetry. Start with the first-line diagnosis below — it resolves most issues.
 
-## What you control vs what comes from the API key
+## What you control vs what comes from your credential
 
 ### Provided by Optimum
 
@@ -26,7 +26,7 @@ This guide covers the operational issues you can hit running the Optimum Gateway
 | `remote_push_enable`                          | Optional; pushes logs/metrics to Optimum for support visibility            |
 | `log_level`                                   | `debug` / `info`                                                           |
 
-### Derived from the API key — you do NOT configure these
+### Derived from your credential — you do NOT configure these
 
 * **`gateway_id`** — from the JWT `sub` claim
 * **`chain`** — from the JWT `chain_id` claim; **not a YAML field**
@@ -359,13 +359,13 @@ Applies when `OPT_JOIN_KEY` is set. See [Gateway Self-Enrollment](07_gateway_sel
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| Startup fails with `enroll gateway` / `401` | Join key unknown, expired, exhausted, or revoked; or host clock >~2 min slow | Verify the key in the console (JOIN tab). Sync NTP. Generate a new join key if needed |
-| Startup fails with `label_conflict` / `409` | Enrollment label already live in the org | Set a unique `OPT_GATEWAY_ID` per host, or revoke the orphan credential in the console |
+| Startup fails with `enroll gateway` / `401` | Join key unknown, expired, exhausted, or revoked; or host clock >~2 min slow | The `401` is deliberately the same for all four, so read the key's state badge under **Manage Gateways** → **Enrollment keys**. Sync NTP. Generate a new key if needed |
+| Startup fails with `label_conflict` / `409` | Enrollment label already live in the org | Set a unique `OPT_GATEWAY_ID` per host, or revoke the orphan under **Manage Gateways** → **Gateway** tab, finding it by that label |
 | Startup fails with `gateway_key_limit` / `409` | Org at the 1000-gateway cap | Revoke unused credentials or contact Optimum |
-| Startup fails: peer ID mismatch | mumP2P identity changed under an existing credential | Restore the original `identity_mump2p_dir` volume, or revoke the enrolled credential and enroll fresh |
-| Corrupt credential on disk | `enrollment.json` unreadable or thumbprint mismatch | Do not delete and re-enroll blindly — that burns a join-key use. Restore from backup or revoke the credential in the console first |
+| Startup fails: peer ID mismatch | mumP2P identity changed under an existing credential. Raised by the gateway, not by auth | Restore the original `identity_mump2p_dir` volume, or revoke the enrolled credential and enroll fresh |
+| Corrupt credential on disk | `enrollment.json` unreadable, or its thumbprint does not match `enrollment.key`. Raised by the gateway, not by auth | Do not delete and re-enroll blindly — that burns a join-key use. Restore the whole credential directory from backup, or revoke the credential in the console first |
 | `auth_enrollment_total{result="success"}` on every restart | Credential directory not persisting | Mount `identity_mump2p_dir` (or `enroll_cred_dir`) as a volume. Repeated `success` across a fleet means enrollments are not being reused |
-| Empty enrollment label warning in logs | `OPT_GATEWAY_ID` left at default (`dev-gateway`) | Set a unique `OPT_GATEWAY_ID` per host before first enroll |
+| Log line `enrolling without a label` at startup | `OPT_GATEWAY_ID` left at default (`dev-gateway`), which sends an empty label | Set a unique `OPT_GATEWAY_ID` per host before first enroll. An empty label is exempt from the conflict check, so the host silently re-enrolls and burns a join-key use every time it loses its credential dir |
 | Mesh peers stay at 0 after enroll | Join key minted without matching `cluster_ids` | Mint a join key whose cluster scope includes your `gateway_cluster_id` |
 | Revoked join key, gateway still runs | Revoking a join key stops new enrollments only | Revoke the enrolled gateway credential separately if you need to cut access |
 
@@ -400,7 +400,7 @@ Runtime `gateway_id` in `/health` and metrics is the enrolled `client_id` (JWT `
 | ------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | Wrong Docker image tag                      | Use `getoptimum/gateway:v1.3.1`                                                                           |
 | Config edited but container not restarted   | `docker restart optimum-gateway`                                                                          |
-| Running hoodi + mainnet on the same ports   | The second instance needs different ports + its own config + its own API key                              |
+| Running hoodi + mainnet on the same ports   | The second instance needs different ports + its own config + its own credential                           |
 | Duplicate gateway (same API key, two hosts) | One key -> one gateway; generate a second key                                                             |
 | Checking health on the wrong host/port      | Confirm `telemetry_port` and Docker port mapping — see [Network Requirements](00_network_requirements.md) |
 | Exposed `/metrics` to the internet          | Use `-p 127.0.0.1:48123:48123`, not `-p 48123:48123`                                                      |

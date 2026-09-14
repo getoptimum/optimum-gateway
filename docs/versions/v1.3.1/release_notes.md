@@ -28,6 +28,8 @@ Everything in [v1.3.0](https://github.com/getoptimum/optimum-gateway/releases/ta
 
 No firewall or CL peering changes are required. Join-key enrollment is **opt-in** — you only change credentials if you adopt the new fleet path.
 
+If you run consumer streams, review [Holding a stream open for weeks](06_block_stream.md#holding-a-stream-open-for-weeks) — implement client keepalives and in-band token refresh for production always-on feeds.
+
 ## Version Status
 
 | Version     | Status                    |

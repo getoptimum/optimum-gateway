@@ -1,6 +1,6 @@
 # v1.3.0
 
-> **Previous release.** Superseded by [v1.3.1](../v1.3.1/release_notes.md). Networking and CL peering are unchanged from v1.3.0 — same ports and firewall rules.
+> **Previous release.** Superseded by [v1.3.1](../v1.3.1/release_notes.md). Networking and CL peering are unchanged from v1.2.0 — same ports and firewall rules.
 
 ## Highlights
 

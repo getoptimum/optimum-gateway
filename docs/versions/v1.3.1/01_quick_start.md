@@ -4,7 +4,7 @@ Get the Optimum Gateway running with Docker.
 
 > **Running on Kubernetes?** See [Kubernetes (Helm)](05_kubernetes.md) for the official Helm chart.
 
-> **Prerequisites:** [Requirements](index.md#requirements) and [Network Requirements](00_network_requirements.md). You also need an **API key** — see [Generate your API key](#generate-your-api-key) below.
+> **Prerequisites:** [Requirements](index.md#requirements) and [Network Requirements](00_network_requirements.md). You also need a credential: an **API key** (see [Generate your API key](#generate-your-api-key) below), or for a fleet, one org **join key** (see [Gateway Self-Enrollment](07_gateway_self_enrollment.md)).
 
 ## Hardware Requirements
 
@@ -30,6 +30,8 @@ Every gateway authenticates with an **API key**. The key binds your gateway's id
 
 ### Bulk generate many keys
 
+> **Running a fleet?** You do not need one key per host at all. Mint a single org **join key** and let each gateway enrol itself on first boot — see [Gateway Self-Enrollment](07_gateway_self_enrollment.md). Bulk generation below remains supported for operators who prefer one key per gateway.
+
 Use **BULK GENERATE** when you need many gateway keys at once (for example a large fleet rollout). Each key is still **one per gateway** — bulk create saves clicking **GENERATE KEY** repeatedly.
 
 1. **Open API Keys.** Same as above: sidebar **API Keys** -> **GATEWAY** tab.
@@ -41,7 +43,7 @@ Use **BULK GENERATE** when you need many gateway keys at once (for example a lar
 
 > **All-or-nothing.** If any key in a batch fails to create, the whole batch is rolled back — none of the keys are kept. Fix the issue (for example quota) and try again.
 
-> **One API key per gateway.** Each gateway instance needs its **own** key. Do not share a key across gateways — the gateway registers a single identity per key, and reuse causes registration conflicts. If you run multiple gateways (e.g. Hoodi + Mainnet, or several hosts), generate a separate key for each — use **BULK GENERATE** for large rollouts.
+> **One API key per gateway.** Each gateway instance needs its **own** key. Do not share a key across gateways — the gateway registers a single identity per key, and reuse causes registration conflicts. If you run multiple gateways (e.g. Hoodi + Mainnet, or several hosts), generate a separate key for each — use **BULK GENERATE** for large rollouts, or switch to [Gateway Self-Enrollment](07_gateway_self_enrollment.md).
 
 The gateway exchanges this key on startup at `auth.getoptimum.io/api/v1/auth/token` for a short-lived JWT that carries your `gateway_id`, `chain`, and validator scope.
 
