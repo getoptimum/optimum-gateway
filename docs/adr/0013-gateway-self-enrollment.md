@@ -1,6 +1,6 @@
 # ADR-0013: Gateway self-enrollment with an org join key
 
-**Status:** Draft
+**Status:** Accepted (implemented)
 **Date:** 2026-09-08
 **Related:** [ADR-0011](./0011-gateway-consumer-block-stream.md)
 
@@ -34,6 +34,10 @@ on every gateway. Each gateway then enrolls itself once, on first boot:
 
 `type`, `chain_id` and `cluster_ids` all come from the join key, so a gateway
 cannot self-assign a privileged type or admit itself to a cluster.
+
+See [Gateway Self-Enrollment](../versions/v1.3.1/07_gateway_self_enrollment.md)
+for the full configuration and operational guide; this document covers the
+design decision, not day-to-day usage.
 
 ### Config
 
@@ -90,20 +94,20 @@ what produces it. Reordering the fields silently changes every thumbprint we
 compute. `TestThumbprintMatchesJose` pins the result against a vector from the
 server's own library.
 
-**Assertion audiences derive from the issuer, never the request URL.** The server
-builds the expected audience from its signer issuer, so a gateway posting to any
-other host would sign the wrong audience. The enroll and token audiences differ,
-which is what stops an enrollment proof being replayed to mint tokens.
+**The assertion audience is derived from the configured issuer, never the request
+URL.** Signing against the URL instead would produce a token the server rejects.
+Enroll and token audiences differ, which is what stops an enrollment proof being
+replayed to mint tokens.
 
 **`client_assertion_type` is required.** Omitting the URN is a 400, not a 401.
 
-**One assertion covers a request and its retries.** The server requires `jti` for
-audit but keeps no replay cache, which `jwk-assert.ts` calls a future add. Whoever
-adds that cache has to make the client re-sign per attempt, or a transient 5xx will
-retry into a replay rejection and surface as a rejected join key.
+**One signed assertion covers a request and its retries.** The gateway does not
+re-sign per attempt, so a lost response or a transient failure just repeats the
+same assertion rather than minting a fresh one.
 
-**`peer_id` travels inside the signature** on the mint, where the server prefers
-the signed claim and rejects a mismatch against the body.
+**`peer_id` travels inside the signature** on the mint, not just the request body.
+A mismatch between the two is rejected, so the gateway cannot claim a different
+peer identity than the one it signed for.
 
 ## Failure modes
 
@@ -116,37 +120,31 @@ the signed claim and rejects a mismatch against the body.
 | Credential corrupt or unreadable | Fails to start. Re-enrolling would burn a use and orphan the old credential |
 | mumP2P identity changed under an existing credential | Fails to start, naming both peer IDs. Every mint would otherwise 401 with nothing pointing at the cause |
 | Join key unknown, expired, exhausted, revoked | `401`, terminal. Not retried |
-| Host clock more than ~2 min slow | The assertion is already expired, so also `401`. Indistinguishable from a bad join key, because upstream collapses both. A fast clock is not bounded server-side |
-| Label already live in the org, or org at its key cap | `409`, terminal. Needs an operator, not a retry |
+| Host clock more than ~2 min slow | The assertion is already expired, so also `401`. Indistinguishable from a bad join key, since both collapse to the same response. A fast clock is not bounded server-side |
+| Label already in use by a live credential, or the org's key cap reached | `401`, terminal, and indistinguishable from a bad join key. Needs an operator, not a retry |
 | Credential directory not writable | Fails before contacting the server, so no credential is orphaned upstream |
-| Transient `401` on a later mint | Retried with backoff. On the assertion path a `401` is also every verification failure, including an assertion that expired in flight |
+| Transient `401` on a later mint | Retried with backoff. This same status covers every verification failure, including an assertion that expired in flight |
 | `403` revoked or suspended | Terminal on both grants |
-
-The `409` codes need optimum-auth to distinguish them; until then a duplicate
-label arrives as a `401` and points at the wrong thing.
 
 ## Consequences
 
 * One credential is distributed to a fleet instead of one per host, and no gateway
   secret is transmitted or stored server-side.
-* Enrollment is idempotent on the thumbprint upstream, and persisting the keypair
-  before the POST is what makes that reachable across a restart. A lost response
-  therefore costs nothing: the retry presents the same key and gets the same
-  credential back. The cost is a second file in the credential directory.
+* Enrollment is idempotent on the submitted public key, and persisting the
+  keypair before the POST is what makes that reachable across a restart. A lost
+  response therefore costs nothing: the retry presents the same key and gets the
+  same credential back. The cost is a second file in the credential directory.
 * Losing the credential directory behaves differently depending on `gateway_id`,
-  and neither outcome is good. The shipped sample leaves it unset, so the label is
-  empty and exempt from the unique index: the gateway silently enrolls a fresh
-  credential on every boot, spending a join-key use and orphaning the last one,
-  until the org key cap turns it into a terminal `gateway_key_limit`. With
-  `gateway_id` set the label is stable, so the first re-enrollment collides with
-  the still-live credential and is refused as a conflict, which is terminal
-  immediately. Recovery is to revoke the orphan in the console. The directory must
-  be persistent, which is also why the chart retains its PVCs.
+  and neither outcome is good. The shipped sample leaves it unset, so the label
+  is empty: the gateway silently enrolls a fresh credential on every boot,
+  spending a join-key use and orphaning the last one, until the org key cap
+  turns it into a terminal `gateway_key_limit`. With `gateway_id` set the label
+  is stable, so the first re-enrollment collides with the still-live credential
+  and is refused, which is terminal immediately. Recovery is to revoke the
+  orphan in the console. The directory must be persistent, which is also why the
+  chart retains its PVCs.
 * Revoking a join key stops future enrollments. It does **not** revoke gateways
   already enrolled through it, which keep independent credentials.
-* `cluster_ids` is validated for shape only, so an operator can mint a join key
-  naming a cluster they do not own. Cluster admission constrains the gateway
-  process, not the human minting the key. `type` is checked server-side.
 * A join key minted without `cluster_ids` produces gateways that authenticate and
   then fail every mesh handshake.
 * Two processes sharing a credential directory would both enroll and orphan one
