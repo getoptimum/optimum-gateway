@@ -36,45 +36,54 @@ const securityAudit = {
   rel: 'noopener',
 }
 
-// --- sidebar per version (install order; metrics tables stay linked from telemetry) ---
-const possibleItems = [
+// --- sidebar per version (same nav for every freeze; missing files are omitted) ---
+const getStartedPages = [
   { text: 'Network Requirements', file: '00_network_requirements.md' },
   { text: 'Quick Start', file: '01_quick_start.md' },
   { text: 'Kubernetes (Helm)', file: '05_kubernetes.md' },
-  { text: 'Configuration', file: '02_configuration.md' },
-  { text: 'Consumer Block Stream', file: '06_block_stream.md' },
-  { text: 'Gateway Self-Enrollment', file: '07_gateway_self_enrollment.md' },
-  { text: 'Metrics & Grafana', file: '03_telemetry.md' },
-  { text: 'Troubleshooting', file: '04_troubleshoot.md' }
 ]
+const operatePages = [
+  { text: 'Configuration', file: '02_configuration.md' },
+  { text: 'Gateway Self-Enrollment', file: '07_gateway_self_enrollment.md' },
+  { text: 'Consumer Block Stream', file: '06_block_stream.md' },
+  { text: 'Metrics & Grafana', file: '03_telemetry.md' },
+]
+const helpPages = [{ text: 'Troubleshooting', file: '04_troubleshoot.md' }]
+
+type SidebarPage = { text: string; file: string }
+
+function existingPages(
+  versionDir: string,
+  v: string,
+  pages: SidebarPage[],
+): Array<{ text: string; link: string }> {
+  const page = (file: string) => `/versions/${v}/${pretty(file).replace(/\.md$/, '')}`
+  return pages
+    .filter(item => fs.existsSync(path.join(versionDir, item.file)))
+    .map(item => ({ text: item.text, link: page(item.file) }))
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const sidebar: Record<string, any> = {}
 for (const v of versionDirs) {
   const versionDir = path.join(DOCS_ROOT, v)
-  const items: Array<{
-    text: string
-    link: string
-    target?: string
-    rel?: string
-  }> = []
   const page = (file: string) => `/versions/${v}/${pretty(file).replace(/\.md$/, '')}`
 
-  items.push({ text: 'Overview', link: `/versions/${v}/` })
+  const getStarted = [
+    { text: 'Overview', link: `/versions/${v}/` },
+    ...(fs.existsSync(path.join(versionDir, 'release_notes.md'))
+      ? [{ text: 'Release Notes', link: page('release_notes.md') }]
+      : []),
+    ...existingPages(versionDir, v, getStartedPages),
+  ]
+  const operate = existingPages(versionDir, v, operatePages)
+  const help = [...existingPages(versionDir, v, helpPages), { ...securityAudit }]
 
-  for (const item of possibleItems) {
-    if (fs.existsSync(path.join(versionDir, item.file))) {
-      items.push({ text: item.text, link: page(item.file) })
-    }
-  }
-
-  if (fs.existsSync(path.join(versionDir, 'release_notes.md'))) {
-    items.push({ text: 'Release Notes', link: page('release_notes.md') })
-  }
-
-  items.push({ ...securityAudit })
-
-  sidebar[`/versions/${v}/`] = [{ text: `Gateway (${v})`, items }]
+  sidebar[`/versions/${v}/`] = [
+    { text: 'Get started', collapsed: false, items: getStarted },
+    ...(operate.length ? [{ text: 'Operate', collapsed: false, items: operate }] : []),
+    { text: 'Help', collapsed: false, items: help },
+  ]
 }
 
 export default defineConfigWithTheme<ThemeConfig>({
