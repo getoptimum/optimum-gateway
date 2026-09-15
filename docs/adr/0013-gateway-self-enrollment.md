@@ -125,7 +125,7 @@ peer identity than the one it signed for.
 | Label already in use by a live credential, or the org's key cap reached | `409`, terminal, and distinguishable from a bad join key (`label_conflict` / `gateway_key_limit`). Needs an operator, not a retry |
 | Credential directory not writable | Fails before contacting the server, so no credential is orphaned upstream |
 | Transient `401` on a later mint | Retried with backoff. This same status covers every verification failure, including an assertion that expired in flight |
-| `403` revoked or suspended | Terminal on both grants |
+| Credential revoked or suspended | `401`, terminal. Same collapse as every other credential-validity failure |
 
 ## Consequences
 
