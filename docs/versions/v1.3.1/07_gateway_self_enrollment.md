@@ -122,6 +122,7 @@ A gateway cannot elevate itself:
 * **`type`** — e.g. `partner`; privileged types are gated at join-key mint time
 * **`chain_id`** — Hoodi vs Mainnet
 * **`cluster_ids`** — must include the cluster you set in `gateway_cluster_id`
+* **Capability grants**: the p2p permissions (for example publish vs. subscribe-only) baked into the join key at mint time. A gateway cannot request its own
 
 Mint a join key whose cluster scope matches your deployment. The console requires at least one cluster on any network that has them, so this is normally enforced for you; a key that reaches auth with no `cluster_ids` produces gateways that authenticate and then fail every mesh handshake.
 
