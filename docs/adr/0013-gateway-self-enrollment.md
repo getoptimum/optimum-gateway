@@ -32,8 +32,9 @@ on every gateway. Each gateway then enrolls itself once, on first boot:
 3. Persist the keypair and `client_id`, and from then on mint tokens by signing an
    RFC 7523 `private_key_jwt` client assertion.
 
-`type`, `chain_id` and `cluster_ids` all come from the join key, so a gateway
-cannot self-assign a privileged type or admit itself to a cluster.
+`type`, `chain_id`, `cluster_ids`, and its capability grants all come from the
+join key, so a gateway cannot self-assign a privileged type, admit itself to a
+cluster, or grant itself a capability it wasn't issued.
 
 See [Gateway Self-Enrollment](../versions/v1.3.1/07_gateway_self_enrollment.md)
 for the full configuration and operational guide; this document covers the
