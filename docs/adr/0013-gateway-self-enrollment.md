@@ -121,7 +121,7 @@ peer identity than the one it signed for.
 | mumP2P identity changed under an existing credential | Fails to start, naming both peer IDs. Every mint would otherwise 401 with nothing pointing at the cause |
 | Join key unknown, expired, exhausted, revoked | `401`, terminal. Not retried |
 | Host clock more than ~2 min slow | The assertion is already expired, so also `401`. Indistinguishable from a bad join key, since both collapse to the same response. A fast clock is not bounded server-side |
-| Label already in use by a live credential, or the org's key cap reached | `401`, terminal, and indistinguishable from a bad join key. Needs an operator, not a retry |
+| Label already in use by a live credential, or the org's key cap reached | `409`, terminal, and distinguishable from a bad join key (`label_conflict` / `gateway_key_limit`). Needs an operator, not a retry |
 | Credential directory not writable | Fails before contacting the server, so no credential is orphaned upstream |
 | Transient `401` on a later mint | Retried with backoff. This same status covers every verification failure, including an assertion that expired in flight |
 | `403` revoked or suspended | Terminal on both grants |
