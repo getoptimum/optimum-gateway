@@ -102,8 +102,9 @@ func (s *Service) ResolveValidatorChunk(attesterIndex uint64) (chunkID, chunkSiz
 	return chunk[0], chunk[1], true
 }
 
-// ShouldForwardMessageToCLP2P decides whether an inbound MumP2P message should be forwarded to the local CL libp2p peer
-func (s *Service) ShouldForwardMessageToCLP2P(kind topics.TopicKind, _ []byte) bool {
+// ShouldForwardMessageToCLP2P decides whether an inbound MumP2P message should be forwarded to the local CL libp2p peer.
+// Beacon blocks: partners publish every slot; Hermes only slots on the accelerate list; relay drops.
+func (s *Service) ShouldForwardMessageToCLP2P(kind topics.TopicKind, slot uint64, _ []byte) bool {
 	gwType := commonentities.GatewayType("")
 	if c := s.authMgr.OwnClaims(); c != nil {
 		gwType = c.Type
@@ -114,9 +115,14 @@ func (s *Service) ShouldForwardMessageToCLP2P(kind topics.TopicKind, _ []byte) b
 	}
 
 	if kind == topics.TopicBeaconBlock {
-		// beacon block we forward only to authorized partners
-		if s.authMgr.IsEnabled() && s.authMgr.HasValidToken() {
-			return gwType == commonentities.GatewayTypePartner
+		if !(s.authMgr.IsEnabled() && s.authMgr.HasValidToken()) {
+			return false
+		}
+		switch gwType {
+		case commonentities.GatewayTypePartner:
+			return true
+		case commonentities.GatewayTypeHermes:
+			return s.ShouldAccelerateBlock(slot)
 		}
 	}
 	return false
