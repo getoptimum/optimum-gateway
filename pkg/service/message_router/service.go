@@ -115,7 +115,7 @@ func (s *Service) ShouldForwardMessageToCLP2P(kind topics.TopicKind, slot uint64
 	}
 
 	if kind == topics.TopicBeaconBlock {
-		if !(s.authMgr.IsEnabled() && s.authMgr.HasValidToken()) {
+		if !s.authMgr.IsEnabled() || !s.authMgr.HasValidToken() {
 			return false
 		}
 		switch gwType {
