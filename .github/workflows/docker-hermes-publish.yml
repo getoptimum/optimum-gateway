@@ -3,7 +3,6 @@ name: Hermes Docker Image Publish
 env:
   DOCKER_ORG: getoptimum
   DOCKER_TOKEN: ${{ secrets.OPT_DOCKER_ACCESS_TOKEN }}
-  HERMES_REPO: probe-lab/hermes
   GO_VERSION: "1.26.6"
 
 on:
@@ -12,7 +11,20 @@ on:
       - main
     paths:
       - .github/workflows/docker-hermes-publish.yml
-  workflow_dispatch: # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      hermes_repo:
+        description: 'owner/name to clone (getoptimum/hermes for a fork PR)'
+        type: string
+        default: 'probe-lab/hermes'
+      hermes_ref:
+        description: 'branch, tag, or full SHA. Empty = default branch'
+        type: string
+        default: ''
+      image_tag:
+        description: 'Docker tag. Empty = hermes-<resolved-sha>. Never retags latest.'
+        type: string
+        default: ''
 
 jobs:
   docker-hermes:
@@ -20,6 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       digest: ${{ steps.build.outputs.digest }}
+      tag: ${{ steps.meta.outputs.tag }}
 
     steps:
       - name: Set up QEMU
@@ -30,26 +43,52 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
 
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: GitHub App token for private hermes clone
+        id: generate-token
+        uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2.2.1
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: getoptimum
+
+      - name: Configure git for private clone
+        run: git config --global url."https://x-access-token:${{ steps.generate-token.outputs.token }}@github.com/".insteadOf "https://github.com/"
+
       - name: Log in to Docker Hub
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
         with:
           username: ${{ env.DOCKER_ORG }}
           password: ${{ env.DOCKER_TOKEN }}
 
+      - name: Clone Hermes repository
+        env:
+          HERMES_REPO: ${{ github.event_name == 'workflow_dispatch' && inputs.hermes_repo || 'probe-lab/hermes' }}
+          HERMES_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.hermes_ref || '' }}
+        run: |
+          git clone "https://github.com/${HERMES_REPO}.git" /tmp/hermes
+          if [ -n "${HERMES_REF}" ]; then
+            git -C /tmp/hermes checkout "${HERMES_REF}"
+          fi
+          echo "cloned ${HERMES_REPO}@$(git -C /tmp/hermes rev-parse HEAD)"
+
       - name: Set image tag
         id: meta
+        env:
+          IMAGE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.image_tag || '' }}
         run: |
-          if [ "${{ github.ref_type }}" = "tag" ]; then
-            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-            echo "latest=true" >> $GITHUB_OUTPUT
+          SHA=$(git -C /tmp/hermes rev-parse HEAD)
+          if [ -n "${IMAGE_TAG}" ]; then
+            TAG="${IMAGE_TAG}"
           else
-            echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
-            echo "latest=false" >> $GITHUB_OUTPUT
+            TAG="hermes-${SHA}"
           fi
-
-      - name: Clone Hermes repository
-        run: |
-          git clone https://github.com/${{ env.HERMES_REPO }}.git /tmp/hermes
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "latest=false" >> "$GITHUB_OUTPUT"
+          echo "publishing getoptimum/hermes-gateway-sidecar:${TAG} from ${SHA}"
 
       - name: Fix Dockerfile for multi-platform build
         run: |
