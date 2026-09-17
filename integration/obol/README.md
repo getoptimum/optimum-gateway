@@ -34,7 +34,7 @@ rm -rf /tmp/optimum-hop
 
 # 2. Add Optimum vars to .env (see optimum/.env.optimum.sample in that folder)
 echo 'OPT_API_KEY=ogw_live_...' >> .env
-echo 'GATEWAY_VERSION=v1.1.1' >> .env
+echo 'GATEWAY_VERSION=v1.3.2' >> .env
 
 # 3. Enable the overlay (append to existing COMPOSE_FILE)
 # Example:

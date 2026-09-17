@@ -82,7 +82,7 @@ docker run --name optimum-gateway --rm \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data/libp2p:/tmp/libp2p \
   -v $(pwd)/data/mump2p:/tmp/mump2p \
-  getoptimum/gateway:v1.1.1 \
+  getoptimum/gateway:v1.3.2 \
   -config=/app/config/app_conf.yml
 ```
 
