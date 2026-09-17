@@ -111,7 +111,7 @@ The gateway receives automatic config updates from bootstrap.
 
 * Polls for updates periodically
 * Changes apply without restart
-* Dynamic config includes: propagation toggle, self-message skip, aggregation interval
+* Dynamic config includes: propagation toggle, self-message skip
 
 ## Config Reference
 
