@@ -94,7 +94,7 @@ func (s *Service) handleAggregatedMessages(l logger.AppLogger, message *commonen
 				continue
 			}
 			telemetry.IncAggregationMessage("expand", len(topicPayload[i]))
-			if !s.srvMsgRouter.ShouldForwardMessageToCLP2P(meta.Kind, topicPayload[i]) {
+			if !s.srvMsgRouter.ShouldForwardMessageToCLP2P(meta.Kind, 0, topicPayload[i]) {
 				continue
 			}
 			var att consensus.SingleAttestation

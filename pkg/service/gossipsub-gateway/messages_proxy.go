@@ -45,9 +45,6 @@ func (s *Service) processCLBeaconBlock(l logger.AppLogger, msg *entities.CLMessa
 	if s.isDuplicateMessage(msg.Message) {
 		return
 	}
-	if !s.srvMsgRouter.ShouldAccelerateBlock(slot) {
-		return
-	}
 	if s.nodeMumP2P == nil {
 		return
 	}
@@ -139,10 +136,7 @@ func (s *Service) processMumP2PBeaconBlock(l logger.AppLogger, msg *commonentiti
 		l.Info("skip processing message since propagation is disabled")
 		return
 	}
-	if !s.srvMsgRouter.ShouldForwardMessageToCLP2P(topics.TopicBeaconBlock, msg.Message) {
-		return
-	}
-	if !s.srvMsgRouter.ShouldAccelerateBlock(slot) {
+	if !s.srvMsgRouter.ShouldForwardMessageToCLP2P(topics.TopicBeaconBlock, slot, msg.Message) {
 		return
 	}
 	if err := s.publishToCLTopic(msg.Message, msg.Topic); err != nil {
