@@ -78,6 +78,7 @@ docker pull getoptimum/gateway:v1.3.2
 docker rm -f optimum-gateway
 docker run --name optimum-gateway --rm \
   -p 33212:33212/tcp \
+  -p 33213:33213/tcp \
   -p 127.0.0.1:48123:48123/tcp \
   -e OPT_API_KEY=$OPT_API_KEY \
   -v $(pwd)/config:/app/config \

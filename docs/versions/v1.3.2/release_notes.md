@@ -4,11 +4,11 @@
 
 ## Highlights
 
-* **Improved beacon-block acceleration.** Partner gateways now accelerate beacon blocks on every slot. No partner configuration change.
-* **Gateway self-enrollment.** Fleet operators can mint one org-wide **join key** (`ojk_`) and configure gateways with `OPT_JOIN_KEY` instead of distributing one `ogw_` API key per host. Each gateway enrolls once on first boot and mints JWTs with a local keypair thereafter. See [Gateway Self-Enrollment](07_gateway_self_enrollment.md).
+* **Improved beacon-block acceleration** (new in v1.3.2). Partner gateways now accelerate beacon blocks on every slot. On v1.3.0 and v1.3.1 they skipped acceleration for some slots. No partner configuration change.
+* **Gateway self-enrollment** (added in v1.3.1, new to you if you are upgrading from v1.2.0 or earlier). Fleet operators can mint one org-wide **join key** (`ojk_`) and configure gateways with `OPT_JOIN_KEY` instead of distributing one `ogw_` API key per host. Each gateway enrolls once on first boot and mints JWTs with a local keypair thereafter. See [Gateway Self-Enrollment](07_gateway_self_enrollment.md).
 * **Legacy API keys unchanged.** The `ogw_` path in [Quick Start](01_quick_start.md) is still the default for single-gateway deployments.
 
-Everything in v1.3.1 — gateway self-enrollment, long-running consumer streams, stream metrics — remains in v1.3.2.
+The consumer block stream, long-running stream support, and stream metrics all carry forward into v1.3.2 unchanged.
 
 ## Upgrade from an earlier release
 
@@ -20,6 +20,7 @@ docker pull getoptimum/gateway:v1.3.2
 docker rm -f optimum-gateway
 docker run --name optimum-gateway --rm \
   -p 33212:33212/tcp \
+  -p 33213:33213/tcp \
   -p 127.0.0.1:48123:48123/tcp \
   -e OPT_API_KEY=$OPT_API_KEY \
   -v $(pwd)/config:/app/config \
