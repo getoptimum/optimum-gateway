@@ -18,7 +18,7 @@ Publish **33212** (CL clients) and **33213** (Optimum mump2p mesh) to the networ
 docker run -p 33212:33212 -p 33213:33213 -p 127.0.0.1:48123:48123 \
   --name optimum-gateway \
   -e OPT_API_KEY=ogw_live_xxx \
-  getoptimum/gateway:v1.3.0
+  getoptimum/gateway:v1.3.2
 ```
 
 If Prometheus runs in another container on the same Docker network, omit the `48123` publish and scrape the gateway by container name instead.

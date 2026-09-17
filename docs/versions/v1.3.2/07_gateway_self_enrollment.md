@@ -90,7 +90,7 @@ All other keys (`agent_*_port`, `telemetry_*`, `direct_cl_peers`, `stream_*`, et
 Persisting the keypair before the POST is what makes an interrupted first boot safe: if the response is lost, the next boot retries with the same key rather than stranding a credential upstream that nothing on the host can use.
 
 ```sh
-docker pull getoptimum/gateway:v1.3.1
+docker pull getoptimum/gateway:v1.3.2
 
 docker run -d --name optimum-gateway \
   --network host \
@@ -99,7 +99,7 @@ docker run -d --name optimum-gateway \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data/libp2p:/data/libp2p \
   -v $(pwd)/data/mump2p:/data/mump2p \
-  getoptimum/gateway:v1.3.1 \
+  getoptimum/gateway:v1.3.2 \
   -config=/app/config/app_conf.yml
 ```
 

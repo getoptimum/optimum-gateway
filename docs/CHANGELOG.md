@@ -1,45 +1,37 @@
 # Optimum Gateway - Version History & Changelog
 
-**Latest Release:** [v1.3.1](./versions/v1.3.1/release_notes.md)  
-**Latest Docs:** [v1.3.1 Documentation](./versions/v1.3.1/index.md)
+**Latest Release:** [v1.3.2](./versions/v1.3.2/release_notes.md)  
+**Latest Docs:** [v1.3.2 Documentation](./versions/v1.3.2/index.md)
 
 ## Supported Versions
 
 | Version | Status                | Docker Image                |
 | ------- | --------------------- | --------------------------- |
-| v1.3.1  | CURRENT — recommended | `getoptimum/gateway:v1.3.1` |
-| v1.3.0  | Previous — supported  | `getoptimum/gateway:v1.3.0` |
+| v1.3.2  | CURRENT — required    | `getoptimum/gateway:v1.3.2` |
 | v1.2.0  | Previous — supported  | `getoptimum/gateway:v1.2.0` |
 | v1.1.1  | Previous — supported  | `getoptimum/gateway:v1.1.1` |
 
-## v1.3.1 (Current)
+## v1.3.2 (Current)
 
-**Docker Image:** `getoptimum/gateway:v1.3.1`
+**Docker Image:** `getoptimum/gateway:v1.3.2`
 
-Recommended upgrade for everyone on v1.3.0. Networking and CL peering are unchanged — same ports and firewall rules.
+Required upgrade for everyone on v1.3.1 or v1.3.0. Networking and CL peering are unchanged — same ports and firewall rules.
 
 ### Highlights
 
-* **Gateway self-enrollment.** Fleet operators can use one org-wide join key (`ojk_`) instead of one API key per host. See [Gateway Self-Enrollment](./versions/v1.3.1/07_gateway_self_enrollment.md).
+* **Improved beacon-block acceleration.** Partner gateways now accelerate beacon blocks on every slot. No partner configuration change.
+* **Gateway self-enrollment.** Fleet operators can use one org-wide join key (`ojk_`) instead of one API key per host. See [Gateway Self-Enrollment](./versions/v1.3.2/07_gateway_self_enrollment.md).
 * **Legacy API keys unchanged.** The `ogw_` quick-start path is still the default for single-gateway deployments.
 
-[Full release notes](./versions/v1.3.1/release_notes.md) · [Documentation](./versions/v1.3.1/index.md)
+[Full release notes](./versions/v1.3.2/release_notes.md) · [Documentation](./versions/v1.3.2/index.md)
 
-## v1.3.0
+## v1.3.1 (Deprecated)
 
-**Docker Image:** `getoptimum/gateway:v1.3.0`
+**v1.3.1 is deprecated.** Docs for this release have been removed. Partners still on v1.3.1 must upgrade to **[v1.3.2](./versions/v1.3.2/release_notes.md)** (`getoptimum/gateway:v1.3.2`).
 
-Introduced long-running consumer streams and slot-prioritized acceleration. Networking and CL peering are unchanged — same ports and firewall rules.
+## v1.3.0 (Deprecated)
 
-### Highlights
-
-* **Long-running consumer streams.** In-band liveness signals, client keepalive guidance, and token refresh without reconnecting. See [Consumer Block Stream](./versions/v1.3.0/06_block_stream.md).
-* **Slot-prioritized acceleration.** During your validators' proposed slots, acceleration is prioritized automatically — no partner action required.
-* **Cleaner block events.** Same-source mesh re-encodings are collapsed before they reach stream consumers.
-* **Reliability.** Improved stability for continuously running gateways on the mesh.
-* **Stream metrics.** Additional `mump2p_stream_*` series when the stream is enabled. See [Metrics](./versions/v1.3.0/metrics.md#consumer-block-stream).
-
-[Full release notes](./versions/v1.3.0/release_notes.md) · [Documentation](./versions/v1.3.0/index.md)
+**v1.3.0 is deprecated.** Docs for this release have been removed. Partners still on v1.3.0 must upgrade to **[v1.3.2](./versions/v1.3.2/release_notes.md)** (`getoptimum/gateway:v1.3.2`).
 
 ## v1.2.0
 
@@ -71,14 +63,16 @@ Recommended upgrade for everyone on v1.0.2. Networking and CL peering are unchan
 
 ## v1.0.2 (Deprecated)
 
-**v1.0.2 is deprecated.** Docs for this release have been removed. Partners still on v1.0.2 should upgrade to **[v1.3.1](./versions/v1.3.1/release_notes.md)** (`getoptimum/gateway:v1.3.1`). v1.1.1, v1.2.0, and v1.3.0 remain supported as previous releases.
+**v1.0.2 is deprecated.** Docs for this release have been removed. Partners still on v1.0.2 should upgrade to **[v1.3.2](./versions/v1.3.2/release_notes.md)** (`getoptimum/gateway:v1.3.2`). v1.1.1 and v1.2.0 remain supported as previous releases.
 
 ## Important: Deprecated Versions
 
-**The following versions are deprecated and no longer supported. Upgrade to v1.3.1.**
+**The following versions are deprecated and no longer supported. Upgrade to v1.3.2.**
 
 | Version     | Status     |
 | ----------- | ---------- |
+| v1.3.1      | DEPRECATED |
+| v1.3.0      | DEPRECATED |
 | v1.0.2      | DEPRECATED |
 | v0.0.1-rc1  | DEPRECATED |
 | v0.0.1-rc2  | DEPRECATED |
@@ -100,7 +94,7 @@ recreate the container:
 
 ```bash
 export OPT_API_KEY=ogw_live_xxx
-docker pull getoptimum/gateway:v1.3.1
+docker pull getoptimum/gateway:v1.3.2
 docker rm -f optimum-gateway
 docker run --name optimum-gateway --rm \
   -p 33212:33212/tcp \
@@ -109,7 +103,7 @@ docker run --name optimum-gateway --rm \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data/libp2p:/tmp/libp2p \
   -v $(pwd)/data/mump2p:/tmp/mump2p \
-  getoptimum/gateway:v1.3.1 \
+  getoptimum/gateway:v1.3.2 \
   -config=/app/config/app_conf.yml
 ```
 

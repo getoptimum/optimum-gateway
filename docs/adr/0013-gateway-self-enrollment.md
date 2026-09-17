@@ -36,7 +36,7 @@ on every gateway. Each gateway then enrolls itself once, on first boot:
 join key, so a gateway cannot self-assign a privileged type, admit itself to a
 cluster, or grant itself a capability it wasn't issued.
 
-See [Gateway Self-Enrollment](../versions/v1.3.1/07_gateway_self_enrollment.md)
+See [Gateway Self-Enrollment](../versions/v1.3.2/07_gateway_self_enrollment.md)
 for the full configuration and operational guide; this document covers the
 design decision, not day-to-day usage.
 

@@ -1,8 +1,8 @@
 # Optimum Gateway - User Guide
 
-> **Recommended upgrade:** [v1.3.0](../v1.3.0/) is the current release. Partners on v1.2.0 should upgrade when convenient — networking and CL peering are unchanged.
+> **Required upgrade:** [v1.3.2](../v1.3.2/) is the current release. Partners on v1.2.0 can remain here, or upgrade — networking and CL peering are unchanged.
 
-> **Release Notes:** [What's new in v1.2.0](./release_notes.md) · [v1.3.0 release notes](../v1.3.0/release_notes.md)
+> **Release Notes:** [What's new in v1.2.0](./release_notes.md) · [v1.3.2 release notes](../v1.3.2/release_notes.md)
 
 > **Security audit:** ProbeLab, 2026 - [Full report](https://cdn.probelab.io/media/documents/2026-08-ProbeLab-Security_Audit_Report_Optimum_Gateway.pdf)
 

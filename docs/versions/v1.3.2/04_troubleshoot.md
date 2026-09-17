@@ -82,7 +82,7 @@ A check is `ok`, `fail`, or `skipped`. `skipped` means the check does not apply 
 {
   "status": "healthy",
   "gateway_id": "optimum-eu-hoodi-01",
-  "version": "v1.3.1",
+  "version": "v1.3.2",
   "uptime_seconds": 1639,
   "checks": {
     "cl_peers": {"status": "ok", "value": 1},
@@ -401,7 +401,7 @@ Runtime `gateway_id` in `/health` and metrics is the enrolled `client_id` (JWT `
 
 | Issue                                       | Fix                                                                                                       |
 | ------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Wrong Docker image tag                      | Use `getoptimum/gateway:v1.3.1`                                                                           |
+| Wrong Docker image tag                      | Use `getoptimum/gateway:v1.3.2`                                                                           |
 | Config edited but container not restarted   | `docker restart optimum-gateway`                                                                          |
 | Running hoodi + mainnet on the same ports   | The second instance needs different ports + its own config + its own credential                           |
 | Duplicate gateway (same API key, two hosts) | One key -> one gateway; generate a second key                                                             |
