@@ -1,6 +1,6 @@
 # Optimum Gateway - User Guide
 
-> **Required upgrade:** v1.3.2 is the current release. Partners on v1.3.1 or v1.3.0 must upgrade — networking and CL peering are unchanged.
+> **Required upgrade:** v1.3.2 is the current release. Partners on earlier releases must upgrade — networking and CL peering are unchanged.
 
 > **Release Notes:** [What's new in v1.3.2](./release_notes.md)
 

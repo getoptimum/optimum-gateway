@@ -1,6 +1,6 @@
 # v1.3.2
 
-> **Required upgrade.** v1.3.2 is the current release. Partners on v1.3.1 or v1.3.0 must upgrade. Networking and CL peering are unchanged — same ports and firewall rules.
+> **Required upgrade.** v1.3.2 is the current release. Partners on earlier releases must upgrade. Networking and CL peering are unchanged — same ports and firewall rules.
 
 ## Highlights
 
@@ -10,7 +10,7 @@
 
 Everything in v1.3.1 — gateway self-enrollment, long-running consumer streams, stream metrics — remains in v1.3.2.
 
-## Upgrade from v1.3.1 or v1.3.0
+## Upgrade from an earlier release
 
 `docker restart` alone keeps the old image. Recreate the container:
 
@@ -45,10 +45,10 @@ If you run consumer streams, treat [Holding a stream open for weeks](06_block_st
 | Version     | Status                    |
 | ----------- | ------------------------- |
 | v1.3.2      | **CURRENT - required**    |
-| v1.2.0      | Previous                  |
-| v1.1.1      | Previous                  |
 | v1.3.1      | DEPRECATED / unsupported  |
 | v1.3.0      | DEPRECATED / unsupported  |
+| v1.2.0      | DEPRECATED / unsupported  |
+| v1.1.1      | DEPRECATED / unsupported  |
 | v1.0.2      | DEPRECATED / unsupported  |
 | v0.0.1-rc12 | REMOVED / unsupported     |
 | v0.0.1-rc11 | REMOVED / unsupported     |
