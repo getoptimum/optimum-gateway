@@ -69,7 +69,7 @@ func joinCLTopic(t *testing.T, svc *Service, topic string) *libp2ppubsub.Subscri
 func TestMumP2PBeaconBlockAccelerateGate(t *testing.T) {
 	cur := chainstate.CurrentSlot(time.Now())
 	// Seed before the router exists: bgSync primes at startup and may land after the refresh.
-	svc, _ := newGateway(t, func(b *test_utils.LocalBootstrapServer) {
+	svc, _ := newGatewayOfType(t, commonentities.GatewayTypeHermes, func(b *test_utils.LocalBootstrapServer) {
 		b.SetAccelerateResponse(map[string]any{
 			"to_slot":         cur + 10,
 			"slots":           []int64{int64(cur)},
@@ -109,6 +109,36 @@ func TestMumP2PBeaconBlockAccelerateGate(t *testing.T) {
 	require.ErrorIs(t, err, context.DeadlineExceeded, "only the on-list slot may reach the CL")
 
 	require.Len(t, sub.Events(), 2, "both blocks are streamed regardless of the verdict")
+}
+
+// Partners publish every slot to the CL; the accelerate list does not apply.
+func TestMumP2PBeaconBlockPartnerPublishesOffList(t *testing.T) {
+	cur := chainstate.CurrentSlot(time.Now())
+	svc, _ := newGateway(t, func(b *test_utils.LocalBootstrapServer) {
+		b.SetAccelerateResponse(map[string]any{
+			"to_slot":         cur + 10,
+			"slots":           []int64{int64(cur)},
+			"generated_at_ms": 1,
+		})
+	})
+	topic := "/eth2/deadbeef/beacon_block/ssz_snappy"
+	clSub := joinCLTopic(t, svc, topic)
+	t.Cleanup(svc.messagesMap.Close)
+
+	svc.srvMsgRouter.RefreshAccelerateSlots(t.Context())
+
+	fixture := test_utils.HoodiBeaconBlockMessage1
+	svc.processMumP2PMessage(svc.log, &commonentities.P2PMessage{
+		SourceNodeID: "peer-1", Topic: topic, Message: blockAtSlot(t, fixture, cur+1),
+	})
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	got, err := clSub.Next(ctx)
+	require.NoError(t, err, "partner must publish a slot that is not on the accelerate list")
+	delivered, err := consensus.DecodeBeaconBlockHeader(got.Data)
+	require.NoError(t, err)
+	require.Equal(t, cur+1, delivered.Header.Slot)
 }
 
 // Two mump2p deliveries of one block with different raw bytes (same state_root) emit one event.

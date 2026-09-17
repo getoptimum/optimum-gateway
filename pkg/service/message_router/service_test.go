@@ -3,6 +3,7 @@ package message_router_test
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -141,6 +142,7 @@ func TestService_ShouldForwardMessageToCLP2P(t *testing.T) {
 	tests := map[string]struct {
 		service     *message_router.Service
 		topic       string
+		slot        uint64
 		wantForward bool
 	}{
 		"partner forwards attestation": {
@@ -163,10 +165,10 @@ func TestService_ShouldForwardMessageToCLP2P(t *testing.T) {
 			topic:       testBeaconAttestationTopic,
 			wantForward: true,
 		},
-		"hermes forwards beacon block": {
+		"hermes forwards beacon block when list is empty (fail-open)": {
 			service:     newTestService(t, commonentities.GatewayTypeHermes),
 			topic:       testBeaconBlockTopic,
-			wantForward: false,
+			wantForward: true,
 		},
 		"relay blocks attestation": {
 			service:     newTestService(t, commonentities.GatewayTypeRelay),
@@ -182,9 +184,29 @@ func TestService_ShouldForwardMessageToCLP2P(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wantForward, tc.service.ShouldForwardMessageToCLP2P(topics.ParseTopicMeta(tc.topic).Kind, nil))
+			require.Equal(t, tc.wantForward, tc.service.ShouldForwardMessageToCLP2P(topics.ParseTopicMeta(tc.topic).Kind, tc.slot, nil))
 		})
 	}
+}
+
+func TestService_ShouldForwardMessageToCLP2P_HermesSlotGate(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"to_slot":         120,
+			"slots":           []int64{100},
+			"generated_at_ms": 1,
+		})
+	}))
+	t.Cleanup(ts.Close)
+
+	hermes := newTestServiceAt(t, commonentities.GatewayTypeHermes, ts.URL)
+	hermes.RefreshAccelerateSlots(t.Context())
+	require.True(t, hermes.ShouldForwardMessageToCLP2P(topics.ParseTopicMeta(testBeaconBlockTopic).Kind, 100, nil))
+	require.False(t, hermes.ShouldForwardMessageToCLP2P(topics.ParseTopicMeta(testBeaconBlockTopic).Kind, 110, nil), "hermes drops slots not on the accelerate list")
+
+	partner := newTestServiceAt(t, commonentities.GatewayTypePartner, ts.URL)
+	partner.RefreshAccelerateSlots(t.Context())
+	require.True(t, partner.ShouldForwardMessageToCLP2P(topics.ParseTopicMeta(testBeaconBlockTopic).Kind, 110, nil), "partner publishes every slot")
 }
 
 func TestService_SetKnownValidatorsReplacesPreviousSet(t *testing.T) {
