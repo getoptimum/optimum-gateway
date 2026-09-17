@@ -88,10 +88,10 @@ func TestMumP2PBeaconBlockAccelerateGate(t *testing.T) {
 
 	fixture := test_utils.HoodiBeaconBlockMessage1
 	svc.processMumP2PMessage(svc.log, &commonentities.P2PMessage{
-		SourceNodeID: "peer-1", Topic: topic, Message: blockAtSlot(t, fixture, cur+1),
+		SourceNodeID: testPeerID, Topic: topic, Message: blockAtSlot(t, fixture, cur+1),
 	})
 	svc.processMumP2PMessage(svc.log, &commonentities.P2PMessage{
-		SourceNodeID: "peer-1", Topic: topic, Message: blockAtSlot(t, fixture, cur),
+		SourceNodeID: testPeerID, Topic: topic, Message: blockAtSlot(t, fixture, cur),
 	})
 
 	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
@@ -129,7 +129,7 @@ func TestMumP2PBeaconBlockPartnerPublishesOffList(t *testing.T) {
 
 	fixture := test_utils.HoodiBeaconBlockMessage1
 	svc.processMumP2PMessage(svc.log, &commonentities.P2PMessage{
-		SourceNodeID: "peer-1", Topic: topic, Message: blockAtSlot(t, fixture, cur+1),
+		SourceNodeID: testPeerID, Topic: topic, Message: blockAtSlot(t, fixture, cur+1),
 	})
 
 	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
@@ -157,7 +157,7 @@ func TestStreamDedupCollapsesReencodedBlock(t *testing.T) {
 	variant := reencodeBody(t, block)
 	require.NotEqual(t, block, variant, "variant must differ in raw bytes to bypass the byte-hash dedup")
 
-	svc.processMumP2PMessage(svc.log, &commonentities.P2PMessage{SourceNodeID: "peer-1", Topic: topic, Message: block})
+	svc.processMumP2PMessage(svc.log, &commonentities.P2PMessage{SourceNodeID: testPeerID, Topic: topic, Message: block})
 	svc.processMumP2PMessage(svc.log, &commonentities.P2PMessage{SourceNodeID: "peer-2", Topic: topic, Message: variant})
 
 	require.Len(t, sub.Events(), 1, "re-encodings of one block collapse to a single stream event")

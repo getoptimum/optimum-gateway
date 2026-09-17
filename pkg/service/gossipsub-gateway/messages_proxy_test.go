@@ -68,7 +68,7 @@ func TestHandleMessagesFromMumP2PNodeCachesHash(t *testing.T) {
 	})
 
 	svc.mumP2PMessages <- &commonentities.P2PMessage{
-		SourceNodeID: "peer-1",
+		SourceNodeID: testPeerID,
 		Topic:        mumP2PAggregatedMessagesTopic,
 		Message:      []byte("payload"),
 	}
@@ -93,7 +93,7 @@ func TestHandleMessagesFromMumP2PNode_NotSubscribedTopicSkipsWithoutBadMessage(t
 	})
 
 	svc.mumP2PMessages <- &commonentities.P2PMessage{
-		SourceNodeID: "peer-1",
+		SourceNodeID: testPeerID,
 		Topic:        topic,
 		Message:      []byte("definitely-not-ssz"),
 		MessageID:    "msg-1",

@@ -12,6 +12,9 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
 )
 
+// Shared so goconst does not trip on the repeated literal across test files.
+const testPeerID = "peer-1"
+
 // prepare seeds the stub before any service polls it.
 func newGateway(t *testing.T, prepare ...func(*test_utils.LocalBootstrapServer)) (*Service, *test_utils.LocalBootstrapServer) {
 	t.Helper()
