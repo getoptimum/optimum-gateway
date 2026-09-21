@@ -11,6 +11,7 @@ import (
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	"github.com/getoptimum/optimum-common/pkg/version"
 	"github.com/getoptimum/optimum-gateway/pkg/config"
+	"github.com/getoptimum/optimum-gateway/pkg/service/stream"
 )
 
 const (
@@ -272,6 +273,18 @@ gateway_id: local-dockerized
 
 // The stream is off by default, and when enabled auth may be disabled only on
 // a loopback bind (ADR-0011 exposure rule).
+// requireUnset clears env vars for the duration of a subtest, so a default
+// assertion cannot silently read a value inherited from the test process.
+func requireUnset(t *testing.T, keys ...string) {
+	t.Helper()
+	for _, k := range keys {
+		if prev, ok := os.LookupEnv(k); ok {
+			require.NoError(t, os.Unsetenv(k))
+			t.Cleanup(func() { require.NoError(t, os.Setenv(k, prev)) })
+		}
+	}
+}
+
 func TestStreamValidation(t *testing.T) {
 	base := func(t *testing.T) {
 		t.Helper()
@@ -336,5 +349,148 @@ func TestStreamValidation(t *testing.T) {
 		cfg, err := config.LoadConfig("")
 		require.NoError(t, err)
 		require.True(t, cfg.StreamOnly)
+	})
+
+	t.Run("heartbeat on by default, may be disabled, never negative", func(t *testing.T) {
+		base(t)
+		requireUnset(t, "OPT_STREAM_HEARTBEAT_INTERVAL_SEC")
+		t.Setenv("OPT_STREAM_ENABLE", "true")
+		cfg, err := config.LoadConfig("")
+		require.NoError(t, err)
+		// On by default: a stream that can starve silently is the failure this
+		// exists to prevent, so it must not need opting in.
+		require.Equal(t, 20, cfg.StreamHeartbeatIntervalSec)
+
+		t.Setenv("OPT_STREAM_HEARTBEAT_INTERVAL_SEC", "0")
+		cfg, err = config.LoadConfig("")
+		require.NoError(t, err, "0 is a valid way to disable it")
+		require.Zero(t, cfg.StreamHeartbeatIntervalSec, "0 must survive, not become the default")
+
+		t.Setenv("OPT_STREAM_HEARTBEAT_INTERVAL_SEC", "-1")
+		_, err = config.LoadConfig("")
+		require.ErrorContains(t, err, "stream_heartbeat_interval_sec")
+	})
+
+	t.Run("keepalive min time defaults below the documented client interval", func(t *testing.T) {
+		base(t)
+		requireUnset(t, "OPT_STREAM_KEEPALIVE_MIN_TIME_SEC")
+		t.Setenv("OPT_STREAM_ENABLE", "true")
+		cfg, err := config.LoadConfig("")
+		require.NoError(t, err)
+		// Consumers are told to ping every ~30s, so the accepted minimum has to
+		// sit below that or they are GOAWAY'd for pinging too often.
+		require.Equal(t, 20, cfg.StreamKeepaliveMinTimeSec)
+	})
+
+	t.Run("reauth ships as observe", func(t *testing.T) {
+		base(t)
+		requireUnset(t, "OPT_STREAM_REAUTH_MODE", "OPT_STREAM_REAUTH_INTERVAL_SEC")
+		t.Setenv("OPT_STREAM_ENABLE", "true")
+		cfg, err := config.LoadConfig("")
+		require.NoError(t, err)
+		// Observe, not enforce: existing consumers cannot refresh in-band yet.
+		require.Equal(t, stream.ReauthObserve, cfg.StreamReauthMode)
+		require.Equal(t, 60, cfg.StreamReauthIntervalSec)
+	})
+
+	// Pins Validate's literals to the stream package's constants.
+	// pkg/service/stream imports this package, so the non-test code cannot
+	// share them and only this test stops them drifting.
+	t.Run("reauth mode accepts exactly the three modes", func(t *testing.T) {
+		for _, mode := range []string{stream.ReauthOff, stream.ReauthObserve, stream.ReauthEnforce} {
+			t.Run(mode, func(t *testing.T) {
+				base(t)
+				t.Setenv("OPT_STREAM_ENABLE", "true")
+				t.Setenv("OPT_STREAM_REAUTH_MODE", mode)
+				cfg, err := config.LoadConfig("")
+				require.NoError(t, err)
+				require.Equal(t, mode, cfg.StreamReauthMode)
+			})
+		}
+	})
+
+	t.Run("reauth mode rejects a near miss", func(t *testing.T) {
+		base(t)
+		t.Setenv("OPT_STREAM_ENABLE", "true")
+		t.Setenv("OPT_STREAM_REAUTH_MODE", "enforced")
+		_, err := config.LoadConfig("")
+		require.ErrorContains(t, err, "stream_reauth_mode")
+	})
+
+	t.Run("reauth interval rejects zero", func(t *testing.T) {
+		base(t)
+		t.Setenv("OPT_STREAM_ENABLE", "true")
+		t.Setenv("OPT_STREAM_REAUTH_INTERVAL_SEC", "0")
+		_, err := config.LoadConfig("")
+		require.ErrorContains(t, err, "stream_reauth_interval_sec")
+	})
+
+	t.Run("keepalive min time rejects zero", func(t *testing.T) {
+		base(t)
+		t.Setenv("OPT_STREAM_ENABLE", "true")
+		t.Setenv("OPT_STREAM_KEEPALIVE_MIN_TIME_SEC", "0")
+		_, err := config.LoadConfig("")
+		require.ErrorContains(t, err, "stream_keepalive_min_time_sec")
+	})
+}
+
+func TestGatewayCredentialConfig(t *testing.T) {
+	base := func(t *testing.T) {
+		t.Helper()
+		t.Setenv("OPT_IDENTITY_LIBP2P_DIR", t.TempDir())
+		t.Setenv("OPT_IDENTITY_MUMP2P_DIR", t.TempDir())
+		t.Setenv("OPT_AGENT_LIB_P2P_PORT", "5000")
+		t.Setenv("OPT_AGENT_MUMP2P_PORT", "5001")
+		t.Setenv("OPT_GATEWAY_CLUSTER_ID", "gw-cluster")
+		t.Setenv("OPT_TELEMETRY_PORT", "8888")
+	}
+
+	// A missed env tag leaves JoinKey empty, which disables auth rather than erroring.
+	// Nothing else stops DefaultGatewayID drifting from the tag it mirrors.
+	t.Run("DefaultGatewayID matches the struct tag default", func(t *testing.T) {
+		base(t)
+		cfg, err := config.LoadConfig("")
+		require.NoError(t, err)
+		require.Equal(t, config.DefaultGatewayID, cfg.GatewayID)
+	})
+
+	t.Run("join_key and enroll_cred_dir bind from env", func(t *testing.T) {
+		base(t)
+		dir := t.TempDir()
+		t.Setenv("OPT_JOIN_KEY", "ojk_test_fromenv")
+		t.Setenv("OPT_ENROLL_CRED_DIR", dir)
+		cfg, err := config.LoadConfig("")
+		require.NoError(t, err)
+		require.Equal(t, "ojk_test_fromenv", cfg.JoinKey)
+		require.Equal(t, dir, cfg.EnrollCredDir)
+		require.Equal(t, dir, cfg.EnrollmentDir())
+	})
+
+	t.Run("enrollment dir defaults to the mump2p identity dir", func(t *testing.T) {
+		base(t)
+		t.Setenv("OPT_JOIN_KEY", "ojk_test_fromenv")
+		cfg, err := config.LoadConfig("")
+		require.NoError(t, err)
+		require.Equal(t, cfg.IdentityMumP2PDir, cfg.EnrollmentDir())
+		require.DirExists(t, cfg.EnrollmentDir())
+	})
+
+	// Mutually exclusive on purpose: a half-migrated host must fail loudly rather
+	// than silently authenticate with whichever credential wins a precedence rule.
+	t.Run("api_key and join_key together are rejected", func(t *testing.T) {
+		base(t)
+		t.Setenv("OPT_API_KEY", "ogw_test_secret")
+		t.Setenv("OPT_JOIN_KEY", "ojk_test_secret")
+		_, err := config.LoadConfig("")
+		require.ErrorContains(t, err, "mutually exclusive")
+	})
+
+	t.Run("either credential alone is accepted", func(t *testing.T) {
+		base(t)
+		t.Setenv("OPT_API_KEY", "ogw_test_secret")
+		cfg, err := config.LoadConfig("")
+		require.NoError(t, err)
+		require.Equal(t, "ogw_test_secret", cfg.APIKey)
+		require.Empty(t, cfg.JoinKey)
 	})
 }

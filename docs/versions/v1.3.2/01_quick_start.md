@@ -4,7 +4,7 @@ Get the Optimum Gateway running with Docker.
 
 > **Running on Kubernetes?** See [Kubernetes (Helm)](05_kubernetes.md) for the official Helm chart.
 
-> **Prerequisites:** [Requirements](index.md#requirements) and [Network Requirements](00_network_requirements.md). You also need an **API key** — see [Generate your API key](#generate-your-api-key) below.
+> **Prerequisites:** [Requirements](index.md#requirements) and [Network Requirements](00_network_requirements.md). You also need a credential: an **API key** (see [Generate your API key](#generate-your-api-key) below), or for a fleet, one org **join key** (see [Gateway Self-Enrollment](07_gateway_self_enrollment.md)).
 
 ## Hardware Requirements
 
@@ -13,42 +13,47 @@ Get the Optimum Gateway running with Docker.
 
 ## Generate your API key
 
-Every gateway authenticates with an **API key**. The key binds your gateway's identity, chain, operator, and validator scope — everything the gateway needs comes from this key, so there is no per-network YAML to edit.
+Every gateway authenticates with a credential. This section covers the **API key** path; fleets can use a join key instead, via [Gateway Self-Enrollment](07_gateway_self_enrollment.md). The key binds your gateway's identity, chain, operator, and validator scope — everything the gateway needs comes from this key, so there is no per-network YAML to edit.
 
 > **Access is invite-only.** You cannot self-register. The Optimum team must **onboard you first**. Anyone not invited cannot create an account or generate a key.
 
 1. **Get invited.** The Optimum team adds you as an operator. You receive a **"Welcome to Optimum"** email invite to the [Partner Console](https://console.getoptimum.io/).
 2. **Sign in.** Open the console and sign in **with the same email** the invite was sent to, using your **Google or Microsoft** account — no password.
-3. **Open API Keys.** In the sidebar go to **API Keys**, then select the **GATEWAY** tab.
+3. **Select your network.** Use the **Network** picker in the header (**Ethereum**, **Hoodi**, or **Mock Chain**). It defaults to **Ethereum**, and the key takes its chain from whatever is selected here — the generate dialog is titled for that network, with no chain field of its own.
+4. **Open Manage Gateways.** In the sidebar go to **Manage Gateways**, then select the **Gateway** tab.
 
 ### Generate one key
 
 1. **Generate a key.** Click **GENERATE KEY** and fill in:
-   * **Type** — choose **Partner** (this fixes the gateway's publish/subscribe role on mump2p and **cannot be changed after creation**).
-   * **Gateway Details** — pick from the dropdowns where available: **Region**, **Consensus Client**, **Hosting Provider**, **DVT**. These label the gateway in monitoring.
+   * **Clusters** — tick every cluster this key may join. At least one is required on any network that has clusters, and generation is refused without it.
+   * **Gateway details (optional)** — pick from the dropdowns where available: **Region**, **Consensus client**, **Hosting provider**, **DVT**. These label the gateway in monitoring.
+
+   The modal confirms the new key is provisioned as a **partner gateway**, and names it automatically. There is no name field, and the name cannot be changed afterwards.
 2. **Copy the key.** The key (format `ogw_live_...`) is **shown only once**. Copy and store it securely. If you lose it, generate a new one and revoke the old.
 
 ### Bulk generate many keys
 
+> **Running a fleet?** You do not need one key per host at all. Mint a single org **join key** and let each gateway enroll itself on first boot — see [Gateway Self-Enrollment](07_gateway_self_enrollment.md). Bulk generation below remains supported for operators who prefer one key per gateway.
+
 Use **BULK GENERATE** when you need many gateway keys at once (for example a large fleet rollout). Each key is still **one per gateway** — bulk create saves clicking **GENERATE KEY** repeatedly.
 
-1. **Open API Keys.** Same as above: sidebar **API Keys** -> **GATEWAY** tab.
+1. **Select your network and open Manage Gateways.** Same as above: header **Network** picker, then sidebar **Manage Gateways** -> **Gateway** tab.
 2. **Start bulk generate.** Click **BULK GENERATE**.
-3. **Choose how many.** Enter the number of keys to create. Your operator quota is shown in the dialog (for example `0 of 1000 used`).
-4. **Gateway details (optional).** **Region**, **Consensus Client**, **Hosting Provider**, and **DVT** apply to **every** key in the batch — the same dropdowns as single-key generation. Keys are **auto-named**; you do not enter a label per key.
-5. **Download your keys.** When creation finishes, download the batch as **CSV or JSON**. Raw keys (`ogw_live_...`) are **shown only once** — store the file securely before closing the dialog. **Keep the browser tab open** until the download completes.
+3. **Choose how many.** Enter a count in **How many keys**, which is prefilled with `10`. Your operator quota is shown above it (for example `0 of 1000 used · 1000 remaining`).
+4. **Clusters and gateway details.** **Clusters** is required on any network that has them. **Region**, **Consensus client**, **Hosting provider**, and **DVT** are optional. All of them apply to **every** key in the batch — the same fields as single-key generation. Keys are **auto-named**; you do not enter a label per key.
+5. **Download your keys.** When creation finishes, download the batch as **CSV or JSON**. Raw keys (`ogw_live_...`) are **shown only once** — store the file securely before closing the dialog. **Keep the browser tab open until creation finishes**; that is when the secrets are at risk, and the dialog warns you if you try to close it without downloading.
 6. **Deploy one key per host.** Map each key to a gateway instance and set `OPT_API_KEY` on that host. Do not reuse a key across gateways.
 
 > **All-or-nothing.** If any key in a batch fails to create, the whole batch is rolled back — none of the keys are kept. Fix the issue (for example quota) and try again.
 
-> **One API key per gateway.** Each gateway instance needs its **own** key. Do not share a key across gateways — the gateway registers a single identity per key, and reuse causes registration conflicts. If you run multiple gateways (e.g. Hoodi + Mainnet, or several hosts), generate a separate key for each — use **BULK GENERATE** for large rollouts.
+> **One API key per gateway.** Each gateway instance needs its **own** key. Do not share a key across gateways — the gateway registers a single identity per key, and reuse causes registration conflicts. If you run multiple gateways (e.g. Hoodi + Mainnet, or several hosts), generate a separate key for each — use **BULK GENERATE** for large rollouts, or switch to [Gateway Self-Enrollment](07_gateway_self_enrollment.md).
 
 The gateway exchanges this key on startup at `auth.getoptimum.io/api/v1/auth/token` for a short-lived JWT that carries your `gateway_id`, `chain`, and validator scope.
 
 ## Installation
 
 ```sh
-docker pull getoptimum/gateway:v1.1.1
+docker pull getoptimum/gateway:v1.3.2
 ```
 
 ## Configuration
@@ -86,7 +91,7 @@ docker run --name optimum-gateway --rm \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data/libp2p:/tmp/libp2p \
   -v $(pwd)/data/mump2p:/tmp/mump2p \
-  getoptimum/gateway:v1.1.1 \
+  getoptimum/gateway:v1.3.2 \
   -config=/app/config/app_conf.yml
 ```
 
@@ -104,7 +109,7 @@ curl http://localhost:48123/health
 {
   "status": "healthy",
   "gateway_id": "optimum-dev-hoodi-kubernetes-validator-lighthouse",
-  "version": "v1.1.1",
+  "version": "v1.3.2",
   "commit_hash": "a0b2bc1",
   "uptime_seconds": 1639,
   "checks": {
@@ -222,8 +227,14 @@ Use a stable `--netkey-file` (not `random`) — Nimbus requires it for privilege
 
 Lodestar is supported. Point it at the gateway as a trusted/direct peer and add the Lodestar node to the gateway's `direct_cl_peers` so the gateway re-dials after restarts.
 
+## Fleet rollout?
+
+If you run many gateways, you do not need one API key per host. Mint a single org **join key** (`ojk_`) and let each gateway self-enroll on first boot. See [Gateway Self-Enrollment](07_gateway_self_enrollment.md).
+
 ## Next Steps
 
 * [Configuration](02_configuration.md) - Ports, direct peers, advanced settings
+* [Gateway Self-Enrollment](07_gateway_self_enrollment.md) - Fleet rollout with a join key
+* [Consumer Block Stream](06_block_stream.md) - Opt-in WebSocket / gRPC feed of decoded blocks
 * [Troubleshooting](04_troubleshoot.md) - Gateway diagnosis and common issues
 * [Metrics](metrics.md) - Gateway and mesh metrics

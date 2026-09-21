@@ -36,14 +36,14 @@ type ExposeNodesRequest struct {
 
 // LocalBootstrapServer is an in-process httptest bootstrap stub for gateway tests.
 type LocalBootstrapServer struct {
-	rig           *AuthTestRig
-	messages      *syncx.RWMap[string, any]
-	forksResponse *syncx.RWMap[string, any]
-	registerReqs  chan RegisterGatewayRequest
-	exposeReqs    chan ExposeNodesRequest
-	latencyReqs   chan BlockLatencyRequest
-	latencyStatus *atomic.Int32 // 0 => success; otherwise HTTP status to return for block-latency posts
-	srv           *httptest.Server
+	rig                *AuthTestRig
+	messages           *syncx.RWMap[string, any]
+	forksResponse      *syncx.RWMap[string, any]
+	accelerateResponse *syncx.RWMap[string, any]
+	registerReqs       chan RegisterGatewayRequest
+	exposeReqs         chan ExposeNodesRequest
+	latencyReqs        chan BlockLatencyRequest
+	srv                *httptest.Server
 }
 
 func NewLocalBootstrapServerWithRig(t *testing.T, rig *AuthTestRig) *LocalBootstrapServer {
@@ -56,6 +56,7 @@ func newLocalBootstrapServer(t *testing.T, rig *AuthTestRig) *LocalBootstrapServ
 
 	messages := syncx.NewRWMap[string, any]()
 	forksResponse := syncx.NewRWMap[string, any]()
+	accelerateResponse := syncx.NewRWMap[string, any]()
 	registerReqs := make(chan RegisterGatewayRequest, 32)
 	exposeReqs := make(chan ExposeNodesRequest, 32)
 	latencyReqs := make(chan BlockLatencyRequest, 32)
@@ -85,23 +86,23 @@ func newLocalBootstrapServer(t *testing.T, rig *AuthTestRig) *LocalBootstrapServ
 		return nil
 	})
 	app.Get(utils.BootstrapForkDigestPath, func(c fiber.Ctx) error {
-		if rig != nil {
-			require.True(t, c.HasHeader("Authorization"))
+		if err := requireAuth(rig, c); err != nil {
+			return err
 		}
 		return c.JSON(forksResponse.LoadAll())
 	})
-	app.Post(utils.BootstrapHandleBlockLatencyBulkV2, func(c fiber.Ctx) error {
-		var payloads []entities.LatencyComparator
-		require.NoError(t, json.Unmarshal(c.Body(), &payloads))
-		for i := range payloads {
-			select {
-			case latencyReqs <- BlockLatencyRequest{
-				Authorization: strings.Clone(c.Get("Authorization")),
-				Payload:       payloads[i],
-			}:
-			default:
-				// Keep latency capture best-effort so unrelated tests never block on this test stub.
-			}
+	app.Get("/api/v2/:chain/accelerate_slots", func(c fiber.Ctx) error {
+		if err := requireAuth(rig, c); err != nil {
+			return err
+		}
+		return c.JSON(accelerateResponse.LoadAll())
+	})
+	app.Post(utils.BootstrapHandleBlockLatencyV2, func(c fiber.Ctx) error {
+		var payload entities.LatencyComparator
+		require.NoError(t, json.Unmarshal(c.Body(), &payload))
+		req := BlockLatencyRequest{
+			Authorization: strings.Clone(c.Get("Authorization")),
+			Payload:       payload,
 		}
 		if code := latencyStatus.Load(); code != 0 {
 			return c.SendStatus(int(code))
@@ -113,21 +114,23 @@ func newLocalBootstrapServer(t *testing.T, rig *AuthTestRig) *LocalBootstrapServ
 	t.Cleanup(srv.Close)
 
 	return &LocalBootstrapServer{
-		rig:           rig,
-		srv:           srv,
-		forksResponse: forksResponse,
-		messages:      messages,
-		registerReqs:  registerReqs,
-		exposeReqs:    exposeReqs,
-		latencyReqs:   latencyReqs,
-		latencyStatus: latencyStatus,
+		rig:                rig,
+		srv:                srv,
+		forksResponse:      forksResponse,
+		accelerateResponse: accelerateResponse,
+		messages:           messages,
+		registerReqs:       registerReqs,
+		exposeReqs:         exposeReqs,
+		latencyReqs:        latencyReqs,
 	}
 }
 
-// SetBlockLatencyStatus makes the block-latency endpoint respond with the given
-// HTTP status. Use 0 to restore success (200). Safe to call concurrently.
-func (m *LocalBootstrapServer) SetBlockLatencyStatus(code int32) {
-	m.latencyStatus.Store(code)
+// Fiber handlers cannot require.FailNow; return 401 instead.
+func requireAuth(rig *AuthTestRig, c fiber.Ctx) error {
+	if rig == nil || c.HasHeader("Authorization") {
+		return nil
+	}
+	return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "missing Authorization header"})
 }
 
 func mapToURLValues(src map[string]string) url.Values {
@@ -140,6 +143,10 @@ func mapToURLValues(src map[string]string) url.Values {
 
 func (m *LocalBootstrapServer) SetForkResponse(payload map[string]any) {
 	m.forksResponse.Replace(payload)
+}
+
+func (m *LocalBootstrapServer) SetAccelerateResponse(payload map[string]any) {
+	m.accelerateResponse.Replace(payload)
 }
 
 func (m *LocalBootstrapServer) SetMessagesResponse(payload map[string]any) {

@@ -1,6 +1,9 @@
 # ADR-0011: Gateway consumer block-stream API (WebSocket + gRPC)
 
 **Status:** Approved (implemented)  
+Amended 2026-09-08: gRPC keepalive enforcement and connection-age visibility.  
+Amended 2026-09-08: in-band liveness heartbeat frame.  
+Amended 2026-09-08: bidirectional `Subscribe` for in-band token refresh, and mid-stream re-authentication.  
 **Date:** 2026-08-05  
 
 ## Context
@@ -172,6 +175,114 @@ Signing events gateway-side would close this without confidentiality, and the
 gateway already holds an identity key — but it puts per-event crypto on a hot
 path to reimplement, worse, what the proxy already provides. Not doing it.
 
+### Keepalive enforcement and connection-age visibility (amended 2026-09-08)
+
+Two gaps that only matter once a consumer holds a stream for weeks.
+
+**Client keepalives were rejected.** gRPC-Go's `EnforcementPolicy` defaults to
+`MinTime` 5m with `PermitWithoutStream` false, while this server pings every
+54s. A consumer that enabled client keepalive at any rate useful to a
+long-lived stream was therefore answered with GOAWAY `too_many_pings`: the
+obvious mitigation for a stream dying to NAT or conntrack expiry made things
+worse. `stream_keepalive_min_time_sec` now sets `MinTime`, with
+`PermitWithoutStream: true`.
+
+| Env / yaml                                                            | Default | Purpose                                 |
+| --------------------------------------------------------------------- | ------- | --------------------------------------- |
+| `OPT_STREAM_KEEPALIVE_MIN_TIME_SEC` / `stream_keepalive_min_time_sec` | `20`    | Shortest client ping interval accepted. |
+
+It has to stay below the interval consumers are documented to use, so the
+documented 30s and this 20s move together.
+
+**Connection lifetime was invisible.** Authentication happens once, at
+subscribe time (§3), so the age of the oldest live connection is the upper
+bound on how long the gateway has trusted a single check. Nothing published
+that. `ConnLimiter` now records each admitted connection's start time, keyed by
+an id returned from `acquire` and passed back to `release`, so releasing a
+newer connection cannot be mistaken for releasing the oldest.
+
+The exported series is `mump2p_stream_oldest_connection_started_seconds`, a
+**start timestamp rather than an age**. A timestamp stays correct between
+scrapes and needs no ticker to keep it fresh; the age is `time() - <value>` at
+query time. Zero means no connection is open. This follows the same convention
+as the terminator's `stream_tls_cert_not_after_seconds`.
+
+### Liveness heartbeat (amended 2026-09-08)
+
+**A starved stream was indistinguishable from a quiet one.** The frame union
+above is `BlockEvent` and `lagged` only, so silence carried no information. If
+ingest stops, the gateway emits nothing while the connection stays healthy on
+transport PINGs, and the consumer waits indefinitely with no data and no error.
+
+Nothing in the path can backstop this. Measured against nginx 1.24 with
+`grpc_read_timeout 10s` and a data-flowing control, the timer is reset by the
+gateway's own PINGs: with PINGs on, a stream that had delivered at least one
+block survived until the client's own 40s deadline; with PINGs off it was cut
+in 11s. The gateway PINGs every 54s, so on any established stream that timeout
+never fires regardless of its value. Only an in-band frame closes the gap.
+
+The frame union therefore gains a third member:
+
+* `heartbeat` — sent every `stream_heartbeat_interval_sec` whether or not
+  blocks are flowing, carrying `last_slot` (the last slot written to that
+  connection), `expected_slot` (from the wall clock) and `silence_ms`.
+
+It is emitted from each transport's send loop, **never from the hub**. A
+hub-sourced heartbeat would be dropped by the ring buffer exactly when liveness
+proof matters most, would increment that connection's `dropped` counter and
+fire a **false** `lagged` frame, and would need a frame-kind field on
+`streamhub.BlockEvent`, polluting the ingest hot path.
+
+| Env / yaml                                                            | Default | Purpose                                |
+| --------------------------------------------------------------------- | ------- | -------------------------------------- |
+| `OPT_STREAM_HEARTBEAT_INTERVAL_SEC` / `stream_heartbeat_interval_sec` | `20`    | Liveness frame interval; `0` disables. |
+
+The field shape follows the downstream `Heartbeat` record `optimum-stream`
+already synthesizes for its own consumers, rather than inventing a second
+vocabulary for the same idea, so it can pass the signal straight through
+instead of inferring silence locally.
+
+### Bidirectional Subscribe and mid-stream re-auth (amended 2026-09-08)
+
+**Auth was checked once and never again.** `Authenticate` runs at subscribe
+time only (§3), so a weeks-long stream honors a one-hour token for weeks and a
+revoked key keeps streaming. Connection age bounds the exposure, which is why
+it is now published, but nothing shortened it.
+
+`Subscribe` therefore becomes bidirectional: the client stream carries the
+selection message first, then a refreshed JWT whenever the consumer has one.
+The token a connection last presented is re-verified every
+`stream_reauth_interval_sec`, gated by `stream_reauth_mode`. Re-verification
+needs no new interface: the verifier already checks `exp`, so re-running
+`Authenticate` on the current token surfaces expiry as a failure.
+
+| Env / yaml                                                      | Default   | Purpose                                                                    |
+| --------------------------------------------------------------- | --------- | -------------------------------------------------------------------------- |
+| `OPT_STREAM_REAUTH_MODE` / `stream_reauth_mode`                 | `observe` | `off`, `observe` (count failures), or `enforce` (close `Unauthenticated`).  |
+| `OPT_STREAM_REAUTH_INTERVAL_SEC` / `stream_reauth_interval_sec` | `60`      | Re-verification interval.                                                  |
+
+It ships as `observe` because no existing consumer can refresh in-band yet;
+`enforce` can only be turned on once they do.
+
+This does **not** create a consumer write path, which stays a non-goal. The
+client stream accepts exactly one field, `token`; nothing a consumer sends
+reaches the hub, the mesh, or another subscriber.
+
+Server-streaming to bidirectional streaming is wire-compatible: a client built
+against the earlier stub sends one message and half-closes, which the new
+handler serves unchanged. This is asserted by a test rather than assumed.
+`buf breaking` flags the change under `RPC_SAME_CLIENT_STREAMING`; no per-rule
+exception was added, because an exception would permanently permit future
+client-streaming changes instead of recording this one. Regenerating against
+the new proto *is* source-breaking at the call site, since `Subscribe` no
+longer takes the request as an argument.
+
+**`MaxConnectionAge` was considered and rejected** as a way to force
+re-authentication. Because there is no replay (Non-goals), every forced
+rotation is a permanent, customer-visible gap in the consumer's data. Paying a
+guaranteed data loss on a fixed schedule to bound token staleness is the wrong
+trade for this feed; in-band refresh bounds it without dropping a frame.
+
 ## Architecture
 
 ```mermaid
@@ -210,6 +321,13 @@ flowchart LR
 * Drop-on-lag means slow consumers miss events — surfaced via `lagged`/`dropped`
   rather than silently.
 * Requires the auth service to mint `aud=stream` tokens.
+* Authentication is checked once per connection, so revocation lag is bounded
+  by connection lifetime rather than token lifetime (amended 2026-09-08).
+  `mump2p_stream_oldest_connection_started_seconds` is what makes that bound
+  observable. Mid-stream re-auth shortens it, but only in `enforce`; in
+  `observe`, the default, a connection whose token has stopped verifying keeps
+  streaming and `mump2p_stream_reauth_failures_total` measures how many
+  consumers have not adopted in-band refresh.
 
 ## Non-goals (v1)
 

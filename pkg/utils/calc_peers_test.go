@@ -1,12 +1,8 @@
 package utils_test
 
 import (
-	"context"
 	"fmt"
 	"math"
-	"net/http"
-	"net/http/httptest"
-	"sync/atomic"
 	"testing"
 
 	"github.com/libp2p/go-libp2p"
@@ -72,27 +68,4 @@ func TestBootstrapURLFallbacks(t *testing.T) {
 		"https://%zz/api/v2/fork-digest?chain_id=hoodi%2Fmainnet",
 		utils.BootstrapForkDigestURL("https://%zz", "hoodi/mainnet"),
 	)
-}
-
-func TestRetryGetRequestStopsWhenContextIsCanceled(t *testing.T) {
-	t.Parallel()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	var calls atomic.Int32
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		calls.Add(1)
-		cancel()
-		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = w.Write([]byte(`{"value":"retry-me"}`))
-	}))
-	t.Cleanup(srv.Close)
-
-	got, code, err := utils.RetryGetRequest[retryResponse](ctx, srv.URL, nil)
-
-	require.ErrorContains(t, err, "context canceled")
-	require.Zero(t, code)
-	require.Nil(t, got)
-	require.LessOrEqual(t, calls.Load(), int32(1))
 }

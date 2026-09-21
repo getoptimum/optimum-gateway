@@ -1,0 +1,164 @@
+package gossipsub_gateway
+
+import (
+	"context"
+	"encoding/binary"
+	"encoding/hex"
+	"testing"
+	"time"
+
+	"github.com/golang/snappy"
+	"github.com/libp2p/go-libp2p"
+	libp2ppubsub "github.com/libp2p/go-libp2p-pubsub"
+	"github.com/stretchr/testify/require"
+
+	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
+	chainstate "github.com/getoptimum/optimum-gateway/pkg/protocol/chain_state"
+	"github.com/getoptimum/optimum-gateway/pkg/protocol/consensus"
+	"github.com/getoptimum/optimum-gateway/pkg/service/streamhub"
+	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
+	"github.com/getoptimum/optimum-gateway/pkg/utils"
+)
+
+// blockAtSlot rewrites the gossip block's slot; DecodeBeaconBlockHeader must read it back.
+func blockAtSlot(t *testing.T, hexBlock string, slot uint64) []byte {
+	t.Helper()
+	raw, err := hex.DecodeString(hexBlock)
+	require.NoError(t, err)
+	ssz, err := utils.DecodeSnappy(raw, utils.MaxGossipPayloadSize)
+	require.NoError(t, err)
+	off := 4 + 96 // SSZ prefix + BLS signature
+	require.GreaterOrEqual(t, len(ssz), off+8, "fixture is too short to hold a slot")
+	binary.LittleEndian.PutUint64(ssz[off:off+8], slot)
+	encoded := snappy.Encode(nil, ssz)
+	hdr, err := consensus.DecodeBeaconBlockHeader(encoded)
+	require.NoError(t, err)
+	require.Equal(t, slot, hdr.Header.Slot, "slot rewrite landed at the wrong offset")
+	return encoded
+}
+
+// reencodeBody flips a body byte so raw bytes change while slot/proposer/state_root stay the same.
+func reencodeBody(t *testing.T, encoded []byte) []byte {
+	t.Helper()
+	ssz, err := utils.DecodeSnappy(encoded, utils.MaxGossipPayloadSize)
+	require.NoError(t, err)
+	off := 4 + 96 + 112 // SSZ prefix + signature + fixed header => first byte past the identity fields
+	require.Greater(t, len(ssz), off, "fixture body too short to mutate")
+	ssz[off] ^= 0xFF
+	return snappy.Encode(nil, ssz)
+}
+
+// joinCLTopic subscribes to a real gossipsub topic so CL publishes can be read back.
+func joinCLTopic(t *testing.T, svc *Service, topic string) *libp2ppubsub.Subscription {
+	t.Helper()
+	h, err := libp2p.New(libp2p.NoListenAddrs)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = h.Close() })
+	ps, err := libp2ppubsub.NewGossipSub(t.Context(), h)
+	require.NoError(t, err)
+	tp, err := ps.Join(topic)
+	require.NoError(t, err)
+	sub, err := tp.Subscribe()
+	require.NoError(t, err)
+	t.Cleanup(sub.Cancel)
+	svc.libP2PTopics.Store(topic, tp)
+	return sub
+}
+
+// Unselected slot is withheld from the CL; both blocks are still streamed (gate is after arrival).
+func TestMumP2PBeaconBlockAccelerateGate(t *testing.T) {
+	cur := chainstate.CurrentSlot(time.Now())
+	// Seed before the router exists: bgSync primes at startup and may land after the refresh.
+	svc, _ := newGatewayOfType(t, commonentities.GatewayTypeHermes, func(b *test_utils.LocalBootstrapServer) {
+		b.SetAccelerateResponse(map[string]any{
+			"to_slot":         cur + 10,
+			"slots":           []int64{int64(cur)},
+			"generated_at_ms": 1,
+		})
+	})
+	topic := "/eth2/deadbeef/beacon_block/ssz_snappy"
+	clSub := joinCLTopic(t, svc, topic)
+	hub := streamhub.New()
+	svc.streamHub = hub
+	sub := hub.Subscribe(4)
+	t.Cleanup(sub.Close)
+	t.Cleanup(svc.messagesMap.Close)
+
+	svc.srvMsgRouter.RefreshAccelerateSlots(t.Context())
+
+	fixture := test_utils.HoodiBeaconBlockMessage1
+	svc.processMumP2PMessage(svc.log, &commonentities.P2PMessage{
+		SourceNodeID: testPeerID, Topic: topic, Message: blockAtSlot(t, fixture, cur+1),
+	})
+	svc.processMumP2PMessage(svc.log, &commonentities.P2PMessage{
+		SourceNodeID: testPeerID, Topic: topic, Message: blockAtSlot(t, fixture, cur),
+	})
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	got, err := clSub.Next(ctx)
+	require.NoError(t, err, "on-list slot must reach the CL")
+	delivered, err := consensus.DecodeBeaconBlockHeader(got.Data)
+	require.NoError(t, err)
+	require.Equal(t, cur, delivered.Header.Slot, "examined but unselected slot must be withheld from the CL")
+
+	// Covers gossipsub delivering the two publishes in either order.
+	idle, cancelIdle := context.WithTimeout(t.Context(), 250*time.Millisecond)
+	defer cancelIdle()
+	_, err = clSub.Next(idle)
+	require.ErrorIs(t, err, context.DeadlineExceeded, "only the on-list slot may reach the CL")
+
+	require.Len(t, sub.Events(), 2, "both blocks are streamed regardless of the verdict")
+}
+
+// Partners publish every slot to the CL; the accelerate list does not apply.
+func TestMumP2PBeaconBlockPartnerPublishesOffList(t *testing.T) {
+	cur := chainstate.CurrentSlot(time.Now())
+	svc, _ := newGateway(t, func(b *test_utils.LocalBootstrapServer) {
+		b.SetAccelerateResponse(map[string]any{
+			"to_slot":         cur + 10,
+			"slots":           []int64{int64(cur)},
+			"generated_at_ms": 1,
+		})
+	})
+	topic := "/eth2/deadbeef/beacon_block/ssz_snappy"
+	clSub := joinCLTopic(t, svc, topic)
+	t.Cleanup(svc.messagesMap.Close)
+
+	svc.srvMsgRouter.RefreshAccelerateSlots(t.Context())
+
+	fixture := test_utils.HoodiBeaconBlockMessage1
+	svc.processMumP2PMessage(svc.log, &commonentities.P2PMessage{
+		SourceNodeID: testPeerID, Topic: topic, Message: blockAtSlot(t, fixture, cur+1),
+	})
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	got, err := clSub.Next(ctx)
+	require.NoError(t, err, "partner must publish a slot that is not on the accelerate list")
+	delivered, err := consensus.DecodeBeaconBlockHeader(got.Data)
+	require.NoError(t, err)
+	require.Equal(t, cur+1, delivered.Header.Slot)
+}
+
+// Two mump2p deliveries of one block with different raw bytes (same state_root) emit one event.
+func TestStreamDedupCollapsesReencodedBlock(t *testing.T) {
+	cur := chainstate.CurrentSlot(time.Now())
+	svc, _ := newGateway(t)
+	topic := "/eth2/deadbeef/beacon_block/ssz_snappy"
+	hub := streamhub.New()
+	svc.streamHub = hub
+	sub := hub.Subscribe(4)
+	t.Cleanup(sub.Close)
+	t.Cleanup(svc.messagesMap.Close)
+	t.Cleanup(svc.streamDedup.Close)
+
+	block := blockAtSlot(t, test_utils.HoodiBeaconBlockMessage1, cur)
+	variant := reencodeBody(t, block)
+	require.NotEqual(t, block, variant, "variant must differ in raw bytes to bypass the byte-hash dedup")
+
+	svc.processMumP2PMessage(svc.log, &commonentities.P2PMessage{SourceNodeID: testPeerID, Topic: topic, Message: block})
+	svc.processMumP2PMessage(svc.log, &commonentities.P2PMessage{SourceNodeID: "peer-2", Topic: topic, Message: variant})
+
+	require.Len(t, sub.Events(), 1, "re-encodings of one block collapse to a single stream event")
+}

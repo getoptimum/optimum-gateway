@@ -158,3 +158,26 @@ func TestRetryPostRequest_DoNotRetry(t *testing.T) {
 	require.Equal(t, want, *got)
 	require.EqualValues(t, 1, calls.Load())
 }
+
+func TestRetryGetRequestStopsWhenContextIsCanceled(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var calls atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		cancel()
+		// Never respond: a 500 would race cancel and return a nil error.
+		<-r.Context().Done()
+	}))
+	t.Cleanup(srv.Close)
+
+	got, code, err := utils.RetryGetRequest[retryResponse](ctx, srv.URL, nil)
+
+	require.ErrorContains(t, err, "context canceled")
+	require.Zero(t, code)
+	require.Nil(t, got)
+	require.LessOrEqual(t, calls.Load(), int32(1))
+}

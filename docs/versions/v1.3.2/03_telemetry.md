@@ -14,32 +14,40 @@
 
 ## Health Endpoint
 
-`GET /health` returns 200 (healthy) or 503 (degraded) based on four checks:
+`GET /health` returns 200 (healthy) or 503 (degraded) based on six checks:
 
 ```json
 {
   "status": "healthy",
   "gateway_id": "optimum-dev-hoodi-kubernetes-validator-lighthouse",
-  "version": "v1.0.2",
+  "version": "v1.3.2",
   "commit_hash": "a0b2bc1",
   "uptime_seconds": 1639,
   "checks": {
+    "cl_health": {"status": "ok"},
     "cl_peers": {"status": "ok", "value": 1},
     "last_block_age_sec": {"status": "ok", "value": 1},
+    "mump2p_health": {"status": "ok"},
     "mump2p_peers": {"status": "ok", "value": 13},
     "subscribed_topics": {"status": "ok", "value": 65}
   }
 }
 ```
 
-| Check                | Passes when                   |
-| -------------------- | ----------------------------- |
-| `cl_peers`           | ≥ 1 CL peer connected         |
-| `mump2p_peers`       | ≥ 1 mump2p peer connected     |
-| `subscribed_topics`  | ≥ 1 topic subscribed          |
-| `last_block_age_sec` | Last block received < 60s ago |
+| Check                | Passes when                    |
+| -------------------- | ------------------------------ |
+| `cl_peers`           | ≥ 1 CL peer connected          |
+| `mump2p_peers`       | ≥ 1 mump2p peer connected      |
+| `subscribed_topics`  | ≥ 1 topic subscribed           |
+| `last_block_age_sec` | Last block received < 60s ago  |
+| `cl_health`          | CL gossip traffic in last 30s  |
+| `mump2p_health`      | Mesh traffic in last 30s       |
 
 If any check fails, `status` becomes `"degraded"` and the failing checks are listed in `"failing"`.
+
+A check can also be `skipped`, meaning it does not apply to this node's mode. A `stream_only` gateway never starts the CL host, so `cl_peers`, `cl_health` and `subscribed_topics` are `skipped` and left out of `failing` and of the 200/503 roll-up. The `mump2p_gateway_cl_health_status` and `mump2p_gateway_cl_peers` gauges have no such notion and still read 0 on those nodes, so exclude them from alerts there, including the "Status" panel below, which multiplies `cl_peers` by `mump2p_peers`.
+
+**Propagation:** `mump2p_gateway_propagation_state` reports whether the gateway is relaying mump2p traffic to your CL (`1` = on, `0` = disabled via Optimum dynamic config). The same state appears as `propagation_enabled` in `/api/v1/self_info`.
 
 ## Self Info
 
@@ -49,15 +57,15 @@ If any check fails, `status` becomes `"degraded"` and the failing checks are lis
 
 ```json
 {
-  "propagation_disabled": false,
+  "propagation_enabled": true,
   "chain": "hoodi",
   "commit_hash": "a0b2bc1",
   "fork_digest": "c6ecb76c",
-  "gateway_cluster_id": "optimum_hoodi_v0_2",
+  "gateway_cluster_id": "optimum_ethereum_hoodi_v0_1",
   "gateway_id": "optimum-dev-hoodi-kubernetes-validator-lighthouse",
   "paired_with": "partner",
   "remote_url": "bootstrap.getoptimum.io",
-  "version": "v1.0.2",
+  "version": "v1.3.2",
   "skip_messages_from_self": true,
   "peer_id": "12D3KooWNKZuPvVw5Sfnbq3nvyukxmhBBPZUXHeqzwcehmmwnKcR",
   "libp2p": {
@@ -98,7 +106,7 @@ Use a multiaddr from `libp2p.multiaddrs` that is reachable from your CL host and
 
 **Endpoint:** `GET /metrics`
 
-Metrics are labeled with `gateway_id` and `gateway_cluster_id`. See [Metrics Reference](metrics.md) for the full list.
+Metrics are labeled with `gateway_id` and `gateway_cluster_id`. See [Metrics Reference](metrics.md) for the full list. Consumer block-stream series (`mump2p_stream_*`) appear when `stream_enable` is true.
 
 **CL connected:** When a CL client connects, `mump2p_gateway_cl_peers` goes from 0 to >=1. Messages flow on both block and attestation topics.
 
@@ -280,7 +288,7 @@ providers:
 Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
 
 <details>
-<summary><strong>Click to expand: Partner Dashboard JSON (v1.0.2)</strong></summary>
+<summary><strong>Click to expand: Partner Dashboard JSON (v1.3.2)</strong></summary>
 
 ```json
 {
@@ -300,7 +308,7 @@ Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
       }
     ]
   },
-  "description": "Partner-facing dashboard for Optimum Gateway v1.0.2. All metrics sourced from the gateway /metrics endpoint. Select your Prometheus datasource and Network (Hoodi or Mainnet), then your gateway (by gateway_label).",
+  "description": "Partner-facing dashboard for Optimum Gateway v1.3.2. All metrics sourced from the gateway /metrics endpoint. Select your Prometheus datasource and Network (Hoodi or Mainnet), then your gateway (by gateway_label).",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -738,16 +746,16 @@ Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
             "uid": "${ds_prometheus}"
           },
           "editorMode": "code",
-          "expr": "vector(1)",
+          "expr": "mump2p_gateway_propagation_state{gateway_label=\"$gateway\"}",
           "instant": true,
-          "legendFormat": "__auto",
+          "legendFormat": "propagation",
           "range": false,
           "refId": "A"
         }
       ],
       "title": "Propagation",
       "type": "stat",
-      "description": "Propagation of messages (blocks / attestations) from the mump2p network to the libp2p (CL) network. Enabled by default in v1."
+      "description": "Whether this gateway is propagating mump2p messages to CL (from mump2p_gateway_propagation_state: 1=enabled, 0=disabled via Optimum dynamic config)."
     },
     {
       "datasource": {
@@ -1763,7 +1771,7 @@ Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
   "tags": [
     "optimum",
     "partner",
-    "v1.0.2"
+    "v1.3.2"
   ],
   "templating": {
     "list": [
@@ -1782,7 +1790,7 @@ Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
       {
         "current": {
           "text": "Hoodi",
-          "value": "optimum_hoodi_.*"
+          "value": "optimum_ethereum_hoodi_.*"
         },
         "includeAll": false,
         "label": "Network",
@@ -1791,7 +1799,7 @@ Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
           {
             "selected": true,
             "text": "Hoodi",
-            "value": "optimum_hoodi_.*"
+            "value": "optimum_ethereum_hoodi_.*"
           },
           {
             "selected": false,
@@ -1799,7 +1807,7 @@ Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
             "value": "optimum_ethereum_mainnet_.*"
           }
         ],
-        "query": "Hoodi : optimum_hoodi_.*, Mainnet : optimum_ethereum_mainnet_.*",
+        "query": "Hoodi : optimum_ethereum_hoodi_.*, Mainnet : optimum_ethereum_mainnet_.*",
         "type": "custom"
       },
       {
@@ -1844,7 +1852,7 @@ Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Optimum Gateway - Partner Dashboard (v1.0.2)",
+  "title": "Optimum Gateway - Partner Dashboard (v1.3.2)",
   "uid": "partner-gateway-v1"
 }
 ```
@@ -1875,7 +1883,7 @@ The Partner Dashboard includes the following sections:
 
 ### Gateway Info
 
-* **Status** - ON/OFF based on CL + mump2p peer connectivity
+* **Status** - ON/OFF based on CL + mump2p peer connectivity. Reads OFF on a `stream_only` gateway, which has no CL peers by design; judge those nodes by `/health` instead
 * **CL Peers** / **mump2p Peers** - current peer counts
 * **Hoodi Slot** - live slot number from Hoodi genesis
 * **Hoodi Epoch** - epoch index (32 slots per epoch)

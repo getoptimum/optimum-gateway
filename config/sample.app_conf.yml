@@ -5,7 +5,10 @@ identity_mump2p_dir: /tmp/mump2p
 agent_lib_p2p_port: 33212
 agent_mump2p_port: 43213
 gateway_cluster_id: optimum_hoodi_v0_2
+# Exactly one gateway credential; setting both is a startup error. api_key is the
+# legacy per-host secret, join_key is one org-wide key every gateway self-enrolls with.
 api_key: your-api-key # or set OPT_API_KEY env var
+# join_key: ojk_live_...                   # or set OPT_JOIN_KEY env var; remove api_key above
 
 # ─── Telemetry ────────────────────────────────────────────────────────────────
 telemetry_enable: true
@@ -18,6 +21,10 @@ telemetry_port: 48123
 # remote_auth_url: https://auth.getoptimum.io
 # jwks_refresh_interval_sec: 3600          # bounds revocation-propagation lag
 # jwks_cache_path: /gateway/cache/jwks.json
+# enroll_cred_dir: /tmp/mump2p             # default: identity_mump2p_dir. Holds the
+#                                          # credential + pending key, so whichever path
+#                                          # you use must be a persistent mount, as the
+#                                          # identity dirs above already are.
 
 # ─── Consumer block-stream (ADR-0011, opt-in, off by default) ────────────────
 # Exposes decoded beacon blocks to your own consumers over WebSocket + gRPC.
@@ -30,6 +37,10 @@ telemetry_port: 48123
 # stream_max_conns: 256                    # default: 256 — global connection cap
 # stream_max_conns_per_sub: 8              # default: 8 — per-consumer-key connection cap
 # stream_buffer_size: 64                   # default: 64 — per-connection ring buffer (drop-on-overflow)
+# stream_heartbeat_interval_sec: 20        # default: 20 — in-band liveness frame; 0 disables, and a quiet feed then reads as a stalled one
+# stream_keepalive_min_time_sec: 20        # default: 20 — shortest accepted client ping interval; faster pings get GOAWAY too_many_pings
+# stream_reauth_mode: observe              # default: observe — off | observe | enforce; re-verify the presented token mid-stream
+# stream_reauth_interval_sec: 60           # default: 60 — how often the presented token is re-verified
 
 # ─── Bootstrap ────────────────────────────────────────────────────────────────
 # remote_bootstrap_url: bootstrap.getoptimum.io
@@ -54,7 +65,9 @@ telemetry_port: 48123
 
 # ─── Dev-mode only (ignored when enable_auth=true) ───────────────────────────
 # chain: hoodi                             # OPT_DEV_CHAIN — overridden by JWT chain_id claim
-# gateway_id: dev-gateway                  # OPT_GATEWAY_ID — overridden by JWT sub claim
+# gateway_id: dev-gateway                  # OPT_GATEWAY_ID — overridden by JWT sub claim,
+#                                          # EXCEPT under join_key: it is read before the
+#                                          # mint as the enrollment label, so set it per host
 
 # ─── Direct CL peers (optional) ──────────────────────────────────────────────
 # direct_cl_peers:

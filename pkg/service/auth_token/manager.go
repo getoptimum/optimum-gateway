@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"sync/atomic"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 	randutil "github.com/getoptimum/optimum-common/pkg/rand"
 	"github.com/getoptimum/optimum-common/pkg/syncx"
 	"github.com/getoptimum/optimum-gateway/pkg/config"
+	"github.com/getoptimum/optimum-gateway/pkg/service/enrollment"
 	"github.com/getoptimum/optimum-gateway/pkg/service/jwks_verifier"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
 	"github.com/getoptimum/optimum-gateway/pkg/utils"
@@ -28,7 +28,9 @@ var (
 )
 
 const (
-	mintPath = "/api/v1/auth/token" // mintPath is appended to AppConfig.RemoteAuthURL to form the mint endpoint.
+	// clientAssertionType is the RFC 7523 grant identifier optimum-auth requires
+	// alongside a client_assertion; omitting it is a 400, not a 401.
+	clientAssertionType = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
 	// Upstream issues 6h JWTs; refreshing around the 3h mark leaves a 3h
 	// fence for transient auth-service outages while still hitting the
 	// auth service only ~8 times/day.
@@ -37,12 +39,16 @@ const (
 )
 
 type Service struct {
-	log         logger.AppLogger
-	apiKey      string
-	mintURL     string
-	mintPayload map[string]string
-	verifier    *jwks_verifier.Verifier
-	token       atomic.Pointer[string]
+	log     logger.AppLogger
+	apiKey  string
+	mintURL string
+	// peerID binds the minted token to this node's mumP2P identity (the cnf claim).
+	peerID string
+	// cred is set only in enrollment mode.
+	cred     *enrollment.Credential
+	mintAud  string
+	verifier *jwks_verifier.Verifier
+	token    atomic.Pointer[string]
 	// servicesToken is the aud=services token used to authenticate centralized
 	// HTTP/push calls (it carries operator_id). Empty when upstream auth predates
 	// the two-token split; callers fall back to the handshake token.
@@ -50,7 +56,10 @@ type Service struct {
 	claims         atomic.Pointer[jwks_verifier.Claims]
 	servicesClaims atomic.Pointer[jwks_verifier.Claims]
 	operatorID     atomic.Pointer[string]
-	indexes        syncx.RWSlice[uint64]
+	// enrollResult is replayed by RefreshAuthMetrics: New runs before
+	// telemetry.InitMetrics, so incrementing at enrollment time is dropped.
+	enrollResult string
+	indexes      syncx.RWSlice[uint64]
 }
 
 type mintResponse struct {
@@ -63,23 +72,27 @@ type mintResponse struct {
 	Error            string   `json:"error,omitempty"`
 }
 
-// New always returns a non-nil Manager. When auth is off (EnableAuth=false
-// or APIKey empty) the returned Manager has empty apiKey/mintURL/verifier
-// and every operation degrades to a no-op: Token returns ("", nil), Start
-// is a no-op, claim getters return zero values. Callers never need to
-// nil-check; use IsEnabled() where the disabled-vs-misconfigured
+// New always returns a non-nil Manager. When auth is off (EnableAuth=false, or
+// neither credential configured) the returned Manager has no credential, no
+// mintURL and no verifier, and every operation degrades to a no-op: Token returns
+// ("", nil), Start is a no-op, claim getters return zero values. Callers never
+// need to nil-check; use IsEnabled() where the disabled-vs-misconfigured
 // distinction matters (e.g. the router's token gate).
 //
 // Resolution:
 //
-//	EnableAuth=false                — LOCAL DEV ONLY; disabled Manager.
-//	EnableAuth=true + APIKey empty  — same: disabled Manager with an info log.
-//	EnableAuth=true + APIKey set    — full path: build JWKS verifier and
-//	                                  return a ready-to-mint Manager.
+//	EnableAuth=false                 : LOCAL DEV ONLY; disabled Manager.
+//	EnableAuth=true, no credential   : same, disabled Manager with an info log.
+//	EnableAuth=true + APIKey         : legacy symmetric grant, unchanged.
+//	EnableAuth=true + JoinKey        : self-enroll (once, then cached on disk) and
+//	                                   mint with an RFC 7523 client assertion.
 //
-// The JWKS verifier is constructed internally so the auth wiring sits in
-// one place; verifier construction can be a slow network call, so it's
-// skipped entirely when auth is off.
+// Config rejects both credentials being set, so the branch order here is not a
+// precedence rule.
+//
+// The JWKS verifier is constructed internally so the auth wiring sits in one
+// place; verifier construction can be a slow network call, so it's skipped
+// entirely when auth is off.
 func New(ctx context.Context, log logger.AppLogger, appCfg *config.AppConfig) (*Service, error) {
 	if log == nil {
 		return nil, errors.New("auth_token: log is required")
@@ -90,9 +103,12 @@ func New(ctx context.Context, log logger.AppLogger, appCfg *config.AppConfig) (*
 	switch {
 	case !appCfg.EnableAuth:
 		log.Info("OPT_ENABLE_AUTH=false — gateway JWT mint disabled; LOCAL DEV ONLY")
+		if appCfg.APIKey != "" || appCfg.JoinKey != "" {
+			log.Info("a gateway credential is configured but ignored because auth is disabled")
+		}
 		return NewDisabled(log), nil
-	case appCfg.APIKey == "":
-		log.Info("OPT_API_KEY not set — auth_token disabled")
+	case appCfg.APIKey == "" && appCfg.JoinKey == "":
+		log.Info("neither OPT_API_KEY nor OPT_JOIN_KEY set: auth_token disabled")
 		return NewDisabled(log), nil
 	}
 	if appCfg.RemoteAuthURL == "" {
@@ -111,15 +127,62 @@ func New(ctx context.Context, log logger.AppLogger, appCfg *config.AppConfig) (*
 		return nil, fmt.Errorf("auth_token: extract identity: %w", err)
 	}
 
-	return &Service{
+	// Audiences derive from the issuer, not the URL we post to; see enrollment.EnrollPath.
+	issuer := enrollment.NormalizeIssuer(appCfg.RemoteAuthURL)
+
+	svc := &Service{
 		log:      log.With(logger.WithService("auth_token")),
 		apiKey:   appCfg.APIKey,
-		mintURL:  strings.TrimRight(appCfg.RemoteAuthURL, "/") + mintPath,
+		peerID:   identityKey.ID.String(),
+		mintURL:  issuer + enrollment.MintPath,
+		mintAud:  issuer + enrollment.MintPath,
 		verifier: verifier,
-		mintPayload: map[string]string{
-			"api_key": appCfg.APIKey,
-			"peer_id": identityKey.ID.String(),
-		},
+	}
+
+	if appCfg.JoinKey != "" {
+		// An empty label is exempt from the per-org unique index, so nothing stops a
+		// lost credential directory re-enrolling on every boot until the key cap.
+		if appCfg.EnrollmentLabel() == "" {
+			svc.log.Info("enrolling without a label: set gateway_id so a re-enrollment is refused rather than silently duplicating")
+		}
+		cred, reused, enrollErr := enrollment.LoadOrEnroll(ctx, svc.log, &enrollment.Options{
+			Issuer:  issuer,
+			Dir:     appCfg.EnrollmentDir(),
+			JoinKey: appCfg.JoinKey,
+			PeerID:  svc.peerID,
+			Label:   appCfg.EnrollmentLabel(),
+		})
+		if enrollErr != nil {
+			return nil, fmt.Errorf("auth_token: enroll gateway: %w", enrollErr)
+		}
+		svc.enrollResult = telemetry.EnrollmentResultSuccess
+		if reused {
+			svc.enrollResult = telemetry.EnrollmentResultReused
+		}
+		svc.cred = cred
+	}
+
+	return svc, nil
+}
+
+// buildMintPayload returns the body for one mint call. The assertion is signed per
+// call: it has a 120s ceiling upstream. peer_id also rides inside the signature,
+// which optimum-auth prefers over the body.
+func (m *Service) buildMintPayload() (map[string]string, error) {
+	if m.cred == nil {
+		return map[string]string{
+			"api_key": m.apiKey,
+			"peer_id": m.peerID,
+		}, nil
+	}
+	assertion, err := m.cred.SignAssertion(m.mintAud, m.peerID)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]string{
+		"client_assertion":      assertion,
+		"client_assertion_type": clientAssertionType,
+		"peer_id":               m.peerID,
 	}, nil
 }
 
@@ -138,7 +201,16 @@ func NewDisabled(log logger.AppLogger) *Service {
 // use this — most callers just call the regular methods, which degrade
 // gracefully on a disabled manager.
 func (m *Service) IsEnabled() bool {
-	return m.apiKey != ""
+	return m.apiKey != "" || m.cred != nil
+}
+
+// ClientID returns the enrolled credential's client_id, or "" on the legacy
+// api_key path and on a disabled Manager.
+func (m *Service) ClientID() string {
+	if m.cred == nil {
+		return ""
+	}
+	return m.cred.ClientID
 }
 
 // Token returns the cached JWT, minting on first call. Returns ("", nil)
@@ -295,10 +367,20 @@ func (m *Service) VerifyStreamToken(rawJWT string) (*jwks_verifier.Claims, error
 // mint hits /auth/token, verifies the response locally, and atomically
 // swaps the cached token + claims + indexes.
 func (m *Service) mint(ctx context.Context) (string, error) {
+	payload, err := m.buildMintPayload()
+	if err != nil {
+		telemetry.IncAuthMintResult(telemetry.AuthMintResultAssertionFailed)
+		return "", fmt.Errorf("auth_token: build mint payload: %w", err)
+	}
+	if m.cred != nil {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, enrollment.AssertionValidityBudget)
+		defer cancel()
+	}
 	parsed, statusCode, err := utils.RetryPostRequest[mintResponse](
 		ctx,
 		m.mintURL,
-		m.mintPayload,
+		payload,
 		nil,
 		http.StatusUnauthorized,
 		http.StatusForbidden,
@@ -383,21 +465,60 @@ func (m *Service) mint(ctx context.Context) (string, error) {
 // range spreads a fleet's mint requests so billing doesn't see synchronized
 // spikes.
 func (m *Service) refreshLoop(ctx context.Context) {
+	backoff := time.Duration(0)
 	for {
-		sleepSec, _ := randutil.RandBetween(refreshIntervalMinSec, refreshIntervalMaxSec)
-		time.Sleep(time.Duration(sleepSec) * time.Second)
-		if _, err := m.mint(ctx); err != nil {
-			switch {
-			case errors.Is(err, ErrUnknownKey),
-				errors.Is(err, ErrKeyRevoked),
-				errors.Is(err, ErrKeySuspended):
-				m.log.Error("api key terminal failure — refresh loop exiting", err)
-				return
-			default:
-				m.log.Error("auth refresh failed; will retry next tick", err)
+		wait := backoff
+		if wait == 0 {
+			// A failed draw returns 0, and waiting 0 would re-mint continuously.
+			sleepSec, err := randutil.RandBetween(refreshIntervalMinSec, refreshIntervalMaxSec)
+			if err != nil || sleepSec <= 0 {
+				sleepSec = refreshIntervalMinSec
 			}
+			wait = time.Duration(sleepSec) * time.Second
 		}
+		// Wake on cancellation, not just on the timer: the backoff retries every
+		// 30m at worst, so a bare sleep logs mint failures all the way to exit.
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(wait):
+		}
+		if _, err := m.mint(ctx); err != nil {
+			if ctx.Err() != nil {
+				return
+			}
+			if m.MintErrorIsTerminal(err) {
+				m.log.Error("credential terminal failure, refresh loop exiting", err)
+				return
+			}
+			// Retry sooner than the next full interval so recovery is quick. It does
+			// not bound staleness: Token() never checks exp, so an outage past the
+			// 6h token lifetime keeps serving an expired JWT.
+			backoff = NextRetryBackoff(backoff)
+			m.log.Error("auth refresh failed; retrying sooner", err)
+			continue
+		}
+		backoff = 0
 	}
+}
+
+// NextRetryBackoff doubles from 1m to a 30m ceiling, so a transient outage costs
+// minutes rather than a whole refresh interval.
+func NextRetryBackoff(current time.Duration) time.Duration {
+	if current == 0 {
+		return time.Minute
+	}
+	return min(current*2, 30*time.Minute)
+}
+
+// MintErrorIsTerminal reports whether a mint failure should stop the refresh loop. A
+// 403 is unambiguous on both grants; a 401 is terminal only for a shared secret,
+// since on the assertion path it is also every verification failure.
+func (m *Service) MintErrorIsTerminal(err error) bool {
+	if errors.Is(err, ErrKeyRevoked) || errors.Is(err, ErrKeySuspended) {
+		return true
+	}
+	return m.cred == nil && errors.Is(err, ErrUnknownKey)
 }
 
 func (m *Service) recordSuccessfulMintMetrics(claims *jwks_verifier.Claims) {
@@ -415,6 +536,9 @@ func (m *Service) recordSuccessfulMintMetrics(claims *jwks_verifier.Claims) {
 func (m *Service) RefreshAuthMetrics() {
 	if !m.IsEnabled() {
 		return
+	}
+	if m.enrollResult != "" {
+		telemetry.IncEnrollmentResult(m.enrollResult)
 	}
 	m.recordSuccessfulMintMetrics(m.OwnClaims())
 }

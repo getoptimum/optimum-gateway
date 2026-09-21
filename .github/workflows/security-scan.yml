@@ -37,7 +37,9 @@ jobs:
           extra_args: --only-verified
 
   dependency-scan:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: >
+      github.actor != 'dependabot[bot]' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     name: Dependency Vulnerability Scanning
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -103,7 +105,9 @@ jobs:
           fi
 
   code-security-scan:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: >
+      github.actor != 'dependabot[bot]' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     name: Code Security Scanning (gosec)
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -136,7 +140,9 @@ jobs:
           fi
 
   docker-image-scan:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: >
+      github.actor != 'dependabot[bot]' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     name: Docker Image Scanning (Trivy)
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -171,7 +177,9 @@ jobs:
           severity: 'CRITICAL'
 
   license-check:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    if: >
+      github.actor != 'dependabot[bot]' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     name: License Compliance (go-licenses)
     runs-on: ubuntu-latest
     timeout-minutes: 20

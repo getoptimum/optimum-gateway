@@ -18,18 +18,20 @@ import (
 )
 
 const (
-	DefaultMaxMessageSize           int64   = 1024 * 1024 // 1MB
-	DefaultRandomMessageSize        uint32  = 512
-	DefaultShardFactor              uint32  = 4
-	DefaultPublisherShardMultiplier float64 = 1.2
-	DefaultForwardShardThreshold    float64 = 0.75
-
-	DefaultAggregationIntervalMs     int64  = 25
-	maxAggregationIntervalMs         int64  = 600000 // 10 minutes
-	DefaultAttestationSyncChunkSize  int    = 64
-	DefaultAttestationPublishAfterMs int64  = 4000
-	DefaultAttestationPublishCapMs   int64  = 8000
-	DefaultAttestationMaxSlotAge     uint64 = 1
+	DefaultMaxMessageSize            int64   = 1024 * 1024 // 1MB
+	DefaultRandomMessageSize         uint32  = 512
+	DefaultShardFactor               uint32  = 4
+	DefaultPublisherShardMultiplier  float64 = 1.2
+	DefaultForwardShardThreshold     float64 = 0.75
+	DefaultMeshDegreeTarget          int64   = 6
+	DefaultMeshDegreeMin             int64   = 4
+	DefaultMeshDegreeMax             int64   = 12
+	DefaultAggregationIntervalMs     int64   = 25
+	maxAggregationIntervalMs         int64   = 600000 // 10 minutes
+	DefaultAttestationSyncChunkSize  int     = 64
+	DefaultAttestationPublishAfterMs int64   = 4000
+	DefaultAttestationPublishCapMs   int64   = 8000
+	DefaultAttestationMaxSlotAge     uint64  = 0
 )
 
 // AppConfig holds all the configuration for the gateway service
@@ -62,8 +64,16 @@ type AppConfig struct {
 	//
 	// Auth service that mints gateway JWTs (POST {url}/api/v1/auth/token) and
 	// hosts the JWKS used to verify peer JWTs (GET {issuer}/.well-known/jwks.json).
-	RemoteAuthURL          string `yaml:"remote_auth_url"    env:"OPT_REMOTE_AUTH_URL"    default:"https://auth.getoptimum.io"`
-	APIKey                 string `yaml:"api_key"            env:"OPT_API_KEY"            default:""`
+	RemoteAuthURL string `yaml:"remote_auth_url"    env:"OPT_REMOTE_AUTH_URL"    default:"https://auth.getoptimum.io"`
+	APIKey        string `yaml:"api_key"            env:"OPT_API_KEY"            default:""`
+	// JoinKey is the org-wide ojk_ enrollment credential: the gateway registers its
+	// own keypair once and mints with a client assertion thereafter, so there is no
+	// per-host secret to distribute. Mutually exclusive with APIKey.
+	JoinKey string `yaml:"join_key" env:"OPT_JOIN_KEY" default:""`
+	// EnrollCredDir holds the enrollment credential. Empty means IdentityMumP2PDir.
+	// MUST be persistent: losing it means a new keypair, a new enrollment, and a
+	// burnt join-key use.
+	EnrollCredDir          string `yaml:"enroll_cred_dir" env:"OPT_ENROLL_CRED_DIR" default:""`
 	JWKSCachePath          string `yaml:"jwks_cache_path"            env:"OPT_JWKS_CACHE_PATH"            default:"/gateway/cache/jwks.json"`
 	JWKSRefreshIntervalSec int    `yaml:"jwks_refresh_interval_sec"  env:"OPT_JWKS_REFRESH_INTERVAL_SEC"  default:"3600"`
 	// GatewayID is JWT-sourced in production — InitRuntime overwrites this
@@ -71,6 +81,8 @@ type AppConfig struct {
 	// env values are only used in dev mode (OPT_ENABLE_AUTH=false); a yaml
 	// or OPT_GATEWAY_ID value in a prod-auth setup is silently replaced by
 	// the JWT subject at boot.
+	// It is no longer inert under join_key: EnrollmentLabel reads it before the
+	// mint, and that label is unique per org, so it must be unique per host.
 	GatewayID string `yaml:"gateway_id" env:"OPT_GATEWAY_ID" default:"dev-gateway"`
 	// GatewayType is JWT-sourced — InitRuntime sets it from the `type` claim
 	// (hermes|partner|relay) once the auth manager has minted. Empty in dev
@@ -107,6 +119,22 @@ type AppConfig struct {
 	StreamMaxConnsPerSub int    `yaml:"stream_max_conns_per_sub" env:"OPT_STREAM_MAX_CONNS_PER_SUB" default:"8"`
 	StreamBufferSize     int    `yaml:"stream_buffer_size" env:"OPT_STREAM_BUFFER_SIZE" default:"64"`
 
+	// StreamHeartbeatIntervalSec paces the in-band liveness frame. Nothing
+	// below the transport reveals a feed that has gone quiet: the connection
+	// stays healthy on PINGs while no blocks arrive, so without this a stalled
+	// ingest is indistinguishable from a quiet chain. 0 disables it.
+	StreamHeartbeatIntervalSec int `yaml:"stream_heartbeat_interval_sec" env:"OPT_STREAM_HEARTBEAT_INTERVAL_SEC" default:"20"`
+	// StreamKeepaliveMinTimeSec is the shortest client ping interval accepted.
+	// It must stay below the interval consumers are told to use, or they are
+	// GOAWAY'd for too_many_pings.
+	StreamKeepaliveMinTimeSec int `yaml:"stream_keepalive_min_time_sec" env:"OPT_STREAM_KEEPALIVE_MIN_TIME_SEC" default:"20"`
+	// StreamReauthMode is off, observe or enforce. Ships as observe so a
+	// weeks-long stream is measured before anything is cut.
+	StreamReauthMode string `yaml:"stream_reauth_mode" env:"OPT_STREAM_REAUTH_MODE" default:"observe"`
+	// StreamReauthIntervalSec paces re-verification of the token the
+	// connection last presented.
+	StreamReauthIntervalSec int `yaml:"stream_reauth_interval_sec" env:"OPT_STREAM_REAUTH_INTERVAL_SEC" default:"60"`
+
 	RemotePushEnable   bool   `yaml:"remote_push_enable" env:"OPT_REMOTE_PUSH_ENABLE" default:"false"`
 	RemotePushMimirURL string `yaml:"remote_push_mimir_url" env:"OPT_REMOTE_PUSH_MIMIR_URL" default:"https://v2-mimir.getoptimum.io"`
 	RemotePushLokiURL  string `yaml:"remote_push_loki_url" env:"OPT_REMOTE_PUSH_LOKI_URL" default:"https://v2-loki.getoptimum.io"`
@@ -133,15 +161,7 @@ func LoadConfig(confFile string) (*AppConfig, error) {
 	}
 	cfg.Version = version.GetVersion()
 	cfg.CommitHash = version.GetCommitHash()
-	cfg.propagationEnabled.Store(cfg.PropagationEnabledRaw)
-	cfg.skipMessageFromSelf.Store(true)
-	var aggMs int64
-	if cfg.AggregationIntervalMs == 0 {
-		aggMs = DefaultAggregationIntervalMs
-	} else {
-		aggMs = cfg.AggregationIntervalMs
-	}
-	cfg.aggregationIntervalMs.Store(aggMs)
+	cfg.InitDerived()
 
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("failed to validate config: %w", err)
@@ -221,6 +241,45 @@ func (c *AppConfig) GetDCRotator() *commonconfig.Rotator {
 	return c.rotator
 }
 
+// InitDerived seeds atomics from yaml/env fields. Required for hand-built configs;
+// unsafe after dynamic-config rotation, which owns those atomics afterwards.
+func (c *AppConfig) InitDerived() {
+	c.propagationEnabled.Store(c.PropagationEnabledRaw)
+	c.skipMessageFromSelf.Store(true)
+	c.aggregationIntervalMs.Store(c.effectiveAggregationIntervalMs())
+}
+
+// effectiveAggregationIntervalMs resolves the zero-means-default rule shared by
+// InitDerived and Validate.
+func (c *AppConfig) effectiveAggregationIntervalMs() int64 {
+	if c.AggregationIntervalMs == 0 {
+		return DefaultAggregationIntervalMs
+	}
+	return c.AggregationIntervalMs
+}
+
+// DefaultGatewayID is the GatewayID placeholder, not an identity: every
+// unconfigured node carries it. Pinned to the struct tag by TestGatewayCredentialConfig.
+const DefaultGatewayID = "dev-gateway"
+
+// EnrollmentLabel is the label recorded against an enrolled credential, empty on the
+// placeholder: labels are unique per org among live credentials, and empty is exempt.
+func (c *AppConfig) EnrollmentLabel() string {
+	if c.GatewayID == DefaultGatewayID {
+		return ""
+	}
+	return c.GatewayID
+}
+
+// EnrollmentDir resolves where the enrollment credential lives, defaulting to the
+// mumP2P identity directory the credential's peer_id comes from.
+func (c *AppConfig) EnrollmentDir() string {
+	if c.EnrollCredDir != "" {
+		return c.EnrollCredDir
+	}
+	return c.IdentityMumP2PDir
+}
+
 // Validate ensures the AppConfig has valid and complete values
 func (c *AppConfig) Validate() error {
 	if c.IdentityLibP2PDir == "" {
@@ -258,6 +317,14 @@ func (c *AppConfig) Validate() error {
 	if c.GatewayClusterID == "" {
 		return fmt.Errorf("OPT_GATEWAY_CLUSTER_ID is required")
 	}
+	if c.APIKey != "" && c.JoinKey != "" {
+		return fmt.Errorf("api_key and join_key are mutually exclusive: set one (join_key self-enrolls, api_key is the legacy per-host secret)")
+	}
+	if c.JoinKey != "" {
+		if err := os.MkdirAll(c.EnrollmentDir(), 0o750); err != nil {
+			return fmt.Errorf("failed to create enrollment credential directory %s: %w", c.EnrollmentDir(), err)
+		}
+	}
 
 	if c.StreamEnable {
 		if err := validateStreamListener("stream_addr", c.StreamAddr, c.StreamRequireAuth); err != nil {
@@ -278,6 +345,23 @@ func (c *AppConfig) Validate() error {
 		if c.StreamBufferSize <= 0 {
 			return fmt.Errorf("stream_buffer_size must be > 0")
 		}
+		if c.StreamHeartbeatIntervalSec < 0 {
+			return fmt.Errorf("stream_heartbeat_interval_sec must be >= 0 (0 disables)")
+		}
+		if c.StreamKeepaliveMinTimeSec <= 0 {
+			return fmt.Errorf("stream_keepalive_min_time_sec must be > 0")
+		}
+		if c.StreamReauthIntervalSec <= 0 {
+			return fmt.Errorf("stream_reauth_interval_sec must be > 0")
+		}
+		// Literals rather than the stream package's constants: pkg/service/stream
+		// depends on this package, so importing it back would cycle. The stream
+		// package pins these against its constants in a test.
+		switch c.StreamReauthMode {
+		case "off", "observe", "enforce":
+		default:
+			return fmt.Errorf("stream_reauth_mode must be one of \"off\", \"observe\", \"enforce\", got %q", c.StreamReauthMode)
+		}
 	}
 	if c.StreamOnly && !c.StreamEnable {
 		return fmt.Errorf("stream_only requires stream_enable")
@@ -286,13 +370,7 @@ func (c *AppConfig) Validate() error {
 	if c.AggregationIntervalMs < 0 {
 		return fmt.Errorf("aggregation_interval_ms must be non-negative")
 	}
-	var effectiveAggMs int64
-	if c.AggregationIntervalMs == 0 {
-		effectiveAggMs = DefaultAggregationIntervalMs
-	} else {
-		effectiveAggMs = c.AggregationIntervalMs
-	}
-	if effectiveAggMs > maxAggregationIntervalMs {
+	if c.effectiveAggregationIntervalMs() > maxAggregationIntervalMs {
 		return fmt.Errorf("aggregation_interval_ms must be <= %d", maxAggregationIntervalMs)
 	}
 

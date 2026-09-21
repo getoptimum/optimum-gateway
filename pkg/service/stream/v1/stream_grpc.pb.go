@@ -28,8 +28,14 @@ const (
 //
 // BlockStreamService streams decoded beacon-block observations to consumers (ADR-0011).
 type BlockStreamServiceClient interface {
-	// Subscribe opens a read-only server stream of block observations.
-	Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[BlockEvent], error)
+	// Subscribe opens a read-only stream of block observations.
+	//
+	// The client stream exists only so a consumer can hand over a refreshed
+	// token without reconnecting: the first message selects mode and topics, and
+	// any later message carries just a token. It stays read-only in every other
+	// sense, and a client that sends one message and half-closes, as a
+	// server-streaming stub does, is served exactly as before.
+	Subscribe(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[SubscribeRequest, BlockEvent], error)
 }
 
 type blockStreamServiceClient struct {
@@ -40,24 +46,18 @@ func NewBlockStreamServiceClient(cc grpc.ClientConnInterface) BlockStreamService
 	return &blockStreamServiceClient{cc}
 }
 
-func (c *blockStreamServiceClient) Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[BlockEvent], error) {
+func (c *blockStreamServiceClient) Subscribe(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[SubscribeRequest, BlockEvent], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &BlockStreamService_ServiceDesc.Streams[0], BlockStreamService_Subscribe_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	x := &grpc.GenericClientStream[SubscribeRequest, BlockEvent]{ClientStream: stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
 	return x, nil
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type BlockStreamService_SubscribeClient = grpc.ServerStreamingClient[BlockEvent]
+type BlockStreamService_SubscribeClient = grpc.BidiStreamingClient[SubscribeRequest, BlockEvent]
 
 // BlockStreamServiceServer is the server API for BlockStreamService service.
 // All implementations must embed UnimplementedBlockStreamServiceServer
@@ -65,8 +65,14 @@ type BlockStreamService_SubscribeClient = grpc.ServerStreamingClient[BlockEvent]
 //
 // BlockStreamService streams decoded beacon-block observations to consumers (ADR-0011).
 type BlockStreamServiceServer interface {
-	// Subscribe opens a read-only server stream of block observations.
-	Subscribe(*SubscribeRequest, grpc.ServerStreamingServer[BlockEvent]) error
+	// Subscribe opens a read-only stream of block observations.
+	//
+	// The client stream exists only so a consumer can hand over a refreshed
+	// token without reconnecting: the first message selects mode and topics, and
+	// any later message carries just a token. It stays read-only in every other
+	// sense, and a client that sends one message and half-closes, as a
+	// server-streaming stub does, is served exactly as before.
+	Subscribe(grpc.BidiStreamingServer[SubscribeRequest, BlockEvent]) error
 	mustEmbedUnimplementedBlockStreamServiceServer()
 }
 
@@ -77,7 +83,7 @@ type BlockStreamServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedBlockStreamServiceServer struct{}
 
-func (UnimplementedBlockStreamServiceServer) Subscribe(*SubscribeRequest, grpc.ServerStreamingServer[BlockEvent]) error {
+func (UnimplementedBlockStreamServiceServer) Subscribe(grpc.BidiStreamingServer[SubscribeRequest, BlockEvent]) error {
 	return status.Error(codes.Unimplemented, "method Subscribe not implemented")
 }
 func (UnimplementedBlockStreamServiceServer) mustEmbedUnimplementedBlockStreamServiceServer() {}
@@ -102,15 +108,11 @@ func RegisterBlockStreamServiceServer(s grpc.ServiceRegistrar, srv BlockStreamSe
 }
 
 func _BlockStreamService_Subscribe_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(SubscribeRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(BlockStreamServiceServer).Subscribe(m, &grpc.GenericServerStream[SubscribeRequest, BlockEvent]{ServerStream: stream})
+	return srv.(BlockStreamServiceServer).Subscribe(&grpc.GenericServerStream[SubscribeRequest, BlockEvent]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type BlockStreamService_SubscribeServer = grpc.ServerStreamingServer[BlockEvent]
+type BlockStreamService_SubscribeServer = grpc.BidiStreamingServer[SubscribeRequest, BlockEvent]
 
 // BlockStreamService_ServiceDesc is the grpc.ServiceDesc for BlockStreamService service.
 // It's only intended for direct use with grpc.RegisterService,
@@ -124,6 +126,7 @@ var BlockStreamService_ServiceDesc = grpc.ServiceDesc{
 			StreamName:    "Subscribe",
 			Handler:       _BlockStreamService_Subscribe_Handler,
 			ServerStreams: true,
+			ClientStreams: true,
 		},
 	},
 	Metadata: "getoptimum/optimum_gateway/service/stream/v1/stream.proto",

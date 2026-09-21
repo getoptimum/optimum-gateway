@@ -2,7 +2,7 @@ log_level: info
 gateway_cluster_id: optimum_hoodi_v0_2
 
 agent_lib_p2p_port: 33212
-agent_mump2p_port: 43213
+agent_mump2p_port: 33213
 telemetry_enable: true
 telemetry_port: 48123
 identity_libp2p_dir: /tmp/libp2p

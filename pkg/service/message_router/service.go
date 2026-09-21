@@ -2,7 +2,7 @@ package message_router
 
 import (
 	"context"
-	"fmt"
+	"sync/atomic"
 	"time"
 
 	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
@@ -30,7 +30,9 @@ type Service struct {
 	authMgr *auth_token.Service
 	// knownValidators keep mapping between validator and target chunkID. also keep length of target chunk
 	// 1st number is chunkID, 2nd number is chunk length
-	knownValidators *syncx.RWMap[uint64, [2]uint64]
+	knownValidators  *syncx.RWMap[uint64, [2]uint64]
+	accelerateSlots  *syncx.TTLMap[uint64, struct{}]
+	accelerateToSlot atomic.Uint64 // 0 = ADR-0012 fail-open
 }
 
 func NewService(ctx context.Context, cfg *config.AppConfig, log logger.AppLogger, authMgr *auth_token.Service) (*Service, error) {
@@ -39,6 +41,7 @@ func NewService(ctx context.Context, cfg *config.AppConfig, log logger.AppLogger
 		log:             log.With(logger.WithService("message_router")),
 		authMgr:         authMgr,
 		knownValidators: syncx.NewRWMap[uint64, [2]uint64](),
+		accelerateSlots: syncx.NewTTLMapWithContext[uint64, struct{}](ctx, accelerateSlotTTL, accelerateSlotCleanup),
 	}
 	srv.SetKnownValidators(authMgr.ValidatorIndexes())
 	go srv.bgSync(ctx)
@@ -128,8 +131,9 @@ func (s *Service) ResolveValidatorChunk(attesterIndex uint64) (chunkID, chunkSiz
 	return chunk[0], chunk[1], true
 }
 
-// ShouldForwardMessageToCLP2P decides whether an inbound MumP2P message should be forwarded to the local CL libp2p peer
-func (s *Service) ShouldForwardMessageToCLP2P(kind topics.TopicKind, _ []byte) bool {
+// ShouldForwardMessageToCLP2P decides whether an inbound MumP2P message should be forwarded to the local CL libp2p peer.
+// Beacon blocks: partners publish every slot; Hermes only slots on the accelerate list; relay drops.
+func (s *Service) ShouldForwardMessageToCLP2P(kind topics.TopicKind, slot uint64, _ []byte) bool {
 	gwType := commonentities.GatewayType("")
 	if c := s.authMgr.OwnClaims(); c != nil {
 		gwType = c.Type
@@ -140,9 +144,15 @@ func (s *Service) ShouldForwardMessageToCLP2P(kind topics.TopicKind, _ []byte) b
 	}
 
 	if kind == topics.TopicBeaconBlock {
-		// beacon block we forward only to authorized partners
-		if s.authMgr.IsEnabled() && s.authMgr.HasValidToken() {
-			return gwType == commonentities.GatewayTypePartner
+		gwAuthorized := s.authMgr.IsEnabled() && s.authMgr.HasValidToken()
+		if !gwAuthorized {
+			return false
+		}
+		switch gwType {
+		case commonentities.GatewayTypePartner:
+			return true
+		case commonentities.GatewayTypeHermes:
+			return s.ShouldAccelerateBlock(slot)
 		}
 	}
 	return false

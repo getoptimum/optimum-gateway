@@ -3,6 +3,9 @@ package message_router_test
 import (
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -46,7 +49,9 @@ func TestService_ShouldForwardMessageToMumP2P(t *testing.T) {
 		service *message_router.Service
 		topic   string
 		payload []byte
-		want    bool
+		// freshSlot rebuilds at assert time so a 12s slot boundary cannot stale it.
+		freshSlot bool
+		want      bool
 	}{
 		"partner forwards beacon block": {
 			service: newTestService(t, commonentities.GatewayTypePartner),
@@ -79,10 +84,10 @@ func TestService_ShouldForwardMessageToMumP2P(t *testing.T) {
 			want:    false,
 		},
 		"known validator with fresh slot forwards": {
-			service: newTestService(t, commonentities.GatewayTypePartner, 42),
-			topic:   testBeaconAttestationTopic,
-			payload: buildAttestationPayload(t, 42, chainstate.CurrentSlot(time.Now())),
-			want:    true,
+			service:   newTestService(t, commonentities.GatewayTypePartner, 42),
+			topic:     testBeaconAttestationTopic,
+			freshSlot: true,
+			want:      true,
 		},
 		"unknown validator is blocked": {
 			service: newTestService(t, commonentities.GatewayTypePartner, 42),
@@ -124,7 +129,11 @@ func TestService_ShouldForwardMessageToMumP2P(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.want, tc.service.ShouldForwardMessageToMumP2P(log, topics.ParseTopicMeta(tc.topic).Kind, tc.topic, tc.payload))
+			payload := tc.payload
+			if tc.freshSlot {
+				payload = buildAttestationPayload(t, 42, chainstate.CurrentSlot(time.Now()))
+			}
+			require.Equal(t, tc.want, tc.service.ShouldForwardMessageToMumP2P(log, topics.ParseTopicMeta(tc.topic).Kind, tc.topic, payload))
 		})
 	}
 }
@@ -133,6 +142,7 @@ func TestService_ShouldForwardMessageToCLP2P(t *testing.T) {
 	tests := map[string]struct {
 		service     *message_router.Service
 		topic       string
+		slot        uint64
 		wantForward bool
 	}{
 		"partner forwards attestation": {
@@ -155,10 +165,10 @@ func TestService_ShouldForwardMessageToCLP2P(t *testing.T) {
 			topic:       testBeaconAttestationTopic,
 			wantForward: true,
 		},
-		"hermes forwards beacon block": {
+		"hermes forwards beacon block when list is empty (fail-open)": {
 			service:     newTestService(t, commonentities.GatewayTypeHermes),
 			topic:       testBeaconBlockTopic,
-			wantForward: false,
+			wantForward: true,
 		},
 		"relay blocks attestation": {
 			service:     newTestService(t, commonentities.GatewayTypeRelay),
@@ -174,9 +184,29 @@ func TestService_ShouldForwardMessageToCLP2P(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.wantForward, tc.service.ShouldForwardMessageToCLP2P(topics.ParseTopicMeta(tc.topic).Kind, nil))
+			require.Equal(t, tc.wantForward, tc.service.ShouldForwardMessageToCLP2P(topics.ParseTopicMeta(tc.topic).Kind, tc.slot, nil))
 		})
 	}
+}
+
+func TestService_ShouldForwardMessageToCLP2P_HermesSlotGate(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"to_slot":         120,
+			"slots":           []int64{100},
+			"generated_at_ms": 1,
+		})
+	}))
+	t.Cleanup(ts.Close)
+
+	hermes := newTestServiceAt(t, commonentities.GatewayTypeHermes, ts.URL)
+	hermes.RefreshAccelerateSlots(t.Context())
+	require.True(t, hermes.ShouldForwardMessageToCLP2P(topics.ParseTopicMeta(testBeaconBlockTopic).Kind, 100, nil))
+	require.False(t, hermes.ShouldForwardMessageToCLP2P(topics.ParseTopicMeta(testBeaconBlockTopic).Kind, 110, nil), "hermes drops slots not on the accelerate list")
+
+	partner := newTestServiceAt(t, commonentities.GatewayTypePartner, ts.URL)
+	partner.RefreshAccelerateSlots(t.Context())
+	require.True(t, partner.ShouldForwardMessageToCLP2P(topics.ParseTopicMeta(testBeaconBlockTopic).Kind, 110, nil), "partner publishes every slot")
 }
 
 func TestService_SetKnownValidatorsReplacesPreviousSet(t *testing.T) {
@@ -219,6 +249,16 @@ func TestService_ResolveValidatorChunkUsesSortedValidatorSet(t *testing.T) {
 
 func newTestService(t *testing.T, pairedWith commonentities.GatewayType, validators ...uint64) *message_router.Service {
 	t.Helper()
+	// bgSync polls at startup; an unstubbed URL would put every caller on the network.
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	t.Cleanup(ts.Close)
+	return newTestServiceAt(t, pairedWith, ts.URL, validators...)
+}
+
+func newTestServiceAt(t *testing.T, pairedWith commonentities.GatewayType, bootstrapURL string, validators ...uint64) *message_router.Service {
+	t.Helper()
 
 	cnt := test_utils.GetClean(t)
 	rig := test_utils.NewAuthTestRig(t, test_utils.WithClaimModifier(func(claims *jwks_verifier.Claims) {
@@ -231,7 +271,7 @@ func newTestService(t *testing.T, pairedWith commonentities.GatewayType, validat
 	require.NoError(t, err)
 
 	srv, err := message_router.NewService(t.Context(), &config.AppConfig{
-		RemoteBootstrapURL: "dev-bootstrap.getoptimum.io",
+		RemoteBootstrapURL: bootstrapURL,
 	}, cnt.Log, m)
 	require.NoError(t, err)
 	srv.SetKnownValidators(validators)

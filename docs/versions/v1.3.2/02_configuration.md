@@ -1,10 +1,10 @@
 # Configuration
 
-> **Prerequisites:** [Quick Start](01_quick_start.md) complete, including an [API key](01_quick_start.md#generate-your-api-key).
+> **Prerequisites:** [Quick Start](01_quick_start.md) complete, including a credential — an [API key](01_quick_start.md#generate-your-api-key), or a join key if you use [Gateway Self-Enrollment](07_gateway_self_enrollment.md).
 
 ## Basic Setup
 
-Everything that identifies your gateway — `gateway_id`, `chain`, and validator scope — comes from your **API key**. The only things you set are operational: the cluster ID, ports, telemetry, and identity directories.
+Everything that identifies your gateway — `gateway_id`, `chain`, and validator scope — comes from your **credential**. Use an **API key** (`ogw_`) for single-gateway deployments, or a **join key** (`ojk_`) for fleet self-enrollment. The only operational fields you set in YAML are cluster ID, ports, telemetry, and identity directories.
 
 Create `config/app_conf.yml`:
 
@@ -13,27 +13,37 @@ log_level: info
 gateway_cluster_id: optimum_ethereum_hoodi_v0_1   # REQUIRED — assigned by Optimum
 
 agent_lib_p2p_port: 33212
-agent_mump2p_port: 43213
+agent_mump2p_port: 33213
 telemetry_enable: true
 telemetry_port: 48123
 identity_libp2p_dir: /tmp/libp2p
 identity_mump2p_dir: /tmp/mump2p
 ```
 
-> **API key via environment, not YAML.** Set `OPT_API_KEY=ogw_live_...` in the environment. Keep it out of the config file and image layers. The key determines your chain (Hoodi vs Mainnet), gateway ID, and validator list — there is **no** `chain` or `gateway_id` field for partners to set.
+> **Credentials via environment, not YAML.** Set `OPT_API_KEY=ogw_live_...` or `OPT_JOIN_KEY=ojk_live_...` in the environment — never in YAML or image layers. `api_key` and `join_key` are **mutually exclusive**; setting both is a startup error.
 
 ## Authentication
 
-Your gateway sends its API key only to Optimum's auth service, never to peer gateways or other Optimum services. On start (and periodically after), it exchanges the key there for two short-lived JWTs and keeps them refreshed automatically. There is nothing to configure and no token to manage yourself.
+Your gateway authenticates only with Optimum's auth service (`https://auth.getoptimum.io`), never with peer gateways. On start (and periodically after), it obtains two short-lived JWTs and keeps them refreshed automatically. There is no token to manage yourself.
+
+### API key (default)
+
+Your gateway sends its API key to `POST /api/v1/auth/token`. The key determines your chain (Hoodi vs Mainnet), gateway ID, and validator list — there is **no** `chain` or `gateway_id` field for partners to set on this path.
+
+### Join key (fleet self-enrollment)
+
+With `OPT_JOIN_KEY`, the gateway **enrolls once** on first boot (`POST /api/v1/gateways/enroll`), persists an asymmetric credential to disk, and mints JWTs with a client assertion on every boot after that. Chain, type, and cluster scope come from the join key. Set a unique `OPT_GATEWAY_ID` per host as the enrollment label; runtime `gateway_id` in metrics and `/health` comes from the JWT `sub` claim after enroll.
+
+See [Gateway Self-Enrollment](07_gateway_self_enrollment.md) for minting, storage, and fleet rollout.
 
 * **Services token:** attached as an `Authorization: Bearer` header on calls to Optimum's central services, namely bootstrap registration and heartbeat, and (when enabled) Loki/Mimir remote push.
 * **Peer handshake token:** presented during peer-to-peer (libp2p) handshakes with other gateways, so each side can confirm the other is a legitimate gateway on the same chain before exchanging traffic.
 
-Both tokens are ES256-signed and valid for 6 hours; the gateway refreshes them well before expiry. Peers verify each other's handshake token locally against Optimum's published JWKS, with no per-connection callback to the auth service. If your API key is revoked or suspended, refresh stops and the gateway loses access at the next token expiry.
+Both tokens are ES256-signed and valid for 6 hours; the gateway refreshes them well before expiry. Peers verify each other's handshake token locally against Optimum's published JWKS, with no per-connection callback to the auth service. If your API key or enrolled credential is revoked or suspended, refresh stops and the gateway loses access at the next token expiry.
 
 ## Networks (Hoodi / Mainnet)
 
-The network is selected by your **API key**, not by config. A Hoodi key runs Hoodi; a Mainnet key runs Mainnet. Set the matching `gateway_cluster_id` you were assigned during onboarding (Hoodi partners use `optimum_ethereum_hoodi_v0_1`; Mainnet cluster ID is provided by Optimum during onboarding). To move a gateway to Mainnet, obtain a Mainnet API key from Optimum and set the assigned Mainnet `gateway_cluster_id`, then restart.
+The network is selected by your **credential**, not by config. A Hoodi API key or join key runs Hoodi; a Mainnet one runs Mainnet. Set the matching `gateway_cluster_id` you were assigned during onboarding (Hoodi partners use `optimum_ethereum_hoodi_v0_1`; Mainnet cluster ID is provided by Optimum during onboarding). To move a gateway to Mainnet, obtain a Mainnet credential from Optimum and set the assigned Mainnet `gateway_cluster_id`, then restart.
 
 Confirm the active network after start:
 
@@ -86,14 +96,14 @@ This is fully automatic — no extra config. Until the first successful validato
 
 ## Remote Push
 
-Remote push streams your gateway's logs to Optimum's Loki and metrics to Optimum's Mimir, giving the Optimum team visibility to help support you. Both `telemetry_enable` and `remote_push_enable` must be `true`. v1.1.1 uses standard **Prometheus remote write** for metrics push — same setup as v1.0.2, with improved reliability.
+Remote push streams your gateway's logs to Optimum's Loki and metrics to Optimum's Mimir, giving the Optimum team visibility to help support you. Both `telemetry_enable` and `remote_push_enable` must be `true`. v1.3.2 uses standard **Prometheus remote write** for metrics push — same setup as v1.1.1.
 
 ```yaml
 telemetry_enable: true
 remote_push_enable: true
 ```
 
-Remote push authenticates with the gateway's **services token** (the short-lived JWT minted from your API key; see [Authentication](#authentication)), attached as an `Authorization: Bearer` header. There are **no** separate `remote_push_client_id` / `remote_push_client_secret` to configure anymore. The push endpoints are baked into the binary. Requirements: `telemetry_enable: true`, `remote_push_enable: true`, a valid API key, and outbound HTTPS (443).
+Remote push authenticates with the gateway's **services token** (the short-lived JWT minted from your API key or enrolled credential; see [Authentication](#authentication)), attached as an `Authorization: Bearer` header. There are **no** separate `remote_push_client_id` / `remote_push_client_secret` to configure anymore. The push endpoints are baked into the binary. Requirements: `telemetry_enable: true`, `remote_push_enable: true`, a valid credential (`OPT_API_KEY` or `OPT_JOIN_KEY`), and outbound HTTPS (443).
 
 ## Dynamic Configuration
 
@@ -101,16 +111,19 @@ The gateway receives automatic config updates from bootstrap.
 
 * Polls for updates periodically
 * Changes apply without restart
-* Dynamic config includes: propagation toggle, self-message skip, aggregation interval
+* Dynamic config includes: propagation toggle, self-message skip
 
 ## Config Reference
 
 | Key | Env Variable | Default | Description |
 |---|---|---|---|
-| `api_key` | `OPT_API_KEY` | *(required)* | Gateway API key (`ogw_live_...`). **Set via env, not YAML.** Drives gateway_id, chain, and validator scope |
+| `api_key` | `OPT_API_KEY` | *(empty)* | Gateway API key (`ogw_live_...`). **Set via env, not YAML.** Set this or `join_key`; with neither, the gateway starts with authentication disabled and cannot join the Optimum mesh. Drives gateway_id, chain, and validator scope |
+| `join_key` | `OPT_JOIN_KEY` | *(empty)* | Org-wide join key (`ojk_live_...`). **Set via env, not YAML.** Mutually exclusive with `api_key`. See [Gateway Self-Enrollment](07_gateway_self_enrollment.md) |
+| `enroll_cred_dir` | `OPT_ENROLL_CRED_DIR` | `identity_mump2p_dir` | Enrollment credential directory (`enrollment.json`). **Must be persistent** |
+| `gateway_id` | `OPT_GATEWAY_ID` | `dev-gateway` | Join-key path only: enrollment label at first boot (unique per host). Overwritten by JWT `sub` after mint. Ignored for API-key path |
 | `gateway_cluster_id` | `OPT_GATEWAY_CLUSTER_ID` | *(required)* | Cluster ID assigned by Optimum during onboarding |
 | `agent_lib_p2p_port` | `OPT_AGENT_LIB_P2P_PORT` | 33212 | CL clients connect here (inbound) |
-| `agent_mump2p_port` | `OPT_AGENT_MUMP2P_PORT` | 33213 | mump2p agent port (outbound). Sample config uses `43213` |
+| `agent_mump2p_port` | `OPT_AGENT_MUMP2P_PORT` | 33213 | mump2p agent port (inbound) |
 | `telemetry_enable` | `OPT_ENABLE_TELEMETRY` | false | Enable metrics / health endpoint |
 | `telemetry_port` | `OPT_TELEMETRY_PORT` | 48123 | Telemetry HTTP port (`/health`, `/metrics`, `/api/v1/self_info`) |
 | `identity_libp2p_dir` | `OPT_IDENTITY_LIBP2P_DIR` | /tmp/libp2p | libp2p identity dir — **persist as a volume** |
@@ -126,6 +139,10 @@ The gateway receives automatic config updates from bootstrap.
 | `stream_max_conns` | `OPT_STREAM_MAX_CONNS` | 256 | Global connection cap |
 | `stream_max_conns_per_sub` | `OPT_STREAM_MAX_CONNS_PER_SUB` | 8 | Per-consumer-key connection cap |
 | `stream_buffer_size` | `OPT_STREAM_BUFFER_SIZE` | 64 | Per-connection ring buffer (drop-on-overflow) |
+| `stream_heartbeat_interval_sec` | `OPT_STREAM_HEARTBEAT_INTERVAL_SEC` | 20 | In-band liveness frame; `0` disables, leaving a stalled feed indistinguishable from a quiet one |
+| `stream_keepalive_min_time_sec` | `OPT_STREAM_KEEPALIVE_MIN_TIME_SEC` | 20 | Shortest accepted client ping interval; faster pings get GOAWAY `too_many_pings` |
+| `stream_reauth_mode` | `OPT_STREAM_REAUTH_MODE` | observe | `off` \| `observe` \| `enforce`; re-verify the presented token mid-stream |
+| `stream_reauth_interval_sec` | `OPT_STREAM_REAUTH_INTERVAL_SEC` | 60 | How often the presented token is re-verified |
 
 See [Consumer Block Stream](06_block_stream.md) for minting consumer tokens and
 opening a stream.
@@ -140,10 +157,11 @@ docker logs optimum-gateway | grep "subscribed to topic"
 
 ## Common Issues
 
-* **Wrong network** — Chain comes from the API key, not YAML. If `/api/v1/self_info` shows the wrong `chain`, you are using the wrong key. Get the right key from Optimum
+* **Wrong network** — Chain comes from the credential, not YAML. If `/api/v1/self_info` shows the wrong `chain`, you are using the wrong API key or join key. Get the right credential from Optimum
 * **Missing `gateway_cluster_id`** — Required; use the ID assigned during onboarding
-* **API key in YAML / image** — Move it to `OPT_API_KEY` in the environment
-* **Port conflicts** — Ensure 33212, 43213, 48123 are free
+* **API key or join key in YAML / image** — Move credentials to `OPT_API_KEY` or `OPT_JOIN_KEY` in the environment
+* **Both `OPT_API_KEY` and `OPT_JOIN_KEY` set** — Startup error; use exactly one credential mode
+* **Port conflicts** — Ensure 33212, 33213, 48123 are free
 * **Peer ID changes after restart** — Persist `identity_libp2p_dir` and `identity_mump2p_dir` as volumes
 
 See [Troubleshooting](04_troubleshoot.md) for more.

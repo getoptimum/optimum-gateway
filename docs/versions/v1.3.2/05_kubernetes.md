@@ -132,7 +132,7 @@ Add it to your client and restart it:
 | client | flag |
 |---|---|
 | Prysm | `--peer=<multiaddr>` |
-| Lighthouse | `--libp2p-addresses=<multiaddr>` and `--trusted-peers=<gateway-peer-id>` |
+| Lighthouse | `--boot-nodes=<multiaddr>` and `--trusted-peers=<gateway-peer-id>` |
 | Teku | `--p2p-direct-peers=<multiaddr>` |
 | Nimbus | `--direct-peer=<multiaddr>` |
 
@@ -157,7 +157,8 @@ curl -s localhost:48123/api/v1/self_info | jq '{peer_id, multiaddrs: .libp2p.mul
 
 Healthy looks like: `status: "healthy"`, `cl: "ok"`, `cl_peers: 1`, and
 `mump2p_peers` in the tens. Expect this **within a couple of minutes** of the pod
-going ready.
+going ready. On a `stream_only` deployment `cl` reads `skipped` and `cl_peers`
+prints `null` (the check carries no value), while `status` is still `"healthy"`.
 
 In `self_info`, `multiaddrs` must contain a **public IP**. If it only shows a
 private or pod address (`10.x`), nothing outside your cluster can dial you and
@@ -191,10 +192,20 @@ kubectl -n optimum delete pvc -l app.kubernetes.io/instance=gateway
 That is permanent. The gateway returns as a new peer and you must update your CL
 client.
 
+## Fleet enrollment (join key)
+
+For large fleets, use one org **join key** (`ojk_`) instead of one API key per pod. See [Gateway Self-Enrollment](07_gateway_self_enrollment.md).
+
+* Store the join key in a Secret and inject it as `OPT_JOIN_KEY` (not `OPT_API_KEY`).
+* Set a **unique** `OPT_GATEWAY_ID` per pod — for example the pod name via the downward API — as the enrollment label.
+* The chart's identity PVC already covers `identity_mump2p_dir`, where `enrollment.json` is written by default, along with a transient `enrollment.key` during first boot. Keep the PVC rather than an `emptyDir`. An `emptyDir` survives a container restart but is discarded whenever the Pod is replaced — rescheduling, scaling, or a rolling update — and each replacement then re-enrolls, burning a join-key use and a slot against the org credential cap. It also lets an interrupted first enrollment resume.
+
+> The published Helm chart documents the `apiKey` values block for the legacy path. If you adopt join-key enrollment, wire `OPT_JOIN_KEY` through your values or workload overrides instead of the API key secret. Contact Optimum if you need chart guidance for your fleet size.
+
 ## Optional
 
 **Send telemetry to Optimum** — lets us help you debug. Authenticated with a
-token derived from your API key, so it needs no extra credentials:
+token derived from your credential, so it needs no extra push credentials:
 
 ```yaml
 gateway:
@@ -212,6 +223,10 @@ podMonitor:
 Metrics are on `:48123/metrics`. Keep `gateway.logLevel: info`; `debug` is very
 noisy. Propagation (forwarding Optimum messages into the CL network) is managed
 by Optimum centrally — you do not need to configure it.
+
+**Consumer block stream** is off by default. Enable it in gateway config if you
+need a local WebSocket/gRPC feed of decoded blocks; listeners bind loopback.
+See [Consumer Block Stream](06_block_stream.md).
 
 ## When it doesn't work
 

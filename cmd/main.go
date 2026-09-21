@@ -174,20 +174,23 @@ func main() {
 		// One limiter across both transports keeps the caps global, not
 		// per-transport; config validation guarantees the caps are > 0.
 		limiter := stream.NewConnLimiter(appConf.StreamMaxConns, appConf.StreamMaxConnsPerSub)
-		streamServer = stream.NewServer(hub, authenticator, stream.Config{
-			Addr:           appConf.StreamAddr,
-			MaxConns:       appConf.StreamMaxConns,
-			MaxConnsPerSub: appConf.StreamMaxConnsPerSub,
-			BufferSize:     appConf.StreamBufferSize,
-			Limiter:        limiter,
-		}, l)
-		streamGRPCServer = stream.NewGRPCServer(hub, authenticator, stream.Config{
-			Addr:           appConf.StreamGRPCAddr,
-			MaxConns:       appConf.StreamMaxConns,
-			MaxConnsPerSub: appConf.StreamMaxConnsPerSub,
-			BufferSize:     appConf.StreamBufferSize,
-			Limiter:        limiter,
-		}, l)
+		// Both transports share every setting but the listen address. Each
+		// constructor copies what it is given, so reassigning Addr between the
+		// two calls is safe.
+		streamCfg := stream.Config{
+			MaxConns:          appConf.StreamMaxConns,
+			MaxConnsPerSub:    appConf.StreamMaxConnsPerSub,
+			BufferSize:        appConf.StreamBufferSize,
+			HeartbeatInterval: time.Duration(appConf.StreamHeartbeatIntervalSec) * time.Second,
+			KeepaliveMinTime:  time.Duration(appConf.StreamKeepaliveMinTimeSec) * time.Second,
+			ReauthMode:        appConf.StreamReauthMode,
+			ReauthInterval:    time.Duration(appConf.StreamReauthIntervalSec) * time.Second,
+			Limiter:           limiter,
+		}
+		streamCfg.Addr = appConf.StreamAddr
+		streamServer = stream.NewServer(hub, authenticator, &streamCfg, l)
+		streamCfg.Addr = appConf.StreamGRPCAddr
+		streamGRPCServer = stream.NewGRPCServer(hub, authenticator, &streamCfg, l)
 	}
 
 	srvGateway, err := gateway.NewService(ctx, l, appConf, srvMessageRouter, authMgr, gateway.WithStreamHub(hub))

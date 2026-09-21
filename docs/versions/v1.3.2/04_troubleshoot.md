@@ -4,12 +4,12 @@
 
 This guide covers the operational issues you can hit running the Optimum Gateway binary: config, network, CL pairing, and telemetry. Start with the first-line diagnosis below — it resolves most issues.
 
-## What you control vs what comes from the API key
+## What you control vs what comes from your credential
 
 ### Provided by Optimum
 
 * Gateway **Docker image / binary**
-* An **API key** (`ogw_live_...`) — binds `gateway_id`, `chain`, operator, and validator scope
+* A credential — either an **API key** (`ogw_live_...`), which binds `gateway_id`, `chain`, operator, and validator scope, or an org **join key** (`ojk_live_...`) the gateway enrolls with, which binds chain, type, and cluster scope. See [Gateway Self-Enrollment](07_gateway_self_enrollment.md)
 * An assigned **`gateway_cluster_id`** (e.g. `optimum_ethereum_hoodi_v0_1` for Hoodi; Mainnet ID provided during onboarding)
 
 ### You configure (operational only)
@@ -17,23 +17,26 @@ This guide covers the operational issues you can hit running the Optimum Gateway
 | Field                                         | Notes                                                                      |
 | --------------------------------------------- | -------------------------------------------------------------------------- |
 | `api_key` (env `OPT_API_KEY`)                 | Wrong/revoked key -> gateway crashes at startup. **Set via env, not YAML** |
+| `join_key` (env `OPT_JOIN_KEY`)               | Fleet alternative to `api_key`; the two are mutually exclusive. **Set via env, not YAML** |
+| `gateway_id` (env `OPT_GATEWAY_ID`)           | Join-key path only: the enrollment label, unique per host. Ignored on the API-key path |
+| `enroll_cred_dir`                             | Join-key path only; **persist as a volume** — losing it re-enrolls and consumes a join-key use |
 | `gateway_cluster_id`                          | Must match onboarding (Hoodi vs Mainnet)                                   |
-| `identity_libp2p_dir` / `identity_optp2p_dir` | **Persist as volumes** — without them, peer ID changes every restart       |
+| `identity_libp2p_dir` / `identity_mump2p_dir` | **Persist as volumes** — without them, peer ID changes every restart       |
 | `agent_lib_p2p_port`                          | Default `33212`; CL connects here                                          |
-| `agent_opt_p2p_port`                          | Default `43213`; mump2p egress                                             |
+| `agent_mump2p_port`                          | Default `33213`; Optimum network peers connect here (inbound)              |
 | `telemetry_enable` / `telemetry_port`         | Default port `48123`                                                       |
 | `direct_cl_peers`                             | Optional, **strongly recommended** for Lighthouse / Nimbus                 |
 | `remote_push_enable`                          | Optional; pushes logs/metrics to Optimum for support visibility            |
 | `log_level`                                   | `debug` / `info`                                                           |
 
-### Derived from the API key — you do NOT configure these
+### Derived from your credential — you do NOT configure these
 
 * **`gateway_id`** — from the JWT `sub` claim
 * **`chain`** — from the JWT `chain_id` claim; **not a YAML field**
 * Validator list — from the auth mint, refreshed periodically
 * Gossip topics (`beacon_block` + 64 attestation subnets) — baked into the binary
 
-> If `chain` looks wrong (e.g. "I want mainnet but it's hoodi"), the **API key is wrong** — chain cannot be changed via YAML. Get the matching key from Optimum.
+> If `chain` looks wrong (e.g. "I want mainnet but it's hoodi"), the **credential is wrong** — chain cannot be changed via YAML. Get the matching API key or join key from Optimum.
 
 
 ## First-line diagnosis (run this first)
@@ -53,15 +56,19 @@ docker logs optimum-gateway --tail=50
 
 **Healthy target:** `cl_peers` ≥ 1, `mump2p_peers` ≥ 1, `subscribed_topics` ≈ 65, `last_block_age_sec` < 60.
 
+On a `stream_only` gateway the target is `mump2p_peers` ≥ 1, `mump2p_health` ok, `last_block_age_sec` < 60; only the three CL checks read `skipped`, so a stale mesh still returns 503.
+
 
 ## `/health` checks -> meaning -> fix
 
 `GET /health` returns 200 (healthy) or 503 (degraded). Each check covers a different part of the pipeline.
 
+A check is `ok`, `fail`, or `skipped`. `skipped` means the check does not apply to this node's mode: a `stream_only` gateway never starts the CL host, so `cl_peers`, `cl_health` and `subscribed_topics` are reported as `skipped` and are left out of `failing` and of the 200/503 roll-up.
+
 | Failing check        | What it means                          | Fix                                                                                                                                          |
 | -------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | `cl_peers`           | No CL client connected on `:33212`     | Configure CL peering; add `direct_cl_peers`; open **33212 inbound**; use a reachable IP in the multiaddr; restart CL after a gateway restart |
-| `mump2p_peers`       | Not connected to the Optimum mesh      | Check **43213 outbound** + HTTPS to bootstrap; verify `api_key` + `gateway_cluster_id`; wait 2-5 min after start                             |
+| `mump2p_peers`       | Not connected to the Optimum mesh      | Check **33213 inbound** + HTTPS to bootstrap; verify `api_key` + `gateway_cluster_id`; wait 2-5 min after start                              |
 | `subscribed_topics`  | Topic subscription failed (expect ~65) | Usually a chain/cluster mismatch (wrong API key for the network); check logs for subscribe errors                                            |
 | `last_block_age_sec` | No beacon block in ~60s                | CL is connected but **silent** — CL not synced, EL stuck, or CL OOM/restart; fix the CL first                                                |
 | `cl_health`          | No CL gossip traffic in the last 30s   | Same as silent CL — peer count alone can be misleading                                                                                       |
@@ -75,7 +82,7 @@ docker logs optimum-gateway --tail=50
 {
   "status": "healthy",
   "gateway_id": "optimum-eu-hoodi-01",
-  "version": "v1.0.2",
+  "version": "v1.3.2",
   "uptime_seconds": 1639,
   "checks": {
     "cl_peers": {"status": "ok", "value": 1},
@@ -105,6 +112,23 @@ Read the `failing[]` list first — it names which checks to fix next.
 }
 ```
 
+### Example `stream_only` response
+
+```json
+{
+  "status": "healthy",
+  "gateway_id": "optimum-eu-mainnet-stream-01",
+  "checks": {
+    "cl_peers": {"status": "skipped"},
+    "cl_health": {"status": "skipped"},
+    "subscribed_topics": {"status": "skipped"},
+    "mump2p_peers": {"status": "ok", "value": 25},
+    "mump2p_health": {"status": "ok"},
+    "last_block_age_sec": {"status": "ok", "value": 11}
+  }
+}
+```
+
 ### `/api/v1/self_info` fields worth reading
 
 | Field                                 | Tells you                                                                                             |
@@ -116,7 +140,7 @@ Read the `failing[]` list first — it names which checks to fix next.
 | `libp2p.total_peers` / `direct_peers` | CL connectivity detail                                                                                |
 | `mump2p.total_peers`                  | Mesh connectivity                                                                                     |
 | `libp2p.peers_per_topic`              | Which topics have CL peers when the CL is healthy                                                     |
-| `propagation_disabled`                | Optimum dynamic config; can explain "not propagating"                                                 |
+| `propagation_enabled`                 | Optimum dynamic config; `false` can explain "not propagating". Same state as `mump2p_gateway_propagation_state=0` |
 | `paired_with`                         | Gateway type from the API key: `partner`, `hermes`, or `relay` — only `partner` forwards attestations |
 
 > For support tickets, attach the full output of `curl -s http://localhost:48123/api/v1/self_info | jq`.
@@ -127,7 +151,8 @@ Read the `failing[]` list first — it names which checks to fix next.
 | Issue                                  | Logs (if applicable)                                                  | Fix                                                                                                                            |
 | -------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | Container exits immediately            | `unable to load config`                                               | Check config path and YAML validity                                                                                            |
-| Auth fatal at startup                  | `unable to initialize auth_token manager` / `initial JWT mint failed` | Bad/missing/revoked `api_key`, or no outbound HTTPS to `auth.getoptimum.io`. Verify the key in the console; check firewall/DNS |
+| Auth fatal at startup                  | `unable to initialize auth_token manager` / `initial JWT mint failed` / `enroll gateway` | Bad/missing/revoked credential, enroll failure, or no outbound HTTPS to `auth.getoptimum.io`. Verify API key or join key in the console; check firewall/DNS |
+| Both credentials set                   | `api_key and join_key are mutually exclusive`                         | Use exactly one: `OPT_API_KEY` or `OPT_JOIN_KEY`                                                                               |
 | Port bind error                        | `bind: address already in use`                                        | `lsof -i :33212` (and 48123); stop the conflicting process or change ports consistently in `docker run -p`                     |
 | Config not loaded                      | `unable to load config`                                               | Mount config correctly: `-v $(pwd)/config:/app/config` and `-config=/app/config/app_conf.yml`                                  |
 | Invalid YAML                           | `failed to validate config`                                           | Fix the YAML syntax                                                                                                            |
@@ -146,7 +171,7 @@ The chain comes from the **API key**, not YAML. A Hoodi key on a Mainnet cluster
 
 | Issue                                               | What you see                                                                                  | Fix                                                                                                                  |
 | --------------------------------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `self_info.chain` is `hoodi` but cluster is mainnet | `chain: hoodi`, `fork_digest: c6ecb76c`, but `gateway_cluster_id: optimum_ethereum_mainnet_*` | Generate a **Mainnet API key** in the console; set the matching **Mainnet `gateway_cluster_id`**; restart            |
+| `self_info.chain` is `hoodi` but cluster is mainnet | `chain: hoodi`, `fork_digest: c6ecb76c`, but `gateway_cluster_id: optimum_ethereum_mainnet_*` | Generate a Mainnet key in the console — the network picker calls it **Ethereum** — and set the matching Mainnet `gateway_cluster_id`; restart |
 | Wrong fork digest in topics                         | mump2p topics use `/eth2/c6ecb76c/...` on mainnet                                             | Fix key + cluster, then **restart**; confirm `self_info.chain` and `fork_digest`                                     |
 | Gateway not visible on bootstrap / no mesh peers    | `mump2p_peers: 0`                                                                             | Registered on the wrong chain or never registered. Fix the mismatch; confirm outbound HTTPS                          |
 | Attestations never forwarded                        | validator list empty                                                                          | Validators come from the auth mint; wait for sync. If persistent, verify the key's validator assignment with Optimum |
@@ -172,7 +197,7 @@ curl -s http://localhost:48123/api/v1/self_info | jq '.chain, .fork_digest'
 | Prysm shows connected but no blocks      | Silent CL / EL not synced. Prysm can follow in optimistic sync while Geth catches up — `cl_peers` OK but `last_block_age_sec` / `cl_health` fail. Check EL logs; wait for EL, then Prysm `/healthz` goes 200 |
 | Docker NAT / wrong IP in multiaddr       | CL on host + gateway in bridge network -> use the host IP or `--network host`                                                                                                                                |
 
-> **Recommended:** Prysm **v7.1.4**; Teku **v26.4.0+**.
+> **Recommended:** Prysm **v7.1.8**; Lighthouse **v8.2.1+**; Teku **v26.6.0+** (minimum v26.4.0); Nimbus **v26.7.0+**.
 
 ### Getting the gateway's peer info for the CL
 
@@ -196,7 +221,7 @@ The gateway advertises a **custody group count of 8** (Fulu `VALIDATOR_CUSTODY_R
 
 ### Lighthouse v8.x PeerDAS Configuration (Important)
 
-Use Lighthouse **v8.2.0+** with:
+Use Lighthouse **v8.2.1+** with:
 
 ```yaml
 command:
@@ -277,28 +302,29 @@ Lodestar is supported. Add the gateway as a trusted/direct peer in Lodestar, and
 | Port    | Direction | Action                                                                                              |
 | ------- | --------- | --------------------------------------------------------------------------------------------------- |
 | `33212` | Inbound   | CL clients connect here                                                                             |
+| `33213` | Inbound   | Optimum network (mump2p) peers connect here                                                         |
 | `48123` | Localhost | `/health`, `/metrics`, `/api/v1/self_info` — see [Network Requirements](00_network_requirements.md) |
-| `43213` | Outbound  | mump2p mesh egress (no inbound rule needed)                                                         |
 | `443`   | Outbound  | auth, bootstrap, Loki, Mimir                                                                        |
 
 ```bash
-sudo lsof -i :33212 -i :43213 -i :48123
+sudo lsof -i :33212 -i :33213 -i :48123
 sudo ufw allow 33212/tcp
+sudo ufw allow 33213/tcp
 ```
 
-Only **33212** needs a public inbound firewall rule. **Docker tip:** `--network host` exposes all ports on the host network interface.
+**33213** must be reachable from the internet for the mesh. **33212** is for your CL (usually private). **Docker tip:** `--network host` exposes all ports on the host network interface.
 
 
 ## Identity / persistence
 
 | Issue                                     | What you see                     | Fix                                                                                                   |
 | ----------------------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| CL config "suddenly wrong" after redeploy | `peer_id` changed in `self_info` | New libp2p identity each run. Persist `identity_libp2p_dir` and `identity_optp2p_dir` as volumes      |
+| CL config "suddenly wrong" after redeploy | `peer_id` changed in `self_info` | New libp2p identity each run. Persist `identity_libp2p_dir` and `identity_mump2p_dir` as volumes      |
 | Auth/mesh issues after a wipe             | —                                | New mump2p peer_id in the mint payload. Persist the identity dir; Optimum may need to re-link the key |
 | Two gateways with the same identity       | —                                | Copied volume. One identity per gateway instance                                                      |
 
 ```bash
-docker exec optimum-gateway ls -la /tmp/libp2p /tmp/optp2p
+docker exec optimum-gateway ls -la /tmp/libp2p /tmp/mump2p
 ```
 
 
@@ -313,6 +339,7 @@ Partners scrape the gateway `/metrics` **locally** with their own Prometheus + G
 | Gateway not in the dropdown    | No successful scrape yet. Confirm `curl localhost:48123/metrics \| grep gateway_id`  |
 | Block/attestation panels empty | Gateway isn't receiving blocks/attestations. Fix CL + mesh first via `/health`       |
 | "Accelerated slots" always 0   | No block race data yet. Needs a healthy CL + mesh + time on the network              |
+| Consumer stream quiet, connection still open | A quiet chain and a stalled feed look the same without liveness frames. Alert on **missing** heartbeats and send client keepalives. See [Consumer Block Stream](06_block_stream.md#holding-a-stream-open-for-weeks) |
 
 ```bash
 curl -s http://localhost:48123/metrics | grep mump2p_gateway
@@ -326,15 +353,33 @@ curl -s http://localhost:48123/metrics | grep mump2p_gateway
 | Blocks not faster than baseline             | CL or mesh unhealthy                  | Fix `/health` first                                                                                                                                                           |
 | Attestations not on the mesh                | Validators not yet in the JWT list    | Wait for sync. Only `partner` gateways forward attestations (`self_info.paired_with`). Check `mump2p_gateway_known_validators_total` — 0 means no validators synced from auth |
 | Attestations dropped (expected)             | Non-partner validators on the same CL | Normal — only your own validators are forwarded                                                                                                                               |
-| `propagation_disabled: true` in `self_info` | Optimum dynamic config                | Not a partner YAML knob                                                                                                                                                       |
+| `propagation_enabled: false` in `self_info` | Optimum dynamic config                | Not a partner YAML knob. Metrics: `mump2p_gateway_propagation_state=0`                                                                                                        |
 
+
+## Gateway self-enrollment
+
+Applies when `OPT_JOIN_KEY` is set. See [Gateway Self-Enrollment](07_gateway_self_enrollment.md).
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Startup fails with `enroll gateway` / `401` | Join key unknown, expired, exhausted, or revoked; or host clock >~2 min slow | The `401` is deliberately the same for all four, so check the key under **Manage Gateways** → **Enrollment keys**: expired and exhausted show as a badge, revoked keys are removed from the list. Sync NTP. Generate a new key if needed |
+| Startup fails with `label_conflict` / `409` | Enrollment label already live in the org | Set a unique `OPT_GATEWAY_ID` per host, or revoke the orphan under **Manage Gateways** → **Gateway** tab, finding it by that label |
+| Startup fails with `gateway_key_limit` / `409` | Org at the 1000-gateway cap | Revoke unused credentials or contact Optimum |
+| Startup fails: peer ID mismatch | mumP2P identity changed under an existing credential. Raised by the gateway, not by auth | Restore the original `identity_mump2p_dir` volume, or revoke the enrolled credential and enroll fresh |
+| Corrupt credential on disk | `enrollment.json` unreadable, or the thumbprint recorded in it does not match the private key it carries. Raised by the gateway, not by auth | Do not delete and re-enroll blindly — that burns a join-key use. Restore `enrollment.json` from backup, or revoke the credential in the console first |
+| `auth_enrollment_total{result="success"}` on every restart | Credential directory not persisting | Mount `identity_mump2p_dir` (or `enroll_cred_dir`) as a volume. Repeated `success` across a fleet means enrollments are not being reused |
+| Log line `enrolling without a label` at startup | `OPT_GATEWAY_ID` left at default (`dev-gateway`), which sends an empty label | Set a unique `OPT_GATEWAY_ID` per host before first enroll. An empty label is exempt from the conflict check, so the host silently re-enrolls and burns a join-key use every time it loses its credential dir |
+| Mesh peers stay at 0 after enroll | Join key minted without matching `cluster_ids` | Mint a join key whose cluster scope includes your `gateway_cluster_id` |
+| Revoked join key, gateway still runs | Revoking a join key stops new enrollments only | Revoke the enrolled gateway credential separately if you need to cut access |
+
+Runtime `gateway_id` in `/health` and metrics is the enrolled `client_id` (JWT `sub`), not the `OPT_GATEWAY_ID` enrollment label.
 
 ## Bootstrap / mesh (partner-visible symptoms only)
 
 | Symptom                                                            | Action                                                       |
 | ------------------------------------------------------------------ | ------------------------------------------------------------ |
 | Startup logs: `failed to connect to bootstrap node... i/o timeout` | **Ignore** if transient (first few minutes)                  |
-| Persistent `mump2p_peers: 0`                                       | Check `api_key`, `gateway_cluster_id`, outbound network      |
+| Persistent `mump2p_peers: 0`                                       | Check credential (`OPT_API_KEY` or `OPT_JOIN_KEY`), `gateway_cluster_id`, outbound network |
 | Handshake errors in logs                                           | Usually peer churn; persistent -> contact Optimum            |
 | Gateway missing from the bootstrap list                            | Usually chain/cluster/key mismatch or no heartbeat (TTL ~1h) |
 
@@ -345,7 +390,7 @@ curl -s http://localhost:48123/metrics | grep mump2p_gateway
 | -------------- | ----------------------------------- | -------------------------------------------------------------------------- |
 | Lighthouse     | No reconnect after gateway restart  | `direct_cl_peers` + `--boot-nodes` / trusted peer                          |
 | Lighthouse v8+ | Goodbye / custody metadata mismatch | Updated gateway + PeerDAS flags (`--semi-supernode`, `--target-peers=500`) |
-| Prysm          | Connected but no gossip             | EL sync; restart beacon node. Use v7.1.4+                                  |
+| Prysm          | Connected but no gossip             | EL sync; restart beacon node. Use v7.1.8+                                  |
 | Teku           | `NoSuchElementException` metadata   | Upgrade to v26.4.0+                                                        |
 | Teku           | Gateway peer pruned                 | Use `--p2p-direct-peers` (not just `--p2p-static-peers`)                   |
 | Nimbus         | Privileged peer fails               | Stable `--netkey-file` + public IP in `direct_cl_peers`                    |
@@ -356,9 +401,9 @@ curl -s http://localhost:48123/metrics | grep mump2p_gateway
 
 | Issue                                       | Fix                                                                                                       |
 | ------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Wrong Docker image tag                      | Use `getoptimum/gateway:v1.0.2`                                                                           |
+| Wrong Docker image tag                      | Use `getoptimum/gateway:v1.3.2`                                                                           |
 | Config edited but container not restarted   | `docker restart optimum-gateway`                                                                          |
-| Running hoodi + mainnet on the same ports   | The second instance needs different ports + its own config + its own API key                              |
+| Running hoodi + mainnet on the same ports   | The second instance needs different ports + its own config + its own credential                           |
 | Duplicate gateway (same API key, two hosts) | One key -> one gateway; generate a second key                                                             |
 | Checking health on the wrong host/port      | Confirm `telemetry_port` and Docker port mapping — see [Network Requirements](00_network_requirements.md) |
 | Exposed `/metrics` to the internet          | Use `-p 127.0.0.1:48123:48123`, not `-p 48123:48123`                                                      |
