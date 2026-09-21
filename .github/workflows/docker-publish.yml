@@ -7,8 +7,9 @@ env:
 
 on:
   push:
+    # Dev cluster (hoodi-dev, dev-latest) tracks development; prod VM/k8s bumps run on v* tags only.
     branches:
-      - main
+      - development
     tags:
       - v*
 
@@ -71,13 +72,14 @@ jobs:
           tags: |
             ${{ env.DOCKER_ORG }}/gateway:${{ steps.meta.outputs.tag }}
             ${{ steps.meta.outputs.latest == 'true' && format('{0}/gateway:latest', env.DOCKER_ORG) || '' }}
-            ${{ github.ref_type != 'tag' && format('{0}/gateway:dev-latest', env.DOCKER_ORG) || '' }}
+            ${{ github.ref == 'refs/heads/development' && format('{0}/gateway:dev-latest', env.DOCKER_ORG) || '' }}
 
       - name: Unset global git insteadOf
         run: git config --global --unset-all url.https://github.com/.insteadOf || true
 
       - name: Generate token for gitops
         id: gitops-token
+        if: github.ref_type == 'tag'
         uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2
         with:
           app-id: ${{ secrets.GH_APP_ID }}
@@ -86,6 +88,7 @@ jobs:
           repositories: gitops
 
       - name: Checkout gitops repo
+        if: github.ref_type == 'tag'
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           repository: getoptimum/gitops
@@ -93,6 +96,7 @@ jobs:
           path: gitops
 
       - name: Update gateway image in gitops manifests
+        if: github.ref_type == 'tag'
         run: |
           set -euo pipefail
           MANIFEST_DIR=gitops/clusters/optimum-infrastructure/manifest/optimum
@@ -150,6 +154,7 @@ jobs:
           fi
 
       - name: Commit and push to gitops
+        if: github.ref_type == 'tag'
         working-directory: gitops
         run: |
           set -euo pipefail
@@ -216,7 +221,7 @@ jobs:
     name: Trigger dev cluster deploy
     needs: docker
     # Run even if the gitops steps in `docker` fail, as long as the image was pushed.
-    if: always() && needs.docker.outputs.digest != '' && github.ref_type != 'tag'
+    if: always() && needs.docker.outputs.digest != '' && github.ref == 'refs/heads/development'
     runs-on: ubuntu-latest
 
     steps:
