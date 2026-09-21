@@ -12,7 +12,7 @@ distributed with this binary.
 Attribution notices required by these licenses (Apache-2.0 §4 and the upstream
 `NOTICE` files it references) are reproduced in the accompanying `NOTICE` file.
 
-Total distributed third-party packages: 235
+Total distributed third-party packages: 247
 
 ## Summary
 
@@ -206,7 +206,7 @@ Total distributed third-party packages: 235
 - [go.opentelemetry.io/collector/pipeline](https://github.com/open-telemetry/opentelemetry-collector/blob/pipeline/v1.54.0/pipeline/LICENSE)
 - [go.opentelemetry.io/collector/processor](https://github.com/open-telemetry/opentelemetry-collector/blob/processor/v1.54.0/processor/LICENSE)
 - [go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/instrumentation/net/http/httptrace/otelhttptrace/v0.67.0/instrumentation/net/http/httptrace/otelhttptrace/LICENSE)
-- [go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/instrumentation/net/http/otelhttp/v0.68.0/instrumentation/net/http/otelhttp/LICENSE)
+- [go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/instrumentation/net/http/otelhttp/v0.69.0/instrumentation/net/http/otelhttp/LICENSE)
 - [go.opentelemetry.io/otel](https://github.com/open-telemetry/opentelemetry-go/blob/v1.44.0/LICENSE)
 - [go.opentelemetry.io/otel/metric](https://github.com/open-telemetry/opentelemetry-go/blob/metric/v1.44.0/metric/LICENSE)
 - [go.opentelemetry.io/otel/trace](https://github.com/open-telemetry/opentelemetry-go/blob/trace/v1.44.0/trace/LICENSE)
@@ -252,10 +252,11 @@ Total distributed third-party packages: 235
 - [github.com/pbnjay/memory](https://github.com/pbnjay/memory/blob/7b4eea64cf58/LICENSE)
 - [github.com/prometheus/client_golang/internal/github.com/golang/gddo/httputil](https://github.com/prometheus/client_golang/blob/v1.24.1/internal/github.com/golang/gddo/LICENSE)
 - [github.com/spaolacci/murmur3](https://github.com/spaolacci/murmur3/blob/v1.1.0/LICENSE)
+- [github.com/spf13/pflag](https://github.com/spf13/pflag/blob/v1.0.10/LICENSE)
 - [github.com/stretchr/testify/internal/difflib](https://github.com/stretchr/testify/blob/v1.12.1/internal/difflib/LICENSE)
 - [github.com/wlynxg/anet](https://github.com/wlynxg/anet/blob/v0.0.5/LICENSE)
 - [golang.org/x/crypto](https://cs.opensource.google/go/x/crypto/+/v0.55.0:LICENSE)
-- [golang.org/x/exp](https://cs.opensource.google/go/x/exp/+/74f9aab9:LICENSE)
+- [golang.org/x/exp](https://cs.opensource.google/go/x/exp/+/c48552f4:LICENSE)
 - [golang.org/x/net](https://cs.opensource.google/go/x/net/+/v0.58.0:LICENSE)
 - [golang.org/x/oauth2](https://cs.opensource.google/go/x/oauth2/+/v0.36.0:LICENSE)
 - [golang.org/x/sync](https://cs.opensource.google/go/x/sync/+/v0.22.0:LICENSE)
