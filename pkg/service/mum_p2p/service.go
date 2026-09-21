@@ -211,8 +211,8 @@ func NewNodeWithHost(
 	}
 	log.Info("log params hardcode",
 		logger.WithFlow("RLNC"),
-		logger.WithUint64("RLNC_K", uint64(beaconHardcodeConf.K)),
 		logger.WithUint64("MaxShardSize", uint64(beaconHardcodeConf.MaxShardSize)),
+		logger.WithUint64("RLNC_K", uint64(beaconHardcodeConf.K)),
 		logger.WithFloat64("RedundancyFraction", beaconHardcodeConf.RedundancyFraction),
 		logger.WithFloat64("ForwardingThresholdFraction", beaconHardcodeConf.ForwardingThresholdFraction),
 		logger.WithInt("MeshDegreeMax", beaconHardcodeConf.MeshDegreeMax),
