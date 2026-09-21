@@ -133,16 +133,16 @@ func customHandshakeOptions(counter *atomic.Int32) []mum_p2p.NodeOption {
 		mum_p2p.WithCustomHandshakeBuilder(func() any {
 			return customHandshake{Kind: "custom"}
 		}),
-		mum_p2p.WithCustomHandshakeHandler(func(_ peer.ID, decoder *json.Decoder) error {
+		mum_p2p.WithCustomHandshakeHandler(func(_ peer.ID, decoder *json.Decoder) (mum_p2p.PeerCapability, error) {
 			var handshake customHandshake
 			if err := decoder.Decode(&handshake); err != nil {
-				return err
+				return mum_p2p.PeerCapability{}, err
 			}
 			if handshake.Kind != "custom" {
-				return fmt.Errorf("unexpected handshake kind %q", handshake.Kind)
+				return mum_p2p.PeerCapability{}, fmt.Errorf("unexpected handshake kind %q", handshake.Kind)
 			}
 			counter.Add(1)
-			return nil
+			return mum_p2p.PeerCapability{CanPublish: true}, nil
 		}),
 	}
 }

@@ -3,6 +3,7 @@ package mum_p2p
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -25,6 +26,8 @@ const (
 	// interval for checking handshake status
 	interval = 1 * time.Second
 )
+
+var errMissingPeerCapability = errors.New("no cached capability for peer with valid handshake")
 
 // RegisterHandshakeMessageSender registers a notification handler for new peer connections.
 // When a new peer connects, it sends a handshake message to the peer if it is not already in a valid handshake state.
@@ -62,6 +65,9 @@ func (n *Node) handleNewConnection(clusterID string, conn network.Conn) {
 	state, ok := n.getPeerState(peerID)
 	if ok && state == entities.PeerStateHandshakeValid {
 		l.Debug("peer already has valid handshake, skipping handshake")
+		// Re-admit on reconnect: mesh admission is revoked on disconnect (#923), so a
+		// still-trusted peer must be re-authorized here since the handshake is skipped.
+		n.allowPeerWithCapability(peerID, n.readmitCapability(l, peerID))
 		return
 	}
 	if ok && state == entities.PeerStateHandshakeInvalid {
@@ -115,12 +121,13 @@ func (n *Node) sendHandshakeForPeer(ctx context.Context, l logger.AppLogger, pID
 	}
 
 	// Wait for the response from the peer and verify handshake
-	if err = n.handshakeHandler(remotePeer, json.NewDecoder(stream)); err != nil {
+	capability, err := n.handshakeHandler(remotePeer, json.NewDecoder(stream))
+	if err != nil {
 		n.disconnectPeer(remotePeer)
 		return fmt.Errorf("verifying handshake response: %w", err)
 	}
 
-	n.markHandshakeValid(remotePeer)
+	n.markHandshakeValid(remotePeer, capability)
 	return nil
 }
 
@@ -140,7 +147,8 @@ func (n *Node) RegisterHandshakeHandler(clusterID string) {
 
 		remotePeer := stream.Conn().RemotePeer()
 		// Read the handshake message from the stream
-		if err := n.handshakeHandler(remotePeer, json.NewDecoder(stream)); err != nil {
+		capability, err := n.handshakeHandler(remotePeer, json.NewDecoder(stream))
+		if err != nil {
 			l.Error("handshake verification failed", err)
 			n.disconnectPeer(remotePeer)
 			return
@@ -151,22 +159,43 @@ func (n *Node) RegisterHandshakeHandler(clusterID string) {
 			n.disconnectPeer(remotePeer)
 			return
 		}
-		n.markHandshakeValid(remotePeer)
+		n.markHandshakeValid(remotePeer, capability)
 		l.Info("handshake handled successfully")
 	})
 }
 
-// markHandshakeValid records a verified handshake and approves the peer for pubsub.
-func (n *Node) markHandshakeValid(peerID peer.ID) {
-	n.setPeerState(peerID, entities.PeerStateHandshakeValid)
+// markHandshakeValid records a verified handshake and admits the peer to the mesh (#923)
+// with the capability its handshake resolved to.
+func (n *Node) markHandshakeValid(peerID peer.ID, capability PeerCapability) {
+	n.setPeerState(peerID, entities.PeerStateHandshakeValid, capability)
+	n.allowPeerWithCapability(peerID, capability)
+}
+
+func (n *Node) allowPeerWithCapability(peerID peer.ID, _ PeerCapability) {
+	n.peersApprovedMap.Store(peerID, struct{}{})
+}
+
+// readmitCapability returns the cached capability for a peer with a valid handshake.
+func (n *Node) readmitCapability(l logger.AppLogger, peerID peer.ID) PeerCapability {
+	capability, ok := n.peerCapabilities.Load(peerID)
+	if !ok {
+		l.Error("re-admitting peer read-only", errMissingPeerCapability)
+		return PeerCapability{CanPublish: false}
+	}
+	return capability
 }
 
 func (n *Node) disconnectPeer(peerID peer.ID) {
-	n.setPeerState(peerID, entities.PeerStateHandshakeInvalid)
+	n.revokePeerAdmission(peerID)
+	n.setPeerState(peerID, entities.PeerStateHandshakeInvalid, PeerCapability{})
 	if n.host.Network().Connectedness(peerID) == network.NotConnected {
 		return
 	}
 	_ = n.host.Network().ClosePeer(peerID)
+}
+
+func (n *Node) revokePeerAdmission(peerID peer.ID) {
+	n.peersApprovedMap.Delete(peerID)
 }
 
 func setRPCStreamDeadlines(log logger.AppLogger, stream network.Stream) {

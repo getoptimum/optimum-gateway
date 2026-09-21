@@ -17,7 +17,7 @@ func WithCustomHandshakeBuilder(handshakeBuilder func() any) NodeOption {
 	}
 }
 
-func WithCustomHandshakeHandler(handshakeHandler func(peerID peer.ID, decoder *json.Decoder) error) NodeOption {
+func WithCustomHandshakeHandler(handshakeHandler func(peerID peer.ID, decoder *json.Decoder) (PeerCapability, error)) NodeOption {
 	return func(n *Node) {
 		if handshakeHandler != nil {
 			n.handshakeHandler = handshakeHandler

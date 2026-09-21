@@ -15,6 +15,9 @@ func (n *Node) PublishMessage(
 	topicName string,
 	msg []byte,
 ) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if _, ok := n.topics.Load(topicName); !ok {
 		if err := n.SubscribeTopic(topicName); err != nil {
 			return fmt.Errorf("failed to subscribe to topic %s: %w", topicName, err)
