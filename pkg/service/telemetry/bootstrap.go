@@ -27,7 +27,7 @@ func initBootstrapMetrics() {
 		"block_latency_export_total",
 		"bootstrap",
 		"Block-latency telemetry export outcomes to the bootstrap service",
-		[]string{"result"},
+		[]string{labelResult},
 	)
 	blockLatencyExportTransientTotal = commonmetrics.NewCounterVec(
 		"block_latency_export_transient_total",

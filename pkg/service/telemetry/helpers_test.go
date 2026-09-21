@@ -139,7 +139,7 @@ func TestMessageAndAuthMetricsHelpers(t *testing.T) {
 	).GetCounter().GetValue())
 	require.Equal(t, float64(1), metricByLabels(t, reg,
 		testMetricsNamespace+"_"+testMetricsSubsystem+"_auth_token_mint_total",
-		map[string]string{"result": AuthMintResultSuccess},
+		map[string]string{labelResult: AuthMintResultSuccess},
 	).GetCounter().GetValue())
 	require.Equal(t, float64(12345), metricByLabels(t, reg,
 		testMetricsNamespace+"_"+testMetricsSubsystem+"_auth_token_expires_at_seconds",
