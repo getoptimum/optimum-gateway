@@ -8,6 +8,7 @@ import (
 
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 
+	rlncps "github.com/getoptimum/mump2p-protocol/pkg/pubsub"
 	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
@@ -22,7 +23,7 @@ func (n *Node) SubscribeTopic(topicName string) error {
 	if _, ok := n.topics.Load(topicName); ok {
 		return nil
 	}
-	topic, err := n.ps.Join(topicName)
+	topic, err := rlncps.JoinPartialTopic(n.ps, topicName)
 	if err != nil {
 		return fmt.Errorf("failed to join GossipSub topic %s: %w", topicName, err)
 	}
