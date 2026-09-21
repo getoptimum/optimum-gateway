@@ -20,8 +20,8 @@ import (
 
 	"github.com/getoptimum/mump2p-protocol/pkg/config"
 	"github.com/getoptimum/mump2p-protocol/pkg/engine"
+	"github.com/getoptimum/mump2p-protocol/pkg/partial"
 	rlncps "github.com/getoptimum/mump2p-protocol/pkg/pubsub"
-	"github.com/getoptimum/mump2p-protocol/pkg/router"
 	"github.com/getoptimum/optimum-common/pkg/identity"
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	commonnet "github.com/getoptimum/optimum-common/pkg/net"
@@ -38,11 +38,12 @@ type Node struct {
 	ctx      context.Context
 	log      logger.AppLogger
 	cfg      *Config
-	host     host.Host          // The libp2p host managing network connections and identity
-	ps       *pubsub.PubSub     // The Optimum pub-sub instance
-	psRouter *router.RLNCRouter // The Optimum pub-sub instance
+	host     host.Host        // The libp2p host managing network connections and identity
+	ps       *pubsub.PubSub   // The Optimum pub-sub instance
+	psRouter *partial.Manager // The Optimum pub-sub instance
 
 	tracer         *tracer.MumP2P
+	meshCollector  *telemetry.MumP2PCollector
 	bootstrapNodes []peer.AddrInfo                            // Optional bootstrap peers for initial connectivity
 	topics         *syncx.RWMap[string, *pubsub.Topic]        // Active topics
 	subscriptions  *syncx.RWMap[string, *pubsub.Subscription] // Active topic subscriptions
@@ -151,6 +152,7 @@ func NewNodeWithHost(
 		broadcaster:      syncx.NewBroadcaster[*entities.MumP2PResponse](),
 		peersMap:         syncx.NewTTLMap[peer.ID, entities.PeerState](15*time.Second, 15*time.Second),
 		peersApprovedMap: syncx.NewRWMap[peer.ID, struct{}](), // list of peers which can be used for message publish
+		meshCollector:    telemetry.NewMumP2PCollector(),
 		tk:               topics_keeper.NewService(ctx, log.With(logger.WithService("topic_keeper")), identityDir),
 
 		handshakeBuilder: func() any {
@@ -208,11 +210,9 @@ func NewNodeWithHost(
 			_, ok := ret.peersApprovedMap.Load(pid)
 			return ok
 		}),
+		rlncps.WithAppendRawTracer(ret.meshCollector),
 	}
-	if telemetry.MetricsEnabled() {
-		optList = append(optList, rlncps.WithRawTracer(telemetry.NewMumP2PCollector()))
-	}
-	ret.ps, ret.psRouter, err = rlncps.NewRLNCPubSub(ctx,
+	ret.ps, ret.psRouter, err = rlncps.NewPartialRLNCPubSub(ctx,
 		psCfg,
 		log.With(logger.WithService("mump2p")).Slog(),
 		h,
@@ -277,7 +277,7 @@ func (n *Node) CountConnectedPeers() (totalPeers int, perTopicPeers map[string]i
 
 // GetMeshPeers returns the list of peer in the state variable mesh[topic] at the node.
 func (n *Node) GetMeshPeers(topic string) []peer.ID {
-	return n.psRouter.MeshPeers(topic)
+	return n.meshCollector.MeshPeers(topic)
 }
 
 // GetTopics returns list of topics the node is subscribed to.
