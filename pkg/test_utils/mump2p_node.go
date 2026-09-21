@@ -81,16 +81,9 @@ func hasRLNCServerSemaphore(tb testing.TB, dir string) bool {
 
 func NewTestConfig(ctx context.Context, log logger.AppLogger, clusterID string, listenPort int, boostrapPeers []string) *mum_p2p.Config {
 	cfg := &mum_p2p.Config{
-		ClusterID:                clusterID,
-		ListenPort:               listenPort,
-		MaxMessageSize:           cfgpkg.DefaultMaxMessageSize,
-		RandomMessageSize:        cfgpkg.DefaultRandomMessageSize,
-		ShardFactor:              cfgpkg.DefaultShardFactor,
-		PublisherShardMultiplier: cfgpkg.DefaultPublisherShardMultiplier,
-		ForwardShardThreshold:    cfgpkg.DefaultForwardShardThreshold,
-		MeshDegreeTarget:         int(cfgpkg.DefaultMeshDegreeTarget),
-		MeshDegreeMin:            int(cfgpkg.DefaultMeshDegreeMin),
-		MeshDegreeMax:            int(cfgpkg.DefaultMeshDegreeMax),
+		ClusterID:      clusterID,
+		ListenPort:     listenPort,
+		MaxMessageSize: cfgpkg.DefaultMaxMessageSize,
 		Rotator: commonconfig.NewConfigRotator(
 			ctx,
 			log,

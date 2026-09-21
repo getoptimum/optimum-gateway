@@ -109,7 +109,6 @@ func (s *Service) handleAggregatedMessages(l logger.AppLogger, message *commonen
 				telemetry.IncreaseBadMessagesToCL()
 				l.Error("failed to publish aggregated message to CL", err)
 			}
-			telemetry.IncAttestationForwarded(entities.SourceLibP2P)
 		}
 	}
 }

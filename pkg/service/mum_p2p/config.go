@@ -17,17 +17,6 @@ type Config struct {
 	ListenPort     int    `yaml:"listen_port"`
 	MaxMessageSize int64  `yaml:"max_message_size_bytes"`
 
-	// RLNC and message settings
-	RandomMessageSize        uint32  `yaml:"random_message_size_bytes"`
-	ShardFactor              uint32  `yaml:"rlnc_shard_factor"`
-	PublisherShardMultiplier float64 `yaml:"publisher_shard_multiplier"`
-	ForwardShardThreshold    float64 `yaml:"forward_shard_threshold"`
-
-	// Mesh topology settings
-	MeshDegreeTarget int `yaml:"mesh_degree_target"`
-	MeshDegreeMin    int `yaml:"mesh_degree_min"`
-	MeshDegreeMax    int `yaml:"mesh_degree_max"`
-
 	BootstrapPeers []string `yaml:"bootstrap_peers"`
 
 	// Trace event categories to broadcast to RegisterListener consumers. Shard metrics
