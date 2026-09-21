@@ -222,6 +222,7 @@ func NewNodeWithHost(
 	if err != nil {
 		return nil, fmt.Errorf("create RLNCP pubsub: %w", err)
 	}
+	go ret.runPartialDeliveries()
 
 	ret.RegisterHandshakeMessageSender(cfg.ClusterID)
 	ret.RegisterHandshakeHandler(cfg.ClusterID)
@@ -258,9 +259,15 @@ func (n *Node) Start() error {
 	return nil
 }
 
-// Stop stops the topics keeper (waiting for any pending flush) and closes the host.
+// Stop stops the topics keeper (waiting for any pending flush), closes the partial
+// message manager, and closes the host.
 func (n *Node) Stop() {
 	n.tk.Stop()
+	if n.psRouter != nil {
+		if err := n.psRouter.Close(); err != nil {
+			n.log.Error("failed to close partial message manager", err)
+		}
+	}
 	if err := n.host.Close(); err != nil {
 		n.log.Error("failed to close host", err)
 	}

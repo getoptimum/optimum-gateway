@@ -1,12 +1,8 @@
 package mum_p2p
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"strings"
-
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
 
 	rlncps "github.com/getoptimum/mump2p-protocol/pkg/pubsub"
 	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
@@ -35,39 +31,31 @@ func (n *Node) SubscribeTopic(topicName string) error {
 		return fmt.Errorf("failed to subscribe to GossipSub topic %s: %w", topicName, err)
 	}
 	n.subscriptions.Store(topicName, s)
-	go n.handleSubscription(s, topicName)
 	telemetry.SetP2PActiveTopics(n.topics.Len())
 	n.tk.AddTopic(topicName)
 	n.log.Info("subscribed to topic", logger.WithTopic(topicName))
 	return nil
 }
 
-// handleSubscription processes incoming messages from the subscription.
-// It runs in a separate goroutine and listens for messages until the context is done.
-// It logs any errors encountered while receiving messages.
-func (n *Node) handleSubscription(s *pubsub.Subscription, topicName string) {
+// runPartialDeliveries reads reconstructed payloads from the partial manager (Deliveries).
+// topic.Subscribe() is only for mesh membership; do not use subscription.Next() for app data.
+func (n *Node) runPartialDeliveries() {
 	hID := n.GetHostInfo().ID.String()
 	for {
 		select {
 		case <-n.ctx.Done():
 			return
-		default:
-			msg, err := s.Next(n.ctx)
-			if err != nil {
-				if errors.Is(err, context.Canceled) {
-					return
-				}
-				n.log.Error("failed to get message", err)
+		case delivery := <-n.psRouter.Deliveries():
+			if _, ok := n.topics.Load(delivery.Topic); !ok {
 				continue
 			}
-
 			n.broadcaster.Broadcast(&entities.MumP2PResponse{
 				Message: &commonentities.P2PMessage{
-					MessageID:      msg.ID,
+					MessageID:      delivery.GroupID,
 					UpstreamPeerID: hID,
-					SourceNodeID:   msg.ReceivedFrom.String(),
-					Topic:          topicName,
-					Message:        msg.Data,
+					SourceNodeID:   delivery.From.String(),
+					Topic:          delivery.Topic,
+					Message:        delivery.Payload,
 				},
 				Command: entities.MumP2PCommandMessage,
 			})
