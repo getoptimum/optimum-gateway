@@ -200,10 +200,10 @@ func NewNodeWithHost(
 	}
 
 	beaconHardcodeConf := config.RLNCConfig{
-		K:                           psCfg.RLNC.K,
-		MaxShardSize:                3300, // 800,
-		RedundancyFraction:          1.5,  // 2,
-		ForwardingThresholdFraction: psCfg.RLNC.ForwardingThresholdFraction,
+		K:                           32,
+		MaxShardSize:                640,
+		RedundancyFraction:          2.0,
+		ForwardingThresholdFraction: 0,
 		MeshDegreeMin:               12,
 		MeshDegreeTarget:            18,
 		MeshDegreeMax:               24,
