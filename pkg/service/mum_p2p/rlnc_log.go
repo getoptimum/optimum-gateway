@@ -34,19 +34,23 @@ func describeRLNCGeom(payloadLen int, cfg config.RLNCConfig) (rlncGeom, error) {
 	if err != nil {
 		return rlncGeom{}, err
 	}
-	base := uint64(payloadLen) + rlncSharderMetadataSize
+	base := uint64(payloadLen) + rlncSharderMetadataSize //nolint:gosec // G115: callers pass len(payload), never negative
 	m := (base + uint64(cfg.MaxShardSize) - 1) / uint64(cfg.MaxShardSize)
 	var chunks uint64
 	if policy.K > 0 {
 		chunks = (m + uint64(policy.K) - 1) / uint64(policy.K)
 	}
 	coded := cfg.RedundantSymbolCount(int(policy.K))
+	var totalCoded uint64
+	if coded > 0 {
+		totalCoded = chunks * uint64(coded) //nolint:gosec // G115: guarded by coded > 0
+	}
 	return rlncGeom{
 		policyK:       policy.K,
 		sourceShards:  m,
 		chunks:        chunks,
 		codedPerChunk: coded,
-		totalCoded:    chunks * uint64(coded),
+		totalCoded:    totalCoded,
 	}, nil
 }
 
