@@ -56,7 +56,7 @@ func toMumP2PConfig() *mump2pcfg.Config {
 	res.RLNC = mump2pcfg.RLNCConfig{
 		K:                  64,
 		MaxShardSize:       3300,
-		RedundancyFraction: 1.5,
+		RedundancyFraction: 2.0,
 	}
 	return res
 }
