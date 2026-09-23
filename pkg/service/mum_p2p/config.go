@@ -52,11 +52,11 @@ func toMumP2PConfig() *mump2pcfg.Config {
 	res.MeshD = 8
 	res.MeshDlo = 6
 	res.MeshDhi = 12
-	res.HeartbeatMS = 100
+	res.HeartbeatMS = 250
 	res.RLNC = mump2pcfg.RLNCConfig{
 		K:                  16,
 		MaxShardSize:       3300,
-		RedundancyFraction: 2.0,
+		RedundancyFraction: 1.5,
 		SpreadSourcePool:   true,
 	}
 	return res

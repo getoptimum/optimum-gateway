@@ -207,11 +207,6 @@ func NewNodeWithHost(
 	}
 
 	ret.rlncConfigs = config.RLNCConfigs{
-		beaconBlockTopicKey: {
-			K:                  8,
-			MaxShardSize:       3300,
-			RedundancyFraction: 6.0,
-		},
 		"*": psCfg.RLNC,
 	}
 	ret.logRLNCTopicMap()
