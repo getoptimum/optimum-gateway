@@ -184,7 +184,6 @@ func NewNodeWithHost(
 		logger.WithUint64("RLNC_K", uint64(psCfg.RLNC.K)),
 		logger.WithUint64("MaxShardSize", uint64(psCfg.RLNC.MaxShardSize)),
 		logger.WithFloat64("RedundancyFraction", psCfg.RLNC.RedundancyFraction),
-		logger.WithFloat64("ForwardingThresholdFraction", psCfg.RLNC.ForwardingThresholdFraction),
 		logger.WithInt("MeshDegreeMax", psCfg.RLNC.MeshDegreeMax),
 	)
 
@@ -200,21 +199,19 @@ func NewNodeWithHost(
 	}
 
 	beaconHardcodeConf := config.RLNCConfig{
-		K:                           8,
-		MaxShardSize:                3300,
-		RedundancyFraction:          8.0,
-		ForwardingThresholdFraction: 0,
-		MeshDegreeMin:               12,
-		MeshDegreeTarget:            18,
-		MeshDegreeMax:               24,
-		EnableTopicPeerFallback:     psCfg.RLNC.EnableTopicPeerFallback,
+		K:                       8,
+		MaxShardSize:            3300,
+		RedundancyFraction:      8.0,
+		MeshDegreeMin:           12,
+		MeshDegreeTarget:        18,
+		MeshDegreeMax:           24,
+		EnableTopicPeerFallback: psCfg.RLNC.EnableTopicPeerFallback,
 	}
 	log.Info("log params hardcode",
 		logger.WithFlow("RLNC"),
 		logger.WithUint64("MaxShardSize", uint64(beaconHardcodeConf.MaxShardSize)),
 		logger.WithUint64("RLNC_K", uint64(beaconHardcodeConf.K)),
 		logger.WithFloat64("RedundancyFraction", beaconHardcodeConf.RedundancyFraction),
-		logger.WithFloat64("ForwardingThresholdFraction", beaconHardcodeConf.ForwardingThresholdFraction),
 		logger.WithInt("MeshDegreeMax", beaconHardcodeConf.MeshDegreeMax),
 	)
 

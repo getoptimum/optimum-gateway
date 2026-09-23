@@ -62,11 +62,10 @@ func toMumP2PConfig(cfg *Config) *mump2pcfg.Config {
 		res.MeshDhi = int(dc.MeshDegreeMax)
 	}
 	res.RLNC = mump2pcfg.RLNCConfig{
-		K:                           dc.ShardFactor,
-		MaxShardSize:                dc.RandomMessageSize,
-		RedundancyFraction:          dc.PublisherShardMultiplier,
-		ForwardingThresholdFraction: dc.ForwardShardThreshold,
-		MeshDegreeMax:               res.MeshDhi,
+		K:                  dc.ShardFactor,
+		MaxShardSize:       dc.RandomMessageSize,
+		RedundancyFraction: dc.PublisherShardMultiplier,
+		MeshDegreeMax:      res.MeshDhi,
 	}
 	return res
 }
@@ -77,7 +76,6 @@ func (n *Node) logRLNCConfig(cfgLog mump2pcfg.RLNCConfig) {
 		logger.WithUint64("RLNC_K", uint64(cfgLog.K)),
 		logger.WithUint64("MaxShardSize", uint64(cfgLog.MaxShardSize)),
 		logger.WithFloat64("RedundancyFraction", cfgLog.RedundancyFraction),
-		logger.WithFloat64("ForwardingThresholdFraction", cfgLog.ForwardingThresholdFraction),
 		logger.WithInt("MeshDegreeMax", cfgLog.MeshDegreeMax),
 	)
 }
