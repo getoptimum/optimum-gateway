@@ -3684,18 +3684,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.1.0?type=module",
+      "bom-ref": "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.1.1-0.20260922232003-afd04a412333?type=module",
       "type": "library",
       "name": "github.com/getoptimum/mump2p-protocol",
-      "version": "v0.1.0",
+      "version": "v0.1.1-0.20260922232003-afd04a412333",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "f35bff8e23f7fe59024b0d413bb28802d45ecb9a0dd4c5b3ebb17a668f80ab05"
+          "content": "a948539ba422aff956267db9582191d3d4ddff43655dce1800529786b60b2d29"
         }
       ],
-      "purl": "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.1.0?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.1.1-0.20260922232003-afd04a412333?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/getoptimum/mump2p-protocol",
@@ -12922,7 +12922,7 @@
       "ref": "pkg:golang/github.com/getoptimum/optimum-gateway@0.0.0-dev?type=module",
       "dependsOn": [
         "pkg:golang/github.com/ferranbt/fastssz@v1.0.1-0.20251203093649-0b1f38e43198?type=module",
-        "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.1.0?type=module",
+        "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.1.1-0.20260922232003-afd04a412333?type=module",
         "pkg:golang/github.com/getoptimum/optimum-common@v0.1.8?type=module",
         "pkg:golang/github.com/gofiber/fiber/v3@v3.4.0?type=module",
         "pkg:golang/github.com/golang-jwt/jwt/v5@v5.3.1?type=module",
@@ -14163,7 +14163,7 @@
       "ref": "pkg:golang/github.com/gabriel-vasile/mimetype@v1.4.13?type=module"
     },
     {
-      "ref": "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.1.0?type=module",
+      "ref": "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.1.1-0.20260922232003-afd04a412333?type=module",
       "dependsOn": [
         "pkg:golang/4d63.com/gocheckcompilerdirectives@v1.3.0?type=module",
         "pkg:golang/4d63.com/gochecknoglobals@v0.2.2?type=module",
