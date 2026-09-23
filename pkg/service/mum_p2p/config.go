@@ -49,14 +49,14 @@ func (cfg *Config) Get() *commonentities.OptimumConfig {
 
 func toMumP2PConfig() *mump2pcfg.Config {
 	res := mump2pcfg.DefaultGossipSubConfig()
-	res.MeshD = 8
-	res.MeshDlo = 6
-	res.MeshDhi = 12
+	res.MeshD = 6
+	res.MeshDlo = 4
+	res.MeshDhi = 8
 	res.HeartbeatMS = 100
 	res.RLNC = mump2pcfg.RLNCConfig{
 		K:                  64,
 		MaxShardSize:       3300,
-		RedundancyFraction: 2.0,
+		RedundancyFraction: 1.5,
 	}
 	return res
 }
