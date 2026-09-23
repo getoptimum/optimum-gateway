@@ -176,7 +176,7 @@ func NewNodeWithHost(
 
 	log.Info("initializing optimum gossipsub")
 
-	psCfg := toMumP2PConfig(cfg)
+	psCfg := toMumP2PConfig()
 	ret.logRLNCConfig(psCfg.RLNC)
 
 	log.Info("log params",
@@ -198,26 +198,8 @@ func NewNodeWithHost(
 		return nil, fmt.Errorf("initialize RLNC shared memory: %w", err)
 	}
 
-	beaconHardcodeConf := config.RLNCConfig{
-		K:                       4,
-		MaxShardSize:            3300,
-		RedundancyFraction:      8.0,
-		MeshDegreeMin:           12,
-		MeshDegreeTarget:        18,
-		MeshDegreeMax:           24,
-		EnableTopicPeerFallback: psCfg.RLNC.EnableTopicPeerFallback,
-	}
-	log.Info("log params hardcode",
-		logger.WithFlow("RLNC"),
-		logger.WithUint64("MaxShardSize", uint64(beaconHardcodeConf.MaxShardSize)),
-		logger.WithUint64("RLNC_K", uint64(beaconHardcodeConf.K)),
-		logger.WithFloat64("RedundancyFraction", beaconHardcodeConf.RedundancyFraction),
-		logger.WithInt("MeshDegreeMax", beaconHardcodeConf.MeshDegreeMax),
-	)
-
 	rlncEngine, err := engine.NewEngine(config.RLNCConfigs{
-		"beacon_block": beaconHardcodeConf,
-		"*":            psCfg.RLNC,
+		"*": psCfg.RLNC,
 	}, log.With(logger.WithService("rlncEngine")).Slog(), shmSvc)
 	if err != nil {
 		return nil, fmt.Errorf("create RLNC engine: %w", err)

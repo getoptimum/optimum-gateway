@@ -47,25 +47,16 @@ func (cfg *Config) Get() *commonentities.OptimumConfig {
 	return cfg.Rotator.Get()
 }
 
-func toMumP2PConfig(cfg *Config) *mump2pcfg.Config {
+func toMumP2PConfig() *mump2pcfg.Config {
 	res := mump2pcfg.DefaultGossipSubConfig()
-	dc := cfg.Get()
-	if dc.MeshDegreeTarget != 0 {
-		res.MeshD = int(dc.MeshDegreeTarget)
-		res.MeshDlo = int(dc.MeshDegreeTarget - 1)
-		res.MeshDhi = int(dc.MeshDegreeTarget + 6)
-	}
-	if dc.MeshDegreeMin != 0 {
-		res.MeshDlo = int(dc.MeshDegreeMin)
-	}
-	if dc.MeshDegreeMax != 0 {
-		res.MeshDhi = int(dc.MeshDegreeMax)
-	}
+	res.MeshD = 8
+	res.MeshDlo = 6
+	res.MeshDhi = 12
+	res.HeartbeatMS = 100
 	res.RLNC = mump2pcfg.RLNCConfig{
-		K:                  dc.ShardFactor,
-		MaxShardSize:       dc.RandomMessageSize,
-		RedundancyFraction: dc.PublisherShardMultiplier,
-		MeshDegreeMax:      res.MeshDhi,
+		K:                  64,
+		MaxShardSize:       3300,
+		RedundancyFraction: 1.5,
 	}
 	return res
 }
