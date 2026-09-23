@@ -67,6 +67,8 @@ func (n *Node) logRLNCConfig(cfgLog mump2pcfg.RLNCConfig) {
 		logger.WithUint64("RLNC_K", uint64(cfgLog.K)),
 		logger.WithUint64("MaxShardSize", uint64(cfgLog.MaxShardSize)),
 		logger.WithFloat64("RedundancyFraction", cfgLog.RedundancyFraction),
+		logger.WithInt("MeshDegreeMin", cfgLog.MeshDegreeMin),
+		logger.WithInt("MeshDegreeTarget", cfgLog.MeshDegreeTarget),
 		logger.WithInt("MeshDegreeMax", cfgLog.MeshDegreeMax),
 	)
 }

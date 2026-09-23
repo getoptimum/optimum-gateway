@@ -55,6 +55,10 @@ type Node struct {
 
 	tk *topics_keeper.Service // Topics keeper for persisting subscribed topics. Using on node startup.
 
+	// rlncConfigs is the per-topic map passed to the RLNC engine. Kept on the
+	// node so publish/decode logs can resolve the same geometry the engine uses.
+	rlncConfigs config.RLNCConfigs
+
 	handshakeBuilder func() any                                                          // function that create handshake message
 	handshakeHandler func(peerID peer.ID, decoder *json.Decoder) (PeerCapability, error) // parse and validate handshake message
 
@@ -184,6 +188,10 @@ func NewNodeWithHost(
 		logger.WithUint64("RLNC_K", uint64(psCfg.RLNC.K)),
 		logger.WithUint64("MaxShardSize", uint64(psCfg.RLNC.MaxShardSize)),
 		logger.WithFloat64("RedundancyFraction", psCfg.RLNC.RedundancyFraction),
+		logger.WithInt("MeshD", psCfg.MeshD),
+		logger.WithInt("MeshDlo", psCfg.MeshDlo),
+		logger.WithInt("MeshDhi", psCfg.MeshDhi),
+		logger.WithInt("HeartbeatMS", psCfg.HeartbeatMS),
 		logger.WithInt("MeshDegreeMax", psCfg.RLNC.MeshDegreeMax),
 	)
 
@@ -198,9 +206,12 @@ func NewNodeWithHost(
 		return nil, fmt.Errorf("initialize RLNC shared memory: %w", err)
 	}
 
-	rlncEngine, err := engine.NewEngine(config.RLNCConfigs{
+	ret.rlncConfigs = config.RLNCConfigs{
 		"*": psCfg.RLNC,
-	}, log.With(logger.WithService("rlncEngine")).Slog(), shmSvc)
+	}
+	ret.logRLNCTopicMap()
+
+	rlncEngine, err := engine.NewEngine(ret.rlncConfigs, log.With(logger.WithService("rlncEngine")).Slog(), shmSvc)
 	if err != nil {
 		return nil, fmt.Errorf("create RLNC engine: %w", err)
 	}

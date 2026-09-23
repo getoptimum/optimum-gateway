@@ -28,6 +28,7 @@ func (n *Node) PublishMessage(
 		}
 	}
 	msgID := commonhash.SHA256(msg)
+	n.logRLNCMessage("rlnc encode", topicName, msgID, len(msg))
 	if err := n.psRouter.Publish(topicName, msgID, msg); err != nil {
 		return fmt.Errorf("failed to publish message: %w", err)
 	}

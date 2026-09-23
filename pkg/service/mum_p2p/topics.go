@@ -49,6 +49,9 @@ func (n *Node) runPartialDeliveries() {
 			if _, ok := n.topics.Load(delivery.Topic); !ok {
 				continue
 			}
+			n.logRLNCMessage("rlnc decode", delivery.Topic, delivery.GroupID, len(delivery.Payload),
+				logger.WithString("from", delivery.From.String()),
+			)
 			n.broadcaster.Broadcast(&entities.MumP2PResponse{
 				Message: &commonentities.P2PMessage{
 					MessageID:      delivery.GroupID,
