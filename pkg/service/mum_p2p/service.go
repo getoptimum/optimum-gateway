@@ -210,7 +210,7 @@ func NewNodeWithHost(
 		beaconBlockTopicKey: {
 			K:                  8,
 			MaxShardSize:       3300,
-			RedundancyFraction: 8.0,
+			RedundancyFraction: 6.0,
 		},
 		"*": psCfg.RLNC,
 	}
