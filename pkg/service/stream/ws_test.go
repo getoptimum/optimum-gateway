@@ -30,6 +30,8 @@ func testAuth(t *testing.T, requireAuth bool) (ConsumerAuthenticator, *test_util
 	}
 	m, err := auth_token.New(t.Context(), logger.NewAppSLogger(logger.Debug), rig.AppCfg(t))
 	require.NoError(t, err)
+	_, err = m.Token(t.Context())
+	require.NoError(t, err)
 	return NewConsumerAuthenticator(m, true), rig
 }
 
@@ -60,6 +62,16 @@ func streamToken(t *testing.T, rig *test_utils.AuthTestRig, subject string) stri
 	return rig.MustSignToken(t, rig.PrivateKey, func(c *jwks_verifier.Claims) {
 		c.Audience = jwt.ClaimStrings{jwks_verifier.AudStream}
 		c.Subject = subject
+		c.OperatorID = rig.OperatorID
+	})
+}
+
+func foreignOperatorStreamToken(t *testing.T, rig *test_utils.AuthTestRig, subject string) string {
+	t.Helper()
+	return rig.MustSignToken(t, rig.PrivateKey, func(c *jwks_verifier.Claims) {
+		c.Audience = jwt.ClaimStrings{jwks_verifier.AudStream}
+		c.Subject = subject
+		c.OperatorID = "op-other"
 	})
 }
 
@@ -121,6 +133,16 @@ func TestWS_RejectsBeforeUpgrade(t *testing.T) {
 		require.Nil(t, conn)
 		require.Zero(t, hub.SubscriberCount(), "rejected consumer must not create a subscriber")
 	}
+}
+
+func TestWS_RejectsForeignOperatorToken(t *testing.T) {
+	ts, _, hub, rig := newWSTestServer(t, &Config{}, true)
+
+	conn, code, err := dial(ts, "", foreignOperatorStreamToken(t, rig, "sub-foreign"))
+	require.Equal(t, websocket.ErrBadHandshake, err)
+	require.Equal(t, http.StatusUnauthorized, code)
+	require.Nil(t, conn)
+	require.Zero(t, hub.SubscriberCount(), "rejected consumer must not create a subscriber")
 }
 
 func TestWS_BlockFraming(t *testing.T) {

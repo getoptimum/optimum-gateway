@@ -352,7 +352,7 @@ func (m *Service) VerifyToken(rawJWT string) (*jwks_verifier.Claims, error) {
 }
 
 // VerifyStreamToken checks a consumer block-stream JWT (aud=stream).
-// No chain gate — stream authorization is audience-only in v1 (ADR-0011).
+// No chain gate — stream authorization is operator-bound in v1 (ADR-0011).
 func (m *Service) VerifyStreamToken(rawJWT string) (*jwks_verifier.Claims, error) {
 	if !m.IsEnabled() {
 		return nil, nil
@@ -360,6 +360,15 @@ func (m *Service) VerifyStreamToken(rawJWT string) (*jwks_verifier.Claims, error
 	claims, err := m.verifier.Verify(rawJWT, jwks_verifier.AudStream)
 	if err != nil {
 		return nil, fmt.Errorf("auth_token: verify stream JWT: %w", err)
+	}
+	// Legacy auth deployments omit operator_id from the mint response. Keep those
+	// gateways compatible, but bind stream tokens whenever our tenancy is known.
+	if operatorID := m.OperatorID(); operatorID != "" && claims.OperatorID != operatorID {
+		return nil, fmt.Errorf(
+			"auth_token: stream token operator mismatch: expected %q, got %q",
+			operatorID,
+			claims.OperatorID,
+		)
 	}
 	return claims, nil
 }

@@ -54,6 +54,10 @@ func authCtx(t *testing.T, rig *test_utils.AuthTestRig, subject string) context.
 	return metadata.AppendToOutgoingContext(context.Background(), "authorization", "Bearer "+streamToken(t, rig, subject))
 }
 
+func authCtxWithToken(token string) context.Context {
+	return metadata.AppendToOutgoingContext(context.Background(), "authorization", "Bearer "+token)
+}
+
 // subscribeGRPC opens the bidi stream and sends the selection message. A bidi
 // Subscribe returns without waiting, so rejections surface on the first Recv.
 func subscribeGRPC(ctx context.Context, t *testing.T, client streamv1.BlockStreamServiceClient, req *streamv1.SubscribeRequest) grpc.BidiStreamingClient[streamv1.SubscribeRequest, streamv1.BlockEvent] {
@@ -68,6 +72,20 @@ func TestGRPC_RejectsWithoutToken(t *testing.T) {
 	client, _, hub, _ := newGRPCTestServer(t, &Config{})
 
 	sub := subscribeGRPC(ctxDeadline(t), t, client, &streamv1.SubscribeRequest{})
+	_, err := sub.Recv()
+	require.Equal(t, codes.Unauthenticated, status.Code(err))
+	require.Zero(t, hub.SubscriberCount(), "rejected consumer must not create a subscriber")
+}
+
+func TestGRPC_RejectsForeignOperatorToken(t *testing.T) {
+	client, _, hub, rig := newGRPCTestServer(t, &Config{})
+
+	sub := subscribeGRPC(
+		authCtxWithToken(foreignOperatorStreamToken(t, rig, "sub-foreign")),
+		t,
+		client,
+		&streamv1.SubscribeRequest{},
+	)
 	_, err := sub.Recv()
 	require.Equal(t, codes.Unauthenticated, status.Code(err))
 	require.Zero(t, hub.SubscriberCount(), "rejected consumer must not create a subscriber")
