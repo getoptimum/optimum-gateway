@@ -9,6 +9,7 @@ import (
 
 	"github.com/libp2p/go-libp2p"
 	mplex "github.com/libp2p/go-libp2p-mplex"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/net/connmgr"
@@ -17,7 +18,10 @@ import (
 	gomplex "github.com/libp2p/go-mplex"
 	"github.com/multiformats/go-multiaddr"
 
-	commonhash "github.com/getoptimum/optimum-common/pkg/hash"
+	"github.com/getoptimum/mump2p-protocol/pkg/config"
+	"github.com/getoptimum/mump2p-protocol/pkg/engine"
+	"github.com/getoptimum/mump2p-protocol/pkg/partial"
+	rlncps "github.com/getoptimum/mump2p-protocol/pkg/pubsub"
 	"github.com/getoptimum/optimum-common/pkg/identity"
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	commonnet "github.com/getoptimum/optimum-common/pkg/net"
@@ -28,31 +32,35 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/service/mum_p2p/tracer"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
 	"github.com/getoptimum/optimum-gateway/pkg/utils"
-	pubsub "github.com/getoptimum/optimum-p2p/optimum-pubsub"
-	pboptimum "github.com/getoptimum/optimum-p2p/optimum-pubsub/pb"
 )
 
 type Node struct {
-	ctx  context.Context
-	log  logger.AppLogger
-	cfg  *Config
-	host host.Host      // The libp2p host managing network connections and identity
-	ps   *pubsub.PubSub // The Optimum pub-sub instance
+	ctx      context.Context
+	log      logger.AppLogger
+	cfg      *Config
+	host     host.Host        // The libp2p host managing network connections and identity
+	ps       *pubsub.PubSub   // The Optimum pub-sub instance
+	psRouter *partial.Manager // The Optimum pub-sub instance
 
 	tracer         *tracer.MumP2P
+	meshCollector  *telemetry.MumP2PCollector
 	bootstrapNodes []peer.AddrInfo                            // Optional bootstrap peers for initial connectivity
 	topics         *syncx.RWMap[string, *pubsub.Topic]        // Active topics
 	subscriptions  *syncx.RWMap[string, *pubsub.Subscription] // Active topic subscriptions
 	broadcaster    *syncx.Broadcaster[*entities.MumP2PResponse]
 
 	peersMap         *syncx.TTLMap[peer.ID, entities.PeerState]
-	peersApprovedMap *syncx.RWMap[peer.ID, struct{}]              // list of peers which can be used for message publish
-	peerCapabilities *syncx.RWMap[peer.ID, pubsub.PeerCapability] // peer capabilities derived from the handshake
+	peersApprovedMap *syncx.RWMap[peer.ID, struct{}] // mesh-admitted peers (handshake verified)
+	peerCapabilities *syncx.RWMap[peer.ID, PeerCapability]
 
 	tk *topics_keeper.Service // Topics keeper for persisting subscribed topics. Using on node startup.
 
-	handshakeBuilder func() any                                                                 // function that create handshake message
-	handshakeHandler func(peerID peer.ID, decoder *json.Decoder) (pubsub.PeerCapability, error) // function that parse and validate handshake message
+	// rlncConfigs is the per-topic map passed to the RLNC engine. Kept on the
+	// node so publish/decode logs can resolve the same geometry the engine uses.
+	rlncConfigs config.RLNCConfigs
+
+	handshakeBuilder func() any                                                          // function that create handshake message
+	handshakeHandler func(peerID peer.ID, decoder *json.Decoder) (PeerCapability, error) // parse and validate handshake message
 
 	oncer sync.Once
 }
@@ -148,65 +156,86 @@ func NewNodeWithHost(
 		subscriptions:    syncx.NewRWMap[string, *pubsub.Subscription](),
 		broadcaster:      syncx.NewBroadcaster[*entities.MumP2PResponse](),
 		peersMap:         syncx.NewTTLMap[peer.ID, entities.PeerState](15*time.Second, 15*time.Second),
-		peersApprovedMap: syncx.NewRWMap[peer.ID, struct{}](), // list of peers which can be used for message publish
-		peerCapabilities: syncx.NewRWMap[peer.ID, pubsub.PeerCapability](),
+		peersApprovedMap: syncx.NewRWMap[peer.ID, struct{}](),
+		peerCapabilities: syncx.NewRWMap[peer.ID, PeerCapability](),
+		meshCollector:    telemetry.NewMumP2PCollector(),
 		tk:               topics_keeper.NewService(ctx, log.With(logger.WithService("topic_keeper")), identityDir),
 
 		handshakeBuilder: func() any {
 			return entities.NewHandshake(cfg.ClusterID)
 		},
-		handshakeHandler: func(_ peer.ID, decoder *json.Decoder) (pubsub.PeerCapability, error) {
+		handshakeHandler: func(_ peer.ID, decoder *json.Decoder) (PeerCapability, error) {
 			var handshake entities.Handshake
 			if errD := decoder.Decode(&handshake); errD != nil {
-				return pubsub.PeerCapability{}, errD
+				return PeerCapability{}, errD
 			}
 			if errV := handshake.Validate(cfg.ClusterID); errV != nil {
-				return pubsub.PeerCapability{}, fmt.Errorf(
+				return PeerCapability{}, fmt.Errorf(
 					"validating handshake response, remote cluster `%s`: %w", handshake.ClusterID, errV)
 			}
-			return pubsub.PeerCapability{CanPublish: true}, nil
+			return PeerCapability{CanPublish: true}, nil
 		},
 	}
 	ret.tracer = tracer.NewTracerMumP2P(ret.broadcaster, entities.OptimumTraceEventSet(cfg.TraceMesh, cfg.TraceRPC, cfg.TraceShard))
 
 	log.Info("initializing optimum gossipsub")
-	maxMessageSize, err := utils.CalculateMaxSize(cfg.MaxMessageSize)
-	if err != nil {
-		return nil, fmt.Errorf("failed to calculate max message size: %w", err)
+
+	psCfg := toMumP2PConfig()
+	ret.logRLNCConfig(psCfg.RLNC)
+
+	log.Info("log params",
+		logger.WithFlow("RLNC"),
+		logger.WithUint64("RLNC_K", uint64(psCfg.RLNC.K)),
+		logger.WithUint64("MaxShardSize", uint64(psCfg.RLNC.MaxShardSize)),
+		logger.WithFloat64("RedundancyFraction", psCfg.RLNC.RedundancyFraction),
+		logger.WithInt("MeshD", psCfg.MeshD),
+		logger.WithInt("MeshDlo", psCfg.MeshDlo),
+		logger.WithInt("MeshDhi", psCfg.MeshDhi),
+		logger.WithInt("HeartbeatMS", psCfg.HeartbeatMS),
+		logger.WithInt("MeshDegreeMax", psCfg.RLNC.MeshDegreeMax),
+	)
+
+	// Fail startup on invalid dynamic config: rotator fetch and programmatic
+	// mump2p setup do not validate these values, so a bad config would drop publishes.
+	if err = psCfg.Validate(); err != nil {
+		return nil, fmt.Errorf("validate mump2p config: %w", err)
 	}
-	options := []pubsub.Option{
-		// todo this for some reason not publish message to all mesh peers pubsub.WithMessageSignaturePolicy(pubsub.StrictNoSign),
-		// todo this triggers panics connection manager because of missing peer.ID pubsub.WithNoAuthor(),
-		pubsub.WithEventTracer(ret.tracer),
-		pubsub.WithMaxMessageSize(maxMessageSize),
-		pubsub.WithOptimumSubParams(toOptimumConfig(cfg)),
-		pubsub.WithConfigRotator(cfg.Rotator),
-		// Default-deny mesh admission (#923): a peer joins the mesh only after its
-		// handshake verifies (AllowPeer in handshake.go), not merely on connect.
-		pubsub.WithPeerAdmissionControl(),
-		pubsub.WithPeerMsgFilter(func(pid peer.ID, _ string) bool {
+
+	shmSvc, err := NewRLNCWrapper(psCfg)
+	if err != nil {
+		return nil, fmt.Errorf("initialize RLNC shared memory: %w", err)
+	}
+
+	ret.rlncConfigs = config.RLNCConfigs{
+		"*": psCfg.RLNC,
+	}
+	ret.logRLNCTopicMap()
+
+	rlncEngine, err := engine.NewEngine(ret.rlncConfigs, log.With(logger.WithService("rlncEngine")).Slog(), shmSvc)
+	if err != nil {
+		return nil, fmt.Errorf("create RLNC engine: %w", err)
+	}
+
+	optList := []rlncps.RLNCOption{
+		rlncps.WithRLNCTracer(ret.tracer),
+		// todo fix it rlncps.WithPeerAdmissionControl(),
+		rlncps.WithPeerFilterFN(func(pid peer.ID, _ string) bool {
 			_, ok := ret.peersApprovedMap.Load(pid)
 			return ok
 		}),
+		rlncps.WithAppendRawTracer(ret.meshCollector),
 	}
-	if telemetry.MetricsEnabled() {
-		options = append(options, pubsub.WithRawTracer(telemetry.NewMumP2PCollector()))
-	}
-
-	// NN: set custom message ID function for optimump2p to use SHA256 hash of the message data
-	options = append(options, pubsub.WithMessageIdFn(func(msg *pboptimum.Message) string {
-		if msg == nil {
-			return ""
-		}
-		return commonhash.SHA256(msg.Data)
-	}))
-
-	// Create pubsub before registering handshake handlers so ps is set when the first
-	// handshake calls AllowPeer (#923); otherwise the peer is deferred for its lifetime.
-	ret.ps, err = pubsub.NewOptimumP2P(ctx, h, options...)
+	ret.ps, ret.psRouter, err = rlncps.NewPartialRLNCPubSub(ctx,
+		psCfg,
+		log.With(logger.WithService("mump2p")).Slog(),
+		h,
+		rlncEngine,
+		optList...,
+	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create mump2p: %w", err)
+		return nil, fmt.Errorf("create RLNCP pubsub: %w", err)
 	}
+	go ret.runPartialDeliveries()
 
 	ret.RegisterHandshakeMessageSender(cfg.ClusterID)
 	ret.RegisterHandshakeHandler(cfg.ClusterID)
@@ -243,9 +272,15 @@ func (n *Node) Start() error {
 	return nil
 }
 
-// Stop stops the topics keeper (waiting for any pending flush) and closes the host.
+// Stop stops the topics keeper (waiting for any pending flush), closes the partial
+// message manager, and closes the host.
 func (n *Node) Stop() {
 	n.tk.Stop()
+	if n.psRouter != nil {
+		if err := n.psRouter.Close(); err != nil {
+			n.log.Error("failed to close partial message manager", err)
+		}
+	}
 	if err := n.host.Close(); err != nil {
 		n.log.Error("failed to close host", err)
 	}
@@ -255,14 +290,14 @@ func (n *Node) CountConnectedPeers() (totalPeers int, perTopicPeers map[string]i
 	topics := n.ps.GetTopics()
 	perTopicPeers = make(map[string]int, len(topics))
 	for _, t := range topics {
-		perTopicPeers[t] = len(n.ps.GetMeshPeers(t))
+		perTopicPeers[t] = len(n.GetMeshPeers(t))
 	}
 	return len(n.host.Network().Peers()), perTopicPeers
 }
 
 // GetMeshPeers returns the list of peer in the state variable mesh[topic] at the node.
 func (n *Node) GetMeshPeers(topic string) []peer.ID {
-	return n.ps.GetMeshPeers(topic)
+	return n.meshCollector.MeshPeers(topic)
 }
 
 // GetTopics returns list of topics the node is subscribed to.
@@ -292,7 +327,7 @@ func (n *Node) getPeerState(peerID peer.ID) (entities.PeerState, bool) {
 	return n.peersMap.Get(peerID)
 }
 
-func (n *Node) setPeerState(peerID peer.ID, state entities.PeerState, capability pubsub.PeerCapability) {
+func (n *Node) setPeerState(peerID peer.ID, state entities.PeerState, capability PeerCapability) {
 	n.peersMap.Put(peerID, state)
 	switch state {
 	case entities.PeerStateHandshakeValid:

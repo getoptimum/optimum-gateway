@@ -7,12 +7,14 @@ import (
 	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/require"
 
+	tracepb "github.com/getoptimum/mump2p-protocol/pkg/pb"
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	commontelemetry "github.com/getoptimum/optimum-common/pkg/telemetry"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry/tracer"
-	pboptimum "github.com/getoptimum/optimum-p2p/optimum-pubsub/pb"
 )
+
+const topicKey = "topic"
 
 func TestPeerTopicTracerHandleMumP2PTrace(t *testing.T) {
 	reg := prometheus.NewRegistry()
@@ -24,39 +26,52 @@ func TestPeerTopicTracerHandleMumP2PTrace(t *testing.T) {
 	attTopic := "/eth2/c6ecb76c/beacon_attestation_31/ssz_snappy"
 
 	require.NoError(t, tracer.HandleMumP2PTrace(nil))
-	require.NoError(t, tracer.HandleMumP2PTrace(&pboptimum.TraceEvent{}))
+	require.NoError(t, tracer.HandleMumP2PTrace(&tracepb.TraceEvent{}))
+	require.NoError(t, tracer.HandleMumP2PTrace(&tracepb.TraceEvent{
+		Event: &tracepb.TraceEvent_EncodeError{EncodeError: &tracepb.EncodeError{}},
+	}))
+	require.Zero(t, metricValue(t, reg, "testns_mump2p_trace_messages_total", map[string]string{
+		"event":  "publish",
+		topicKey: "beacon_block",
+	}))
 
 	cases := []struct {
 		name   string
-		raw    *pboptimum.TraceEvent
+		raw    *tracepb.TraceEvent
 		checks []metricExpectation
 	}{
 		{
 			name: "publish message",
-			raw: &pboptimum.TraceEvent{
-				Type:           pboptimum.TraceEvent_PUBLISH_MESSAGE.Enum(),
-				PublishMessage: &pboptimum.TraceEvent_PublishMessage{Topic: new(beaconTopic)},
+			raw: &tracepb.TraceEvent{
+				Event: &tracepb.TraceEvent_PublishMessage{PublishMessage: &tracepb.PublishMessage{Topic: beaconTopic}},
 			},
 			checks: []metricExpectation{
-				{name: "testns_mump2p_trace_messages_total", labels: map[string]string{"event": "publish", "topic": "beacon_block"}, value: 1},
+				{name: "testns_mump2p_trace_messages_total", labels: map[string]string{
+					"event":  "publish",
+					topicKey: "beacon_block",
+				}, value: 1},
 			},
 		},
 		{
 			name: "reject message with empty reason",
-			raw: &pboptimum.TraceEvent{
-				Type:          pboptimum.TraceEvent_REJECT_MESSAGE.Enum(),
-				RejectMessage: &pboptimum.TraceEvent_RejectMessage{Topic: new(attTopic)},
+			raw: &tracepb.TraceEvent{
+				Event: &tracepb.TraceEvent_RejectMessage{RejectMessage: &tracepb.RejectMessage{Topic: attTopic}},
 			},
 			checks: []metricExpectation{
-				{name: "testns_mump2p_trace_messages_total", labels: map[string]string{"event": "reject", "topic": "beacon_attestation"}, value: 1},
-				{name: "testns_mump2p_trace_message_rejects_total", labels: map[string]string{"topic": "beacon_attestation", "reason": "unknown"}, value: 1},
+				{name: "testns_mump2p_trace_messages_total", labels: map[string]string{
+					"event":  "reject",
+					topicKey: "beacon_attestation",
+				}, value: 1},
+				{name: "testns_mump2p_trace_message_rejects_total", labels: map[string]string{
+					topicKey: "beacon_attestation",
+					"reason": "unknown",
+				}, value: 1},
 			},
 		},
 		{
-			name: "new shard",
-			raw: &pboptimum.TraceEvent{
-				Type:     pboptimum.TraceEvent_NEW_SHARD.Enum(),
-				NewShard: &pboptimum.TraceEvent_ShardContainer{Coefficients: []byte{1, 2, 3, 4}},
+			name: "helpful symbol",
+			raw: &tracepb.TraceEvent{
+				Event: &tracepb.TraceEvent_HelpfulSymbol{HelpfulSymbol: &tracepb.SymbolContainer{Coefficients: []byte{1, 2, 3, 4}}},
 			},
 			checks: []metricExpectation{
 				{name: "testns_mump2p_trace_shards_total", labels: map[string]string{"kind": "new"}, value: 1},
@@ -65,9 +80,8 @@ func TestPeerTopicTracerHandleMumP2PTrace(t *testing.T) {
 		},
 		{
 			name: "recv rpc",
-			raw: &pboptimum.TraceEvent{
-				Type:    pboptimum.TraceEvent_RECV_RPC.Enum(),
-				RecvRPC: &pboptimum.TraceEvent_RecvRPC{Length: new(uint64(17))},
+			raw: &tracepb.TraceEvent{
+				Event: &tracepb.TraceEvent_RecvRpc{RecvRpc: &tracepb.RecvRPC{Length: 17}},
 			},
 			checks: []metricExpectation{
 				{name: "testns_mump2p_trace_rpc_total", labels: map[string]string{"direction": "recv"}, value: 1},
@@ -76,9 +90,8 @@ func TestPeerTopicTracerHandleMumP2PTrace(t *testing.T) {
 		},
 		{
 			name: "drop rpc",
-			raw: &pboptimum.TraceEvent{
-				Type:    pboptimum.TraceEvent_DROP_RPC.Enum(),
-				DropRPC: &pboptimum.TraceEvent_DropRPC{},
+			raw: &tracepb.TraceEvent{
+				Event: &tracepb.TraceEvent_DropRpc{DropRpc: &tracepb.DropRPC{}},
 			},
 			checks: []metricExpectation{
 				{name: "testns_mump2p_trace_rpc_total", labels: map[string]string{"direction": "drop"}, value: 1},
@@ -86,22 +99,26 @@ func TestPeerTopicTracerHandleMumP2PTrace(t *testing.T) {
 		},
 		{
 			name: "join mesh topic",
-			raw: &pboptimum.TraceEvent{
-				Type: pboptimum.TraceEvent_JOIN.Enum(),
-				Join: &pboptimum.TraceEvent_Join{Topic: new(attTopic)},
+			raw: &tracepb.TraceEvent{
+				Event: &tracepb.TraceEvent_Join{Join: &tracepb.Join{Topic: attTopic}},
 			},
 			checks: []metricExpectation{
-				{name: "testns_mump2p_trace_mesh_total", labels: map[string]string{"event": "join", "topic": "beacon_attestation"}, value: 1},
+				{name: "testns_mump2p_trace_mesh_total", labels: map[string]string{
+					"event":  "join",
+					topicKey: "beacon_attestation",
+				}, value: 1},
 			},
 		},
 		{
 			name: "add peer mesh event",
-			raw: &pboptimum.TraceEvent{
-				Type:    pboptimum.TraceEvent_ADD_PEER.Enum(),
-				AddPeer: &pboptimum.TraceEvent_AddPeer{},
+			raw: &tracepb.TraceEvent{
+				Event: &tracepb.TraceEvent_AddPeer{AddPeer: &tracepb.AddPeer{}},
 			},
 			checks: []metricExpectation{
-				{name: "testns_mump2p_trace_mesh_total", labels: map[string]string{"event": "add_peer", "topic": "none"}, value: 1},
+				{name: "testns_mump2p_trace_mesh_total", labels: map[string]string{
+					"event":  "add_peer",
+					topicKey: "none",
+				}, value: 1},
 			},
 		},
 	}

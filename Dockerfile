@@ -5,7 +5,7 @@ FROM --platform=$BUILDPLATFORM golang:1.26.6-alpine AS builder
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
 
-RUN apk add --no-cache build-base git clang lld openssh-client
+RUN apk add --no-cache build-base git clang lld openssh-client bash
 
 COPY --from=xx / /
 
@@ -46,6 +46,8 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
     go build -o /gateway/optimum-gateway ./cmd
 
+RUN make RLNC_SERVER_OUTPUT=/gateway/bin/rlnc-server build-rlnc-server
+
 FROM alpine:3.22
 
 RUN apk upgrade --no-cache && \
@@ -61,12 +63,16 @@ WORKDIR /gateway
 RUN mkdir -p /gateway/logs
 
 COPY --from=builder /gateway/optimum-gateway /optimum-gateway
+COPY --from=builder /gateway/bin/rlnc-server /rlnc-server
+COPY --from=builder /optimum-gateway/docker-entrypoint.sh /docker-entrypoint.sh
 
 # License, patent marking and third-party attribution shipped with the binary.
 COPY --from=builder /optimum-gateway/LICENSE /optimum-gateway/NOTICE /optimum-gateway/PATENTS /optimum-gateway/THIRD-PARTY-NOTICES.md /usr/share/doc/optimum-gateway/
 
 # USER gateway
+#RUN /rlnc-server --lanes 20 --name mump2p-protocol &
 
 EXPOSE 33212 33213 48123
 
-ENTRYPOINT ["/optimum-gateway"]
+RUN chmod +x /docker-entrypoint.sh
+ENTRYPOINT ["/docker-entrypoint.sh"]

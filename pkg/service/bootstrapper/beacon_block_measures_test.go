@@ -10,21 +10,11 @@ import (
 	chainstate "github.com/getoptimum/optimum-gateway/pkg/protocol/chain_state"
 )
 
-func TestRecordMumPublishedAtChanOverflow(t *testing.T) {
+func TestRecordMumPublishedAtDoesNotBlock(t *testing.T) {
 	srv, _, _ := getTestSrv(t)
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		n := time.Now()
-		for i := range uint64(1000) {
-			srv.RecordMumPublishedAt(i, n.Unix())
-		}
-	}()
-
-	select {
-	case <-done:
-	case <-time.After(5 * time.Second):
-		t.Fatal("timeout")
+	n := time.Now().Unix()
+	for i := range uint64(1000) {
+		srv.RecordMumPublishedAt(i, n)
 	}
 }
 
@@ -53,9 +43,8 @@ func TestRecordMumPublishedAt(t *testing.T) {
 	require.Equal(t, int64(444), req.Payload.MumPublishedAtMs)
 }
 
-func TestSendTrackedSlotsEmitsLatestSameSlotValue(t *testing.T) {
-	srv, bootstrap, cfg := getTestSrv(t)
-	cfg.TelemetryEnable = true
+func TestBlockLatencyExportEmitsLatestSameSlotValue(t *testing.T) {
+	srv, bootstrap, _ := getTestSrv(t)
 
 	const slot = uint64(128)
 	srv.RecordMumPublishedAt(slot, 100)
@@ -77,6 +66,36 @@ func TestSendTrackedSlotsEmitsLatestSameSlotValue(t *testing.T) {
 	}
 	require.GreaterOrEqual(t, seen, 1, "expected at least one emission")
 	require.Equal(t, int64(300), last, "settled emission must carry the latest same-slot value")
+}
+
+func TestBlockLatencyExportRetriesThenRecovers(t *testing.T) {
+	srv, bootstrap, _ := getTestSrv(t)
+	bootstrap.SetBlockLatencyStatus(521)
+
+	const slot = uint64(700)
+	srv.RecordMumPublishedAt(slot, 100)
+
+	a1 := bootstrap.WaitBlockLatencyRequest(t, 5*time.Second)
+	require.Equal(t, slot, a1.Payload.BlockSlot)
+	a2 := bootstrap.WaitBlockLatencyRequest(t, 5*time.Second)
+	require.Equal(t, slot, a2.Payload.BlockSlot)
+
+	bootstrap.SetBlockLatencyStatus(0)
+	req := bootstrap.WaitBlockLatencyRequest(t, 20*time.Second)
+	require.Equal(t, slot, req.Payload.BlockSlot)
+	bootstrap.AssertNoBlockLatencyRequest(t, 2500*time.Millisecond)
+}
+
+func TestBlockLatencyExportTerminalResponseIsNotRetried(t *testing.T) {
+	srv, bootstrap, _ := getTestSrv(t)
+	bootstrap.SetBlockLatencyStatus(400)
+
+	const slot = uint64(800)
+	srv.RecordMumPublishedAt(slot, 100)
+
+	req := bootstrap.WaitBlockLatencyRequest(t, 5*time.Second)
+	require.Equal(t, slot, req.Payload.BlockSlot)
+	bootstrap.AssertNoBlockLatencyRequest(t, 2500*time.Millisecond)
 }
 
 func TestHandleBeaconBlock(t *testing.T) {

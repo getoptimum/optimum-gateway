@@ -15,7 +15,6 @@ import (
 
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
-	pubsub "github.com/getoptimum/optimum-p2p/optimum-pubsub"
 )
 
 const (
@@ -66,13 +65,9 @@ func (n *Node) handleNewConnection(clusterID string, conn network.Conn) {
 	state, ok := n.getPeerState(peerID)
 	if ok && state == entities.PeerStateHandshakeValid {
 		l.Debug("peer already has valid handshake, skipping handshake")
-		// Re-admit on reconnect: pubsub revokes mesh admission on disconnect (#923), so a
+		// Re-admit on reconnect: mesh admission is revoked on disconnect (#923), so a
 		// still-trusted peer must be re-authorized here since the handshake is skipped.
-		// The capability must come from the cache, never from a default: re-admitting with
-		// AllowPeer would silently promote a read-only peer to publisher on every reconnect.
-		if n.ps != nil {
-			n.ps.AllowPeerWithCapability(peerID, n.readmitCapability(l, peerID))
-		}
+		n.allowPeerWithCapability(peerID, n.readmitCapability(l, peerID))
 		return
 	}
 	if ok && state == entities.PeerStateHandshakeInvalid {
@@ -159,7 +154,7 @@ func (n *Node) RegisterHandshakeHandler(clusterID string) {
 			return
 		}
 
-		if err = json.NewEncoder(stream).Encode(n.handshakeBuilder()); err != nil {
+		if err := json.NewEncoder(stream).Encode(n.handshakeBuilder()); err != nil {
 			l.Error("failed to send handshake response", err)
 			n.disconnectPeer(remotePeer)
 			return
@@ -169,35 +164,38 @@ func (n *Node) RegisterHandshakeHandler(clusterID string) {
 	})
 }
 
-// markHandshakeValid records a verified handshake and admits the peer to the pubsub mesh (#923)
+// markHandshakeValid records a verified handshake and admits the peer to the mesh (#923)
 // with the capability its handshake resolved to.
-func (n *Node) markHandshakeValid(peerID peer.ID, capability pubsub.PeerCapability) {
+func (n *Node) markHandshakeValid(peerID peer.ID, capability PeerCapability) {
 	n.setPeerState(peerID, entities.PeerStateHandshakeValid, capability)
-	if n.ps != nil {
-		n.ps.AllowPeerWithCapability(peerID, capability)
-	}
+	n.allowPeerWithCapability(peerID, capability)
+}
+
+func (n *Node) allowPeerWithCapability(peerID peer.ID, _ PeerCapability) {
+	n.peersApprovedMap.Store(peerID, struct{}{})
 }
 
 // readmitCapability returns the cached capability for a peer with a valid handshake.
-func (n *Node) readmitCapability(l logger.AppLogger, peerID peer.ID) pubsub.PeerCapability {
+func (n *Node) readmitCapability(l logger.AppLogger, peerID peer.ID) PeerCapability {
 	capability, ok := n.peerCapabilities.Load(peerID)
 	if !ok {
 		l.Error("re-admitting peer read-only", errMissingPeerCapability)
-		return pubsub.PeerCapability{CanPublish: false}
+		return PeerCapability{CanPublish: false}
 	}
 	return capability
 }
 
 func (n *Node) disconnectPeer(peerID peer.ID) {
-	n.setPeerState(peerID, entities.PeerStateHandshakeInvalid, pubsub.PeerCapability{})
-	// Revoke mesh admission (#923) before closing so the peer cannot linger in any mesh.
-	if n.ps != nil {
-		n.ps.DenyPeer(peerID)
-	}
+	n.revokePeerAdmission(peerID)
+	n.setPeerState(peerID, entities.PeerStateHandshakeInvalid, PeerCapability{})
 	if n.host.Network().Connectedness(peerID) == network.NotConnected {
 		return
 	}
 	_ = n.host.Network().ClosePeer(peerID)
+}
+
+func (n *Node) revokePeerAdmission(peerID peer.ID) {
+	n.peersApprovedMap.Delete(peerID)
 }
 
 func setRPCStreamDeadlines(log logger.AppLogger, stream network.Stream) {

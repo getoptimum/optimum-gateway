@@ -68,7 +68,6 @@ func GetClean(tb testing.TB) *Container {
 
 	ctx, cancel := context.WithTimeout(tb.Context(), time.Minute*3)
 	log := logger.NewAppSLogger(logger.Debug)
-
 	tb.Cleanup(cancel)
 	return &Container{
 		Ctx: ctx,

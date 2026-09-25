@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	commonmetrics "github.com/getoptimum/optimum-common/pkg/telemetry"
+	"github.com/getoptimum/optimum-gateway/pkg/entities"
 )
 
 const (
@@ -123,6 +124,7 @@ func TestMessageAndAuthMetricsHelpers(t *testing.T) {
 
 	IncreaseBadMessagesToMum()
 	IncreaseBadMessagesToCL()
+	ObserveBeaconBlockSize(2048)
 	IncAuthMintResult(AuthMintResultSuccess)
 	SetAuthTokenExpiresAt(12345)
 
@@ -136,9 +138,15 @@ func TestMessageAndAuthMetricsHelpers(t *testing.T) {
 		testMetricsNamespace+"_"+testMetricsSubsystem+"_bad_messages_to_cl_total",
 		map[string]string{labelDirection: "cl"},
 	).GetCounter().GetValue())
+	beaconBlockSize := metricByLabels(t, reg,
+		testMetricsNamespace+"_"+testMetricsSubsystem+"_beacon_block_size_bytes",
+		nil,
+	).GetHistogram()
+	require.Equal(t, uint64(1), beaconBlockSize.GetSampleCount())
+	require.Equal(t, float64(2048), beaconBlockSize.GetSampleSum())
 	require.Equal(t, float64(1), metricByLabels(t, reg,
 		testMetricsNamespace+"_"+testMetricsSubsystem+"_auth_token_mint_total",
-		map[string]string{"result": AuthMintResultSuccess},
+		map[string]string{labelResult: AuthMintResultSuccess},
 	).GetCounter().GetValue())
 	require.Equal(t, float64(12345), metricByLabels(t, reg,
 		testMetricsNamespace+"_"+testMetricsSubsystem+"_auth_token_expires_at_seconds",
@@ -157,7 +165,7 @@ func TestAggregationAndAttestationMetricsHelpers(t *testing.T) {
 	ObserveAttestationPackUniqueDataKeys(5)
 	IncAttestationSubnet(7)
 	IncAttestationEvaluated()
-	IncAttestationForwarded()
+	IncAttestationForwarded(entities.SourceMumP2P)
 	IncAttestationDropped("expired")
 	ObserveAttestationInclusionDelay(4)
 	ObserveAttestationPackLatency(3.5)

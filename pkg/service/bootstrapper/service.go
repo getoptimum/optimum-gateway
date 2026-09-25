@@ -38,9 +38,11 @@ type Service struct {
 	srvForkMgr *forks.Service
 
 	nodeMumP2PStr string // This gateway's mump2p peer ID
-	sendSlotsChan chan uint64
 	blockEvents   chan *blockArrival
 	trackedSlots  *syncx.TTLMap[uint64, *entities.LatencyComparator]
+
+	// queued block-latency snapshots, flushed in bulk once a minute
+	resendList *syncx.RWSlice[entities.LatencyComparator]
 }
 
 func NewService(
@@ -57,11 +59,12 @@ func NewService(
 		authMgr:    authMgr,
 		srvForkMgr: srvForkMgr,
 
-		sendSlotsChan: make(chan uint64, 100),
-		blockEvents:   make(chan *blockArrival, 1024),
-		trackedSlots:  syncx.NewTTLMap[uint64, *entities.LatencyComparator](5*time.Minute, 1*time.Minute),
+		blockEvents:  make(chan *blockArrival, 1024),
+		trackedSlots: syncx.NewTTLMap[uint64, *entities.LatencyComparator](5*time.Minute, 1*time.Minute),
+
+		resendList: syncx.NewRWSlice[entities.LatencyComparator](),
 	}
-	go srv.bgHandleSendSlots()
+	go srv.runBlockLatencyExporter()
 	go srv.bgHandleBlockEvents()
 	return srv
 }
@@ -98,7 +101,8 @@ func (s *Service) RegisterAndGetMumP2PPeers() ([]string, error) {
 		// we can't get info from bootstrap server - either protocol changed or server is down
 		if registerResult != nil {
 			payloadBytes, _ := json.Marshal(payload)
-			s.log.Info("response from bootstrap server",
+			s.log.Info(
+				"response from bootstrap server",
 				logger.WithString("payload", string(payloadBytes)),
 				logger.WithString("response", fmt.Sprintf("%v", *registerResult)),
 			)
@@ -111,7 +115,8 @@ func (s *Service) RegisterAndGetMumP2PPeers() ([]string, error) {
 			return nil, fmt.Errorf("failed to register mump2p peers from bootstrap server")
 		}
 	} else {
-		s.log.Info("registered gateway to bootstrap server",
+		s.log.Info(
+			"registered gateway to bootstrap server",
 			logger.WithString("public_ip", publicIP),
 			logger.WithString("predicted_peer_id", predictedAddress.ID.String()),
 		)
@@ -129,7 +134,8 @@ func (s *Service) RegisterAndGetMumP2PPeers() ([]string, error) {
 		// we can skip such nodes, but we just log error here
 		addr, err := commonnet.AddressInfoFromString(gateway.P2PAddr)
 		if err != nil {
-			s.log.Error("invalid mump2p_addr from bootstrap server, skipping this node",
+			s.log.Error(
+				"invalid mump2p_addr from bootstrap server, skipping this node",
 				fmt.Errorf("gateway_id: %s, mump2p_addr: %s, error: %w", gateway.GatewayID, gateway.P2PAddr, err),
 			)
 			continue
@@ -158,7 +164,8 @@ func (s *Service) predictMumP2PAddrInfo() (peerInfo peer.AddrInfo, publicIP stri
 			return peer.AddrInfo{}, "", fmt.Errorf("unable to get any IP address: %w", err)
 		}
 	}
-	s.log.Info("public IP address detected from prediction",
+	s.log.Info(
+		"public IP address detected from prediction",
 		logger.WithString("public_ip", publicIPV4),
 		logger.WithString("public_ip_v6", publicIPV6),
 	)

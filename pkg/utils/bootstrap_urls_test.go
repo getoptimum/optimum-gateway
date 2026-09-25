@@ -11,29 +11,34 @@ import (
 
 func TestBootstrapRegisterURL(t *testing.T) {
 	tests := map[string]struct {
-		host                string
-		wantRegisterURL     string
-		wantBlockLatencyURL string
+		host                    string
+		wantRegisterURL         string
+		wantBlockLatencyURL     string
+		wantBlockLatencyBulkURL string
 	}{
 		"hostname": {
-			host:                "bootstrap.example.com",
-			wantRegisterURL:     "https://bootstrap.example.com/api/v2/gateways/register",
-			wantBlockLatencyURL: "https://bootstrap.example.com/api/v2/handle_block_latency",
+			host:                    "bootstrap.example.com",
+			wantRegisterURL:         "https://bootstrap.example.com/api/v2/gateways/register",
+			wantBlockLatencyURL:     "https://bootstrap.example.com/api/v2/handle_block_latency",
+			wantBlockLatencyBulkURL: "https://bootstrap.example.com/api/v2/handle_block_latency_bulk",
 		},
 		"base url without trailing slash": {
-			host:                "https://bootstrap.example.com",
-			wantRegisterURL:     "https://bootstrap.example.com/api/v2/gateways/register",
-			wantBlockLatencyURL: "https://bootstrap.example.com/api/v2/handle_block_latency",
+			host:                    "https://bootstrap.example.com",
+			wantRegisterURL:         "https://bootstrap.example.com/api/v2/gateways/register",
+			wantBlockLatencyURL:     "https://bootstrap.example.com/api/v2/handle_block_latency",
+			wantBlockLatencyBulkURL: "https://bootstrap.example.com/api/v2/handle_block_latency_bulk",
 		},
 		"base url with trailing slash": {
-			host:                "https://bootstrap.example.com/",
-			wantRegisterURL:     "https://bootstrap.example.com/api/v2/gateways/register",
-			wantBlockLatencyURL: "https://bootstrap.example.com/api/v2/handle_block_latency",
+			host:                    "https://bootstrap.example.com/",
+			wantRegisterURL:         "https://bootstrap.example.com/api/v2/gateways/register",
+			wantBlockLatencyURL:     "https://bootstrap.example.com/api/v2/handle_block_latency",
+			wantBlockLatencyBulkURL: "https://bootstrap.example.com/api/v2/handle_block_latency_bulk",
 		},
 		"base url with path preserved": {
-			host:                "https://bootstrap.example.com/root",
-			wantRegisterURL:     "https://bootstrap.example.com/root/api/v2/gateways/register",
-			wantBlockLatencyURL: "https://bootstrap.example.com/root/api/v2/handle_block_latency",
+			host:                    "https://bootstrap.example.com/root",
+			wantRegisterURL:         "https://bootstrap.example.com/root/api/v2/gateways/register",
+			wantBlockLatencyURL:     "https://bootstrap.example.com/root/api/v2/handle_block_latency",
+			wantBlockLatencyBulkURL: "https://bootstrap.example.com/root/api/v2/handle_block_latency_bulk",
 		},
 	}
 
@@ -41,6 +46,7 @@ func TestBootstrapRegisterURL(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			require.Equal(t, tt.wantRegisterURL, utils.BootstrapRegisterURL(tt.host))
 			require.Equal(t, tt.wantBlockLatencyURL, utils.BootstrapHandleBlockLatencyURL(tt.host))
+			require.Equal(t, tt.wantBlockLatencyBulkURL, utils.BootstrapHandleBlockLatencyBulkURL(tt.host))
 		})
 	}
 }

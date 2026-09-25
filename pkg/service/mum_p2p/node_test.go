@@ -12,10 +12,10 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/stretchr/testify/require"
 
+	cfgpkg "github.com/getoptimum/optimum-gateway/pkg/config"
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
 	"github.com/getoptimum/optimum-gateway/pkg/service/mum_p2p"
 	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
-	pubsub "github.com/getoptimum/optimum-p2p/optimum-pubsub"
 )
 
 func TestNodePublishMessageAutoSubscribes(t *testing.T) {
@@ -54,7 +54,8 @@ func TestNodeHandshakeAndTopicLifecycle(t *testing.T) {
 		nodeB.UnregisterListener("topic-flow")
 	})
 
-	payload := []byte("hello from mump2p")
+	payload := make([]byte, int(cfgpkg.DefaultRandomMessageSize*cfgpkg.DefaultShardFactor))
+	copy(payload, "hello from mump2p")
 	require.NoError(t, nodeA.PublishMessage(cnt.Ctx, topic, payload))
 
 	select {
@@ -132,16 +133,16 @@ func customHandshakeOptions(counter *atomic.Int32) []mum_p2p.NodeOption {
 		mum_p2p.WithCustomHandshakeBuilder(func() any {
 			return customHandshake{Kind: "custom"}
 		}),
-		mum_p2p.WithCustomHandshakeHandler(func(_ peer.ID, decoder *json.Decoder) (pubsub.PeerCapability, error) {
+		mum_p2p.WithCustomHandshakeHandler(func(_ peer.ID, decoder *json.Decoder) (mum_p2p.PeerCapability, error) {
 			var handshake customHandshake
 			if err := decoder.Decode(&handshake); err != nil {
-				return pubsub.PeerCapability{}, err
+				return mum_p2p.PeerCapability{}, err
 			}
 			if handshake.Kind != "custom" {
-				return pubsub.PeerCapability{}, fmt.Errorf("unexpected handshake kind %q", handshake.Kind)
+				return mum_p2p.PeerCapability{}, fmt.Errorf("unexpected handshake kind %q", handshake.Kind)
 			}
 			counter.Add(1)
-			return pubsub.PeerCapability{CanPublish: true}, nil
+			return mum_p2p.PeerCapability{CanPublish: true}, nil
 		}),
 	}
 }

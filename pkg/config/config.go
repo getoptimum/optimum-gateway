@@ -51,6 +51,7 @@ type AppConfig struct {
 	AgentLibP2PPort       int      `yaml:"agent_lib_p2p_port" env:"OPT_AGENT_LIB_P2P_PORT" default:"33212"`
 	AgentMumP2PPort       int      `yaml:"agent_mump2p_port" env:"OPT_AGENT_MUMP2P_PORT" default:"33213"`
 	DirectCLPeers         []string `yaml:"direct_cl_peers" env:"OPT_DIRECT_CL_PEERS"`
+	AllowNonDirectCLPeers bool     `yaml:"allow_non_direct_cl_peers" env:"OPT_ALLOW_NON_DIRECT_CL_PEERS" default:"false"`
 	TelemetryEnable       bool     `yaml:"telemetry_enable" env:"OPT_ENABLE_TELEMETRY" default:"false"`
 	TelemetryPort         int      `yaml:"telemetry_port" env:"OPT_TELEMETRY_PORT" default:"48123"`
 	TelemetryNamespace    string   `yaml:"telemetry_namespace" env:"OPT_TELEMETRY_NAMESPACE" default:"mump2p"`
@@ -203,9 +204,6 @@ func (c *AppConfig) InitRuntime(ctx context.Context, log logger.AppLogger, chain
 			ShardFactor:              DefaultShardFactor,
 			PublisherShardMultiplier: DefaultPublisherShardMultiplier,
 			ForwardShardThreshold:    DefaultForwardShardThreshold,
-			MeshDegreeTarget:         DefaultMeshDegreeTarget,
-			MeshDegreeMin:            DefaultMeshDegreeMin,
-			MeshDegreeMax:            DefaultMeshDegreeMax,
 		},
 		ch.String(),
 		c.GatewayClusterID,

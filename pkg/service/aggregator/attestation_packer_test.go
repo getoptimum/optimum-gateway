@@ -25,13 +25,20 @@ const (
 func TestPackAttestations(t *testing.T) {
 	// given
 	packer := aggregator.NewAttestationPacker(nil)
-	data := generateAttestationData(t)
+	dataList := []*consensus.AttestationData{
+		generateAttestationData(t),
+		generateAttestationData(t),
+		generateAttestationData(t),
+	}
+
 	rawAttestations := make([]*consensus.SingleAttestation, 0, items)
 	rawAttestationsMap := make(map[string]struct{}, items)
-	for range items {
+	for i := range items {
+		data := dataList[i%len(dataList)]
 		attestation := generateAttestation(t, data)
 
-		require.NoError(t, packer.Add(topics.ParseTopicMeta(generateAttestationTopic(t)), test_utils.SSZSnappyEncode(t, attestation)))
+		topic := generateAttestationTopic(t)
+		require.NoError(t, packer.Add(topics.ParseTopicMeta(topic), test_utils.SSZSnappyEncode(t, attestation)))
 
 		rawAttestations = append(rawAttestations, attestation)
 		encodedAttestation := test_utils.SSZSnappyEncode(t, attestation)
@@ -56,7 +63,7 @@ func TestPackAttestations(t *testing.T) {
 	require.NoError(t, err)
 	resultPacked, err := packer.EncodeCurrent()
 	require.NoError(t, err)
-	require.Len(t, resultPacked, 1)
+	require.Len(t, resultPacked, len(dataList), "packed should equal to number of unique slot attestations")
 
 	lenNative := len(result)
 	lenPacked := len(resultPacked)
@@ -77,14 +84,16 @@ func TestPackAttestations(t *testing.T) {
 		}
 	})
 	t.Run("packed attestations should be restored", func(t *testing.T) {
-		require.True(t, bytes.HasPrefix(resultPacked[0], aggregator.PrefixPacker))
-		decodedPacked, errD := packer.Decode(testForkDigest, resultPacked[0][len(aggregator.PrefixPacker):])
-		require.NoError(t, errD)
+		for i := range resultPacked {
+			require.True(t, bytes.HasPrefix(resultPacked[i], aggregator.PrefixPacker))
+			decodedPacked, errD := packer.Decode(testForkDigest, resultPacked[i][len(aggregator.PrefixPacker):])
+			require.NoError(t, errD)
 
-		for topic := range decodedPacked {
-			for _, sszMessage := range decodedPacked[topic] {
-				_, ok := rawAttestationsMap[commonhash.SHA256(sszMessage)]
-				require.True(t, ok)
+			for topic := range decodedPacked {
+				for _, sszMessage := range decodedPacked[topic] {
+					_, ok := rawAttestationsMap[commonhash.SHA256(sszMessage)]
+					require.True(t, ok)
+				}
 			}
 		}
 	})
@@ -95,7 +104,9 @@ func TestPackAttestations_SendTsMs(t *testing.T) {
 	data := generateAttestationData(t)
 
 	for range 10 {
-		require.NoError(t, packer.Add(topics.ParseTopicMeta(generateAttestationTopic(t)), test_utils.SSZSnappyEncode(t, generateAttestation(t, data))))
+		topic := generateAttestationTopic(t)
+		att := generateAttestation(t, data)
+		require.NoError(t, packer.Add(topics.ParseTopicMeta(topic), test_utils.SSZSnappyEncode(t, att)))
 	}
 
 	beforeEncode := time.Now().UnixMilli()
