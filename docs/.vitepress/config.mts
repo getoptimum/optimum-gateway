@@ -47,6 +47,8 @@ const operatePages = [
   { text: 'Gateway Self-Enrollment', file: '07_gateway_self_enrollment.md' },
   { text: 'Consumer Block Stream', file: '06_block_stream.md' },
   { text: 'Metrics & Grafana', file: '03_telemetry.md' },
+  { text: 'Metrics Reference', file: 'metrics.md' },
+  { text: 'Metrics Methodology', file: 'metrics_methodology.md' },
 ]
 const helpPages = [{ text: 'Troubleshooting', file: '04_troubleshoot.md' }]
 
@@ -132,7 +134,8 @@ export default defineConfigWithTheme<ThemeConfig>({
   ],
 
   sitemap: {
-    hostname: 'https://docs.getoptimum.xyz'
+    // Origin only. Built page paths already include BASE (/optimum-gateway/).
+    hostname: 'https://getoptimum.github.io'
   },
 
   head: [

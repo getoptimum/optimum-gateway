@@ -17,7 +17,7 @@ Required upgrade for everyone not on v1.3.2. Networking and CL peering are uncha
 
 ### Highlights
 
-* **Improved beacon-block acceleration.** Partner gateways now accelerate beacon blocks on every slot. No partner configuration change.
+* **Beacon blocks propagated on every slot.** Partner gateways now propagate beacon blocks over mump2p on every slot. On v1.3.0 and v1.3.1 some slots were skipped. No partner configuration change.
 * **Gateway self-enrollment.** Fleet operators can use one org-wide join key (`ojk_`) instead of one API key per host. See [Gateway Self-Enrollment](./versions/v1.3.2/07_gateway_self_enrollment.md).
 * **Legacy API keys unchanged.** The `ogw_` quick-start path is still the default for single-gateway deployments.
 
