@@ -1252,7 +1252,7 @@ Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
           "refId": "A"
         }
       ],
-      "title": "Accelerated slots (last 5m)",
+      "title": "mump2p-first slots (last 5m)",
       "type": "stat"
     },
     {
@@ -1335,7 +1335,7 @@ Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
           "refId": "A"
         }
       ],
-      "title": "Accelerated slots over time",
+      "title": "mump2p-first slots over time",
       "type": "heatmap"
     },
     {
@@ -1892,16 +1892,14 @@ The Partner Dashboard includes the following sections:
 
 ### Block Arrival Performance
 
-* **Arrival via mump2p (median)** - median block arrival time via mump2p from slot start
-* **Accelerated slots** - percentage of slots where mump2p delivered the block strictly before libp2p
-* **Accelerated slots over time** - heatmap of accelerated slot percentage over time
-* **mump2p arrival over time (median)** - arrival time trend
+* **mump2p-first slots (last 5m)** - percentage of blocks first seen via mump2p rather than libp2p over the last 5 minutes
+* **mump2p-first slots over time** - heatmap of mump2p-first slot percentage over time
+* **mump2p arrival over time (median)** - median block arrival time via mump2p from slot start
 
 ### Attestation Performance
 
-* **Accelerated attestations** - percentage of attestations where mump2p delivered first
-* **Accelerated attestations over time** - trend of attestation race wins
-* **Attestations delivered before 8s deadline** - percentage of mump2p attestations arriving within the 8-second slot deadline
+* **Attestation propagation at $gateway** - end-to-end latency from sender gateway emit to receiver gateway decode (p50 and p95)
+* **mump2p network attestation propagation** - time for attestations to reach 50% and 95% of mump2p nodes once they are injected
 
 
 ## Prometheus Queries (Quick Reference)
@@ -1913,7 +1911,7 @@ All queries use gateway-local metrics from the `/metrics` endpoint.
 | CL peers                           | `mump2p_gateway_cl_peers{gateway_id="$gateway"}`                                                                                      |
 | mump2p peers                       | `mump2p_gateway_mump2p_peers{gateway_id="$gateway"}`                                                                                  |
 | Block arrival p50 via mump2p       | `histogram_quantile(0.50, sum by(le) (rate(mump2p_gateway_block_arrival_mump2p_ms_bucket{gateway_id="$gateway"}[5m])))`               |
-| Accelerated slots %                | `rate(mump2p_gateway_blocks_first_seen_mump2p_total[5m]) / (rate(mump2p_gateway_blocks_first_seen_mump2p_total[5m]) + rate(mump2p_gateway_blocks_first_seen_libp2p_total[5m])) * 100`              |
+| mump2p-first slots %               | `rate(mump2p_gateway_blocks_first_seen_mump2p_total[5m]) / (rate(mump2p_gateway_blocks_first_seen_mump2p_total[5m]) + rate(mump2p_gateway_blocks_first_seen_libp2p_total[5m])) * 100`              |
 
 
 ## Stopping the Stack

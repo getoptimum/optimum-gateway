@@ -5,7 +5,7 @@ Optimum Gateway telemetry follows a two-layer design: **gateways emit raw per-bl
 
 ## Capture the Critical Path
 
-The system sits in the hot path of validator rewards: blocks, attestations, and gossip messages passing between Ethereum CL clients and the Optimum network acceleration layer. We need visibility into three things:
+The system sits in the hot path of validator rewards: blocks, attestations, and gossip messages passing between Ethereum CL clients and the Optimum mump2p mesh. We need visibility into three things:
 
 * **Throughput** -> Are we carrying the expected traffic volume?
 * **Latency** -> Are we delivering faster than vanilla libp2p?
