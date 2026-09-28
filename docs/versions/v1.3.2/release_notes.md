@@ -4,7 +4,7 @@
 
 ## Highlights
 
-* **Improved beacon-block acceleration** (new in v1.3.2). Partner gateways now accelerate beacon blocks on every slot. On v1.3.0 and v1.3.1 they skipped acceleration for some slots. No partner configuration change.
+* **Beacon blocks propagated on every slot** (new in v1.3.2). Partner gateways now propagate beacon blocks over mump2p on every slot. On v1.3.0 and v1.3.1 some slots were skipped. No partner configuration change.
 * **Gateway self-enrollment** (added in v1.3.1, new to you if you are upgrading from v1.2.0 or earlier). Fleet operators can mint one org-wide **join key** (`ojk_`) and configure gateways with `OPT_JOIN_KEY` instead of distributing one `ogw_` API key per host. Each gateway enrolls once on first boot and mints JWTs with a local keypair thereafter. See [Gateway Self-Enrollment](07_gateway_self_enrollment.md).
 * **Legacy API keys unchanged.** The `ogw_` path in [Quick Start](01_quick_start.md) is still the default for single-gateway deployments.
 
