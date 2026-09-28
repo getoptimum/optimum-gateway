@@ -338,7 +338,7 @@ Partners scrape the gateway `/metrics` **locally** with their own Prometheus + G
 | Prometheus can't scrape        | Wrong target. macOS/Windows: `host.docker.internal:48123`; Linux: `172.17.0.1:48123` |
 | Gateway not in the dropdown    | No successful scrape yet. Confirm `curl localhost:48123/metrics \| grep gateway_id`  |
 | Block/attestation panels empty | Gateway isn't receiving blocks/attestations. Fix CL + mesh first via `/health`       |
-| "Accelerated slots" always 0   | No block race data yet. Needs a healthy CL + mesh + time on the network              |
+| "mump2p-first slots" always 0  | No block race data yet. Needs a healthy CL + mesh + time on the network              |
 | Consumer stream quiet, connection still open | A quiet chain and a stalled feed look the same without liveness frames. Alert on **missing** heartbeats and send client keepalives. See [Consumer Block Stream](06_block_stream.md#holding-a-stream-open-for-weeks) |
 
 ```bash

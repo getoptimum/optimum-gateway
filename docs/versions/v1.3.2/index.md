@@ -15,7 +15,7 @@ The **Optimum Gateway** bridges your **Ethereum Consensus Layer (CL) client** wi
 * **Result**: Faster block and attestation propagation, reduced latency, improved validator rewards.
 * **Consumer block stream** (opt-in): expose decoded beacon blocks to your own consumers over WebSocket or gRPC, with production-grade support for long-running connections. See [Consumer Block Stream](06_block_stream.md).
 * **Gateway self-enrollment** (opt-in): fleet operators can use one org-wide join key (`ojk_`) instead of one API key per host. See [Gateway Self-Enrollment](07_gateway_self_enrollment.md).
-* **Beacon-block acceleration:** partner gateways accelerate beacon blocks on every slot — no configuration required.
+* **Beacon-block propagation over mump2p:** partner gateways propagate every slot's beacon block over the mump2p mesh, with no configuration required.
 
 ## Architecture
 
