@@ -8,6 +8,16 @@ import (
 	"github.com/getoptimum/mump2p-protocol/pkg/config"
 )
 
+func TestToMumP2PConfigRelayCreditMultiplier(t *testing.T) {
+	t.Parallel()
+
+	cfg := toMumP2PConfig()
+	require.Equal(t, 5, cfg.RLNC.RelayCreditMultiplier)
+	require.Equal(t, uint32(16), cfg.RLNC.K)
+	require.Equal(t, 1.5, cfg.RLNC.RedundancyFraction)
+	require.NoError(t, cfg.Validate())
+}
+
 func TestIsBeaconBlockTopic(t *testing.T) {
 	t.Parallel()
 

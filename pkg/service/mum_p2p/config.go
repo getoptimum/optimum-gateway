@@ -54,10 +54,10 @@ func toMumP2PConfig() *mump2pcfg.Config {
 	res.MeshDhi = 15
 	res.HeartbeatMS = 250
 	res.RLNC = mump2pcfg.RLNCConfig{
-		K:                  16,
-		MaxShardSize:       3300,
-		RedundancyFraction: 1.5,
-		SpreadSourcePool:   true,
+		K:                     16,
+		MaxShardSize:          3300,
+		RedundancyFraction:    1.5,
+		RelayCreditMultiplier: 5, // 1 is the protocol default; 5 is the hoodi trial of PR 378
 	}
 	return res
 }
@@ -71,5 +71,6 @@ func (n *Node) logRLNCConfig(cfgLog mump2pcfg.RLNCConfig) {
 		logger.WithInt("MeshDegreeMin", cfgLog.MeshDegreeMin),
 		logger.WithInt("MeshDegreeTarget", cfgLog.MeshDegreeTarget),
 		logger.WithInt("MeshDegreeMax", cfgLog.MeshDegreeMax),
+		logger.WithInt("RelayCreditMultiplier", cfgLog.RelayCreditMultiplier),
 	)
 }

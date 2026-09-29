@@ -22,6 +22,10 @@ func NewRLNCWrapper(psCfg *mump2pcfg.Config) (*RLNCWrapper, error) {
 	return &RLNCWrapper{srv: shmSvc}, nil
 }
 
+func (r *RLNCWrapper) Capacity() int {
+	return r.srv.Capacity()
+}
+
 func (r *RLNCWrapper) ExecuteOp(op rlncpbshm.OperationType, data []byte) ([]byte, error) {
 	start := time.Now()
 	res, err := r.srv.ExecuteOp(op, data)

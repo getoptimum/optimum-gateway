@@ -193,6 +193,7 @@ func NewNodeWithHost(
 		logger.WithInt("MeshDhi", psCfg.MeshDhi),
 		logger.WithInt("HeartbeatMS", psCfg.HeartbeatMS),
 		logger.WithInt("MeshDegreeMax", psCfg.RLNC.MeshDegreeMax),
+		logger.WithInt("RelayCreditMultiplier", psCfg.RLNC.RelayCreditMultiplier),
 	)
 
 	// Fail startup on invalid dynamic config: rotator fetch and programmatic
@@ -216,7 +217,7 @@ func NewNodeWithHost(
 		return nil, fmt.Errorf("create RLNC engine: %w", err)
 	}
 
-	optList := []rlncps.RLNCOption{
+	optList := []rlncps.PubSubOption{
 		rlncps.WithRLNCTracer(ret.tracer),
 		// todo fix it rlncps.WithPeerAdmissionControl(),
 		rlncps.WithPeerFilterFN(func(pid peer.ID, _ string) bool {
