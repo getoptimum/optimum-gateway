@@ -1268,18 +1268,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.1.1-0.20260928224022-b60cf9e58b83?type=module",
+      "bom-ref": "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.1.1-0.20260929220655-d28d6905f43b?type=module",
       "type": "library",
       "name": "github.com/getoptimum/mump2p-protocol",
-      "version": "v0.1.1-0.20260928224022-b60cf9e58b83",
+      "version": "v0.1.1-0.20260929220655-d28d6905f43b",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "a169dfbeb1a8da6cec15c2482eb2f2429b1a7afb29487febf89db173bcfaa91d"
+          "content": "1f0f750d6e01950c702d8bd0f049d3b3cfae0ad943d2c47ca05c679258644c33"
         }
       ],
-      "purl": "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.1.1-0.20260928224022-b60cf9e58b83?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.1.1-0.20260929220655-d28d6905f43b?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/getoptimum/mump2p-protocol",
@@ -6483,7 +6483,7 @@
       "ref": "pkg:golang/github.com/getoptimum/optimum-gateway@0.0.0-dev?type=module#cmd",
       "dependsOn": [
         "pkg:golang/github.com/ferranbt/fastssz@v1.0.1-0.20251203093649-0b1f38e43198?type=module",
-        "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.1.1-0.20260928224022-b60cf9e58b83?type=module",
+        "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.1.1-0.20260929220655-d28d6905f43b?type=module",
         "pkg:golang/github.com/getoptimum/optimum-common@v0.1.8?type=module",
         "pkg:golang/github.com/gofiber/fiber/v3@v3.4.0?type=module",
         "pkg:golang/github.com/golang-jwt/jwt/v5@v5.3.1?type=module",
@@ -6852,7 +6852,7 @@
       "ref": "pkg:golang/github.com/gabriel-vasile/mimetype@v1.4.13?type=module"
     },
     {
-      "ref": "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.1.1-0.20260928224022-b60cf9e58b83?type=module",
+      "ref": "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.1.1-0.20260929220655-d28d6905f43b?type=module",
       "dependsOn": [
         "pkg:golang/filippo.io/bigmod@v0.1.1-0.20260103110540-f8a47775ebe5?type=module",
         "pkg:golang/filippo.io/keygen@v0.0.0-20260114151900-8e2790ea4c5b?type=module",
