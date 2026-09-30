@@ -57,7 +57,7 @@ func toMumP2PConfig() *mump2pcfg.Config {
 		K:                     16,
 		MaxShardSize:          3300,
 		RedundancyFraction:    1.5,
-		RelayCreditMultiplier: 1, // protocol default; hoodi A/B after the multiplier-5 trial
+		RelayCreditMultiplier: 5, // hoodi mesh 8/6/12 run; 1 is the protocol default
 	}
 	return res
 }

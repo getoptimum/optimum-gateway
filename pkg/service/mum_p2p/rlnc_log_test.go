@@ -12,7 +12,7 @@ func TestToMumP2PConfigRelayCreditMultiplier(t *testing.T) {
 	t.Parallel()
 
 	cfg := toMumP2PConfig()
-	require.Equal(t, 1, cfg.RLNC.RelayCreditMultiplier)
+	require.Equal(t, 5, cfg.RLNC.RelayCreditMultiplier)
 	require.Equal(t, 8, cfg.MeshD)
 	require.Equal(t, 6, cfg.MeshDlo)
 	require.Equal(t, 12, cfg.MeshDhi)
