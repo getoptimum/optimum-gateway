@@ -217,7 +217,7 @@ func NewNodeWithHost(
 		return nil, fmt.Errorf("create RLNC engine: %w", err)
 	}
 
-	optList := []rlncps.PubSubOption{
+	optList := []rlncps.Option{
 		rlncps.WithRLNCTracer(ret.tracer),
 		// todo fix it rlncps.WithPeerAdmissionControl(),
 		rlncps.WithPeerFilterFN(func(pid peer.ID, _ string) bool {
