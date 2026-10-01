@@ -104,12 +104,16 @@ func (s *Service) composeBlockTelemetry(ev *blockArrival) {
 		value.ChainID = s.srvForkMgr.AppChainID()
 		switch ev.source {
 		case entities.SourceLibP2P:
-			value.EthSeenAtMs = ev.recvAt
-			value.EthUpstreamPeerID = ev.upstreamPeerID
+			if value.EthSeenAtMs == 0 {
+				value.EthSeenAtMs = ev.recvAt
+				value.EthUpstreamPeerID = ev.upstreamPeerID
+			}
 		case entities.SourceMumP2P:
-			value.MumSeenAtMs = ev.recvAt
-			value.OriginGatewayID = ev.originGatewayID
-			value.UpstreamPeerID = ev.upstreamPeerID
+			if value.MumSeenAtMs == 0 {
+				value.MumSeenAtMs = ev.recvAt
+				value.OriginGatewayID = ev.originGatewayID
+				value.UpstreamPeerID = ev.upstreamPeerID
+			}
 		}
 		return value
 	}, zeroVal)

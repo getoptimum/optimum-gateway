@@ -124,12 +124,20 @@ func TestHandleBeaconBlock(t *testing.T) {
 	require.Equal(t, int64(2_000), req.Payload.EthSeenAtMs)
 	require.Equal(t, "upstream-lib", req.Payload.EthUpstreamPeerID)
 
+	// A later duplicate from either source must not overwrite the first arrival.
 	srv.HandleBeaconBlock(entities.SourceMumP2P, slot, 77, 2048, 3_000, "origin-b", "upstream-b")
 	req = bootstrap.WaitBlockLatencyRequest(t, 5*time.Second)
 	require.Equal(t, slot, req.Payload.BlockSlot)
-	require.Equal(t, int64(3_000), req.Payload.MumSeenAtMs)
-	require.Equal(t, "origin-b", req.Payload.OriginGatewayID)
-	require.Equal(t, "upstream-b", req.Payload.UpstreamPeerID)
+	require.Equal(t, int64(1_000), req.Payload.MumSeenAtMs)
+	require.Equal(t, "origin-a", req.Payload.OriginGatewayID)
+	require.Equal(t, "upstream-a", req.Payload.UpstreamPeerID)
+
+	srv.HandleBeaconBlock(entities.SourceLibP2P, slot, 77, 2048, 5_000, "", "upstream-lib-late")
+	req = bootstrap.WaitBlockLatencyRequest(t, 5*time.Second)
+	require.Equal(t, slot, req.Payload.BlockSlot)
+	require.Equal(t, int64(2_000), req.Payload.EthSeenAtMs)
+	require.Equal(t, "upstream-lib", req.Payload.EthUpstreamPeerID)
+	require.Equal(t, int64(1_000), req.Payload.MumSeenAtMs)
 
 	srv.HandleBeaconBlock(entities.SourceLibP2P, slot+1, 88, 4096, 4_000, "", "upstream-lib-first")
 	req = bootstrap.WaitBlockLatencyRequest(t, 5*time.Second)
