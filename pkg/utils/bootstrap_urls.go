@@ -9,10 +9,11 @@ import (
 )
 
 const (
-	BootstrapRegisterPath         = "/api/v2/gateways/register"
-	BootstrapExposeNodesPath      = "/api/v2/expose-nodes"
-	BootstrapHandleBlockLatencyV2 = "/api/v2/handle_block_latency"
-	BootstrapForkDigestPath       = "/api/v2/fork-digest"
+	BootstrapRegisterPath             = "/api/v2/gateways/register"
+	BootstrapExposeNodesPath          = "/api/v2/expose-nodes"
+	BootstrapHandleBlockLatencyV2     = "/api/v2/handle_block_latency"
+	BootstrapHandleBlockLatencyBulkV2 = "/api/v2/handle_block_latency_bulk"
+	BootstrapForkDigestPath           = "/api/v2/fork-digest"
 )
 
 // BootstrapAccelerateSlotsURL is GET /api/v2/:chain/accelerate_slots (ADR-0012).
@@ -67,6 +68,11 @@ func BootstrapExposeNodesURL(host, clusterID, version, exposeAmount string) stri
 // BootstrapHandleBlockLatencyURL returns the full URL for v2 block latency endpoint.
 func BootstrapHandleBlockLatencyURL(host string) string {
 	return bootstrapPathURL(host, BootstrapHandleBlockLatencyV2)
+}
+
+// BootstrapHandleBlockLatencyBulkURL returns the full URL for v2 bulk block latency endpoint.
+func BootstrapHandleBlockLatencyBulkURL(host string) string {
+	return bootstrapPathURL(host, BootstrapHandleBlockLatencyBulkV2)
 }
 
 // BootstrapForkDigestURL returns the full URL for fork digest endpoint.

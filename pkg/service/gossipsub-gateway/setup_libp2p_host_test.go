@@ -79,6 +79,25 @@ func TestSetupLibP2PHost_DisallowsNonAllowlistedInboundPeer(t *testing.T) {
 	require.Contains(t, directPeers, clNodeA.Host.ID().String())
 }
 
+func TestSetupLibP2PHost_AllowsNonDirectPeerWhenConfigured(t *testing.T) {
+	cnt := test_utils.GetClean(t)
+	test_utils.SpawnLocalDeps(t)
+
+	directPeer, _ := test_utils.GenerateIdentity(t)
+	t.Setenv("OPT_DIRECT_CL_PEERS", fmt.Sprintf("/ip4/127.0.0.1/tcp/%d/p2p/%s", test_utils.GetFreePortT(t), directPeer.ID.String()))
+	t.Setenv("OPT_ALLOW_NON_DIRECT_CL_PEERS", "true")
+	gatewayNode, _ := getGatewayNode(cnt.Ctx, t, cnt.Log, "allow_non_direct_node", true)
+	require.NoError(t, gatewayNode.Run())
+
+	nonDirectPeer := test_utils.SpawnLocalCLLibP2PNode(cnt.Ctx, t, gatewayNode.GetHostInfo(), test_utils.GetFreePortT(t), t.TempDir())
+	require.NoError(t, nonDirectPeer.Host.Connect(cnt.Ctx, gatewayNode.GetHostInfo()))
+
+	require.Eventually(t, func() bool {
+		return len(nonDirectPeer.Host.Network().ConnsToPeer(gatewayNode.GetHostInfo().ID)) > 0
+	}, 30*time.Second, time.Second)
+	require.Contains(t, gatewayNode.GetDirectLibP2PPeers(), nonDirectPeer.Host.ID().String())
+}
+
 func TestSetupLibP2PHost_DisconnectionCleansupDirectPeerState(t *testing.T) {
 	cnt := test_utils.GetClean(t)
 	test_utils.SpawnLocalDeps(t)
