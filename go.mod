@@ -11,7 +11,7 @@ tool (
 
 require (
 	github.com/ferranbt/fastssz v1.0.1-0.20251203093649-0b1f38e43198
-	github.com/getoptimum/mump2p-protocol v0.1.1-0.20260929220655-d28d6905f43b
+	github.com/getoptimum/mump2p-protocol v0.2.0
 	github.com/getoptimum/optimum-common v0.1.8
 	github.com/gofiber/fiber/v3 v3.4.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
