@@ -24,14 +24,10 @@ var (
 
 func (s *Service) enqueueBlockLatencyExport(slot uint64) {
 	var snap entities.LatencyComparator
-	found := false
-	s.trackedSlots.DoAndApply(slot, func(v *entities.LatencyComparator) *entities.LatencyComparator {
-		if v != nil {
-			snap, found = *v, true
-		}
+	if s.trackedSlots.DoAndApply(slot, func(v *entities.LatencyComparator) *entities.LatencyComparator {
+		snap = *v
 		return v
-	})
-	if found {
+	}) {
 		s.resendList.Add(snap)
 	}
 }
