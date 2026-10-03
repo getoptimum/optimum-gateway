@@ -100,6 +100,10 @@ func (s *Service) composeBlockTelemetry(ev *blockArrival) {
 	// firstForSlot will be true if this is the first time we're seeing this slot, which we use to increment the appropriate telemetry counter.
 	firstForSlot := true
 	s.trackedSlots.Upsert(ev.slot, func(value *entities.LatencyComparator) *entities.LatencyComparator {
+		if value.EthSeenAtMs == 0 && value.MumSeenAtMs == 0 {
+			zeroVal.MumPublishedAtMs = value.MumPublishedAtMs
+			return zeroVal
+		}
 		firstForSlot = false
 		value.ChainID = s.srvForkMgr.AppChainID()
 		switch ev.source {
