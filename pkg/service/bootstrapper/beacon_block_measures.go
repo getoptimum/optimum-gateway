@@ -143,7 +143,7 @@ func (s *Service) enqueueBlockEvent(ev *blockArrival) {
 }
 
 func (s *Service) composeBlockTelemetry(ev *blockArrival) {
-	zeroVal := &entities.LatencyComparator{
+	created := &entities.LatencyComparator{
 		GatewayID:      s.cfg.GatewayID,
 		GatewayPeerID:  s.nodeMumP2PStr,
 		ChainID:        s.srvForkMgr.AppChainID(),
@@ -154,16 +154,16 @@ func (s *Service) composeBlockTelemetry(ev *blockArrival) {
 	}
 	switch ev.source {
 	case entities.SourceMumP2P:
-		zeroVal.MumSeenAtMs = ev.recvAt // mark time when we received block from mump2p
-		zeroVal.OriginGatewayID = ev.originGatewayID
-		zeroVal.UpstreamPeerID = ev.upstreamPeerID
+		created.MumSeenAtMs = ev.recvAt // mark time when we received block from mump2p
+		created.OriginGatewayID = ev.originGatewayID
+		created.UpstreamPeerID = ev.upstreamPeerID
 		// Record routing information for hop-by-hop latency analysis
-		telemetry.RecordBlockPathArrival(true, ev.recvAt, zeroVal.SlotTime, ev.originGatewayID, ev.upstreamPeerID)
+		telemetry.RecordBlockPathArrival(true, ev.recvAt, created.SlotTime, ev.originGatewayID, ev.upstreamPeerID)
 	case entities.SourceLibP2P:
-		zeroVal.EthSeenAtMs = ev.recvAt // mark time when we received block from libp2p
-		zeroVal.EthUpstreamPeerID = ev.upstreamPeerID
+		created.EthSeenAtMs = ev.recvAt // mark time when we received block from libp2p
+		created.EthUpstreamPeerID = ev.upstreamPeerID
 		// Record routing information for hop-by-hop latency analysis
-		telemetry.RecordBlockPathArrival(false, ev.recvAt, zeroVal.SlotTime, "", ev.upstreamPeerID)
+		telemetry.RecordBlockPathArrival(false, ev.recvAt, created.SlotTime, "", ev.upstreamPeerID)
 	}
 	// firstForSlot will be true if this is the first time we're seeing this slot, which we use to increment the appropriate telemetry counter.
 	firstForSlot := true
@@ -177,14 +177,17 @@ func (s *Service) composeBlockTelemetry(ev *blockArrival) {
 				value.EthUpstreamPeerID = ev.upstreamPeerID
 			}
 		case entities.SourceMumP2P:
-			if value.MumSeenAtMs == 0 {
-				value.MumSeenAtMs = ev.recvAt
+			// Publish sets t_mum_seen with no peer, so the first copy still fills the peer.
+			if value.UpstreamPeerID == "" {
+				if value.MumSeenAtMs == 0 {
+					value.MumSeenAtMs = ev.recvAt
+				}
 				value.OriginGatewayID = ev.originGatewayID
 				value.UpstreamPeerID = ev.upstreamPeerID
 			}
 		}
 		return value
-	}, zeroVal)
+	}, created)
 	if firstForSlot {
 		telemetry.IncBlocksFirstSeen(ev.source)
 	}

@@ -87,7 +87,7 @@ func TestMultiPublisherRace(t *testing.T) {
 		wantSeen   int64
 		wantOrigin string
 	}{
-		{"other publisher's copy after own publish", 1_500, publishedAt, ""},
+		{"other publisher's copy after own publish", 1_500, publishedAt, "origin-b"},
 		{"other publisher's copy before own publish", 950, 950, "origin-b"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -106,6 +106,7 @@ func TestMultiPublisherRace(t *testing.T) {
 			if tc.copyAt > publishedAt {
 				mumCopy()
 			}
+			srv.HandleBeaconBlock(entities.SourceMumP2P, slot, 77, 2048, tc.copyAt+10, "origin-c", "upstream-c")
 
 			req := bootstrap.WaitBlockLatencyRequest(t, 5*time.Second)
 			for {
@@ -119,6 +120,7 @@ func TestMultiPublisherRace(t *testing.T) {
 			require.Equal(t, publishedAt, req.Payload.MumPublishedAtMs)
 			require.Equal(t, tc.wantSeen, req.Payload.MumSeenAtMs)
 			require.Equal(t, tc.wantOrigin, req.Payload.OriginGatewayID)
+			require.Equal(t, "upstream-b", req.Payload.UpstreamPeerID)
 			require.Equal(t, "self-peer", req.Payload.GatewayPeerID)
 			require.Equal(t, uint64(77), req.Payload.ValidatorIndex)
 			require.Equal(t, uint64(2048), req.Payload.BlockSize)
