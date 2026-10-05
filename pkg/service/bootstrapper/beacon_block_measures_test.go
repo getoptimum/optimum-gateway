@@ -79,6 +79,53 @@ func TestSendTrackedSlotsEmitsLatestSameSlotValue(t *testing.T) {
 	require.Equal(t, int64(300), last, "settled emission must carry the latest same-slot value")
 }
 
+func TestMultiPublisherRace(t *testing.T) {
+	const publishedAt = int64(1_000)
+	for _, tc := range []struct {
+		name       string
+		copyAt     int64
+		wantSeen   int64
+		wantOrigin string
+	}{
+		{"other publisher's copy after own publish", 1_500, publishedAt, ""},
+		{"other publisher's copy before own publish", 950, 950, "origin-b"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			srv, bootstrap, _ := getTestSrv(t)
+			srv.SetGatewayPeerIDStr("self-peer")
+
+			const slot = uint64(96)
+			mumCopy := func() {
+				srv.HandleBeaconBlock(entities.SourceMumP2P, slot, 77, 2048, tc.copyAt, "origin-b", "upstream-b")
+			}
+			srv.HandleBeaconBlock(entities.SourceLibP2P, slot, 77, 2048, 900, "", "upstream-lib")
+			if tc.copyAt < publishedAt {
+				mumCopy()
+			}
+			srv.RecordMumPublishedAt(slot, publishedAt)
+			if tc.copyAt > publishedAt {
+				mumCopy()
+			}
+
+			req := bootstrap.WaitBlockLatencyRequest(t, 5*time.Second)
+			for {
+				next, ok := bootstrap.TryBlockLatencyRequest(500 * time.Millisecond)
+				if !ok {
+					break
+				}
+				req = next
+			}
+			require.Equal(t, int64(900), req.Payload.EthSeenAtMs)
+			require.Equal(t, publishedAt, req.Payload.MumPublishedAtMs)
+			require.Equal(t, tc.wantSeen, req.Payload.MumSeenAtMs)
+			require.Equal(t, tc.wantOrigin, req.Payload.OriginGatewayID)
+			require.Equal(t, "self-peer", req.Payload.GatewayPeerID)
+			require.Equal(t, uint64(77), req.Payload.ValidatorIndex)
+			require.Equal(t, uint64(2048), req.Payload.BlockSize)
+		})
+	}
+}
+
 func TestHandleBeaconBlock(t *testing.T) {
 	srv, bootstrap, cfg := getTestSrv(t)
 	srv.SetGatewayPeerIDStr("self-peer")
@@ -105,12 +152,20 @@ func TestHandleBeaconBlock(t *testing.T) {
 	require.Equal(t, int64(2_000), req.Payload.EthSeenAtMs)
 	require.Equal(t, "upstream-lib", req.Payload.EthUpstreamPeerID)
 
+	// A later duplicate from either source must not overwrite the first arrival.
 	srv.HandleBeaconBlock(entities.SourceMumP2P, slot, 77, 2048, 3_000, "origin-b", "upstream-b")
 	req = bootstrap.WaitBlockLatencyRequest(t, 5*time.Second)
 	require.Equal(t, slot, req.Payload.BlockSlot)
-	require.Equal(t, int64(3_000), req.Payload.MumSeenAtMs)
-	require.Equal(t, "origin-b", req.Payload.OriginGatewayID)
-	require.Equal(t, "upstream-b", req.Payload.UpstreamPeerID)
+	require.Equal(t, int64(1_000), req.Payload.MumSeenAtMs)
+	require.Equal(t, "origin-a", req.Payload.OriginGatewayID)
+	require.Equal(t, "upstream-a", req.Payload.UpstreamPeerID)
+
+	srv.HandleBeaconBlock(entities.SourceLibP2P, slot, 77, 2048, 5_000, "", "upstream-lib-late")
+	req = bootstrap.WaitBlockLatencyRequest(t, 5*time.Second)
+	require.Equal(t, slot, req.Payload.BlockSlot)
+	require.Equal(t, int64(2_000), req.Payload.EthSeenAtMs)
+	require.Equal(t, "upstream-lib", req.Payload.EthUpstreamPeerID)
+	require.Equal(t, int64(1_000), req.Payload.MumSeenAtMs)
 
 	srv.HandleBeaconBlock(entities.SourceLibP2P, slot+1, 88, 4096, 4_000, "", "upstream-lib-first")
 	req = bootstrap.WaitBlockLatencyRequest(t, 5*time.Second)
