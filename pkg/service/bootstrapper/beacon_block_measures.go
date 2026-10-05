@@ -17,30 +17,47 @@ type blockArrival struct {
 	recvAt          int64
 	originGatewayID string
 	upstreamPeerID  string
+	publishedAt     int64
 }
 
 func (s *Service) bgHandleBlockEvents() {
 	for ev := range s.blockEvents {
+		if ev.publishedAt > 0 {
+			s.composePublishTelemetry(ev)
+			continue
+		}
 		s.composeBlockTelemetry(ev)
 	}
 }
 
+// RecordMumPublishedAt shares the blockEvents queue with HandleBeaconBlock so the
+// libp2p arrival that triggered the publish is always composed first.
 func (s *Service) RecordMumPublishedAt(slot uint64, publishedAt int64) {
 	if !s.cfg.TelemetryEnable || slot == 0 {
 		return
 	}
-	s.trackedSlots.Upsert(slot, func(value *entities.LatencyComparator) *entities.LatencyComparator {
+	s.enqueueBlockEvent(&blockArrival{slot: slot, publishedAt: publishedAt})
+}
+
+// composePublishTelemetry marks the publish as this gateway's mump2p first-seen,
+// so a later copy from another publisher cannot set t_mum_seen.
+func (s *Service) composePublishTelemetry(ev *blockArrival) {
+	s.trackedSlots.Upsert(ev.slot, func(value *entities.LatencyComparator) *entities.LatencyComparator {
 		value.ChainID = s.srvForkMgr.AppChainID()
-		value.MumPublishedAtMs = publishedAt
+		value.MumPublishedAtMs = ev.publishedAt
+		if value.MumSeenAtMs == 0 {
+			value.MumSeenAtMs = ev.publishedAt
+		}
 		return value
 	}, &entities.LatencyComparator{
 		GatewayID:        s.cfg.GatewayID,
 		ChainID:          s.srvForkMgr.AppChainID(),
-		BlockSlot:        slot,
-		SlotTime:         chainstate.SlotStartTime(slot).UnixMilli(),
-		MumPublishedAtMs: publishedAt,
+		BlockSlot:        ev.slot,
+		SlotTime:         chainstate.SlotStartTime(ev.slot).UnixMilli(),
+		MumPublishedAtMs: ev.publishedAt,
+		MumSeenAtMs:      ev.publishedAt,
 	})
-	s.enqueueBlockLatencyExport(slot)
+	s.enqueueBlockLatencyExport(ev.slot)
 }
 
 // HandleBeaconBlock records a beacon block observation without blocking the
@@ -58,7 +75,7 @@ func (s *Service) HandleBeaconBlock(
 	if !s.cfg.TelemetryEnable {
 		return
 	}
-	ev := &blockArrival{
+	s.enqueueBlockEvent(&blockArrival{
 		source:          source,
 		slot:            slot,
 		proposerIndex:   proposerIndex,
@@ -66,11 +83,14 @@ func (s *Service) HandleBeaconBlock(
 		recvAt:          recvAt,
 		originGatewayID: originGatewayID,
 		upstreamPeerID:  upstreamPeerID,
-	}
+	})
+}
+
+func (s *Service) enqueueBlockEvent(ev *blockArrival) {
 	select {
 	case s.blockEvents <- ev:
 	default:
-		s.log.Debug("blockEvents is full, skipping block latency telemetry", logger.WithUint64("slot", slot))
+		s.log.Debug("blockEvents is full, skipping block latency telemetry", logger.WithUint64("slot", ev.slot))
 	}
 }
 

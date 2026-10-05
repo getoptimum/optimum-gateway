@@ -54,7 +54,7 @@ Each gateway `g` reports these raw fields:
 * `validator_index` — proposer index inside the observed block
 * `block_size` — size of the block message in bytes
 * `t_eth_seen_ms(g,b)` — first time gateway `g` saw `b` via `ethp2p`
-* `t_mum_seen_ms(g,b)` — first time gateway `g` saw `b` via `mump2p`
+* `t_mum_seen_ms(g,b)` — first time gateway `g` saw `b` via `mump2p`; for a publisher this is its publish time, a later copy from another publisher does not change it
 * `t_mum_published_ms(g,b)` — time gateway `g` published `b` into `mump2p (only if publisher)`
 
 Helper definitions (raw → derived per gateway)
@@ -172,12 +172,12 @@ Block reaches everyone via Eth fast; Mum arrives later or not at all.
 
 | gateway       | t_eth_seen | t_mum_published| t_mum_seen |
 | ------------- | ---------: | -------------: | ---------: |
-| g1 (publish)  |        100 |            115 |        125 |
+| g1 (publish)  |        100 |            115 |        115 |
 | g2            |        210 |              0 |        150 |
 | g3            |        240 |              0 |        165 |
 
 * `t_any_seen`:
-    * g1 = min(100,125)=100
+    * g1 = min(100,115)=100
     * g2 = min(210,150)=150
     * g3 = min(240,165)=165
 * `t_global_first_seen` = min(100,150,165)=100
@@ -187,7 +187,7 @@ Block reaches everyone via Eth fast; Mum arrives later or not at all.
     * g3 = 165-100 = 65
 * `t_mum_enter_first` = 115
 * `mum_spread_ms`:
-    * g1 = 125-115 = 10
+    * g1 = 115-115 = 0
     * g2 = 150-115 = 35
     * g3 = 165-115 = 50
 
@@ -199,7 +199,7 @@ Because the network is coupled + multipath, `mum_minus_eth_m`s can flip sign at 
 
 | gateway       | t_eth_seen | t_mum_published| t_mum_seen |
 | ------------- | ---------: | -------------: | ---------: |
-| g1 (publish)  |        100 |            115 |        125 |
+| g1 (publish)  |        100 |            115 |        115 |
 | g2            |        145 |              0 |        160 |
 | g3            |        230 |              0 |        155 |
 
@@ -229,16 +229,16 @@ g2 being Eth-first **does not mean Optimum lost**; it just means g2’s Eth path
 
 | gateway | t_eth_seen | t_mum_published| t_mum_seen |
 | ------- | ---------: | -------------: | ---------: |
-| g1      |        100 |            140 |        150 |
-| g2      |        120 |            130 |        145 |
+| g1      |        100 |            140 |        140 |
+| g2      |        120 |            130 |        130 |
 | g3      |        220 |              0 |        170 |
 
 Compute:
 
 * `t_mum_enter_first` = min(140,130)=130 (g2 published first)
 * `mum_spread_ms`:
-    * g1 = 150-130 = 20
-    * g2 = 145-130 = 15
+    * g1 = 140-130 = 10
+    * g2 = 130-130 = 0
     * g3 = 170-130 = 40
 
 Stable KPI:
@@ -253,7 +253,7 @@ Multi-publisher is fine as long as the baseline is `first publisher`.
 
 | gateway       | t_eth_seen | t_mum_published| t_mum_seen |
 | ------------- | ---------: | -------------: | ---------: |
-| g1 (publisher)|        100 |            115 |        125 |
+| g1 (publisher)|        100 |            115 |        115 |
 | g2            |          0 |              0 |        155 |
 | g3            |        210 |              0 |          0 |
 
