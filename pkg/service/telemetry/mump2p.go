@@ -1,13 +1,15 @@
 package telemetry
 
 import (
+	"sync"
+
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/getoptimum/optimum-common/pkg/syncx"
 	commonmetrics "github.com/getoptimum/optimum-common/pkg/telemetry"
-	pubsub "github.com/getoptimum/optimum-p2p/optimum-pubsub"
 )
 
 var (
@@ -53,37 +55,98 @@ func initMumP2PMetrics() {
 // MumP2PCollector implements pubsub.RawTracer for Optimum's mump2p pubsub.
 type MumP2PCollector struct {
 	peers *syncx.RWMap[peer.ID, protocol.ID]
+
+	meshMu sync.RWMutex
+	mesh   map[string]map[peer.ID]struct{}
+}
+
+func (g *MumP2PCollector) OnNewOutboundStream(_ peer.ID, _ protocol.ID) {}
+
+func (g *MumP2PCollector) OnClosedOutboundStream(id peer.ID) {
+	g.removeMeshPeer(id)
 }
 
 func NewMumP2PCollector() *MumP2PCollector {
 	return &MumP2PCollector{
 		peers: syncx.NewRWMap[peer.ID, protocol.ID](),
+		mesh:  make(map[string]map[peer.ID]struct{}),
 	}
 }
 
 func (g *MumP2PCollector) AddPeer(id peer.ID, protoID protocol.ID) {
 	g.peers.Store(id, protoID)
-	mpPeersPerProtocol.WithLabelValues(string(protoID)).Inc()
-	mpTotalPeers.WithLabelValues().Inc()
+	if MetricsEnabled() {
+		mpPeersPerProtocol.WithLabelValues(string(protoID)).Inc()
+		mpTotalPeers.WithLabelValues().Inc()
+	}
 }
 
 func (g *MumP2PCollector) RemovePeer(id peer.ID) {
+	g.removeMeshPeer(id)
 	protoID, ok := g.peers.Load(id)
 	if !ok {
 		return
 	}
 	g.peers.Delete(id)
-	mpPeersPerProtocol.WithLabelValues(string(protoID)).Dec()
-	mpTotalPeers.WithLabelValues().Dec()
+	if MetricsEnabled() {
+		mpPeersPerProtocol.WithLabelValues(string(protoID)).Dec()
+		mpTotalPeers.WithLabelValues().Dec()
+	}
 }
 
-func (g *MumP2PCollector) Join(string)           {}
-func (g *MumP2PCollector) Leave(string)          {}
-func (g *MumP2PCollector) Graft(peer.ID, string) {}
-func (g *MumP2PCollector) Prune(peer.ID, string) {}
+func (g *MumP2PCollector) Join(string) {}
+func (g *MumP2PCollector) Leave(topic string) {
+	g.meshMu.Lock()
+	delete(g.mesh, topic)
+	g.meshMu.Unlock()
+}
+
+func (g *MumP2PCollector) Graft(id peer.ID, topic string) {
+	g.meshMu.Lock()
+	if g.mesh[topic] == nil {
+		g.mesh[topic] = make(map[peer.ID]struct{})
+	}
+	g.mesh[topic][id] = struct{}{}
+	g.meshMu.Unlock()
+}
+
+func (g *MumP2PCollector) Prune(id peer.ID, topic string) {
+	g.meshMu.Lock()
+	if peers := g.mesh[topic]; peers != nil {
+		delete(peers, id)
+		if len(peers) == 0 {
+			delete(g.mesh, topic)
+		}
+	}
+	g.meshMu.Unlock()
+}
+
+// MeshPeers returns a snapshot of the peers currently in the topic mesh.
+func (g *MumP2PCollector) MeshPeers(topic string) []peer.ID {
+	g.meshMu.RLock()
+	defer g.meshMu.RUnlock()
+
+	peers := make([]peer.ID, 0, len(g.mesh[topic]))
+	for id := range g.mesh[topic] {
+		peers = append(peers, id)
+	}
+	return peers
+}
+
+func (g *MumP2PCollector) removeMeshPeer(id peer.ID) {
+	g.meshMu.Lock()
+	defer g.meshMu.Unlock()
+
+	for topic, peers := range g.mesh {
+		delete(peers, id)
+		if len(peers) == 0 {
+			delete(g.mesh, topic)
+		}
+	}
+}
 
 func (g *MumP2PCollector) ValidateMessage(msg *pubsub.Message) {
-	if msg.Topic == nil {
+	if !MetricsEnabled() || msg.Topic == nil {
 		return
 	}
 	mpReceivedMessagesBytes.WithLabelValues(*msg.Topic).Add(float64(len(msg.Data)))
@@ -91,7 +154,7 @@ func (g *MumP2PCollector) ValidateMessage(msg *pubsub.Message) {
 }
 
 func (g *MumP2PCollector) DeliverMessage(msg *pubsub.Message) {
-	if msg.Topic == nil {
+	if !MetricsEnabled() || msg.Topic == nil {
 		return
 	}
 	mpDeliveredMessagesBytes.WithLabelValues(*msg.Topic).Add(float64(len(msg.Data)))
@@ -99,6 +162,9 @@ func (g *MumP2PCollector) DeliverMessage(msg *pubsub.Message) {
 }
 
 func (g *MumP2PCollector) RejectMessage(msg *pubsub.Message, reason string) {
+	if !MetricsEnabled() {
+		return
+	}
 	topic := ""
 	if msg.Topic != nil {
 		topic = *msg.Topic
@@ -114,7 +180,7 @@ func (g *MumP2PCollector) RejectMessage(msg *pubsub.Message, reason string) {
 }
 
 func (g *MumP2PCollector) DuplicateMessage(msg *pubsub.Message) {
-	if msg.Topic == nil {
+	if !MetricsEnabled() || msg.Topic == nil {
 		return
 	}
 	mpReceivedMessagesBytes.WithLabelValues(*msg.Topic).Add(float64(len(msg.Data)))

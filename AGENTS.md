@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**Optimum Gateway** is a single-process gossipsub relay that bridges Ethereum Consensus Layer (CL) libp2p traffic with the mump2p mesh. It:
+**Optimum Gateway** is a gossipsub relay that bridges Ethereum Consensus Layer (CL) libp2p traffic with the mump2p mesh. The gateway process uses a required local `rlnc-server` companion for RLNC coding over shared memory. It:
 
 - Subscribes to Ethereum gossip topics (via local libp2p)
 - Forwards messages to mump2p peers
@@ -19,6 +19,7 @@ cmd/main.go
 ├── gossipsub_gateway.Service    (Main relay; runs two p2p loops)
 │   ├── libp2p host + subscriptions  (CL-side gossipsub)
 │   ├── mum_p2p.Node                 (mump2p-side mesh; pkg/service/mum_p2p)
+│   │   └── SHM client               (local rlnc-server; 20 lanes named mump2p-protocol)
 │   ├── aggregator.Service           (Batch attestations into containers)
 │   └── channels: clMessages, mumP2PMessages
 ├── telemetry service           (Prometheus, Loki, Mimir pushers)
@@ -38,12 +39,16 @@ cmd/main.go
 
 ```bash
 make build           # Builds into ./bin/optimum-gateway
+make build-rlnc-server # Builds the required ./bin/rlnc-server companion
+make run-rlnc-server # Runs the RLNC shared-memory server
 make run             # go run cmd/main.go -config config/app_conf.yml
 make test            # Go test suite; coverage is reported here, threshold checked by make coverage
 make lint            # Installs/runs golangci-lint on ./... (see Makefile)
 make proto           # Regenerate Go from .proto files
 make vulcheck        # govulncheck with hardcoded exception list
 ```
+
+Keep `make run-rlnc-server` running in a separate terminal before `make run` or `make test`. The run target builds the RLNC server on first use.
 
 ### Proto & Code Generation
 
@@ -124,14 +129,15 @@ Gateway calls `filterAndBuildEthTopics()` to expand shorts into fulls using fork
 ## Integration Points & Dependencies
 
 
-| Dependency                           | Purpose                                              | Notes                                           |
-| ------------------------------------ | ---------------------------------------------------- | ----------------------------------------------- |
-| github.com/libp2p/go-libp2p          | libp2p host & gossipsub                              | Local CL peering                                |
-| github.com/getoptimum/optimum-p2p    | mump2p gossipsub (RLNC)                              | Used by `pkg/service/mum_p2p`              |
-| github.com/getoptimum/optimum-common | Shared types, logger, config                         | Utilities, auth claims                          |
-| github.com/libp2p/go-libp2p-kad-dht  | mump2p peer discovery                                | Used by `pkg/service/mum_p2p/dhtdiscovery` |
-| github.com/prometheus/client_golang  | Metrics export                                       | Local Prometheus scrape                         |
-| github.com/gofiber/fiber/v3          | HTTP API                                             | `/`, `/api/v1/self_info`, `/metrics`, `/health` |
+| Dependency                              | Purpose                                  | Notes                                                    |
+| --------------------------------------- | ---------------------------------------- | -------------------------------------------------------- |
+| github.com/libp2p/go-libp2p             | libp2p host & gossipsub                  | Local CL peering                                         |
+| github.com/getoptimum/mump2p-protocol   | RLNC-enabled mump2p pubsub and SHM client | Used by `pkg/service/mum_p2p`                            |
+| github.com/getoptimum/rlnc               | RLNC shared-memory server                | Built by `make build-rlnc-server`                        |
+| github.com/getoptimum/optimum-common    | Shared types, logger, config             | Utilities, auth claims                                   |
+| github.com/libp2p/go-libp2p-kad-dht     | mump2p peer discovery                    | Used by `pkg/service/mum_p2p/dhtdiscovery`               |
+| github.com/prometheus/client_golang     | Metrics export                           | Local Prometheus scrape                                  |
+| github.com/gofiber/fiber/v3             | HTTP API                                 | `/`, `/api/v1/self_info`, `/metrics`, `/health`          |
 
 
 ## Security Trust Model

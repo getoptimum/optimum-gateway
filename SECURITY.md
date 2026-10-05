@@ -57,9 +57,10 @@ The gateway has three trust anchors, in roughly increasing blast radius:
    gateway hands to libp2p-pubsub as direct peers
    (`WithDirectPeers`/`WithDirectConnectTicks`). When this list is
    non-empty, `onPeerConnected` also disconnects peers whose ID is not
-   in the list (connect-time allowlist, not a `ConnectionGater`). When
-   the list is empty, no peer-ID filtering is applied; operators must
-   firewall the libp2p port to the intended CL client.
+   in the list (connect-time allowlist, not a `ConnectionGater`), unless
+   `allow_non_direct_cl_peers` (`OPT_ALLOW_NON_DIRECT_CL_PEERS`) is true.
+   When filtering is disabled, operators must firewall the libp2p port to
+   the intended CL client.
 2. **The mump2p fleet** the gateway joins via the embedded mump2p node on
    the port configured by `agent_mump2p_port` / `OPT_AGENT_MUMP2P_PORT`
    (default `33213`). When auth is enabled (`OPT_ENABLE_AUTH=true` with

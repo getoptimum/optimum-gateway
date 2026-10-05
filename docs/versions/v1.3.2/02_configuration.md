@@ -64,7 +64,7 @@ Replace the IP, port, and peer ID with your CL node's libp2p multiaddr.
 
 **Why this matters:** Prysm re-dials peers on its own, but Lighthouse and Nimbus do not reliably hold the gateway link after a gateway restart. Without `direct_cl_peers`, the CL can stay disconnected until the next manual intervention. We recommend all partners add their CL nodes as direct peers.
 
-**Peer allowlist:** When `direct_cl_peers` is set, the gateway disconnects any libp2p peer whose ID is not in that list. When empty, no peer-ID filtering is applied; firewall `agent_lib_p2p_port` (default `33212`) to your CL client.
+**Peer allowlist:** When `direct_cl_peers` is set, the gateway disconnects any libp2p peer whose ID is not in that list. Set `allow_non_direct_cl_peers: true` to keep auto-reconnect while accepting other peers. When filtering is disabled, firewall `agent_libp2p_port` (default `33212`) to your CL client.
 
 **Lighthouse beacon node CLI:** upstream help marks `--libp2p-addresses` as **deprecated**; use **`--boot-nodes`** for the same comma-delimited multiaddrs (multiaddr or ENR). See [Beacon Node help](https://lighthouse-book.sigmaprime.io/help_bn.html).
 
@@ -129,6 +129,7 @@ The gateway receives automatic config updates from bootstrap.
 | `identity_libp2p_dir` | `OPT_IDENTITY_LIBP2P_DIR` | /tmp/libp2p | libp2p identity dir — **persist as a volume** |
 | `identity_mump2p_dir` | `OPT_IDENTITY_MUMP2P_DIR` | /tmp/mump2p | mump2p identity dir — **persist as a volume** |
 | `direct_cl_peers` | `OPT_DIRECT_CL_PEERS` | *(empty)* | CL node multiaddrs for auto-reconnect; when set, only listed peer IDs may stay connected |
+| `allow_non_direct_cl_peers` | `OPT_ALLOW_NON_DIRECT_CL_PEERS` | false | Accept peers outside `direct_cl_peers`; disables its peer-ID allowlist |
 | `log_level` | `OPT_LOG_LEVEL` | debug | `debug` / `info` |
 | `remote_push_enable` | `OPT_REMOTE_PUSH_ENABLE` | false | Optional Loki/Mimir push (requires `telemetry_enable: true`) |
 | `stream_enable` | `OPT_STREAM_ENABLE` | false | Enable the consumer block stream (WebSocket + gRPC) |

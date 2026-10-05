@@ -18,6 +18,7 @@ It listens to `gossipsub` traffic from your CL client, forwards it into the mump
 
 - Your beacon node peers with the gateway over libp2p.
 - The gateway embeds its own Optimum mump2p host.
+- The mump2p host delegates RLNC coding to a required local `rlnc-server` over shared memory.
 - Bootstrap provides peer discovery, registration, fork digest, and telemetry collection.
 - Gateways connect directly to other gateways over the mesh.
 
@@ -56,11 +57,12 @@ The gateway accepts configuration through environment variables as well. Environ
 
 ## Startup Flow
 
-1. The gateway starts its CL-facing libp2p listener.
-2. The gateway resolves the fork digest from Bootstrap.
-3. The gateway registers its advertised Optimum mesh address with Bootstrap.
-4. Bootstrap returns peer addresses for the same chain and cluster.
-5. The gateway joins the mesh and begins forwarding traffic.
+1. The local `rlnc-server` exposes 20 shared-memory lanes named `mump2p-protocol`.
+2. The gateway connects to those lanes and starts its CL-facing libp2p listener.
+3. The gateway resolves the fork digest from Bootstrap.
+4. The gateway registers its advertised Optimum mesh address with Bootstrap.
+5. Bootstrap returns peer addresses for the same chain and cluster.
+6. The gateway joins the mesh and begins forwarding traffic.
 
 ## Run from Source
 
@@ -69,6 +71,11 @@ git clone https://github.com/getoptimum/optimum-gateway
 cd optimum-gateway
 cp config/sample.app_conf.yml config/app_conf.yml
 make build
+
+# terminal 1; builds ./bin/rlnc-server on first use
+make run-rlnc-server
+
+# terminal 2
 make run
 ```
 
