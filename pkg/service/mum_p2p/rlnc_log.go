@@ -40,7 +40,7 @@ func describeRLNCGeom(payloadLen int, cfg config.RLNCConfig) (rlncGeom, error) {
 	if policy.K > 0 {
 		chunks = (m + uint64(policy.K) - 1) / uint64(policy.K)
 	}
-	coded := cfg.RedundantSymbolCount(int(policy.K))
+	coded := config.RedundantSymbolCount(cfg.RedundancyFraction, int(policy.K))
 	var totalCoded uint64
 	if coded > 0 {
 		totalCoded = chunks * uint64(coded) //nolint:gosec // G115: guarded by coded > 0
