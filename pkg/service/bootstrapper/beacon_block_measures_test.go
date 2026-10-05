@@ -98,18 +98,27 @@ func TestBlockLatencyExportTerminalResponseIsNotRetried(t *testing.T) {
 	bootstrap.AssertNoBlockLatencyRequest(t, 2500*time.Millisecond)
 }
 
-func TestHandleBeaconBlockAfterPublish(t *testing.T) {
+func TestPublishIsMumFirstSeen(t *testing.T) {
 	srv, bootstrap, _ := getTestSrv(t)
 	srv.SetGatewayPeerIDStr("self-peer")
 
 	const slot = uint64(96)
-	srv.RecordMumPublishedAt(slot, 900)
-	bootstrap.WaitBlockLatencyRequest(t, 5*time.Second)
+	srv.HandleBeaconBlock(entities.SourceLibP2P, slot, 77, 2048, 900, "", "upstream-lib")
+	srv.RecordMumPublishedAt(slot, 1_000)
+	srv.HandleBeaconBlock(entities.SourceMumP2P, slot, 77, 2048, 1_500, "origin-b", "upstream-b")
 
-	srv.HandleBeaconBlock(entities.SourceLibP2P, slot, 77, 2048, 1_000, "", "upstream-lib")
 	req := bootstrap.WaitBlockLatencyRequest(t, 5*time.Second)
-	require.Equal(t, int64(900), req.Payload.MumPublishedAtMs)
-	require.Equal(t, int64(1_000), req.Payload.EthSeenAtMs)
+	for {
+		next, ok := bootstrap.TryBlockLatencyRequest(500 * time.Millisecond)
+		if !ok {
+			break
+		}
+		req = next
+	}
+	require.Equal(t, int64(900), req.Payload.EthSeenAtMs)
+	require.Equal(t, int64(1_000), req.Payload.MumPublishedAtMs)
+	require.Equal(t, int64(1_000), req.Payload.MumSeenAtMs)
+	require.Empty(t, req.Payload.OriginGatewayID)
 	require.Equal(t, "self-peer", req.Payload.GatewayPeerID)
 	require.Equal(t, uint64(77), req.Payload.ValidatorIndex)
 	require.Equal(t, uint64(2048), req.Payload.BlockSize)
