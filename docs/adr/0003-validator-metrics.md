@@ -1,7 +1,8 @@
 # ADR-0003: Redesign Optimum Gateway metrics around validator outcomes
 
 **Status:** Accepted  
-**Date:** 2026-01-07
+**Date:** 2026-01-07  
+**Updated:** 2026-10-05 — definitions aligned with `optimum-measurements`, which now computes these KPIs.
 
 ## Context
 
@@ -54,13 +55,21 @@ Each gateway `g` reports these raw fields:
 * `validator_index` — proposer index inside the observed block
 * `block_size` — size of the block message in bytes
 * `t_eth_seen_ms(g,b)` — first time gateway `g` saw `b` via `ethp2p`
-* `t_mum_seen_ms(g,b)` — first time gateway `g` saw `b` via `mump2p`
+* `t_mum_seen_ms(g,b)` — first time gateway `g` received `b` via `mump2p`. mump2p v2 never delivers a published block back to its publisher, so on a publisher this is a later copy from another gateway, or absent. It is never set at publish time.
 * `t_mum_published_ms(g,b)` — time gateway `g` published `b` into `mump2p (only if publisher)`
+
+`0` means not observed. Gateway `g` is a **publisher** for `b` when `t_mum_published_ms(g,b) > 0`.
 
 Helper definitions (raw → derived per gateway)
 
-* `t_any_seen_ms(g,b)` = `min_nonzero(t_eth_seen_ms(g,b), t_mum_seen_ms(g,b))`
+* `t_mum_had_ms(g,b)` — when `g` had `b` in mump2p:
+    * non-publisher: `t_mum_seen_ms(g,b)`
+    * publisher, a peer copy arrived before it published (`0 < t_mum_seen_ms < t_mum_published_ms`): `t_mum_seen_ms(g,b)`
+    * other publishers: `t_mum_published_ms(g,b)`
+* `t_any_seen_ms(g,b)` = `min_nonzero(t_eth_seen_ms(g,b), t_mum_had_ms(g,b))`
 * `mum_minus_eth_ms(g,b)` = `t_mum_seen_ms(g,b) - t_eth_seen_ms(g,b)` (debug only)
+
+Spread, coverage, `t_any_seen` and missing-mum use `t_mum_had_ms`. Metrics about *receiving* via mump2p (mump2p arrival, first-seen-via, `mum_advantage_ms`, `mum_minus_eth_ms`) read raw `t_mum_seen_ms`.
 
 ### Transport / Network KPIs (Optimum-controlled)
 
@@ -84,15 +93,15 @@ Therefore: raw `Eth vs Mum delta` is a debug signal, not a **stable KPI**.
 
 ### What we measure instead: stable relative propagation KPIs
 
-We introduce two types of `baselines`, `computed at the bootstrap collector`.
+We introduce two types of `baselines`, `computed at the bootstrap collector` (now `optimum-measurements`).
 
 #### Baseline 1 — Global First-Seen baseline (stable "competitiveness vs best")
 
 For each block `b`:
 
-* Define, per gateway `g`: `t_any_seen(g,b) = min_nonzero(t_eth_seen(g,b), t_mum_seen(g,b))`
+* Define, per gateway `g`: `t_any_seen(g,b) = min_nonzero(t_eth_seen(g,b), t_mum_had(g,b))`
 * Define: `t_global_first_seen(b) = min_g t_any_seen(g,b)`
-* stable KPI: `gap_to_best_ms(g,b) = t_any_seen(g,b) - t_global_first_seen(b)`
+* stable KPI: `gap_to_best_ms(g,b) = t_any_seen(g,b) - t_global_first_seen(b)` when both are `> 0`, else `0`
 
 This gives **how far behind best-in-population was this gateway for this block**, independent of proposer publish time.
 
@@ -103,8 +112,10 @@ To isolate Optimum routing/transport, we need a baseline that starts when the bl
 For each block `b` define: 
 
 * `t_mum_enter_first(b) = min_g t_mum_published_ms(g,b) where t_mum_published_ms(g,b) > 0`
-* `mum_spread_ms(g,b) = t_mum_seen(g,b) - t_mum_enter_first(b)`. computed only if `t_mum_seen(g,b)>0` and `t_mum_enter_first(b)>0` (so it exists only for blocks that entered mump2p and were observed via `mump2p`)
-* Optionally (for debugging, not KPI): 
+* `mum_spread_ms(g,b) = max(t_mum_had(g,b) - t_mum_enter_first(b), 0)`. computed only if `t_mum_had(g,b)>0` and `t_mum_enter_first(b)>0` (so it exists only for blocks that entered mump2p and that `g` had in mump2p)
+    * the first publisher gets `0`; a later publisher gets its publish lag, not the later copy from another gateway
+    * a non-publisher gets `t_mum_seen(g,b) - t_mum_enter_first(b)`
+* Not implemented (debug idea only, no code in `optimum-measurements`):
     * `t_eth_first_seen(b) = min_g t_eth_seen(g,b) where t_eth_seen(g,b)>0`
     * `eth_spread_ms(g,b) = t_eth_seen(g,b) - t_eth_first_seen(b)`
 
@@ -139,8 +150,9 @@ Per slot `s`:
 For a block b and gateway g:
 
 * `t_eth_seen(g,b)` = when `g` first sees `b` from ethp2p
-* `t_mum_seen(g,b)` = when `g` first sees `b` from mump2p
+* `t_mum_seen(g,b)` = when `g` first receives `b` from mump2p (on a publisher: a later copy from another gateway)
 * `t_mum_published(g,b)` = when `g` publish `b` into mump2p (publish-to-mump2p)
+* `t_mum_had(g,b)` = `t_mum_seen` for a non-publisher; `t_mum_published` for a publisher unless an earlier peer copy exists
 
 why `mum_minus_eth_ms` flips sign even when Optimum helps, and how the redesigned metrics stay stable.
 
@@ -176,8 +188,9 @@ Block reaches everyone via Eth fast; Mum arrives later or not at all.
 | g2            |        210 |              0 |        150 |
 | g3            |        240 |              0 |        165 |
 
+* `t_mum_had`: g1 = 115 (publisher; its 125 copy came after it published), g2 = 150, g3 = 165
 * `t_any_seen`:
-    * g1 = min(100,125)=100
+    * g1 = min(100,115)=100
     * g2 = min(210,150)=150
     * g3 = min(240,165)=165
 * `t_global_first_seen` = min(100,150,165)=100
@@ -187,7 +200,7 @@ Block reaches everyone via Eth fast; Mum arrives later or not at all.
     * g3 = 165-100 = 65
 * `t_mum_enter_first` = 115
 * `mum_spread_ms`:
-    * g1 = 125-115 = 10
+    * g1 = 115-115 = 0
     * g2 = 150-115 = 35
     * g3 = 165-115 = 50
 
@@ -221,7 +234,7 @@ Stable KPI:
 Optimum spread:
 
 * `t_mum_enter_first`=115
-* `mum_spread_ms`: g2=45, g3=40
+* `mum_spread_ms`: g1=0, g2=45, g3=40
 
 g2 being Eth-first **does not mean Optimum lost**; it just means g2’s Eth path beat its mump2p path for that block.
 
@@ -236,9 +249,10 @@ g2 being Eth-first **does not mean Optimum lost**; it just means g2’s Eth path
 Compute:
 
 * `t_mum_enter_first` = min(140,130)=130 (g2 published first)
+* `t_mum_had`: g1 = 140, g2 = 130 (both publishers; their copies came after they published), g3 = 170
 * `mum_spread_ms`:
-    * g1 = 150-130 = 20
-    * g2 = 145-130 = 15
+    * g1 = 140-130 = 10 (its publish lag)
+    * g2 = 130-130 = 0 (first publisher)
     * g3 = 170-130 = 40
 
 Stable KPI:
@@ -261,14 +275,14 @@ Multi-publisher is fine as long as the baseline is `first publisher`.
 * `t_global_first_seen`=100
 * `gap_to_best_ms`: g2=55, g3=110
 * `t_mum_enter_first`=115
-* `mum_spread_ms`: g2=40, g3=N/A
+* `mum_spread_ms`: g1=0, g2=40, g3=N/A
 
-If `t_mum_seen(g,b)=0`, then:
+If `t_mum_had(g,b)=0` (a non-publisher with no mump2p receipt; a publisher always has one), then:
 
-* `mum_spread_ms(g,b)` is undefined (no mump2p receipt)
+* `mum_spread_ms(g,b)` is undefined
 * `gap_to_best_ms(g,b)` still works using Eth if present
 
-**Takeaway:** `gap_to_best_ms` remains a **population KPI**, `mum_spread_ms` remains a **transport KPI** wherever Mum receipts exist.
+**Takeaway:** `gap_to_best_ms` remains a **population KPI**, `mum_spread_ms` remains a **transport KPI** wherever the gateway had the block in mump2p.
 
 #### Scenario 6 — Clock drift (why bootstrap must compute baselines)
 
@@ -280,10 +294,10 @@ If `t_mum_seen(g,b)=0`, then:
 
 Bootstrap produces KPIs aggregated over a time window.
 
-> **Implementation note (verified against code):** The metric names in the groups below are *design-time* names, and they conflate two different layers. In the current bootstrap code:
+> **Implementation note (verified against code):** The metric names in the groups below are *design-time* names, and they conflate two different layers. KPI computation now runs in `optimum-measurements` (bootstrap ingests the raw rows; measurements reads `slot_measurements_v2` and computes):
 >
-> * The **JSON snapshot** struct (`internal/entities`) uses percentile-suffixed keys: `opt_gateway_gap_to_best_ms_{50,95,99}`, `opt_gateway_mum_spread_ms_{50,95,99}`, `opt_mum_spread_coverage_{200,500,1000}`, `opt_mum_publish_rate`, `opt_missing_eth_rate`, `opt_missing_mum_rate` (partner-scoped `mum_seen_rate` is **un-prefixed**).
-> * The **Prometheus** layer (namespace `optp2p_bootstrap` / subsystem `optimum_bootstrap`) uses **un-prefixed base names**: `gap_to_best_ms`, `mum_spread_ms`, `mum_spread_coverage_{200,500,1000}`, `missing_eth_rate`, `missing_mum_rate`, `mum_publish_rate`, `gap_to_best_ms_max`. The `opt_`/`opt_gateway_` prefix and the `_50/_95/_99` split exist only in the JSON snapshot, not at the Prometheus layer.
+> * The **JSON snapshot** (`/api/v2/block_latency`) uses percentile-suffixed keys: `opt_gateway_gap_to_best_ms_{50,95,99}`, `opt_gateway_mum_spread_ms_{50,95,99}`, `opt_mum_spread_coverage_{200,500,1000}`, `opt_mum_publish_rate`, `opt_missing_eth_rate`, `opt_missing_mum_rate` (partner-scoped `mum_seen_rate` is **un-prefixed**).
+> * The **Prometheus** layer (namespace `optp2p_measurements` / subsystem `optimum_measurements`; the old `optp2p_bootstrap_optimum_bootstrap_*` names are retired) uses **un-prefixed base names**: `gap_to_best_ms`, `mum_spread_ms`, `mum_spread_coverage_{200,500,1000}`, `missing_eth_rate`, `missing_mum_rate`, `mum_publish_rate`, `gap_to_best_ms_max`. The `opt_`/`opt_gateway_` prefix and the `_50/_95/_99` split exist only in the JSON snapshot, not at the Prometheus layer.
 > * Names below that appear in **neither** layer (e.g. `opt_gateway_gap_to_best_p95_ms`, `opt_gateway_gap_to_best_within_ms`, `opt_gateway_event_missing_rate`, and the clock-drift group `opt_gateway_clock_offset_ms` / `opt_gateway_clock_rtt_ms`) are **proposed, not yet implemented**.
 
 #### KPI group A — Gateway competitiveness vs best (per gateway)
@@ -305,11 +319,11 @@ From per-block `mum_spread_ms(g,b)` (only blocks that had a publish event):
 * `opt_mum_spread_ms{gateway_id}` → histogram
     * show p50/p95/p99 per gateway
 * `opt_mum_spread_coverage{threshold="200|500|1000"}` → ratio (global)
-    * For each block, compute `% gateways with mum_spread <= threshold`, then average over window
+    * For each published block: gateways with `0 <= t_mum_had - t_mum_enter_first <= threshold`, divided by **all** gateways on that block (a gateway with no mump2p time counts as a miss; a negative spread from clock skew is skipped). Then average over the window's published blocks.
 * `opt_mum_publish_rate` → ratio (global)
     * `% blocks where t_mum_enter_first exists`
-* `opt_mum_seen_rate{gateway_id}` → ratio
-    * `% published blocks where this gateway actually saw block via Mum`
+* `mum_seen_rate{gateway_id}` → ratio (partner snapshot)
+    * blocks where this gateway had the block in mump2p (`t_mum_had > 0`), divided by **all** blocks in the window
 
 Interpretation:
 
@@ -318,9 +332,9 @@ Interpretation:
 
 #### KPI group C — Data quality + time sync safety (clock drift — open item)
 
-* `opt_gateway_event_missing_rate{gateway_id,source="eth|mum"}`, example:
-    * missing eth seen
-    * missing mum seen
+* `opt_gateway_event_missing_rate{gateway_id,source="eth|mum"}` (proposed). Implemented today as cluster-level and partner-level rates:
+    * `missing_eth_rate`: among gateways that saw the block by any path (`t_any_seen > 0`), the share with `t_eth_seen = 0`
+    * `missing_mum_rate`: among gateways on a published block, the share with `t_mum_had = 0` (a publisher is never missing)
 * `opt_gateway_clock_offset_ms{gateway_id}` (estimated offset to bootstrap clock)
 * `opt_gateway_clock_rtt_ms{gateway_id}` (for health)
 
@@ -328,7 +342,7 @@ Open item: clock-drift handling.
 
 ### What we downgrade (debug only)
 
-* `mum_minus_eth_ms(g,b) = t_mum_seen - t_eth_seen` is debug only
+* `mum_minus_eth_ms(g,b) = t_mum_seen - t_eth_seen` is debug only (both > 0; raw `t_mum_seen`, not `t_mum_had`)
     * it answers: “which path won locally on this gateway for this block”
     * it does not answer: “did Optimum win globally”
 * `recv_time - slot_start` metrics remain for debugging slot timing games, but not KPI.
