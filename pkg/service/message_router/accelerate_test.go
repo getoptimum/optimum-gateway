@@ -93,3 +93,39 @@ func TestAccelerateSlotsPrimedAtStartup(t *testing.T) {
 	}, 5*time.Second, 5*time.Millisecond, "startup must fetch the window without waiting for a tick")
 	require.True(t, srv.ShouldAccelerateBlock(100), "selected slot still accelerates")
 }
+
+// Pins the contract that a 200 carrying to_slot <= 0 keeps the PREVIOUS horizon
+// rather than collapsing to "no window". This passes before and after the
+// accompanying fix, and is kept as documentation of behaviour that is easy to
+// break while refactoring the early-return.
+//
+// NOT a regression test for the telemetry bug the fix addresses. That bug is
+// only observable on the accelerate_generated_at_ms gauge, which is
+// package-private; asserting it needs telemetry.InitMetrics, which is behind a
+// sync.Once and takes a full AppConfig. Wiring that into this package is more
+// surface than a three-line early-return warrants, so the telemetry difference
+// is deliberately uncovered here and stated in the PR instead.
+func TestAccelerateSlotsZeroToSlotKeepsPreviousHorizon(t *testing.T) {
+	var toSlot atomic.Int64
+	toSlot.Store(120)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"to_slot":         toSlot.Load(),
+			"slots":           []int64{100},
+			"generated_at_ms": time.Now().UnixMilli(),
+		})
+	}))
+	t.Cleanup(ts.Close)
+
+	srv := newTestServiceAt(t, commonentities.GatewayTypePartner, ts.URL)
+	srv.RefreshAccelerateSlots(t.Context())
+	require.True(t, srv.ShouldAccelerateBlock(100))
+	require.False(t, srv.ShouldAccelerateBlock(110), "baseline: inside the horizon, not selected")
+
+	toSlot.Store(0)
+	srv.RefreshAccelerateSlots(t.Context())
+	require.True(t, srv.ShouldAccelerateBlock(100), "previous list must survive a zero-to_slot poll")
+	require.False(t, srv.ShouldAccelerateBlock(110),
+		"horizon must be kept: a zero to_slot must NOT collapse into fail-open-everything")
+	require.True(t, srv.ShouldAccelerateBlock(121), "past the retained to_slot still fail-opens")
+}
