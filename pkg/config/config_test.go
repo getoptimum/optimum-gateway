@@ -66,6 +66,7 @@ func TestLoadConfig_FromEnvOnly(t *testing.T) {
 	t.Setenv("OPT_IDENTITY_LIBP2P_DIR", "./libid")
 	t.Setenv("OPT_IDENTITY_MUMP2P_DIR", "./mump2pid")
 	t.Setenv("OPT_GATEWAY_ID", "gw-env")
+	t.Setenv("OPT_DEV_CHAIN", "hoodi")
 	t.Setenv("OPT_GATEWAY_CLUSTER_ID", "gw-cluster-env")
 	t.Setenv("OPT_ENABLE_TELEMETRY", "true")
 	t.Setenv("OPT_TELEMETRY_PORT", "8888")
@@ -76,6 +77,7 @@ func TestLoadConfig_FromEnvOnly(t *testing.T) {
 	require.Equal(t, 5000, cfg.AgentLibP2PPort)
 	require.True(t, cfg.TelemetryEnable)
 	require.Equal(t, "gw-env", cfg.GatewayID)
+	require.Equal(t, "hoodi", cfg.Chain)
 	require.Equal(t, 8888, cfg.TelemetryPort)
 	require.Equal(t, "127.0.0.1:6060", cfg.PProfAddr)
 	require.Equal(t, version.GetVersion(), cfg.Version)
@@ -257,6 +259,7 @@ telemetry_enable: true
 telemetry_port: 48123
 gateway_cluster_id: optimum_hoodi_v0_1
 gateway_id: local-dockerized
+chain: hoodi
 `
 	confPath := writeTempConfig(t, confYml)
 
@@ -268,7 +271,35 @@ gateway_id: local-dockerized
 	require.Equal(t, 43213, cfg.AgentMumP2PPort)
 	require.True(t, cfg.TelemetryEnable)
 	require.Equal(t, "local-dockerized", cfg.GatewayID)
+	require.Equal(t, "hoodi", cfg.Chain)
 	require.Equal(t, "optimum_hoodi_v0_1", cfg.GatewayClusterID)
+}
+
+func TestInitRuntime_DevChainWhenClaimEmpty(t *testing.T) {
+	log := logger.NewAppSLogger(logger.Debug)
+
+	t.Run("yaml chain is used when the claim is empty", func(t *testing.T) {
+		cfg := &config.AppConfig{
+			Chain:            "hoodi",
+			GatewayClusterID: "optimum_hoodi_v0_3",
+		}
+		require.NoError(t, cfg.InitRuntime(t.Context(), log, "", "", "", ""))
+	})
+
+	t.Run("empty claim and empty chain still fail", func(t *testing.T) {
+		cfg := &config.AppConfig{GatewayClusterID: "optimum_hoodi_v0_3"}
+		err := cfg.InitRuntime(t.Context(), log, "  ", "", "", "")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "empty chain ID")
+	})
+
+	t.Run("jwt claim wins over an unusable dev chain", func(t *testing.T) {
+		cfg := &config.AppConfig{
+			Chain:            "not-a-chain",
+			GatewayClusterID: "optimum_hoodi_v0_3",
+		}
+		require.NoError(t, cfg.InitRuntime(t.Context(), log, "560048", "", "", ""))
+	})
 }
 
 // The stream is off by default, and when enabled auth may be disabled only on
