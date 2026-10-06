@@ -131,7 +131,7 @@ Total distributed third-party packages: 235
 - [go.uber.org/zap](https://github.com/uber-go/zap/blob/v1.28.0/LICENSE)
 - [go.yaml.in/yaml/v3](https://github.com/yaml/go-yaml/blob/v3.0.5/LICENSE)
 - [gopkg.in/yaml.v3](https://github.com/go-yaml/yaml/blob/v3.0.1/LICENSE)
-- [lukechampine.com/blake3](Unknown)
+- [lukechampine.com/blake3](https://github.com/lukechampine/blake3/blob/v1.4.1/LICENSE)
 
 ## Apache-2.0
 
