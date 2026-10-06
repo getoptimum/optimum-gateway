@@ -11,7 +11,11 @@ import (
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	"github.com/getoptimum/optimum-common/pkg/version"
 	"github.com/getoptimum/optimum-gateway/pkg/config"
+	"github.com/getoptimum/optimum-gateway/pkg/protocol/forks"
+	"github.com/getoptimum/optimum-gateway/pkg/service/auth_token"
+	"github.com/getoptimum/optimum-gateway/pkg/service/jwks_verifier"
 	"github.com/getoptimum/optimum-gateway/pkg/service/stream"
+	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
 )
 
 const (
@@ -300,6 +304,46 @@ func TestInitRuntime_DevChainWhenClaimEmpty(t *testing.T) {
 		}
 		require.NoError(t, cfg.InitRuntime(t.Context(), log, "560048", "", "", ""))
 	})
+
+	// Auth on: a chain / OPT_DEV_CHAIN value must not replace the minted claim,
+	// including when that value would not parse.
+	for _, override := range []string{"hoodi", "not-a-chain"} {
+		t.Run("auth on ignores chain override "+override, func(t *testing.T) {
+			rig := test_utils.NewAuthTestRig(t)
+			rig.ClaimMod = func(c *jwks_verifier.Claims) { c.ChainID = "1" }
+			bootstrap := test_utils.NewLocalBootstrapServerWithRig(t, rig)
+			bootstrap.SetForkResponse(map[string]any{
+				"chain_id":    "mainnet",
+				"fork_digest": "deadbeef",
+				"future_fork": "",
+			})
+
+			cfg := rig.AppCfg(t)
+			cfg.EnableAuth = true
+			cfg.Chain = override
+			cfg.RemoteBootstrapURL = bootstrap.URL()
+
+			mgr, err := auth_token.New(t.Context(), log, cfg)
+			require.NoError(t, err)
+			_, err = mgr.Token(t.Context())
+			require.NoError(t, err)
+			require.True(t, mgr.IsEnabled())
+			require.Equal(t, "mainnet", mgr.Chain().String())
+
+			chainID := ""
+			if c := mgr.OwnClaims(); c != nil {
+				chainID = c.ChainID
+			}
+			require.Equal(t, "1", chainID)
+			require.NoError(t, cfg.InitRuntime(t.Context(), log, chainID, "", "", ""))
+			require.Equal(t, override, cfg.Chain)
+
+			srv, err := forks.NewService(t.Context(), cfg, log, mgr)
+			require.NoError(t, err)
+			require.Equal(t, "mainnet", srv.AppChain().String())
+			require.Equal(t, uint64(1), srv.AppChainID())
+		})
+	}
 }
 
 // The stream is off by default, and when enabled auth may be disabled only on
