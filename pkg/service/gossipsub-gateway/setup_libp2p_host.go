@@ -142,7 +142,7 @@ func (s *Service) setupLibP2PHost() error {
 		libp2ppubsub.WithMessageIdFn(s.pubsubMsgID),
 		libp2ppubsub.WithGossipSubParams(pubsubGossipParam()),
 		libp2ppubsub.WithPeerExchange(false),
-		libp2ppubsub.WithMaxMessageSize(1024 * 1024),
+		libp2ppubsub.WithMaxMessageSize(consensus.MaxCompressedGossipSize()),
 		libp2ppubsub.WithEventTracer(s.peerTopicTracer),
 	}
 	directCLPeers := make([]peer.AddrInfo, 0)
