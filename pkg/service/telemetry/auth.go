@@ -68,6 +68,47 @@ func initAuthMetrics() {
 		"Cluster-binding check outcome at the mumP2P handshake (result=authorized|rejected)",
 		[]string{"result"},
 	)
+
+	// Eagerly create every result child at 0.
+	//
+	// WITHOUT THIS, NONE OF THESE COUNTERS CAN BE ALERTED ON. A CounterVec child
+	// is created on its first Inc, so a counter whose failure paths have never
+	// fired exports only its success child. Measured across the live fleet on
+	// 2026-10-06:
+	//
+	//   auth_token_mint_total          310 series, ALL result="success"
+	//   p2p_handshake_cluster_claim_total  309 series, ALL result="authorized"
+	//   auth_enrollment_total          268 series: 267 "reused", 1 "success"
+	//
+	// The failure paths are correctly wired -- there are ten IncAuthMintResult
+	// call sites and the handshake increments ClusterClaimRejected at
+	// handshake.go:78,82 -- they have simply never been reached. So any rule of
+	// the form rate(..{result!="success"}) selects ZERO series, which Prometheus
+	// reports as health=ok forever. That is the single defect class the alerting
+	// audit (gitops#622) exists to eliminate, and it is why the Signal / auth
+	// surface currently has no alerts at all despite being fully instrumented.
+	//
+	// Eager init makes absence impossible: a healthy fleet publishes
+	// result="revoked" 0 rather than nothing, so a rate over it is a real zero
+	// and an alert on it is fireable from the moment it merges.
+	//
+	// Cost is 14 extra series per gateway (10 + 2 + 2), all constant at 0 until
+	// something happens. Against ~310 gateways that is ~4.3k series, which is
+	// negligible next to the per-topic and per-peer families already exported.
+	for _, r := range []string{
+		AuthMintResultSuccess, AuthMintResultUnknownKey, AuthMintResultRevoked,
+		AuthMintResultSuspended, AuthMintResultForbidden, AuthMintResultBadStatus,
+		AuthMintResultNetworkError, AuthMintResultEmptyToken, AuthMintResultVerifyFailed,
+		AuthMintResultAssertionFailed,
+	} {
+		authTokenMintTotal.WithLabelValues(r)
+	}
+	for _, r := range []string{EnrollmentResultSuccess, EnrollmentResultReused} {
+		authEnrollmentTotal.WithLabelValues(r)
+	}
+	for _, r := range []string{ClusterClaimAuthorized, ClusterClaimRejected} {
+		handshakeClusterClaimTotal.WithLabelValues(r)
+	}
 }
 
 func IncAuthMintResult(result string) {
