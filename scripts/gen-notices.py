@@ -27,6 +27,7 @@ FIRST_PARTY_PREFIX = "github.com/getoptimum/"
 # Update the version when the dependency is bumped.
 URL_OVERRIDES = {
     "gonum.org/v1/gonum/mathext": "https://github.com/gonum/gonum/blob/v0.17.0/LICENSE",
+    "lukechampine.com/blake3": "https://github.com/lukechampine/blake3/blob/v1.4.1/LICENSE",
 }
 
 

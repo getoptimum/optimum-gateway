@@ -34,14 +34,24 @@ type Service struct {
 }
 
 func NewService(ctx context.Context, appCfg *config.AppConfig, log logger.AppLogger, authMgr *auth_token.Service) (*Service, error) {
+	// Auth off has no JWT chain_id. The dev-mode chain on AppConfig is the
+	// same value InitRuntime already accepted.
+	appChain := authMgr.Chain()
+	if appChain == "" {
+		parsed, parseErr := chain.ChainFromString(appCfg.Chain)
+		if parseErr != nil {
+			return nil, fmt.Errorf("dev chain: %w", parseErr)
+		}
+		appChain = parsed
+	}
 	srv := &Service{
 		cfg:            appCfg,
 		log:            log.With(logger.WithService("forks")),
 		authMgr:        authMgr,
 		supportedForks: commonsyncx.NewRWMap[string, struct{}](),
 		topicForkCache: commonsyncx.NewRWMap[string, string](),
-		appChain:       authMgr.Chain(),
-		appChainID:     authMgr.Chain().ID(),
+		appChain:       appChain,
+		appChainID:     appChain.ID(),
 	}
 
 	if err := chain_state.LoadGenesisState(log, srv.appChain); err != nil {

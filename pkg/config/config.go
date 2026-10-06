@@ -84,6 +84,10 @@ type AppConfig struct {
 	// It is no longer inert under join_key: EnrollmentLabel reads it before the
 	// mint, and that label is unique per org, so it must be unique per host.
 	GatewayID string `yaml:"gateway_id" env:"OPT_GATEWAY_ID" default:"dev-gateway"`
+	// Chain is the dev-mode chain (hoodi, mainnet, or a numeric id). InitRuntime
+	// uses it only when the JWT chain_id claim is empty. A prod boot passes the
+	// claim, and this value is ignored.
+	Chain string `yaml:"chain" env:"OPT_DEV_CHAIN" default:""`
 	// GatewayType is JWT-sourced — InitRuntime sets it from the `type` claim
 	// (hermes|partner|relay) once the auth manager has minted. Empty in dev
 	// mode (OPT_ENABLE_AUTH=false), where there is no minted claim. Used as
@@ -175,6 +179,9 @@ func LoadConfig(confFile string) (*AppConfig, error) {
 // fallback in dev mode); gatewayType is the `type` claim (empty in dev mode).
 // Empty values are ignored so the yaml/env defaults stay in place.
 func (c *AppConfig) InitRuntime(ctx context.Context, log logger.AppLogger, chainStr, gatewayID, gatewayType, orgID string) error {
+	if strings.TrimSpace(chainStr) == "" {
+		chainStr = c.Chain
+	}
 	ch, err := chain.ChainFromString(chainStr)
 	if err != nil {
 		return fmt.Errorf("error parse chain from string: %w", err)
