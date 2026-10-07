@@ -17,8 +17,8 @@ func TestAuthMetricChildrenAreEager(t *testing.T) {
 		family := prefix + name
 		require.Len(t, metricFamilyByName(t, reg, family).Metric, len(results))
 		for _, r := range results {
-			got := metricByLabels(t, reg, family, map[string]string{"result": r}).GetCounter().GetValue()
-			require.Zero(t, got, "%s{result=%q}", family, r)
+			got := metricByLabels(t, reg, family, map[string]string{labelResult: r}).GetCounter().GetValue()
+			require.Zero(t, got, "%s{%s=%q}", family, labelResult, r)
 		}
 	}
 

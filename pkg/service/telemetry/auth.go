@@ -6,6 +6,9 @@ import (
 	commonmetrics "github.com/getoptimum/optimum-common/pkg/telemetry"
 )
 
+// labelResult is the shared label name on the auth counters.
+const labelResult = "result"
+
 // Result label values for auth_token_mint_total.
 const (
 	AuthMintResultSuccess      = "success"
@@ -48,7 +51,7 @@ func initAuthMetrics() {
 		"auth_token_mint_total",
 		subsystem,
 		"Outcomes of gateway JWT mint attempts against the remote auth service",
-		[]string{"result"},
+		[]string{labelResult},
 	)
 	// Updated only on successful mint. Expired when time() > value (and value > 0).
 	authTokenExpiresAt = commonmetrics.NewGauge(
@@ -60,13 +63,13 @@ func initAuthMetrics() {
 		"auth_enrollment_total",
 		subsystem,
 		"Outcomes of resolving this gateway's own enrollment credential at startup",
-		[]string{"result"},
+		[]string{labelResult},
 	)
 	handshakeClusterClaimTotal = commonmetrics.NewCounterVec(
 		"p2p_handshake_cluster_claim_total",
 		subsystem,
 		"Cluster-binding check outcome at the mumP2P handshake (result=authorized|rejected)",
-		[]string{"result"},
+		[]string{labelResult},
 	)
 
 	// Create every result child at init so a failure series exists at 0.
