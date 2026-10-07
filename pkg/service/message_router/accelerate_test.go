@@ -93,3 +93,33 @@ func TestAccelerateSlotsPrimedAtStartup(t *testing.T) {
 	}, 5*time.Second, 5*time.Millisecond, "startup must fetch the window without waiting for a tick")
 	require.True(t, srv.ShouldAccelerateBlock(100), "selected slot still accelerates")
 }
+
+// A zero to_slot keeps the previous horizon and does not take slots from that response.
+func TestAccelerateSlotsZeroToSlotKeepsPreviousHorizon(t *testing.T) {
+	var toSlot atomic.Int64
+	toSlot.Store(120)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		responseToSlot := toSlot.Load()
+		slots := []int64{100}
+		if responseToSlot == 0 {
+			slots = append(slots, 110)
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"to_slot":         responseToSlot,
+			"slots":           slots,
+			"generated_at_ms": time.Now().UnixMilli(),
+		})
+	}))
+	t.Cleanup(ts.Close)
+
+	srv := newTestServiceAt(t, commonentities.GatewayTypePartner, ts.URL)
+	srv.RefreshAccelerateSlots(t.Context())
+	require.True(t, srv.ShouldAccelerateBlock(100))
+	require.False(t, srv.ShouldAccelerateBlock(110), "baseline: inside the horizon, not selected")
+
+	toSlot.Store(0)
+	srv.RefreshAccelerateSlots(t.Context())
+	require.True(t, srv.ShouldAccelerateBlock(100), "previous list must survive a zero-to_slot poll")
+	require.False(t, srv.ShouldAccelerateBlock(110), "zero response must not add 110")
+	require.True(t, srv.ShouldAccelerateBlock(121), "past the retained to_slot still fail-opens")
+}
