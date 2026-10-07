@@ -69,11 +69,7 @@ func initAuthMetrics() {
 		[]string{"result"},
 	)
 
-	// Eagerly create every result child at 0. A CounterVec child appears on first
-	// Inc, so counters whose failure paths have never fired export only their
-	// success child -- rate(...{result!="success"}) then selects zero series, which
-	// reads as health=ok rather than no-data. Measured 2026-10-06: mint 310 series
-	// all result="success", cluster_claim 309 all "authorized".
+	// Create every result child at init so a failure series exists at 0.
 	for _, r := range []string{
 		AuthMintResultSuccess, AuthMintResultUnknownKey, AuthMintResultRevoked,
 		AuthMintResultSuspended, AuthMintResultForbidden, AuthMintResultBadStatus,
