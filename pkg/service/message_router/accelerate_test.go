@@ -94,17 +94,10 @@ func TestAccelerateSlotsPrimedAtStartup(t *testing.T) {
 	require.True(t, srv.ShouldAccelerateBlock(100), "selected slot still accelerates")
 }
 
-// Pins the contract that a 200 carrying to_slot <= 0 keeps the PREVIOUS horizon
-// rather than collapsing to "no window". This passes before and after the
-// accompanying fix, and is kept as documentation of behaviour that is easy to
-// break while refactoring the early-return.
-//
-// NOT a regression test for the telemetry bug the fix addresses. That bug is
-// only observable on the accelerate_generated_at_ms gauge, which is
-// package-private; asserting it needs telemetry.InitMetrics, which is behind a
-// sync.Once and takes a full AppConfig. Wiring that into this package is more
-// surface than a three-line early-return warrants, so the telemetry difference
-// is deliberately uncovered here and stated in the PR instead.
+// A zero to_slot keeps the previous horizon rather than collapsing to "no window".
+// Passes with and without the accompanying fix -- the fix is only observable on the
+// package-private accelerate_generated_at_ms gauge. Kept as a guard against
+// refactoring the early-return away.
 func TestAccelerateSlotsZeroToSlotKeepsPreviousHorizon(t *testing.T) {
 	var toSlot atomic.Int64
 	toSlot.Store(120)

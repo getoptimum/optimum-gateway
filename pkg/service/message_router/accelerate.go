@@ -81,25 +81,10 @@ func (s *Service) RefreshAccelerateSlots(ctx context.Context) {
 		s.log.Error("accelerate_slots poll failed, keeping previous list", err, logger.WithInt("status_code", code))
 		return
 	}
-	// A 200 carrying to_slot <= 0 is a FAILED poll, not a successful one with an
-	// empty horizon, and it has to be treated as such BEFORE the telemetry call.
-	//
-	// The old code stored to_slot only when positive but called
-	// SetAccelerateWindow unconditionally with the new GeneratedAtMs. So a
-	// response with to_slot: 0 refreshed the freshness gauge while leaving the
-	// horizon pinned at whatever it was. Two consequences, both silent:
-	//
-	//   - if a horizon had been set, the gauge reports a fresh window while the
-	//     service is deciding against a stale one;
-	//   - if one never had been, accelerateToSlot is still 0, decideAccelerate
-	//     takes its `toSlot == 0` branch and returns accelerateFailOpen for
-	//     EVERY slot -- the gateway accelerates everything, which is exactly
-	//     what the A/B control arm must not do -- and the freshness gauge says
-	//     the window is current, so nothing downstream can tell.
-	//
-	// Returning here keeps the previous list, which is the same contract the
-	// transport-failure branch above already has, and leaves the gauge holding
-	// its last genuinely-good GeneratedAtMs so staleness remains measurable.
+	// A 200 with to_slot <= 0 is a failed poll. SetAccelerateWindow used to run
+	// anyway, so the freshness gauge advanced while the horizon stayed stale --
+	// and on a gateway that never had one, decideAccelerate fail-opens on every
+	// slot while telemetry reports the window current.
 	if res.ToSlot <= 0 {
 		s.log.Error("accelerate_slots poll returned a non-positive to_slot, keeping previous list",
 			nil, logger.WithInt("to_slot", int(res.ToSlot)), logger.WithInt("slots", len(res.Slots)))
