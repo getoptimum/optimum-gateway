@@ -68,23 +68,19 @@ func bgUpdateHealthStatus() {
 }
 
 func HealthCL() int64 {
-	return clWorking.Load()
+	return int64(connectionAlive(time.Now().Unix(), lastCLMessageAt.Load()))
 }
 
 func HealthMUM() int64 {
-	return mumWorking.Load()
+	return int64(connectionAlive(time.Now().Unix(), lastMumMessageAt.Load()))
 }
 
 func RecordCLMessageAt() {
-	if enabledMetrics {
-		lastCLMessageAt.Store(time.Now().Unix())
-	}
+	lastCLMessageAt.Store(time.Now().Unix())
 }
 
 func RecordMumMessageAt() {
-	if enabledMetrics {
-		lastMumMessageAt.Store(time.Now().Unix())
-	}
+	lastMumMessageAt.Store(time.Now().Unix())
 }
 
 func SetPropagationState(enabled bool) {
