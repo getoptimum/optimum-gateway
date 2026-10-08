@@ -110,38 +110,20 @@ not the HTTP port you just queried.
 
 ## Point your CL client at the gateway
 
-**Peering is two-way.** The step above tells the gateway about your client. Your
-client must **also** be told about the gateway, or it drops the connection and
-`cl_peers` stays at 0.
-
-Get the gateway's identity once it is running:
+`gateway.directClPeers` above is the allowlist, filled with the CL's own peer ID. After the pod is ready, point the CL at the gateway. The flag for each client is in [Connecting your CL client](08_cl_clients.md).
 
 ```bash
 kubectl -n optimum port-forward svc/gateway-optimum-gateway 48123:48123
 curl -s localhost:48123/api/v1/self_info | jq -r '.peer_id, .libp2p.multiaddrs[]'
 ```
 
-Build the multiaddr from the **public** address and port `33212`:
+Build the multiaddr from the address the CL can route, and port `33212`:
 
 ```text
 /ip4/<gateway-node-public-ip>/tcp/33212/p2p/<gateway-peer-id>
 ```
 
-Add it to your client and restart it:
-
-| client | flag |
-|---|---|
-| Prysm | `--peer=<multiaddr>` |
-| Lighthouse | `--boot-nodes=<multiaddr>` and `--trusted-peers=<gateway-peer-id>` |
-| Teku | `--p2p-direct-peers=<multiaddr>` |
-| Nimbus | `--direct-peer=<multiaddr>` |
-
-> **Nimbus** ignores the direct-peer list when its network key is
-> auto-generated. Give Nimbus a persistent netkey or it silently skips the
-> gateway.
-
-The gateway's peer ID is stable across restarts. Its **IP is not** — if the pod
-moves to a different node, update this multiaddr.
+A pod address in `libp2p.multiaddrs` is not that address. The peer ID stays across restarts. The IP does not: if the pod moves to another node, update the multiaddr on the CL. Nimbus skips `--direct-peer` when its netkey is `random`. See [Nimbus](08_cl_clients.md#nimbus).
 
 ## Check it works
 

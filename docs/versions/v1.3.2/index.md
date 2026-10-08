@@ -83,7 +83,7 @@ The **Optimum Gateway** bridges your **Ethereum Consensus Layer (CL) client** wi
 
 ## Requirements
 
-* **CL Client**: Prysm, Lighthouse, Teku, Nimbus, or Lodestar running
+* **CL Client**: Prysm, Lighthouse, Teku, Nimbus, or Lodestar. Flags and the peer-ID exchange are in [Connecting your CL client](08_cl_clients.md)
 * **Credential**: API key (`ogw_`) or join key (`ojk_`) from the [Optimum Partner Console](https://console.getoptimum.io/) after onboarding — see [Quick Start](01_quick_start.md#generate-your-api-key) or [Gateway Self-Enrollment](07_gateway_self_enrollment.md#mint-a-join-key)
 * **Docker**: Docker Desktop or Docker Engine
 * **Firewall**: Required ports open (see [Network Requirements](00_network_requirements.md))
