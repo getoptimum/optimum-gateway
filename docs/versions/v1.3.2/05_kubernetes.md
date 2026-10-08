@@ -98,10 +98,13 @@ peer not on it. A wrong peer ID or port means it talks to nothing.
 Get your client's peer ID:
 
 ```bash
-curl -s localhost:5052/eth/v1/node/identity | jq -r .data.peer_id   # lighthouse / nimbus
+curl -s localhost:5052/eth/v1/node/identity | jq -r .data.peer_id   # lighthouse, or nimbus with --rest
 curl -s localhost:3500/eth/v1/node/identity | jq -r .data.peer_id   # prysm
-curl -s localhost:5051/eth/v1/node/identity | jq -r .data.peer_id   # teku
+curl -s localhost:5051/eth/v1/node/identity | jq -r .data.peer_id   # teku with --rest-api-enabled
+curl -s localhost:9596/eth/v1/node/identity | jq -r .data.peer_id   # lodestar
 ```
+
+Nimbus does not answer on `9596`, and its REST server is off until `--rest`. Teku's REST server is off until `--rest-api-enabled`. A refused curl is the beacon API.
 
 Use the client's **P2P** port in the multiaddr — prysm `13000`, others `9000` —
 not the HTTP port you just queried.
@@ -110,7 +113,7 @@ not the HTTP port you just queried.
 
 ## Point your CL client at the gateway
 
-`gateway.directClPeers` above is the allowlist, filled with the CL's own peer ID. After the pod is ready, point the CL at the gateway. The flag for each client is in [Connecting your CL client](08_cl_clients.md).
+On Helm the order is the reverse of Docker. The chart rejects an empty `gateway.directClPeers`, so the CL peer ID has to exist before install. After the pod is ready, point the CL at the gateway. Flags are in [Connecting your CL client](08_cl_clients.md).
 
 ```bash
 kubectl -n optimum port-forward svc/gateway-optimum-gateway 48123:48123

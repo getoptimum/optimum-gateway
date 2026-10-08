@@ -190,7 +190,7 @@ Flags, versions, and the per-client fixes are in [Connecting your CL client](08_
 
 | Issue                                    | Fix                                                                                                                                                          |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `cl_peers: 0`                            | CL flag uses `self_info.peer_id` and an address the CL can route. Open **33212**.                                                                            |
+| `cl_peers: 0`                            | CL flag uses `self_info.peer_id` and an address the CL can route. Open **33212** to the CL only.                                                             |
 | Disconnected after a **gateway restart** | Lighthouse and Nimbus do not re-dial. Add the CL to `direct_cl_peers`.                                                                                       |
 | Wrong peer ID in CL config               | Identity dirs not persisted, or the beacon `.data.peer_id` / `mump2p.peer_ids` was pasted into the CL flag.                                                 |
 | Lighthouse drops the gateway             | `--boot-nodes` plus `--trusted-peers=<gateway peer_id>`. `--semi-supernode` is custody, not the session.                                                     |

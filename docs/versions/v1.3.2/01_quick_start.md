@@ -161,7 +161,7 @@ docker logs optimum-gateway
 
 **Note:** "Failed to connect to bootstrap" during startup is normal. See [Troubleshooting](04_troubleshoot.md#normal-log-noise-safe-to-ignore).
 
-## Connect your CL client
+## Connecting your CL client
 
 Read `peer_id` from `self_info`, then set the flag for your beacon node. Versions, the ID each flag takes, and the failure cases are in [Connecting your CL client](08_cl_clients.md).
 
