@@ -161,71 +161,13 @@ docker logs optimum-gateway
 
 **Note:** "Failed to connect to bootstrap" during startup is normal. See [Troubleshooting](04_troubleshoot.md#normal-log-noise-safe-to-ignore).
 
-## Connect CL Client
+## Connecting your CL client
 
-Get gateway peer info:
-
-```sh
-curl -s http://localhost:48123/api/v1/self_info
-```
-
-Use `libp2p.multiaddrs[0]` (or another reachable multiaddr) for IP and `peer_id` for peer ID.
-
-> **Recommended CL versions:** Use **Prysm v7.1.8** or later. For Teku use **v26.6.0+** (minimum v26.4.0). See [Troubleshooting](04_troubleshoot.md) for client-specific PeerDAS flags.
-
-### Prysm
+Read `peer_id` from `self_info`, then set the flag for your beacon node. Versions, the ID each flag takes, and the failure cases are in [Connecting your CL client](08_cl_clients.md).
 
 ```sh
-./beacon-chain \
-  --peer=/ip4/YOUR_GATEWAY_IP/tcp/33212/p2p/YOUR_GATEWAY_PEER_ID \
-  ...
+curl -s http://localhost:48123/api/v1/self_info | jq -r '.peer_id'
 ```
-
-### Teku
-
-```sh
-teku \
-  --p2p-direct-peers=/ip4/YOUR_GATEWAY_IP/tcp/33212/p2p/YOUR_GATEWAY_PEER_ID \
-  --p2p-static-peers=/ip4/YOUR_GATEWAY_IP/tcp/33212/p2p/YOUR_GATEWAY_PEER_ID \
-  ...
-```
-
-Use `--p2p-direct-peers` (not just `--p2p-static-peers`) — static peers can be pruned. See [Troubleshooting - Teku PeerDAS](04_troubleshoot.md#teku-peerdas-configuration-important) for details.
-
-### Lighthouse
-
-Add your Lighthouse node as a direct peer in the gateway config so the gateway auto-reconnects after restarts:
-
-```yaml
-direct_cl_peers:
-  - /ip4/YOUR_LIGHTHOUSE_IP/tcp/9000/p2p/YOUR_LIGHTHOUSE_PEER_ID
-```
-
-See [Troubleshooting - Lighthouse v8.x](04_troubleshoot.md#lighthouse-v8x-peerdas-configuration-important) for additional required flags.
-
-### Nimbus
-
-Point Nimbus at the gateway (multiaddr or ENR; multiaddr is typical):
-
-```sh
-nimbus_beacon_node \
-  --direct-peer=/ip4/YOUR_GATEWAY_IP/tcp/33212/p2p/YOUR_GATEWAY_PEER_ID \
-  --netkey-file=/data/netkey \
-  ...
-```
-
-Add your Nimbus node in the gateway config so the gateway reconnects after restarts:
-
-```yaml
-direct_cl_peers:
-  - /ip4/YOUR_NIMBUS_IP/tcp/YOUR_NIMBUS_P2P_PORT/p2p/YOUR_NIMBUS_PEER_ID
-```
-
-Use a stable `--netkey-file` (not `random`) — Nimbus requires it for privileged direct peers. Nimbus drop/reconnect cycles during warmup are normal; see [Troubleshooting - Nimbus](04_troubleshoot.md#nimbus) for verification and expected behavior.
-
-### Lodestar
-
-Lodestar is supported. Point it at the gateway as a trusted/direct peer and add the Lodestar node to the gateway's `direct_cl_peers` so the gateway re-dials after restarts.
 
 ## Fleet rollout?
 
@@ -233,6 +175,7 @@ If you run many gateways, you do not need one API key per host. Mint a single or
 
 ## Next Steps
 
+* [Connecting your CL client](08_cl_clients.md) - Peer IDs, flags, and reconnects
 * [Configuration](02_configuration.md) - Ports, direct peers, advanced settings
 * [Gateway Self-Enrollment](07_gateway_self_enrollment.md) - Fleet rollout with a join key
 * [Consumer Block Stream](06_block_stream.md) - Opt-in WebSocket / gRPC feed of decoded blocks

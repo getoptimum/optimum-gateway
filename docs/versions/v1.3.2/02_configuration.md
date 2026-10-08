@@ -51,28 +51,16 @@ Confirm the active network after start:
 curl -s http://localhost:48123/api/v1/self_info | jq '.chain, .fork_digest'
 ```
 
-## Direct CL Peers (Recommended for All Partners)
+## Direct CL Peers
 
-Lighthouse and Nimbus do not automatically reconnect to the gateway after a **gateway** restart. Configure `direct_cl_peers` so the gateway runs a dedicated goroutine that retries the connection until the CL peer is reachable again.
+`direct_cl_peers` is the CL multiaddr the gateway dials and keeps retrying. When the list is set, it is also an allowlist: any other libp2p peer is disconnected. When it is empty, no peer-ID filter is applied.
 
 ```yaml
 direct_cl_peers:
   - /ip4/192.168.1.2/tcp/9000/p2p/16Uiu2HAmGj6AoMKe7fNrghXwwRgivXLpji3Hkm4QEGVpsHZYKwPQ
 ```
 
-Replace the IP, port, and peer ID with your CL node's libp2p multiaddr.
-
-**Why this matters:** Prysm re-dials peers on its own, but Lighthouse and Nimbus do not reliably hold the gateway link after a gateway restart. Without `direct_cl_peers`, the CL can stay disconnected until the next manual intervention. We recommend all partners add their CL nodes as direct peers.
-
-**Peer allowlist:** When `direct_cl_peers` is set, the gateway disconnects any libp2p peer whose ID is not in that list. When empty, no peer-ID filtering is applied; firewall `agent_lib_p2p_port` (default `33212`) to your CL client.
-
-**Lighthouse beacon node CLI:** upstream help marks `--libp2p-addresses` as **deprecated**; use **`--boot-nodes`** for the same comma-delimited multiaddrs (multiaddr or ENR). See [Beacon Node help](https://lighthouse-book.sigmaprime.io/help_bn.html).
-
-To find your CL node's multiaddr:
-
-* **Lighthouse:** `curl -s http://localhost:5052/eth/v1/node/identity | jq '.data.p2p_addresses[0]'`
-* **Prysm:** `curl -s http://localhost:3500/eth/v1/node/identity | jq '.data.p2p_addresses[0]'`
-* **Nimbus:** `curl -s http://localhost:9596/eth/v1/node/identity | jq '.data.p2p_addresses[0]'`
+Which peer ID goes in that multiaddr, and the flag on each CL, is in [Connecting your CL client](08_cl_clients.md). Firewall `agent_lib_p2p_port` (default `33212`) to your CL either way.
 
 ## Topics
 
