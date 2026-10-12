@@ -66,9 +66,6 @@ func (s *Server) handleRoot(ctx fiber.Ctx) error {
 
 func (s *Server) handleHealth(ctx fiber.Ctx) error {
 	resp, code := s.srvGateway.BuildHealthResponse()
-	if lastMs := resp.Checks["last_block_age_sec"]; lastMs.Value != nil {
-		telemetry.SetLastBlockReceivedTimestamp(float64(time.Now().Unix() - int64(*lastMs.Value)))
-	}
 	return ctx.Status(code).JSON(resp)
 }
 

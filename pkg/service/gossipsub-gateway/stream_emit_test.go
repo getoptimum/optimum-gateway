@@ -2,13 +2,16 @@ package gossipsub_gateway
 
 import (
 	"encoding/hex"
+	"strings"
 	"testing"
 	"time"
 
+	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/require"
 
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
 	"github.com/getoptimum/optimum-gateway/pkg/service/streamhub"
+	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
 	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
 )
 
@@ -23,8 +26,12 @@ func TestProcessBeaconBlockArrivalEmitsToStreamHub(t *testing.T) {
 	require.NoError(t, err)
 	topic := "/eth2/deadbeef/beacon_block/ssz_snappy"
 
-	slot, _ := svc.processBeaconBlockArrival(svc.log, topic, raw, time.Now().UnixMilli(), entities.SourceLibP2P, "", "peer-x")
+	// The gauge moves when the block arrives. Nothing here calls /health.
+	telemetry.InitMetrics(t.Context(), svc.log, svc.cfg)
+	recvAt := time.Now().UnixMilli()
+	slot, _ := svc.processBeaconBlockArrival(svc.log, topic, raw, recvAt, entities.SourceLibP2P, "", "peer-x")
 	require.Equal(t, uint64(3435697), slot)
+	require.InDelta(t, float64(recvAt)/1000, lastBlockReceivedGauge(t), 0.001)
 
 	select {
 	case ev := <-sub.Events():
@@ -38,4 +45,20 @@ func TestProcessBeaconBlockArrivalEmitsToStreamHub(t *testing.T) {
 	default:
 		t.Fatal("expected a block event on the hub")
 	}
+}
+
+func lastBlockReceivedGauge(t *testing.T) float64 {
+	t.Helper()
+	families, err := telemetry.CustomRegistry.Gather()
+	require.NoError(t, err)
+	var got *dto.Metric
+	for _, family := range families {
+		if strings.HasSuffix(family.GetName(), "last_block_received_timestamp") {
+			require.NotEmpty(t, family.Metric)
+			got = family.Metric[0]
+			break
+		}
+	}
+	require.NotNil(t, got)
+	return got.GetGauge().GetValue()
 }
