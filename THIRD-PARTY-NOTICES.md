@@ -130,7 +130,7 @@ Total distributed third-party packages: 235
 - [go.uber.org/multierr](https://github.com/uber-go/multierr/blob/v1.11.0/LICENSE.txt)
 - [go.uber.org/zap](https://github.com/uber-go/zap/blob/v1.28.0/LICENSE)
 - [go.yaml.in/yaml/v3](https://github.com/yaml/go-yaml/blob/v3.0.5/LICENSE)
-- [gopkg.in/yaml.v3](Unknown)
+- [gopkg.in/yaml.v3](https://github.com/go-yaml/yaml/blob/v3.0.1/LICENSE)
 - [lukechampine.com/blake3](https://github.com/lukechampine/blake3/blob/v1.4.1/LICENSE)
 
 ## Apache-2.0
@@ -203,7 +203,7 @@ Total distributed third-party packages: 235
 - [go.yaml.in/yaml/v2](https://github.com/yaml/go-yaml/blob/v2.4.4/LICENSE)
 - [google.golang.org/genproto/googleapis/rpc/status](https://github.com/googleapis/go-genproto/blob/7ab31c22f7ad/googleapis/rpc/LICENSE)
 - [google.golang.org/grpc](https://github.com/grpc/grpc-go/blob/v1.83.2/LICENSE)
-- [gopkg.in/yaml.v2](Unknown)
+- [gopkg.in/yaml.v2](https://github.com/go-yaml/yaml/blob/v2.4.0/LICENSE)
 - [k8s.io/apimachinery/pkg](https://github.com/kubernetes/apimachinery/blob/v0.35.3/LICENSE)
 - [k8s.io/client-go](https://github.com/kubernetes/client-go/blob/v0.35.3/LICENSE)
 - [k8s.io/klog/v2](https://github.com/kubernetes/klog/blob/v2.140.0/LICENSE)
@@ -255,7 +255,7 @@ Total distributed third-party packages: 235
 - [gonum.org/v1/gonum/mathext](https://github.com/gonum/gonum/blob/v0.17.0/LICENSE)
 - [google.golang.org/api](https://github.com/googleapis/google-api-go-client/blob/v0.272.0/LICENSE)
 - [google.golang.org/protobuf](https://github.com/protocolbuffers/protobuf-go/blob/v1.36.12/LICENSE)
-- [gopkg.in/inf.v0](Unknown)
+- [gopkg.in/inf.v0](https://github.com/go-inf/inf/blob/v0.9.1/LICENSE)
 - [k8s.io/apimachinery/third_party/forked/golang/reflect](https://github.com/kubernetes/apimachinery/blob/v0.35.3/third_party/forked/golang/LICENSE)
 - [k8s.io/utils/internal/third_party/forked/golang/net](https://github.com/kubernetes/utils/blob/bc988d571ff4/internal/third_party/forked/golang/LICENSE)
 
