@@ -12,7 +12,7 @@ distributed with this binary.
 Attribution notices required by these licenses (Apache-2.0 §4 and the upstream
 `NOTICE` files it references) are reproduced in the accompanying `NOTICE` file.
 
-Total distributed third-party packages: 235
+Total distributed third-party packages: 236
 
 ## Summary
 
@@ -20,7 +20,7 @@ Total distributed third-party packages: 235
 | --- | --- |
 | MIT | 99 |
 | Apache-2.0 | 78 |
-| BSD-3-Clause | 42 |
+| BSD-3-Clause | 43 |
 | BSD-2-Clause | 6 |
 | ISC | 5 |
 | MPL-2.0 | 4 |
@@ -45,7 +45,7 @@ Total distributed third-party packages: 235
 - [github.com/davidlazar/go-crypto/salsa20](https://github.com/davidlazar/go-crypto/blob/b73af7476f6c/LICENSE)
 - [github.com/dennwc/varint](https://github.com/dennwc/varint/blob/v1.0.0/LICENSE)
 - [github.com/emicklei/dot](https://github.com/emicklei/dot/blob/v1.9.1/LICENSE)
-- [github.com/felixge/httpsnoop](https://github.com/felixge/httpsnoop/blob/v1.0.4/LICENSE.txt)
+- [github.com/felixge/httpsnoop](https://github.com/felixge/httpsnoop/blob/v1.1.0/LICENSE.txt)
 - [github.com/ferranbt/fastssz](https://github.com/ferranbt/fastssz/blob/0b1f38e43198/LICENSE)
 - [github.com/fxamacker/cbor/v2](https://github.com/fxamacker/cbor/blob/v2.9.2/LICENSE)
 - [github.com/go-viper/mapstructure/v2](https://github.com/go-viper/mapstructure/blob/v2.5.0/LICENSE)
@@ -135,7 +135,7 @@ Total distributed third-party packages: 235
 
 ## Apache-2.0
 
-- [cloud.google.com/go/auth](https://github.com/googleapis/google-cloud-go/blob/auth/v0.18.2/auth/LICENSE)
+- [cloud.google.com/go/auth](https://github.com/googleapis/google-cloud-go/blob/auth/v0.23.2/auth/LICENSE)
 - [cloud.google.com/go/auth/oauth2adapt](https://github.com/googleapis/google-cloud-go/blob/auth/oauth2adapt/v0.2.8/auth/oauth2adapt/LICENSE)
 - [cloud.google.com/go/compute/metadata](https://github.com/googleapis/google-cloud-go/blob/compute/metadata/v0.9.0/compute/metadata/LICENSE)
 - [github.com/MicahParks/jwkset](https://github.com/MicahParks/jwkset/blob/v0.11.1/LICENSE)
@@ -155,10 +155,10 @@ Total distributed third-party packages: 235
 - [github.com/aws/aws-sdk-go-v2/service/sts](https://github.com/aws/aws-sdk-go-v2/blob/service/sts/v1.41.9/service/sts/LICENSE.txt)
 - [github.com/aws/smithy-go](https://github.com/aws/smithy-go/blob/v1.24.2/LICENSE)
 - [github.com/bboreham/go-loser](https://github.com/bboreham/go-loser/blob/fcc2c21820a3/LICENSE)
-- [github.com/go-logr/logr](https://github.com/go-logr/logr/blob/v1.4.3/LICENSE)
+- [github.com/go-logr/logr](https://github.com/go-logr/logr/blob/v1.4.4/LICENSE)
 - [github.com/go-logr/stdr](https://github.com/go-logr/stdr/blob/v1.2.2/LICENSE)
 - [github.com/google/s2a-go](https://github.com/google/s2a-go/blob/v0.1.9/LICENSE.md)
-- [github.com/googleapis/enterprise-certificate-proxy/client](https://github.com/googleapis/enterprise-certificate-proxy/blob/v0.3.14/LICENSE)
+- [github.com/googleapis/enterprise-certificate-proxy/client](https://github.com/googleapis/enterprise-certificate-proxy/blob/v0.3.20/LICENSE)
 - [github.com/ipfs/boxo](https://github.com/ipfs/boxo/blob/v0.30.0/LICENSE.md)
 - [github.com/jackpal/go-nat-pmp](https://github.com/jackpal/go-nat-pmp/blob/v1.0.2/LICENSE)
 - [github.com/klauspost/compress](https://github.com/klauspost/compress/blob/v1.19.1/LICENSE)
@@ -196,12 +196,12 @@ Total distributed third-party packages: 235
 - [go.opentelemetry.io/collector/pipeline](https://github.com/open-telemetry/opentelemetry-collector/blob/pipeline/v1.54.0/pipeline/LICENSE)
 - [go.opentelemetry.io/collector/processor](https://github.com/open-telemetry/opentelemetry-collector/blob/processor/v1.54.0/processor/LICENSE)
 - [go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/instrumentation/net/http/httptrace/otelhttptrace/v0.67.0/instrumentation/net/http/httptrace/otelhttptrace/LICENSE)
-- [go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/instrumentation/net/http/otelhttp/v0.68.0/instrumentation/net/http/otelhttp/LICENSE)
-- [go.opentelemetry.io/otel](https://github.com/open-telemetry/opentelemetry-go/blob/v1.44.0/LICENSE)
-- [go.opentelemetry.io/otel/metric](https://github.com/open-telemetry/opentelemetry-go/blob/metric/v1.44.0/metric/LICENSE)
-- [go.opentelemetry.io/otel/trace](https://github.com/open-telemetry/opentelemetry-go/blob/trace/v1.44.0/trace/LICENSE)
+- [go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/instrumentation/net/http/otelhttp/v0.70.0/instrumentation/net/http/otelhttp/LICENSE)
+- [go.opentelemetry.io/otel](https://github.com/open-telemetry/opentelemetry-go/blob/v1.45.0/LICENSE)
+- [go.opentelemetry.io/otel/metric](https://github.com/open-telemetry/opentelemetry-go/blob/metric/v1.45.0/metric/LICENSE)
+- [go.opentelemetry.io/otel/trace](https://github.com/open-telemetry/opentelemetry-go/blob/trace/v1.45.0/trace/LICENSE)
 - [go.yaml.in/yaml/v2](https://github.com/yaml/go-yaml/blob/v2.4.4/LICENSE)
-- [google.golang.org/genproto/googleapis/rpc/status](https://github.com/googleapis/go-genproto/blob/7ab31c22f7ad/googleapis/rpc/LICENSE)
+- [google.golang.org/genproto/googleapis/rpc](https://github.com/googleapis/go-genproto/blob/08b0e4226688/googleapis/rpc/LICENSE)
 - [google.golang.org/grpc](https://github.com/grpc/grpc-go/blob/v1.83.2/LICENSE)
 - [gopkg.in/yaml.v2](https://github.com/go-yaml/yaml/blob/v2.4.0/LICENSE)
 - [k8s.io/apimachinery/pkg](https://github.com/kubernetes/apimachinery/blob/v0.35.3/LICENSE)
@@ -228,7 +228,7 @@ Total distributed third-party packages: 235
 - [github.com/google/go-cmp/cmp](https://github.com/google/go-cmp/blob/v0.7.0/LICENSE)
 - [github.com/google/gopacket/routing](https://github.com/google/gopacket/blob/v1.1.19/LICENSE)
 - [github.com/google/uuid](https://github.com/google/uuid/blob/v1.6.0/LICENSE)
-- [github.com/googleapis/gax-go/v2/internallog](https://github.com/googleapis/gax-go/blob/v2.18.0/v2/LICENSE)
+- [github.com/googleapis/gax-go/v2](https://github.com/googleapis/gax-go/blob/v2.24.0/v2/LICENSE)
 - [github.com/grafana/regexp](https://github.com/grafana/regexp/blob/f7b3be9d1853/LICENSE)
 - [github.com/hashicorp/golang-lru/v2/simplelru](https://github.com/hashicorp/golang-lru/blob/v2.0.7/simplelru/LICENSE_list)
 - [github.com/klauspost/compress/internal/snapref](https://github.com/klauspost/compress/blob/v1.19.1/internal/snapref/LICENSE)
@@ -253,7 +253,8 @@ Total distributed third-party packages: 235
 - [golang.org/x/text](https://cs.opensource.google/go/x/text/+/v0.42.0:LICENSE)
 - [golang.org/x/time/rate](https://cs.opensource.google/go/x/time/+/v0.15.0:LICENSE)
 - [gonum.org/v1/gonum/mathext](https://github.com/gonum/gonum/blob/v0.17.0/LICENSE)
-- [google.golang.org/api](https://github.com/googleapis/google-api-go-client/blob/v0.272.0/LICENSE)
+- [google.golang.org/api](https://github.com/googleapis/google-api-go-client/blob/v0.293.0/LICENSE)
+- [google.golang.org/api/internal/third_party/uritemplates](https://github.com/googleapis/google-api-go-client/blob/v0.293.0/internal/third_party/uritemplates/LICENSE)
 - [google.golang.org/protobuf](https://github.com/protocolbuffers/protobuf-go/blob/v1.36.12/LICENSE)
 - [gopkg.in/inf.v0](https://github.com/go-inf/inf/blob/v0.9.1/LICENSE)
 - [k8s.io/apimachinery/third_party/forked/golang/reflect](https://github.com/kubernetes/apimachinery/blob/v0.35.3/third_party/forked/golang/LICENSE)
