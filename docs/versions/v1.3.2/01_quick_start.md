@@ -17,7 +17,7 @@ Every gateway authenticates with a credential. This section covers the **API key
 
 > **Access is invite-only.** You cannot self-register. The Optimum team must **onboard you first**. Anyone not invited cannot create an account or generate a key.
 
-1. **Get invited.** The Optimum team adds you as an operator. You receive a **"Welcome to Optimum"** email invite to the [Partner Console](https://console.getoptimum.io/).
+1. **Get invited.** The Optimum team adds you as an operator. You receive a **"Welcome to Optimum"** email invite to the [Partner Console](https://console.getoptimum.xyz/).
 2. **Sign in.** Open the console and sign in **with the same email** the invite was sent to, using your **Google or Microsoft** account — no password.
 3. **Select your network.** Use the **Network** picker in the header (**Ethereum**, **Hoodi**, or **Mock Chain**). It defaults to **Ethereum**, and the key takes its chain from whatever is selected here — the generate dialog is titled for that network, with no chain field of its own.
 4. **Open Manage Gateways.** In the sidebar go to **Manage Gateways**, then select the **Gateway** tab.

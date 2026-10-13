@@ -72,7 +72,7 @@ The **Optimum Gateway** bridges your **Ethereum Consensus Layer (CL) client** wi
   <path d="M 140,510 L 320,510 A 20,20 0 0 1 340,530 L 340,670 A 20,20 0 0 1 320,690 L 140,690 A 20,20 0 0 1 120,670 L 120,530 A 20,20 0 0 1 140,510 Z" fill="currentColor" fill-opacity="0.035" stroke="currentColor" stroke-opacity="0.32" stroke-width="1.25"></path>
   <text x="230" y="544" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="700" letter-spacing="1.1" fill="currentColor" fill-opacity="0.55" style="text-transform:uppercase">Onboarding</text>
   <text x="230" y="582" text-anchor="middle" font-family="&#34;ABC Diatype&#34;, &#34;Inter Tight&#34;, system-ui, sans-serif" font-size="22" font-weight="400" letter-spacing="-0.5" fill="currentColor">Partner Console</text>
-  <text x="230" y="622" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="500" fill="currentColor" fill-opacity="0.72">console.getoptimum.io</text>
+  <text x="230" y="622" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="500" fill="currentColor" fill-opacity="0.72">console.getoptimum.xyz</text>
   <text x="230" y="644" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="500" fill="currentColor" fill-opacity="0.6">API key issuance</text>
 </svg>
 
@@ -84,7 +84,7 @@ The **Optimum Gateway** bridges your **Ethereum Consensus Layer (CL) client** wi
 ## Requirements
 
 * **CL Client**: Prysm, Lighthouse, Teku, Nimbus, or Lodestar. Flags and the peer-ID exchange are in [Connecting your CL client](08_cl_clients.md)
-* **Credential**: API key (`ogw_`) or join key (`ojk_`) from the [Optimum Partner Console](https://console.getoptimum.io/) after onboarding — see [Quick Start](01_quick_start.md#generate-your-api-key) or [Gateway Self-Enrollment](07_gateway_self_enrollment.md#mint-a-join-key)
+* **Credential**: API key (`ogw_`) or join key (`ojk_`) from the [Optimum Partner Console](https://console.getoptimum.xyz/) after onboarding — see [Quick Start](01_quick_start.md#generate-your-api-key) or [Gateway Self-Enrollment](07_gateway_self_enrollment.md#mint-a-join-key)
 * **Docker**: Docker Desktop or Docker Engine
 * **Firewall**: Required ports open (see [Network Requirements](00_network_requirements.md))
 

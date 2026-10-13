@@ -183,7 +183,7 @@ export default defineConfigWithTheme<ThemeConfig>({
 
   themeConfig: {
     nav: [
-      { text: 'Console', link: 'https://console.getoptimum.io/' },
+      { text: 'Console', link: 'https://console.getoptimum.xyz/' },
       { text: 'Changelog', link: '/CHANGELOG' },
       {
         text: 'GitHub',

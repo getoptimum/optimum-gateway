@@ -38,7 +38,7 @@ short-lived token, separate from the gateway's API key.
   <path d="M 80,80 L 280,80 A 20,20 0 0 1 300,100 L 300,240 A 20,20 0 0 1 280,260 L 80,260 A 20,20 0 0 1 60,240 L 60,100 A 20,20 0 0 1 80,80 Z" fill="currentColor" fill-opacity="0.035" stroke="currentColor" stroke-opacity="0.32" stroke-width="1.25"></path>
   <text x="180" y="114" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="11" font-weight="700" letter-spacing="1.1" fill="currentColor" fill-opacity="0.55" style="text-transform:uppercase">Onboarding</text>
   <text x="180" y="152" text-anchor="middle" font-family="&#34;ABC Diatype&#34;, &#34;Inter Tight&#34;, system-ui, sans-serif" font-size="22" font-weight="400" letter-spacing="-0.5" fill="currentColor">Partner Console</text>
-  <text x="180" y="192" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="500" fill="currentColor" fill-opacity="0.72">console.getoptimum.io</text>
+  <text x="180" y="192" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="500" fill="currentColor" fill-opacity="0.72">console.getoptimum.xyz</text>
   <text x="180" y="214" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="500" fill="currentColor" fill-opacity="0.6">per-gateway scope</text>
 
   <path d="M 400,100 A 90,20 0 0 1 580,100 L 580,240 A 90,20 0 0 1 400,240 Z" fill="currentColor" fill-opacity="0.035" stroke="currentColor" stroke-opacity="0.32" stroke-width="1.25"></path>
@@ -121,7 +121,7 @@ so it must point at the same auth service that mints the stream tokens.
 
 ## Step 1 — mint a stream key (console)
 
-Open the [Optimum Partner Console](https://console.getoptimum.io/) and select
+Open the [Optimum Partner Console](https://console.getoptimum.xyz/) and select
 the operator you are minting for. **Check the network picker (top right) first** —
 the key is minted for the selected chain (Hoodi or Mainnet). Open the API keys
 section (labelled **Manage Gateways** for a customer-role login), choose the
@@ -515,7 +515,7 @@ curl -s http://localhost:48123/metrics | grep mump2p_stream_
 ## Availability
 
 The stream is live on **Hoodi and Mainnet**. Mint the consumer key in the
-[Partner Console](https://console.getoptimum.io/) with the matching network
+[Partner Console](https://console.getoptimum.xyz/) with the matching network
 selected, and exchange it at `https://auth.getoptimum.io/api/v1/stream/token`.
 
 | Network | Console picker | Cluster ID (typical) |

@@ -17,7 +17,7 @@ The legacy **API key** path is unchanged. Single-gateway and small deployments s
 
 ## Mint a join key
 
-1. Sign in to the [Partner Console](https://console.getoptimum.io/).
+1. Sign in to the [Partner Console](https://console.getoptimum.xyz/).
 2. **Select your network** in the header picker (**Ethereum**, **Hoodi**, or **Mock Chain**; Ethereum is selected by default). The key inherits it.
 3. In the sidebar open **Manage Gateways**, then select the **Enrollment keys** tab.
 4. Click **Generate enrollment key** and fill in, in this order:
