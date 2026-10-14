@@ -40,6 +40,7 @@ const securityAudit = {
 const getStartedPages = [
   { text: 'Network Requirements', file: '00_network_requirements.md' },
   { text: 'Quick Start', file: '01_quick_start.md' },
+  { text: 'Connecting your CL client', file: '08_cl_clients.md' },
   { text: 'Kubernetes (Helm)', file: '05_kubernetes.md' },
 ]
 const operatePages = [
@@ -182,7 +183,7 @@ export default defineConfigWithTheme<ThemeConfig>({
 
   themeConfig: {
     nav: [
-      { text: 'Console', link: 'https://console.getoptimum.io/' },
+      { text: 'Console', link: 'https://console.getoptimum.xyz/' },
       { text: 'Changelog', link: '/CHANGELOG' },
       {
         text: 'GitHub',

@@ -1,7 +1,7 @@
 name: Security Scanning
 
 env:
-  go-version: "1.26.6"
+  go-version: "1.27.2"
   GOPRIVATE: "github.com/getoptimum"
 
 on:
@@ -124,7 +124,7 @@ jobs:
       - name: Download Go dependencies
         run: go mod download
       - name: Install gosec
-        run: go install github.com/securego/gosec/v2/cmd/gosec@7387d225921a2efbcf1613bdb32f490285f9af65
+        run: go install github.com/securego/gosec/v2/cmd/gosec@7b1b5cebe007d62fb58eacb90fc571112939ec30
       - name: Run gosec security scanner
         run: |
           # Read exclusions from gosec.yaml

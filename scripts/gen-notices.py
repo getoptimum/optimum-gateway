@@ -27,6 +27,9 @@ FIRST_PARTY_PREFIX = "github.com/getoptimum/"
 # Update the version when the dependency is bumped.
 URL_OVERRIDES = {
     "gonum.org/v1/gonum/mathext": "https://github.com/gonum/gonum/blob/v0.17.0/LICENSE",
+    "gopkg.in/inf.v0": "https://github.com/go-inf/inf/blob/v0.9.1/LICENSE",
+    "gopkg.in/yaml.v2": "https://github.com/go-yaml/yaml/blob/v2.4.0/LICENSE",
+    "gopkg.in/yaml.v3": "https://github.com/go-yaml/yaml/blob/v3.0.1/LICENSE",
     "lukechampine.com/blake3": "https://github.com/lukechampine/blake3/blob/v1.4.1/LICENSE",
 }
 
@@ -78,6 +81,9 @@ def main():
             if url == "Unknown":
                 url = pkg_go_dev_url(pkg)
         url = URL_OVERRIDES.get(pkg, url)
+        if url == "Unknown":
+            print(f"error: unresolved Unknown license URL: {pkg}", file=sys.stderr)
+            return 1
         groups.setdefault(lic, {})[pkg] = url
 
     total = sum(len(v) for v in groups.values())

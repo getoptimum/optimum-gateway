@@ -3,9 +3,11 @@ package routes_test
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
+	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/require"
 
 	"github.com/getoptimum/optimum-common/pkg/identity"
@@ -14,6 +16,7 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/service/auth_token"
 	gateway "github.com/getoptimum/optimum-gateway/pkg/service/gossipsub-gateway"
 	"github.com/getoptimum/optimum-gateway/pkg/service/message_router"
+	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
 	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
 )
 
@@ -42,6 +45,9 @@ func TestAppRouter(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, srvGateway.Run())
 
+	// Register the gauge before the scrape. /health must not write it.
+	telemetry.InitMetrics(cnt.Ctx, cnt.Log, cfg)
+
 	port := test_utils.GetFreePortT(t)
 	addr := fmt.Sprintf("127.0.0.1:%d", port)
 	appRouter := routes.NewAppRouter(cnt.Log, srvGateway, cfg, addr)
@@ -58,6 +64,7 @@ func TestAppRouter(t *testing.T) {
 		_, code, errR := net.GetCurl[any](cnt.Ctx, healthURL, nil)
 		return errR == nil && code == http.StatusServiceUnavailable
 	}, 10*time.Second, 500*time.Millisecond)
+	require.Zero(t, lastBlockReceivedGauge(t))
 
 	// then
 	type testResp struct {
@@ -79,4 +86,20 @@ func TestAppRouter(t *testing.T) {
 	id, err := identity.ExtractIdentityFromDir(cfg.IdentityLibP2PDir)
 	require.NoError(t, err)
 	require.Equal(t, id.ID.String(), res.PeerID)
+}
+
+func lastBlockReceivedGauge(t *testing.T) float64 {
+	t.Helper()
+	families, err := telemetry.CustomRegistry.Gather()
+	require.NoError(t, err)
+	var got *dto.Metric
+	for _, family := range families {
+		if strings.HasSuffix(family.GetName(), "last_block_received_timestamp") {
+			require.NotEmpty(t, family.Metric)
+			got = family.Metric[0]
+			break
+		}
+	}
+	require.NotNil(t, got)
+	return got.GetGauge().GetValue()
 }
