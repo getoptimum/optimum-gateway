@@ -450,6 +450,7 @@ func (m *Service) mint(ctx context.Context) (string, error) {
 
 	m.recordSuccessfulMintMetrics(claims)
 	telemetry.SetPushToken(pushToken)
+	telemetry.SetAppBuildPairedWith(claims.Type.String())
 
 	m.log.Info("minted gateway JWT",
 		logger.WithString("sub", claims.Subject),
