@@ -80,6 +80,10 @@ func (s *Service) handleAggregatedMessages(l logger.AppLogger, message *commonen
 		l.Error("failed to unmarshal aggregated message", err)
 		return
 	}
+	// after decode so attestation propagation latency is still observed
+	if s.propagationDisabled(l) {
+		return
+	}
 
 	for topic, topicPayload := range decoded {
 		if _, ok := s.libP2PTopics.Load(topic); !ok {

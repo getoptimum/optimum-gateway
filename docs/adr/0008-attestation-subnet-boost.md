@@ -94,6 +94,8 @@ A new config field `paired_with` determines gateway deployment intent:
 
 Attestation forwarding is identical in all modes (always forward mump2p → CL). Only beacon block re-forwarding to CL differs.
 
+> **Superseded in part.** The role now comes from the JWT `type` claim, not a `paired_with` config field, and per-role block forwarding is defined in [ADR-0012](./0012-slot-based-block-acceleration.md). Attestations are forwarded mump2p → CL for every role except `relay`, and not at all while dynamic-config `propagation_enabled` is false.
+
 ---
 
 ## Data flow

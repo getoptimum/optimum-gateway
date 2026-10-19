@@ -20,3 +20,8 @@ docs/node_modules/
 path/
 # Python bytecode from scripts/ tooling
 scripts/__pycache__/
+
+# Local flexnode
+*flexnode*
+aggregator-spec.md
+gateway-isolation.md
