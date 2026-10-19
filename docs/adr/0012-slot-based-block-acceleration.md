@@ -81,7 +81,7 @@ Hermes gateways are where selectivity takes effect. A partner's consensus client
 
 A role change is an auth-side change. It takes effect at the gateway's next token mint, with no redeploy.
 
-The fleet-wide propagation switch still runs first on the mesh → CL path and still wins. This gate can only narrow what that switch already allows.
+The fleet-wide propagation switch (dynamic-config `propagation_enabled`) still runs first on the mesh → CL path, for attestations as well as blocks, and still wins. This gate can only narrow what that switch already allows.
 
 Measurement stays outside the gate. Arrival timing, latency tracking and the ADR-0011 stream all run regardless of the verdict, otherwise we have nothing to compare accelerated slots against.
 

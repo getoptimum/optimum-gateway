@@ -203,7 +203,7 @@ cmd/main.go          Bootstrap flow, service initialization, HTTP server startup
 1. **Trace selectively**: `OPT_TRACE_MESH=true`, `OPT_TRACE_SHARD=true` in config (don't enable `OPT_TRACE_RPC` unless debugging handshake).
 2. **Bootstrap fallback**: If bootstrap unreachable, check `remote_bootstrap_url` and GitHub `forkdigest-hub` repo.
 3. **Validator sync failures**: `bgSync()` itself is silent; check auth mint responses / JWT-derived validator indexes and the `known_validators_total` metric.
-4. **Propagation disabled**: The YAML/env flag only seeds startup state. Runtime behavior comes from the dynamic-config rotator (`cfg.GetDCRotator()`), which can flip `PropagationEnabled()` and `GetSkipMessagesFromSelf()`.
+4. **Propagation disabled**: Stops mump2p → CL forwarding of blocks and attestations; CL → mump2p is not gated. The YAML/env flag only seeds startup state. Runtime behavior comes from the dynamic-config rotator (`cfg.GetDCRotator()`), which can flip `PropagationEnabled()` and `GetSkipMessagesFromSelf()`.
 
 ---
 
