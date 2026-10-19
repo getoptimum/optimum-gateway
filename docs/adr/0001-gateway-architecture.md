@@ -18,7 +18,7 @@ The gateway’s responsibilities are:
 * Apply topic‑level aggregation for high‑volume topics to reduce bandwidth.
 * Provide observability on message volume, size, latency, and peer health.
 * Enforce basic safety and compatibility constraints (fork digests, topic
-  mapping, AB testing for latency experiments).
+  mapping, a fleet-wide propagation switch).
 
 This ADR documents the current design and architecture so that later
 feature‑specific ADRs (such as ADR‑0002 for beacon block latency) have a
@@ -121,7 +121,7 @@ high‑level structure:
     * This keeps metric naming and labels consistent.
 
 * **Config‑driven behavior**
-    * Features such as aggregation, telemetry, and AB testing are toggled
+    * Features such as aggregation, telemetry, and propagation are toggled
     via `AppConfig`, so deployments can gradually enable more complex
     behavior.
 
