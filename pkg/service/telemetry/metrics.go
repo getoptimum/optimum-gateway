@@ -175,19 +175,45 @@ func InitMetricsWithRegistry(log logger.AppLogger, pairedWith string) {
 		log.Error("could not get public IP", err)
 		publicIP = "unknown"
 	}
-	appInfo := commonmetrics.NewGaugeVec("app_build_info", subsystem, "Build information.", []string{
+	appBuildInfo = commonmetrics.NewGaugeVec("app_build_info", subsystem, "Build information.", []string{
 		"version",
 		"commit",
 		"go",
 		"public_ip",
 		"paired_with",
 	})
-	appInfo.With(prometheus.Labels{
-		"version":     version.GetVersion(),
-		"commit":      version.GetCommitHash(),
-		"go":          runtime.Version(),
-		"public_ip":   publicIP,
-		"paired_with": pairedWith,
-	}).Set(1)
+	appBuildBaseLabels = prometheus.Labels{
+		"version":   version.GetVersion(),
+		"commit":    version.GetCommitHash(),
+		"go":        runtime.Version(),
+		"public_ip": publicIP,
+	}
+	appBuildPairedWith = ""
+	SetAppBuildPairedWith(pairedWith)
 	enabledMetrics = true
+}
+
+// app_build_info is one series per label set. A JWT type change has to drop the
+// previous paired_with series, or the old value stays at 1 for the process lifetime.
+var (
+	appBuildInfo       *prometheus.GaugeVec
+	appBuildBaseLabels prometheus.Labels
+	appBuildPairedWith string
+)
+
+// SetAppBuildPairedWith moves the app_build_info series to the current gateway type.
+// No-op before InitMetricsWithRegistry, and when the type is unchanged.
+func SetAppBuildPairedWith(pairedWith string) {
+	if appBuildInfo == nil || pairedWith == appBuildPairedWith {
+		return
+	}
+	if appBuildPairedWith != "" {
+		stale := maps.Clone(appBuildBaseLabels)
+		stale["paired_with"] = appBuildPairedWith
+		appBuildInfo.Delete(stale)
+	}
+	current := maps.Clone(appBuildBaseLabels)
+	current["paired_with"] = pairedWith
+	appBuildInfo.With(current).Set(1)
+	appBuildPairedWith = pairedWith
 }

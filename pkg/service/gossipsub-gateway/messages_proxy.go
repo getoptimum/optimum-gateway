@@ -130,10 +130,7 @@ func (s *Service) processMumP2PMessage(l logger.AppLogger, msg *commonentities.P
 }
 
 func (s *Service) processMumP2PBeaconBlock(l logger.AppLogger, msg *commonentities.P2PMessage, slot uint64) {
-	propagationEnabled := s.cfg.PropagationEnabled()
-	telemetry.SetPropagationState(propagationEnabled)
-	if !propagationEnabled {
-		l.Info("skip processing message since propagation is disabled")
+	if s.propagationDisabled(l) {
 		return
 	}
 	if !s.srvMsgRouter.ShouldForwardMessageToCLP2P(topics.TopicBeaconBlock, slot, msg.Message) {
@@ -144,6 +141,17 @@ func (s *Service) processMumP2PBeaconBlock(l logger.AppLogger, msg *commonentiti
 		telemetry.IncreaseBadMessagesToCL()
 		l.Error("failed to publish message to CL", err)
 	}
+}
+
+// propagationDisabled reports the dynamic-config switch that stops mump2p -> CL forwarding
+// (CL -> mump2p is never gated) and keeps the propagation_state gauge current.
+func (s *Service) propagationDisabled(l logger.AppLogger) bool {
+	enabled := s.cfg.PropagationEnabled()
+	telemetry.SetPropagationState(enabled)
+	if !enabled {
+		l.Debug("skip message since propagation is disabled")
+	}
+	return !enabled
 }
 
 func (s *Service) publishToCLTopic(data []byte, topic string) error {
