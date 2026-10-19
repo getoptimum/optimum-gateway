@@ -1,6 +1,7 @@
 package gossipsub_gateway
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"strings"
@@ -13,8 +14,10 @@ import (
 	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
 	chainstate "github.com/getoptimum/optimum-gateway/pkg/protocol/chain_state"
+	"github.com/getoptimum/optimum-gateway/pkg/protocol/consensus"
 	"github.com/getoptimum/optimum-gateway/pkg/protocol/topics"
 	"github.com/getoptimum/optimum-gateway/pkg/service/aggregator"
+	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
 	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
 )
 
@@ -45,20 +48,53 @@ func validAttestation(t *testing.T) []byte {
 	return raw
 }
 
-// The switch only gates mump2p -> CL: CL messages still pass dedup on their way into mump2p.
+// attestationAt rewrites the fixture so the router's current-slot and known-validator checks pass.
+func attestationAt(t *testing.T, attester, slot uint64) []byte {
+	t.Helper()
+	codec := &consensus.SSZSnappyCodec{}
+	var att consensus.SingleAttestation
+	require.NoError(t, codec.DecodeGossip(validAttestation(t), &att))
+	att.AttesterIndex = consensus.ValidatorIndex(attester)
+	att.Data.Slot = consensus.Slot(slot)
+	var buf bytes.Buffer
+	_, err := codec.EncodeGossip(&buf, &att)
+	require.NoError(t, err)
+	return buf.Bytes()
+}
+
+func attestationsForwardedToMumP2P(t *testing.T) float64 {
+	t.Helper()
+	families, err := telemetry.CustomRegistry.Gather()
+	require.NoError(t, err)
+	for _, family := range families {
+		if strings.HasSuffix(family.GetName(), "attestation_forwarded_mump2p_total") {
+			require.NotEmpty(t, family.Metric)
+			return family.Metric[0].GetCounter().GetValue()
+		}
+	}
+	t.Fatal("attestation_forwarded_mump2p_total is not registered")
+	return 0
+}
+
+// The switch only gates mump2p -> CL: CL blocks and attestations still go out to mump2p.
 func TestPropagationDisabledKeepsCLToMumP2P(t *testing.T) {
 	svc, _ := newGateway(t)
 	t.Cleanup(svc.messagesMap.Close)
+	telemetry.InitMetrics(t.Context(), svc.log, svc.cfg)
 	disablePropagation(t, svc)
 
+	// dedup runs after the arrival gate, so a marked hash means the block reached the publish step
 	block := blockAtSlot(t, test_utils.HoodiBeaconBlockMessage1, chainstate.CurrentSlot(time.Now()))
 	svc.processCLBeaconBlock(svc.log, &entities.CLMessage{Topic: testBlockTopic, Message: block})
 	require.True(t, svc.isDuplicateMessage(block), "CL block must still reach the mump2p publish path")
 
+	const attester = 42
+	svc.srvMsgRouter.SetKnownValidators([]uint64{attester})
 	attestationTopic := "/eth2/deadbeef/beacon_attestation_31/ssz_snappy"
-	attestation := validAttestation(t)
+	attestation := attestationAt(t, attester, chainstate.CurrentSlot(time.Now()))
+	before := attestationsForwardedToMumP2P(t)
 	svc.processCLAttestation(svc.log, &entities.CLMessage{Topic: attestationTopic, Message: attestation}, topics.TopicMetaFor(attestationTopic))
-	require.True(t, svc.isDuplicateMessage(attestation), "CL attestation must still reach the aggregator path")
+	require.Equal(t, before+1, attestationsForwardedToMumP2P(t), "CL attestation must still be forwarded to mump2p")
 }
 
 // With propagation off, neither blocks nor aggregated attestations from mump2p reach the CL.
