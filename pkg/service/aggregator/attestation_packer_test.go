@@ -172,6 +172,7 @@ func TestDecode_RejectsOutOfRangeTopicIndex(t *testing.T) {
 	require.Error(t, err)
 }
 
+// TestDecode_AllocationBounded guards against reintroducing per-topic preallocation in Decode.
 func TestDecode_AllocationBounded(t *testing.T) {
 	const maxDecodeAlloc = 4 << 20
 	indexes := make([]uint32, 500)
@@ -194,6 +195,7 @@ func TestDecode_AllocationBounded(t *testing.T) {
 	require.Less(t, res.AllocedBytesPerOp(), int64(maxDecodeAlloc))
 }
 
+// buildPack encodes one AttestationPack with an item per topic index.
 func buildPack(t *testing.T, topicIndexes ...uint32) []byte {
 	t.Helper()
 

@@ -86,6 +86,7 @@ func (a *AttestationPacker) EncodeCurrent() ([][]byte, error) {
 	return result, nil
 }
 
+// Decode expands a packed attestation payload into SSZ-snappy messages keyed by topic.
 func (a *AttestationPacker) Decode(currentForkDigest string, payload []byte) (map[string][][]byte, error) {
 	var decodedPackedAggregator AttestationPack
 	if err := proto.Unmarshal(payload, &decodedPackedAggregator); err != nil {
