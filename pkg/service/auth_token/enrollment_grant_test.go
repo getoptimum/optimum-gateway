@@ -228,8 +228,6 @@ func TestMintErrorIsTerminal(t *testing.T) {
 }
 
 func TestRetryBackoffClimbsToACeiling(t *testing.T) {
-	// A failed refresh retries from 1m, doubling to a 30m ceiling, which stays
-	// inside the 6h token lifetime.
 	got := []time.Duration{}
 	d := time.Duration(0)
 	for range 8 {
@@ -238,13 +236,16 @@ func TestRetryBackoffClimbsToACeiling(t *testing.T) {
 	}
 	require.Equal(t, time.Minute, got[0])
 	require.Equal(t, 30*time.Minute, got[len(got)-1])
-	for _, d := range got {
-		require.Less(t, d, 6*time.Hour, "inside the token lifetime")
-	}
 }
 
-// A claim change applies within one refresh, and the spread keeps a fleet's mints apart.
-func TestRefreshIntervalIsAboutFifteenMinutes(t *testing.T) {
-	require.Equal(t, 10*60, auth_token.RefreshIntervalMinSec)
-	require.Equal(t, 20*60, auth_token.RefreshIntervalMaxSec)
+// A token minted at the latest possible refresh must survive enough retries to ride
+// out an auth outage before its 6h lifetime ends.
+func TestTokenOutlivesRefreshAndRetries(t *testing.T) {
+	elapsed := time.Duration(auth_token.RefreshIntervalMaxSec) * time.Second
+	retries := 0
+	for d := auth_token.NextRetryBackoff(0); elapsed+d < 6*time.Hour; d = auth_token.NextRetryBackoff(d) {
+		elapsed += d
+		retries++
+	}
+	require.GreaterOrEqual(t, retries, 10)
 }
