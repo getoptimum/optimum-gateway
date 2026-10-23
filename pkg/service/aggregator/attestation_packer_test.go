@@ -160,3 +160,54 @@ func generateAttestationTopic(t *testing.T) string {
 	require.NoError(t, err)
 	return topics.BuildFullTopic(testForkDigest, fmt.Sprintf("beacon_attestation_%d", r))
 }
+
+func TestDecode_RejectsOutOfRangeTopicIndex(t *testing.T) {
+	packer := aggregator.NewAttestationPacker(nil)
+
+	decoded, err := packer.Decode(testForkDigest, buildPack(t, 63))
+	require.NoError(t, err)
+	require.Len(t, decoded[topics.BuildFullTopic(testForkDigest, "beacon_attestation_63")], 1)
+
+	_, err = packer.Decode(testForkDigest, buildPack(t, 64))
+	require.Error(t, err)
+}
+
+func TestDecode_AllocationBounded(t *testing.T) {
+	const maxDecodeAlloc = 4 << 20
+	indexes := make([]uint32, 500)
+	for i := range indexes {
+		indexes[i] = uint32(i % 64)
+	}
+	payload := buildPack(t, indexes...)
+	packer := aggregator.NewAttestationPacker(nil)
+	decoded, err := packer.Decode(testForkDigest, payload)
+	require.NoError(t, err)
+	require.Len(t, decoded, 64)
+
+	res := testing.Benchmark(func(b *testing.B) {
+		b.ReportAllocs()
+		for range b.N {
+			_, _ = packer.Decode(testForkDigest, payload)
+		}
+	})
+	require.Less(t, res.AllocedBytesPerOp(), int64(maxDecodeAlloc))
+}
+
+func buildPack(t *testing.T, topicIndexes ...uint32) []byte {
+	t.Helper()
+
+	data := generateAttestationData(t)
+	pack := &aggregator.AttestationPack{AttestationSszData: test_utils.SSZSnappyEncode(t, data)}
+	for _, idx := range topicIndexes {
+		att := generateAttestation(t, data)
+		pack.Items = append(pack.Items, &aggregator.AttestationItem{
+			CommitteeId:   uint64(att.CommitteeIndex),
+			AttesterIndex: uint64(att.AttesterIndex),
+			TopicIndex:    idx,
+			Signature:     att.Signature[:],
+		})
+	}
+	b, err := proto.Marshal(pack)
+	require.NoError(t, err)
+	return b
+}
