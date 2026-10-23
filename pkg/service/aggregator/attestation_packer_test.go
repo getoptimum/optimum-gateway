@@ -185,6 +185,7 @@ func TestDecode_AllocationBounded(t *testing.T) {
 	require.Len(t, decoded, 64)
 
 	res := testing.Benchmark(func(b *testing.B) {
+		b.Helper()
 		b.ReportAllocs()
 		for range b.N {
 			_, _ = packer.Decode(testForkDigest, payload)
