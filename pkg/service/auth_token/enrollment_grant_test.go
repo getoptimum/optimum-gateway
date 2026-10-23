@@ -228,8 +228,8 @@ func TestMintErrorIsTerminal(t *testing.T) {
 }
 
 func TestRetryBackoffClimbsToACeiling(t *testing.T) {
-	// A failed refresh must retry sooner than the next full interval: another 3h
-	// sleep can land after the cached 6h token has expired.
+	// A failed refresh retries from 1m, doubling to a 30m ceiling, which stays
+	// inside the 6h token lifetime.
 	got := []time.Duration{}
 	d := time.Duration(0)
 	for range 8 {
@@ -239,6 +239,12 @@ func TestRetryBackoffClimbsToACeiling(t *testing.T) {
 	require.Equal(t, time.Minute, got[0])
 	require.Equal(t, 30*time.Minute, got[len(got)-1])
 	for _, d := range got {
-		require.Less(t, d, 155*time.Minute, "must be well inside the refresh interval")
+		require.Less(t, d, 6*time.Hour, "inside the token lifetime")
 	}
+}
+
+// A claim change applies within one refresh, and the spread keeps a fleet's mints apart.
+func TestRefreshIntervalIsAboutFifteenMinutes(t *testing.T) {
+	require.Equal(t, 10*60, auth_token.RefreshIntervalMinSec)
+	require.Equal(t, 20*60, auth_token.RefreshIntervalMaxSec)
 }

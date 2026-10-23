@@ -31,11 +31,11 @@ const (
 	// clientAssertionType is the RFC 7523 grant identifier optimum-auth requires
 	// alongside a client_assertion; omitting it is a 400, not a 401.
 	clientAssertionType = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
-	// Upstream issues 6h JWTs; refreshing around the 3h mark leaves a 3h
-	// fence for transient auth-service outages while still hitting the
-	// auth service only ~8 times/day.
-	refreshIntervalMinSec = 10_500 // 2h55m
-	refreshIntervalMaxSec = 11_100 // 3h05m
+	// Upstream issues 6h JWTs. Refreshing every 10-20m applies a claim change (type,
+	// validator indexes) within one interval and leaves almost the whole token for an
+	// auth outage. The spread keeps a fleet's mints apart.
+	refreshIntervalMinSec = 600   // 10m
+	refreshIntervalMaxSec = 1_200 // 20m
 )
 
 type Service struct {

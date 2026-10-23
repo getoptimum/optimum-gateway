@@ -2,6 +2,8 @@ package auth_token
 
 import "context"
 
+const RefreshIntervalMinSec, RefreshIntervalMaxSec = refreshIntervalMinSec, refreshIntervalMaxSec
+
 // MintForTest drives one mint. Token caches, so a test that needs a second mint on
 // the same Service cannot get there through the public API.
 func (m *Service) MintForTest(ctx context.Context) error {
