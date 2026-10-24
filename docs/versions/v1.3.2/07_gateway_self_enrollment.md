@@ -4,7 +4,7 @@
 
 Use this path when you run **many gateways** under one operator. Instead of minting and distributing one `ogw_` API key per host, you mint one org-wide **join key** (`ojk_live_...`) and let each gateway register its own asymmetric credential on first boot.
 
-The legacy **API key** path is unchanged. Single-gateway and small deployments should keep using [Quick Start](01_quick_start.md).
+The **API key** path stays available for partner accounts that mint one `ogw_` key per gateway. Those steps are in [Quick Start](01_quick_start.md#generate-your-api-key). The join key is the credential Console puts in the start command.
 
 ## When to use a join key
 
