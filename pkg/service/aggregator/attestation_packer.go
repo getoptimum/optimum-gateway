@@ -11,13 +11,14 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/protocol/consensus"
 	"github.com/getoptimum/optimum-gateway/pkg/protocol/topics"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
+	"github.com/getoptimum/optimum-gateway/pkg/utils"
 )
 
 // ValidatorChecker returns true if the validator index is in the known set.
 type ValidatorChecker func(attesterIndex uint64) bool
 
 // attestationsPerDataIDHint is the initial capacity hint for per-data-ID
-// attestation slices and per-topic decode buckets.
+// attestation slices.
 const attestationsPerDataIDHint = 10_000
 
 // AttestationPacker handle all attestation messages and pack them into final bytes that will be sent
@@ -85,6 +86,7 @@ func (a *AttestationPacker) EncodeCurrent() ([][]byte, error) {
 	return result, nil
 }
 
+// Decode expands a packed attestation payload into SSZ-snappy messages keyed by topic.
 func (a *AttestationPacker) Decode(currentForkDigest string, payload []byte) (map[string][][]byte, error) {
 	var decodedPackedAggregator AttestationPack
 	if err := proto.Unmarshal(payload, &decodedPackedAggregator); err != nil {
@@ -97,8 +99,12 @@ func (a *AttestationPacker) Decode(currentForkDigest string, payload []byte) (ma
 	if err := a.sszEncoder.DecodeGossip(decodedPackedAggregator.AttestationSszData, &attestationData); err != nil {
 		return nil, fmt.Errorf("decoding message: %w", err)
 	}
-	result := make(map[string][][]byte, 64)
+	result := make(map[string][][]byte, utils.AttestationSubnetCount)
 	for i := range decodedPackedAggregator.Items {
+		// Untrusted peer input: each distinct index becomes its own topic bucket.
+		if decodedPackedAggregator.Items[i].TopicIndex >= utils.AttestationSubnetCount {
+			return nil, fmt.Errorf("decoding message: invalid topic index %d", decodedPackedAggregator.Items[i].TopicIndex)
+		}
 		if len(decodedPackedAggregator.Items[i].Signature) != 96 {
 			return nil, fmt.Errorf("decoding message: invalid signature length %d", len(decodedPackedAggregator.Items[i].Signature))
 		}
@@ -115,9 +121,6 @@ func (a *AttestationPacker) Decode(currentForkDigest string, payload []byte) (ma
 			return nil, fmt.Errorf("encoding message: %w", err)
 		}
 		topic := topics.BuildFullTopic(currentForkDigest, fmt.Sprintf("beacon_attestation_%d", decodedPackedAggregator.Items[i].TopicIndex))
-		if _, ok := result[topic]; !ok {
-			result[topic] = make([][]byte, 0, attestationsPerDataIDHint)
-		}
 		result[topic] = append(result[topic], res.Bytes())
 	}
 	return result, nil

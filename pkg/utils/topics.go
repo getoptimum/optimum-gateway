@@ -10,8 +10,9 @@ import (
 )
 
 const (
-	BeaconBlockBase       = "beacon_block"
-	BeaconAttestationBase = "beacon_attestation"
+	BeaconBlockBase        = "beacon_block"
+	BeaconAttestationBase  = "beacon_attestation"
+	AttestationSubnetCount = 64
 	// singleAttestationSSZSize is the fixed SSZ size of an Electra SingleAttestation:
 	// committee_index(8) + attester_index(8) + AttestationData(128) + signature(96).
 	singleAttestationSSZSize = 240
@@ -34,7 +35,7 @@ func UnpackTopics(topicsList []string) []string {
 			continue
 		}
 		if strings.Contains(topic, BeaconAttestationBase) {
-			for i := range 64 {
+			for i := range AttestationSubnetCount {
 				result = append(result, fmt.Sprintf("%s_%d", BeaconAttestationBase, i))
 			}
 			continue
@@ -91,7 +92,7 @@ func ExtractAttestationTopicIndex(s string) (uint32, error) {
 	if err != nil {
 		return 0, err
 	}
-	if n > 63 {
+	if n >= AttestationSubnetCount {
 		return 0, fmt.Errorf("attestation topic index out of range: %d", n)
 	}
 	return uint32(n), nil
