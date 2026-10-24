@@ -36,8 +36,41 @@ func newUnitTestService() *Service {
 		appChain:       chain.ChainHoodi,
 		appChainID:     chain.ChainHoodi.ID(),
 	}
-	svc.cfgForkDigest.Store("c6ecb76c")
+	svc.applyForkDigest("c6ecb76c", "")
 	return svc
+}
+
+func TestObserveMessageDigestPromotesOnlyConfiguredFuture(t *testing.T) {
+	svc := newUnitTestService()
+	svc.applyForkDigest("deadbeef", " DDEEFF00 ")
+
+	require.False(t, svc.CanObserveMessageDigest("deadbeef"))
+	require.False(t, svc.CanObserveMessageDigest("abcdef12"))
+	require.True(t, svc.CanObserveMessageDigest(" DDEEFF00 "))
+	require.False(t, svc.ObserveMessageDigest("deadbeef"))
+	require.False(t, svc.ObserveMessageDigest("abcdef12"))
+	require.Equal(t, "deadbeef", svc.ActiveDigest())
+
+	require.True(t, svc.ObserveMessageDigest(" DDEEFF00 "))
+	require.Equal(t, "ddeeff00", svc.ActiveDigest())
+	require.False(t, svc.CanObserveMessageDigest("ddeeff00"))
+
+	// Lagging messages on the pre-fork topic cannot roll the transition back.
+	require.False(t, svc.ObserveMessageDigest("deadbeef"))
+	require.Equal(t, "ddeeff00", svc.ActiveDigest())
+
+	// Once bootstrap advances, the next configured future can be promoted.
+	svc.applyForkDigest("ddeeff00", "abcdef12")
+	require.Equal(t, "ddeeff00", svc.ActiveDigest())
+	require.True(t, svc.CanObserveMessageDigest("abcdef12"))
+	require.True(t, svc.ObserveMessageDigest("abcdef12"))
+	require.Equal(t, "abcdef12", svc.ActiveDigest())
+	require.False(t, svc.ObserveMessageDigest("ddeeff00"))
+	require.Equal(t, "abcdef12", svc.ActiveDigest())
+
+	// An observed digest that leaves the supported set no longer overrides bootstrap.
+	svc.applyForkDigest("12345678", "")
+	require.Equal(t, "12345678", svc.ActiveDigest())
 }
 
 func rewriteGitHubRequestsTo(t *testing.T, serverURL string) {

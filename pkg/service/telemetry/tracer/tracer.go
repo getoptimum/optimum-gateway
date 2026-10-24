@@ -20,17 +20,18 @@ type PeerTopicTracer struct {
 	discoveredTopics  map[string]map[peer.ID]struct{} // topic -> set of peer IDs
 	unsubscribeTopics *syncx.RWSlice[string]
 	mu                sync.RWMutex
-	onTopicEmpty      func(topic string) // callback to unsubscribe gateway when topic has 0 peers
 	forkManager       ForkManager
+	topicDiscovered   chan<- struct{}
 }
 
-func NewPeerTopicTracer(log logger.AppLogger, s ForkManager, onTopicEmpty func(topic string)) *PeerTopicTracer {
+// NewPeerTopicTracer creates a tracer that records remote subscription state.
+func NewPeerTopicTracer(log logger.AppLogger, s ForkManager, topicDiscovered chan<- struct{}) *PeerTopicTracer {
 	return &PeerTopicTracer{
 		forkManager:       s,
 		log:               log,
 		discoveredTopics:  make(map[string]map[peer.ID]struct{}),
 		unsubscribeTopics: syncx.NewRWSlice[string](),
-		onTopicEmpty:      onTopicEmpty,
+		topicDiscovered:   topicDiscovered,
 	}
 }
 
@@ -40,50 +41,9 @@ func (t *PeerTopicTracer) Trace(evt *pubsubpb.TraceEvent) {
 		return
 	}
 
-	var peerID peer.ID
-
-	// Extract peer ID - can be from main event or from specific event
-	if len(evt.PeerID) > 0 {
-		peerID = peer.ID(evt.PeerID)
-	}
-
-	// Handle different event types
+	// Remote subscription RPCs are the source of truth for discovered topics.
+	// JOIN/LEAVE describe the local node, while GRAFT/PRUNE describe mesh membership.
 	switch evt.GetType() {
-	case pubsubpb.TraceEvent_JOIN:
-		if join := evt.GetJoin(); join != nil && join.Topic != nil {
-			if peerID == "" {
-				// For JOIN events, peerID might not be set, skip if we can't identify peer
-				return
-			}
-			t.addPeerTopic(peerID, *join.Topic)
-		}
-	case pubsubpb.TraceEvent_LEAVE:
-		if leave := evt.GetLeave(); leave != nil && leave.Topic != nil {
-			if peerID == "" {
-				return
-			}
-			t.removePeerTopic(peerID, *leave.Topic)
-		}
-	case pubsubpb.TraceEvent_GRAFT:
-		if graft := evt.GetGraft(); graft != nil && graft.Topic != nil {
-			// Graft event has its own peerID field
-			if len(graft.PeerID) > 0 {
-				peerID = peer.ID(graft.PeerID)
-			}
-			if peerID != "" {
-				t.addPeerTopic(peerID, *graft.Topic)
-			}
-		}
-	case pubsubpb.TraceEvent_PRUNE:
-		if prune := evt.GetPrune(); prune != nil && prune.Topic != nil {
-			// Prune event has its own peerID field
-			if len(prune.PeerID) > 0 {
-				peerID = peer.ID(prune.PeerID)
-			}
-			if peerID != "" {
-				t.removePeerTopic(peerID, *prune.Topic)
-			}
-		}
 	case pubsubpb.TraceEvent_RECV_RPC: // Handle multiple topics in RPC
 		recvRPC := evt.GetRecvRPC()
 		if recvRPC == nil {
@@ -94,9 +54,7 @@ func (t *PeerTopicTracer) Trace(evt *pubsubpb.TraceEvent) {
 			t.log.Debug("received RPC with no metadata")
 			return
 		}
-		if from := recvRPC.GetReceivedFrom(); len(from) > 0 {
-			peerID = peer.ID(from)
-		}
+		peerID := peer.ID(recvRPC.GetReceivedFrom())
 		if peerID == "" {
 			return
 		}
@@ -104,7 +62,11 @@ func (t *PeerTopicTracer) Trace(evt *pubsubpb.TraceEvent) {
 			if subMsg == nil || subMsg.Topic == nil {
 				continue
 			}
-			t.addPeerTopic(peerID, *subMsg.Topic)
+			if subMsg.GetSubscribe() {
+				t.addPeerTopic(peerID, *subMsg.Topic)
+			} else {
+				t.removePeerTopic(peerID, *subMsg.Topic)
+			}
 		}
 		for _, m := range meta.GetMessages() {
 			if m == nil || m.Topic == nil {
@@ -143,6 +105,7 @@ func (t *PeerTopicTracer) addPeerTopic(peerID peer.ID, topic string) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
+	topicIsNew := t.discoveredTopics[topic] == nil
 	if t.discoveredTopics[topic] == nil {
 		t.discoveredTopics[topic] = make(map[peer.ID]struct{})
 	}
@@ -161,27 +124,55 @@ func (t *PeerTopicTracer) addPeerTopic(peerID peer.ID, topic string) {
 		)
 		if t.forkManager.CheckForkSupported(forkDigest) {
 			l.Debug("remote peer subscribed to new topic with supported fork digest")
-			t.forkManager.SetObservedDigest(forkDigest)
+			if topicIsNew {
+				t.notifyTopicDiscovered()
+			}
 		} else {
 			l.Error("remote peer subscribed to non-supported fork digest", fmt.Errorf("non-supported fork digest"))
 		}
 	}
 }
 
+func (t *PeerTopicTracer) notifyTopicDiscovered() {
+	select {
+	case t.topicDiscovered <- struct{}{}:
+	default:
+	}
+}
+
 func (t *PeerTopicTracer) removePeerTopic(peerID peer.ID, topic string) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
+	t.removePeerTopicLocked(peerID, topic)
+}
 
+func (t *PeerTopicTracer) removePeerTopicLocked(peerID peer.ID, topic string) {
 	if peers, ok := t.discoveredTopics[topic]; ok {
 		delete(peers, peerID)
 		if len(peers) == 0 {
 			delete(t.discoveredTopics, topic)
-			// If topic has 0 peers, unsubscribe gateway from this topic
-			if t.onTopicEmpty != nil {
-				t.onTopicEmpty(topic)
-			}
 			t.unsubscribeTopics.Add(topic)
 		}
+	}
+}
+
+// RemovePeerIfDisconnected removes a peer from every topic it advertised when
+// isDisconnected still reports that the peer has no active connection. The
+// check runs under the topic lock so a reconnect subscription cannot be removed
+// after it has been recorded.
+func (t *PeerTopicTracer) RemovePeerIfDisconnected(peerID peer.ID, isDisconnected func() bool) {
+	if peerID == "" || isDisconnected == nil {
+		return
+	}
+
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if !isDisconnected() {
+		return
+	}
+
+	for topic := range t.discoveredTopics {
+		t.removePeerTopicLocked(peerID, topic)
 	}
 }
 
@@ -192,6 +183,26 @@ func (t *PeerTopicTracer) GetDiscoveredTopics() []string {
 	return commonmaps.MapKeys(t.discoveredTopics)
 }
 
+// GetAndEraseUnsubscribeTopics returns queued topics that are still empty.
 func (t *PeerTopicTracer) GetAndEraseUnsubscribeTopics() []string {
-	return t.unsubscribeTopics.LoadAndErase()
+	candidates := t.unsubscribeTopics.LoadAndErase()
+	if len(candidates) == 0 {
+		return nil
+	}
+
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
+	emptyTopics := make([]string, 0, len(candidates))
+	seen := make(map[string]struct{}, len(candidates))
+	for _, topic := range candidates {
+		if _, ok := seen[topic]; ok {
+			continue
+		}
+		seen[topic] = struct{}{}
+		if len(t.discoveredTopics[topic]) == 0 {
+			emptyTopics = append(emptyTopics, topic)
+		}
+	}
+	return emptyTopics
 }

@@ -28,6 +28,7 @@ type Service struct {
 	topicForkCache   *commonsyncx.RWMap[string, string] // topic -> fork digest
 	observedDigestLC atomic.Value                       // lowercased observed digest from CL peers
 	cfgForkDigest    atomic.Value                       // active digest from bootstrap or forkdigest-hub
+	cfgFutureDigest  atomic.Value                       // next digest from bootstrap or forkdigest-hub
 
 	appChain   chain.Chain
 	appChainID uint64
@@ -70,12 +71,15 @@ func (s *Service) Start(ctx context.Context) {
 
 func (s *Service) applyForkDigest(current, future string) {
 	newMap := make(map[string]struct{}, 2)
-	if val := sanitizeForkDigest(current); val != "" {
-		newMap[val] = struct{}{}
-		s.cfgForkDigest.Store(val)
+	currentDigest := sanitizeForkDigest(current)
+	if currentDigest != "" {
+		newMap[currentDigest] = struct{}{}
+		s.cfgForkDigest.Store(currentDigest)
 	}
-	if val := sanitizeForkDigest(future); val != "" {
-		newMap[val] = struct{}{}
+	futureDigest := sanitizeForkDigest(future)
+	s.cfgFutureDigest.Store(futureDigest)
+	if futureDigest != "" {
+		newMap[futureDigest] = struct{}{}
 	}
 	s.supportedForks.Replace(newMap)
 }
@@ -85,8 +89,24 @@ func (s *Service) CheckForkSupported(digest string) bool {
 	return ok
 }
 
-func (s *Service) SetObservedDigest(digest string) {
-	s.observedDigestLC.Store(sanitizeForkDigest(digest))
+// CanObserveMessageDigest reports whether a message on digest could advance the
+// active fork. Callers can use it to avoid validating ordinary gossip twice.
+func (s *Service) CanObserveMessageDigest(digest string) bool {
+	digest = sanitizeForkDigest(digest)
+	future, _ := s.cfgFutureDigest.Load().(string)
+	return digest != "" && future != "" && digest == future &&
+		s.CheckForkSupported(digest) && digest != s.ActiveDigest()
+}
+
+// ObserveMessageDigest promotes the active digest only to the configured future
+// fork. Messages on the previous fork cannot roll an observed transition back.
+func (s *Service) ObserveMessageDigest(digest string) bool {
+	digest = sanitizeForkDigest(digest)
+	if !s.CanObserveMessageDigest(digest) {
+		return false
+	}
+	s.observedDigestLC.Store(digest)
+	return true
 }
 
 func (s *Service) AppChainID() uint64 {
@@ -100,7 +120,7 @@ func (s *Service) AppChain() chain.Chain {
 // ActiveDigest prefers the CL-observed digest when set; otherwise the bootstrap/hub digest.
 func (s *Service) ActiveDigest() string {
 	if v := s.observedDigestLC.Load(); v != nil {
-		if digest, _ := v.(string); digest != "" {
+		if digest, _ := v.(string); digest != "" && s.CheckForkSupported(digest) {
 			return digest
 		}
 	}

@@ -3,6 +3,7 @@ package gossipsub_gateway
 import (
 	"testing"
 
+	libp2ppubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,4 +32,18 @@ func TestFilterEthTopics_MumP2PNode(t *testing.T) {
 			require.Contains(t, topic, "c6ecb76c")
 		}
 	})
+}
+
+func TestUnsubscribeHandlerTopicPreservesReplacement(t *testing.T) {
+	svc, _ := newGateway(t)
+	topic := "/eth2/deadbeef/beacon_attestation_5/ssz_snappy"
+	stale := &libp2ppubsub.Subscription{}
+	replacement := &libp2ppubsub.Subscription{}
+	svc.libP2PSubs.Store(topic, replacement)
+
+	svc.unsubscribeHandlerTopic(topic, stale)
+
+	current, ok := svc.libP2PSubs.Load(topic)
+	require.True(t, ok)
+	require.Same(t, replacement, current)
 }

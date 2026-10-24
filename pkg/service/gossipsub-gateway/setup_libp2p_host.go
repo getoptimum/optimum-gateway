@@ -131,9 +131,9 @@ func (s *Service) setupLibP2PHost() error {
 
 	go s.handleHandshake()
 
-	// Initialize peer topic tracer to discover topics from connected peers
-	// When a topic has 0 peers, unsubscribe the gateway from that topic
-	s.peerTopicTracer = tracer.NewPeerTopicTracer(s.log, s.GetForkDigestManager(), s.onZeroPeersForTopic)
+	// Initialize peer topic tracer to discover topics from connected peers and
+	// notify the background reconciler without running pubsub lifecycle calls inline.
+	s.peerTopicTracer = tracer.NewPeerTopicTracer(s.log, s.GetForkDigestManager(), s.topicDiscovered)
 
 	options := []libp2ppubsub.Option{
 		libp2ppubsub.WithMessageSignaturePolicy(libp2ppubsub.StrictNoSign),
@@ -181,16 +181,6 @@ func (s *Service) setupLibP2PHost() error {
 		logger.WithString("listen_addrs", fmt.Sprintf("%v", listenAddrs)),
 	)
 	return nil
-}
-
-// onZeroPeersForTopic is invoked by the peer topic tracer when a topic drops to 0 discovered peers.
-// It unsubscribes the gateway from that topic, but only if it is currently subscribed.
-func (s *Service) onZeroPeersForTopic(topic string) {
-	// Only unsubscribe if we're actually subscribed to this topic
-	if _, ok := s.libP2PSubs.Load(topic); ok {
-		s.log.Info("unsubscribing from topic (0 peers discovered)", logger.WithTopic(topic))
-		s.unsubscribeFromTopic(topic)
-	}
 }
 
 // pubsubMsgID computes the gossipsub message ID based on the topic and message data.
@@ -245,6 +235,11 @@ func (s *Service) onPeerDisconnected(n network.Network, conn network.Conn) {
 		s.libP2PDirectPeers.Delete(peerID.String())
 		s.hostLibP2P.Peerstore().ClearAddrs(peerID)
 		s.hostLibP2P.Peerstore().RemovePeer(peerID)
+		if s.peerTopicTracer != nil {
+			s.peerTopicTracer.RemovePeerIfDisconnected(peerID, func() bool {
+				return n.Connectedness(peerID) != network.Connected
+			})
+		}
 	}
 	telemetry.CLPeerDisconnected()
 }

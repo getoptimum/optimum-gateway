@@ -83,14 +83,4 @@ func TestServiceApplyForkDigestReplacesSupportedSet(t *testing.T) {
 		require.False(t, svc.CheckForkSupported("12345678"))
 	})
 
-	t.Run("check active digest", func(t *testing.T) {
-		svc.SetObservedDigest(" c6ecb76c ")
-		require.Equal(t, "c6ecb76c", svc.ActiveDigest())
-
-		svc.SetObservedDigest(" DDEEFF00 ")
-		require.Equal(t, "ddeeff00", svc.ActiveDigest())
-
-		svc.SetObservedDigest("")
-		require.Equal(t, "ddeeff00", svc.ActiveDigest())
-	})
 }

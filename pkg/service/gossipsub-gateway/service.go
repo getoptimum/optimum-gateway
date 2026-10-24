@@ -52,8 +52,10 @@ type Service struct {
 
 	oncer sync.Once // ensures that topic subscriptions are set up only once
 
-	libP2PTopics *syncx.RWMap[string, *libp2ppubsub.Topic]
-	libP2PSubs   *syncx.RWMap[string, *libp2ppubsub.Subscription]
+	libP2PTopics    *syncx.RWMap[string, *libp2ppubsub.Topic]
+	libP2PSubs      *syncx.RWMap[string, *libp2ppubsub.Subscription]
+	topicMu         sync.Mutex // serializes pubsub topic lifecycle operations
+	topicDiscovered chan struct{}
 
 	clMessages                  chan *entities.CLMessage        // messages from CL clients pass to mump2p nodes
 	mumP2PMessages              chan *commonentities.P2PMessage // messages from mump2p nodes we're passing to CL client
@@ -121,6 +123,7 @@ func NewService(
 		libP2PTopics:      syncx.NewRWMap[string, *libp2ppubsub.Topic](),
 		libP2PSubs:        syncx.NewRWMap[string, *libp2ppubsub.Subscription](),
 		libP2PDirectPeers: syncx.NewRWMap[string, peer.AddrInfo](),
+		topicDiscovered:   make(chan struct{}, 1),
 		clMessages:        make(chan *entities.CLMessage, 1_000),
 		mumP2PMessages:    make(chan *commonentities.P2PMessage, 1_000),
 		messagesMap:       syncx.NewTTLMap[uint64, struct{}](30*time.Second, 30*time.Second),
@@ -146,7 +149,7 @@ func NewService(
 	go srv.srvForkMgr.Start(ctx)
 	go srv.dumpServiceStat()
 	go srv.dumpAggregateStats()
-	go srv.refreshForkDigestFromPeers() // Periodically refresh fork digest from peer topics
+	go srv.refreshForkDigestFromPeers() // Reconcile topics discovered from CL peers
 	return srv, nil
 }
 

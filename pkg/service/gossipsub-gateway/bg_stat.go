@@ -125,8 +125,8 @@ func (s *Service) dumpServiceStat() {
 	}
 }
 
-// refreshForkDigestFromPeers periodically refreshes fork digest from discovered peer topics to detect fork migration.
-// This runs with the same cadence as CL re-syncs topics (every epoch).
+// refreshForkDigestFromPeers reconciles discovered peer topics immediately and
+// also runs periodically as a fallback.
 func (s *Service) refreshForkDigestFromPeers() {
 	// Check every epoch (32 slots * 12 seconds = ~6.4 minutes)
 	// Using 7 minutes to be safe
@@ -138,12 +138,17 @@ func (s *Service) refreshForkDigestFromPeers() {
 		case <-s.ctx.Done():
 			return
 		case <-ticker.C:
-			if s.peerTopicTracer == nil {
-				s.log.Debug("peer topic tracer not initialized yet, skipping refresh")
-				continue
-			}
-			s.refreshTopics()
+		case <-s.topicDiscovered:
 		}
+
+		if s.peerTopicTracer == nil {
+			s.log.Debug("peer topic tracer not initialized yet, skipping refresh")
+			continue
+		}
+		if s.ps == nil {
+			continue
+		}
+		s.refreshTopics()
 	}
 }
 
