@@ -3,14 +3,12 @@ name: Docker Image Publish
 env:
   DOCKER_ORG: getoptimum
   GOPRIVATE: "github.com/getoptimum"
-  go-version: "1.26.6"
+  go-version: "1.27.2"
 
 on:
   push:
-    # development: dev-latest + hoodi-dev Ansible + internal k8s gitops digests.
-    # v* tags: release image + gitops + prod VM Ansible.
     branches:
-      - development
+      - main
     tags:
       - v*
 
@@ -73,14 +71,13 @@ jobs:
           tags: |
             ${{ env.DOCKER_ORG }}/gateway:${{ steps.meta.outputs.tag }}
             ${{ steps.meta.outputs.latest == 'true' && format('{0}/gateway:latest', env.DOCKER_ORG) || '' }}
-            ${{ github.ref == 'refs/heads/development' && format('{0}/gateway:dev-latest', env.DOCKER_ORG) || '' }}
+            ${{ github.ref_type != 'tag' && format('{0}/gateway:dev-latest', env.DOCKER_ORG) || '' }}
 
       - name: Unset global git insteadOf
         run: git config --global --unset-all url.https://github.com/.insteadOf || true
 
       - name: Generate token for gitops
         id: gitops-token
-        if: github.ref_type == 'tag' || github.ref == 'refs/heads/development'
         uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2
         with:
           app-id: ${{ secrets.GH_APP_ID }}
@@ -89,7 +86,6 @@ jobs:
           repositories: gitops
 
       - name: Checkout gitops repo
-        if: github.ref_type == 'tag' || github.ref == 'refs/heads/development'
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           repository: getoptimum/gitops
@@ -97,7 +93,6 @@ jobs:
           path: gitops
 
       - name: Update gateway image in gitops manifests
-        if: github.ref_type == 'tag' || github.ref == 'refs/heads/development'
         run: |
           set -euo pipefail
           MANIFEST_DIR=gitops/clusters/optimum-infrastructure/manifest/optimum
@@ -155,7 +150,6 @@ jobs:
           fi
 
       - name: Commit and push to gitops
-        if: github.ref_type == 'tag' || github.ref == 'refs/heads/development'
         working-directory: gitops
         run: |
           set -euo pipefail
@@ -167,11 +161,7 @@ jobs:
           git add -A clusters/optimum-infrastructure/manifest/optimum
           git add -A charts/optimum-gateway/values || true
           if [ -n "$(git status --porcelain)" ]; then
-            if [ "${{ github.ref }}" = "refs/heads/development" ]; then
-              git commit -m "gateway: update dev image to ${{ github.sha }}"
-            else
-              git commit -m "gateway: update image to ${{ steps.meta.outputs.tag }}"
-            fi
+            git commit -m "gateway: update image to ${{ steps.meta.outputs.tag }}"
             git push origin main
           fi
 
@@ -226,12 +216,12 @@ jobs:
     name: Trigger dev cluster deploy
     needs: docker
     # Run even if the gitops steps in `docker` fail, as long as the image was pushed.
-    if: always() && needs.docker.outputs.digest != '' && github.ref == 'refs/heads/development'
+    if: always() && needs.docker.outputs.digest != '' && github.ref_type != 'tag'
     runs-on: ubuntu-latest
 
     steps:
-      - name: Generate token for infrastructure dispatch (development)
-        id: infra-dispatch-token-dev
+      - name: Generate token for infrastructure dispatch (main)
+        id: infra-dispatch-token-main
         uses: actions/create-github-app-token@29824e69f54612133e76f7eaac726eef6c875baf # v2
         with:
           app-id: ${{ secrets.GH_APP_ID }}
@@ -239,11 +229,11 @@ jobs:
           owner: getoptimum
           repositories: infrastructure
 
-      - name: Trigger Ansible deploy (development)
+      - name: Trigger Ansible deploy (main)
         run: |
           gh api repos/getoptimum/infrastructure/dispatches \
             -f event_type=deploy_gateways \
             -f "client_payload[tag]=dev-latest" \
             -f "client_payload[digest]=${{ needs.docker.outputs.digest }}"
         env:
-          GH_TOKEN: ${{ steps.infra-dispatch-token-dev.outputs.token }}
+          GH_TOKEN: ${{ steps.infra-dispatch-token-main.outputs.token }}
