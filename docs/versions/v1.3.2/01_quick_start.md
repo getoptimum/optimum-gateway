@@ -4,23 +4,30 @@ Get the Optimum Gateway running with Docker.
 
 > **Running on Kubernetes?** See [Kubernetes (Helm)](05_kubernetes.md) for the official Helm chart.
 
-> **Prerequisites:** [Requirements](index.md#requirements) and [Network Requirements](00_network_requirements.md). You also need a credential: an **API key** (see [Generate your API key](#generate-your-api-key) below), or for a fleet, one org **join key** (see [Gateway Self-Enrollment](07_gateway_self_enrollment.md)).
+> **Prerequisites:** [Requirements](index.md#requirements) and [Network Requirements](00_network_requirements.md). You also need a credential from [Console](https://console.getoptimum.xyz/): a **join key** (`OPT_JOIN_KEY`, [Gateway Self-Enrollment](07_gateway_self_enrollment.md)), or, on a partner account, an **API key** (`ogw_`, [Generate your API key](#generate-your-api-key)).
 
 ## Hardware Requirements
 
 **Minimum:** 2+ vCPUs, 512MB RAM, 500MB+ disk  
 **Recommended:** 4+ vCPUs
 
+## Get a credential
+
+Open [Console](https://console.getoptimum.xyz/) and sign in with **Google** or **Microsoft**.
+
+If the card has a **Create account** tab, that is self-serve signup: **Sign up with Google** or **Sign up with Microsoft**. If the tab is missing, or [signup](https://console.getoptimum.xyz/signup) is a 404, Optimum has created the account. Sign in with the Google or Microsoft account you gave them, on **Continue with Google** or **Continue with Microsoft**.
+
+The command on **Connect your first gateway**, and on Signal under **Set up another gateway**, uses a **join key** (`ojk_…`) as `OPT_JOIN_KEY`. Mint it on **Enrollment keys**. With Signal on, that tab is under **Gateways & keys**. Otherwise it is **Manage Gateways** → **Enrollment keys**. One key enrolls many hosts, and each host gets its own name. The steps are in [Gateway Self-Enrollment](07_gateway_self_enrollment.md).
+
+Partner accounts that mint one key per gateway use the **API key** below (`ogw_…` as `OPT_API_KEY`).
+
 ## Generate your API key
 
-Every gateway authenticates with a credential. This section covers the **API key** path; fleets can use a join key instead, via [Gateway Self-Enrollment](07_gateway_self_enrollment.md). The key binds your gateway's identity, chain, operator, and validator scope — everything the gateway needs comes from this key, so there is no per-network YAML to edit.
+This is the partner path: one `ogw_` key per gateway, from **Manage Gateways** → **Gateway**. The key binds the gateway's identity, chain, operator, and validator scope, so there is no per-network YAML to edit. A fleet can use one join key instead, via [Gateway Self-Enrollment](07_gateway_self_enrollment.md).
 
-> **Access is invite-only.** You cannot self-register. The Optimum team must **onboard you first**. Anyone not invited cannot create an account or generate a key.
-
-1. **Get invited.** The Optimum team adds you as an operator. You receive a **"Welcome to Optimum"** email invite to the [Partner Console](https://console.getoptimum.xyz/).
-2. **Sign in.** Open the console and sign in **with the same email** the invite was sent to, using your **Google or Microsoft** account — no password.
-3. **Select your network.** Use the **Network** picker in the header (**Ethereum**, **Hoodi**, or **Mock Chain**). It defaults to **Ethereum**, and the key takes its chain from whatever is selected here — the generate dialog is titled for that network, with no chain field of its own.
-4. **Open Manage Gateways.** In the sidebar go to **Manage Gateways**, then select the **Gateway** tab.
+1. **Sign in.** Open the [Partner Console](https://console.getoptimum.xyz/) and sign in with the **Google or Microsoft** account on the organisation.
+2. **Select your network.** Use the **Network** picker in the header (**Ethereum**, **Hoodi**, or **Mock Chain**). It defaults to **Ethereum**, and the key takes its chain from whatever is selected here — the generate dialog is titled for that network, with no chain field of its own.
+3. **Open Manage Gateways.** In the sidebar go to **Manage Gateways**, then select the **Gateway** tab.
 
 ### Generate one key
 
