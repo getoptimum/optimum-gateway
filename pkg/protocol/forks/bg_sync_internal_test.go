@@ -40,6 +40,35 @@ func newUnitTestService() *Service {
 	return svc
 }
 
+func TestObserveMessageDigest(t *testing.T) {
+	fresh := newUnitTestService()
+	require.Equal(t, "c6ecb76c", fresh.ActiveDigest())
+	require.False(t, fresh.ObserveMessageDigest("ddeeff00"))
+	require.Equal(t, "c6ecb76c", fresh.ActiveDigest())
+
+	svc := newUnitTestService()
+	svc.applyForkDigest("deadbeef", " DDEEFF00 ")
+	require.False(t, svc.ObserveMessageDigest(""))
+	require.False(t, svc.ObserveMessageDigest("deadbeef"))
+	require.False(t, svc.ObserveMessageDigest("abcdef12"))
+	require.Equal(t, "deadbeef", svc.ActiveDigest())
+
+	require.True(t, svc.ObserveMessageDigest(" DDEEFF00 "))
+	require.Equal(t, "ddeeff00", svc.ActiveDigest())
+	require.False(t, svc.ObserveMessageDigest("deadbeef"))
+	require.Equal(t, "ddeeff00", svc.ActiveDigest())
+
+	svc.applyForkDigest("ddeeff00", "abcdef12")
+	require.Equal(t, "ddeeff00", svc.ActiveDigest())
+	require.True(t, svc.ObserveMessageDigest("abcdef12"))
+	require.Equal(t, "abcdef12", svc.ActiveDigest())
+	require.False(t, svc.ObserveMessageDigest("ddeeff00"))
+	require.Equal(t, "abcdef12", svc.ActiveDigest())
+
+	svc.applyForkDigest("12345678", "")
+	require.Equal(t, "12345678", svc.ActiveDigest())
+}
+
 func rewriteGitHubRequestsTo(t *testing.T, serverURL string) {
 	t.Helper()
 

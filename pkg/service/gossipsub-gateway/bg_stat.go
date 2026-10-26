@@ -125,12 +125,10 @@ func (s *Service) dumpServiceStat() {
 	}
 }
 
-// refreshForkDigestFromPeers periodically refreshes fork digest from discovered peer topics to detect fork migration.
-// This runs with the same cadence as CL re-syncs topics (every epoch).
+// refreshForkDigestFromPeers joins topics the CL has advertised. CL clients subscribe to
+// the next fork one or two epochs ahead, so a one-minute tick joins those topics before the fork.
 func (s *Service) refreshForkDigestFromPeers() {
-	// Check every epoch (32 slots * 12 seconds = ~6.4 minutes)
-	// Using 7 minutes to be safe
-	ticker := time.NewTicker(7 * time.Minute)
+	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
 	for {

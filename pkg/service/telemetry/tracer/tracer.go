@@ -161,7 +161,6 @@ func (t *PeerTopicTracer) addPeerTopic(peerID peer.ID, topic string) {
 		)
 		if t.forkManager.CheckForkSupported(forkDigest) {
 			l.Debug("remote peer subscribed to new topic with supported fork digest")
-			t.forkManager.SetObservedDigest(forkDigest)
 		} else {
 			l.Error("remote peer subscribed to non-supported fork digest", fmt.Errorf("non-supported fork digest"))
 		}
