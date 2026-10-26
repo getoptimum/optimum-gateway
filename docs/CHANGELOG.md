@@ -1,19 +1,38 @@
 # Optimum Gateway - Version History & Changelog
 
-**Latest Release:** [v1.3.2](./versions/v1.3.2/release_notes.md)  
-**Latest Docs:** [v1.3.2 Documentation](./versions/v1.3.2/index.md)
+**Latest Release:** [v1.3.3](./versions/v1.3.3/release_notes.md)  
+**Latest Docs:** [v1.3.3 Documentation](./versions/v1.3.3/index.md)
 
 ## Supported Versions
 
-| Version | Status             | Docker Image                |
-| ------- | ------------------ | --------------------------- |
-| v1.3.2  | CURRENT — required | `getoptimum/gateway:v1.3.2` |
+| Version | Status    | Docker Image                |
+| ------- | --------- | --------------------------- |
+| v1.3.3  | CURRENT   | `getoptimum/gateway:v1.3.3` |
+| v1.3.2  | supported | `getoptimum/gateway:v1.3.2` |
 
-## v1.3.2 (Current)
+## v1.3.3 (Current)
+
+**Docker Image:** `getoptimum/gateway:v1.3.3`
+
+v1.3.3 is the current release. v1.3.2 remains supported. Networking and CL peering are unchanged — same ports and firewall rules.
+
+### Highlights
+
+* **Critical certificate-trust fix.** The gateway is built with Go 1.27.3, which stops trusting a set of compromised certificate-authority intermediates (CVE-2026-111943). HTTPS calls from the gateway reject those chains. No partner configuration change.
+* **Traffic stays on the current fork until your CL uses the next one.** An early subscription to the next fork no longer moves attestations onto that topic. The gateway follows once a message arrives on it.
+* **Turning propagation off stops attestations too.** Attestations from mump2p are no longer forwarded to your CL when propagation is disabled, the same as blocks.
+* **Health works with telemetry off.** `GET /health` answers when the metrics exporter is disabled, and the last-block age is taken when the block arrives.
+* **Large beacon blocks are accepted.** The CL connection accepts a block up to the compressed size the gateway can decode.
+* **A bad attestation subnet is dropped.** An aggregated attestation whose subnet is outside 0–63 is discarded.
+* **The access token refreshes about every 15 minutes.** A change to gateway type or validator set shows up well before the six-hour token expires.
+
+[Full release notes](./versions/v1.3.3/release_notes.md) · [Documentation](./versions/v1.3.3/index.md)
+
+## v1.3.2 (Supported)
 
 **Docker Image:** `getoptimum/gateway:v1.3.2`
 
-Required upgrade for everyone not on v1.3.2. Networking and CL peering are unchanged — same ports and firewall rules.
+v1.3.2 remains supported. Networking and CL peering are unchanged — same ports and firewall rules.
 
 ### Highlights
 
@@ -25,27 +44,27 @@ Required upgrade for everyone not on v1.3.2. Networking and CL peering are uncha
 
 ## v1.3.1 (Deprecated)
 
-**v1.3.1 is deprecated.** Docs for this release have been removed. Partners still on v1.3.1 must upgrade to **[v1.3.2](./versions/v1.3.2/release_notes.md)** (`getoptimum/gateway:v1.3.2`).
+**v1.3.1 is deprecated.** Docs for this release have been removed. Partners still on v1.3.1 must upgrade to **[v1.3.3](./versions/v1.3.3/release_notes.md)** (`getoptimum/gateway:v1.3.3`). v1.3.2 remains supported.
 
 ## v1.3.0 (Deprecated)
 
-**v1.3.0 is deprecated.** Docs for this release have been removed. Partners still on v1.3.0 must upgrade to **[v1.3.2](./versions/v1.3.2/release_notes.md)** (`getoptimum/gateway:v1.3.2`).
+**v1.3.0 is deprecated.** Docs for this release have been removed. Partners still on v1.3.0 must upgrade to **[v1.3.3](./versions/v1.3.3/release_notes.md)** (`getoptimum/gateway:v1.3.3`). v1.3.2 remains supported.
 
 ## v1.2.0 (Deprecated)
 
-**v1.2.0 is deprecated.** Docs for this release have been removed. Partners still on v1.2.0 must upgrade to **[v1.3.2](./versions/v1.3.2/release_notes.md)** (`getoptimum/gateway:v1.3.2`).
+**v1.2.0 is deprecated.** Docs for this release have been removed. Partners still on v1.2.0 must upgrade to **[v1.3.3](./versions/v1.3.3/release_notes.md)** (`getoptimum/gateway:v1.3.3`). v1.3.2 remains supported.
 
 ## v1.1.1 (Deprecated)
 
-**v1.1.1 is deprecated.** Docs for this release have been removed. Partners still on v1.1.1 must upgrade to **[v1.3.2](./versions/v1.3.2/release_notes.md)** (`getoptimum/gateway:v1.3.2`).
+**v1.1.1 is deprecated.** Docs for this release have been removed. Partners still on v1.1.1 must upgrade to **[v1.3.3](./versions/v1.3.3/release_notes.md)** (`getoptimum/gateway:v1.3.3`). v1.3.2 remains supported.
 
 ## v1.0.2 (Deprecated)
 
-**v1.0.2 is deprecated.** Docs for this release have been removed. Partners still on v1.0.2 must upgrade to **[v1.3.2](./versions/v1.3.2/release_notes.md)** (`getoptimum/gateway:v1.3.2`).
+**v1.0.2 is deprecated.** Docs for this release have been removed. Partners still on v1.0.2 must upgrade to **[v1.3.3](./versions/v1.3.3/release_notes.md)** (`getoptimum/gateway:v1.3.3`). v1.3.2 remains supported.
 
 ## Important: Deprecated Versions
 
-**The following versions are deprecated and no longer supported. Upgrade to v1.3.2.**
+**The following versions are deprecated and no longer supported. Upgrade to v1.3.3. v1.3.2 remains supported.**
 
 | Version     | Status     |
 | ----------- | ---------- |
@@ -74,7 +93,7 @@ recreate the container:
 
 ```bash
 export OPT_API_KEY=ogw_live_xxx
-docker pull getoptimum/gateway:v1.3.2
+docker pull getoptimum/gateway:v1.3.3
 docker rm -f optimum-gateway
 docker run --name optimum-gateway --rm \
   -p 33212:33212/tcp \
@@ -84,7 +103,7 @@ docker run --name optimum-gateway --rm \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data/libp2p:/tmp/libp2p \
   -v $(pwd)/data/mump2p:/tmp/mump2p \
-  getoptimum/gateway:v1.3.2 \
+  getoptimum/gateway:v1.3.3 \
   -config=/app/config/app_conf.yml
 ```
 
