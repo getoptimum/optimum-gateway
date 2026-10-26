@@ -31,11 +31,11 @@ const (
 	// clientAssertionType is the RFC 7523 grant identifier optimum-auth requires
 	// alongside a client_assertion; omitting it is a 400, not a 401.
 	clientAssertionType = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
-	// Upstream issues 6h JWTs; refreshing around the 3h mark leaves a 3h
-	// fence for transient auth-service outages while still hitting the
-	// auth service only ~8 times/day.
-	refreshIntervalMinSec = 10_500 // 2h55m
-	refreshIntervalMaxSec = 11_100 // 3h05m
+	// Upstream issues 6h JWTs. Refreshing every 10-20m lets routing see a new type or
+	// validator indexes within one interval; startup config and peers' view of our caps
+	// still wait for a restart or re-handshake. The spread keeps a fleet's mints apart.
+	refreshIntervalMinSec = 600   // 10m
+	refreshIntervalMaxSec = 1_200 // 20m
 )
 
 type Service struct {
@@ -492,9 +492,9 @@ func (m *Service) refreshLoop(ctx context.Context) {
 				m.log.Error("credential terminal failure, refresh loop exiting", err)
 				return
 			}
-			// Retry sooner than the next full interval so recovery is quick. It does
-			// not bound staleness: Token() never checks exp, so an outage past the
-			// 6h token lifetime keeps serving an expired JWT.
+			// Back off from 1m so recovery is quick. It does not bound staleness:
+			// Token() never checks exp, so an outage past the 6h token lifetime keeps
+			// serving an expired JWT.
 			backoff = NextRetryBackoff(backoff)
 			m.log.Error("auth refresh failed; retrying sooner", err)
 			continue
