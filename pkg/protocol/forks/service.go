@@ -85,8 +85,15 @@ func (s *Service) CheckForkSupported(digest string) bool {
 	return ok
 }
 
-func (s *Service) SetObservedDigest(digest string) {
-	s.observedDigestLC.Store(sanitizeForkDigest(digest))
+// ObserveMessageDigest moves the active digest forward to the bootstrap future digest only.
+func (s *Service) ObserveMessageDigest(digest string) bool {
+	digest = sanitizeForkDigest(digest)
+	current, _ := s.cfgForkDigest.Load().(string)
+	if digest == "" || digest == current || digest == s.ActiveDigest() || !s.CheckForkSupported(digest) {
+		return false
+	}
+	s.observedDigestLC.Store(digest)
+	return true
 }
 
 func (s *Service) AppChainID() uint64 {
@@ -97,10 +104,10 @@ func (s *Service) AppChain() chain.Chain {
 	return s.appChain
 }
 
-// ActiveDigest prefers the CL-observed digest when set; otherwise the bootstrap/hub digest.
+// ActiveDigest prefers the CL-observed digest when it is still supported; otherwise the bootstrap/hub digest.
 func (s *Service) ActiveDigest() string {
 	if v := s.observedDigestLC.Load(); v != nil {
-		if digest, _ := v.(string); digest != "" {
+		if digest, _ := v.(string); digest != "" && s.CheckForkSupported(digest) {
 			return digest
 		}
 	}

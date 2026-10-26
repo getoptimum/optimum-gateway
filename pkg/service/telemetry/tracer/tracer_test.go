@@ -13,15 +13,10 @@ import (
 
 type mockForkManager struct {
 	supportedDigests map[string]bool
-	observedDigests  []string
 }
 
 func (m *mockForkManager) CheckForkSupported(forkDigest string) bool {
 	return m.supportedDigests[forkDigest]
-}
-
-func (m *mockForkManager) SetObservedDigest(forkDigest string) {
-	m.observedDigests = append(m.observedDigests, forkDigest)
 }
 
 func TestPeerTopicTracerTraceJoinLeaveAndUnsubscribe(t *testing.T) {
@@ -60,7 +55,7 @@ func TestPeerTopicTracerTraceJoinLeaveAndUnsubscribe(t *testing.T) {
 
 func TestPeerTopicTracerTraceGraftAndPruneUseEventPeerID(t *testing.T) {
 	l := logger.NewAppSLogger(logger.Debug)
-	t.Run("supported fork digest is observed", func(t *testing.T) {
+	t.Run("supported fork digest is discovered", func(t *testing.T) {
 		topic := "/eth2/c6ecb76c/beacon_block/ssz_snappy"
 		peerID := peer.ID("peer-2")
 		forks := &mockForkManager{
@@ -77,7 +72,6 @@ func TestPeerTopicTracerTraceGraftAndPruneUseEventPeerID(t *testing.T) {
 			Graft: &pubsubpb.TraceEvent_Graft{PeerID: []byte(peerID), Topic: new(topic)},
 		})
 
-		require.Equal(t, []string{"c6ecb76c"}, forks.observedDigests)
 		require.Equal(t, []string{topic}, tr.GetDiscoveredTopics())
 
 		tr.Trace(&pubsubpb.TraceEvent{
@@ -102,7 +96,6 @@ func TestPeerTopicTracerTraceGraftAndPruneUseEventPeerID(t *testing.T) {
 			Graft: &pubsubpb.TraceEvent_Graft{PeerID: []byte(peerID), Topic: new(topic)},
 		})
 
-		require.Empty(t, forks.observedDigests)
 		require.Equal(t, []string{topic}, tr.GetDiscoveredTopics())
 	})
 	t.Run("trace rpc event", func(t *testing.T) {
@@ -142,7 +135,6 @@ func TestPeerTopicTracerTraceGraftAndPruneUseEventPeerID(t *testing.T) {
 		})
 
 		require.Equal(t, []string{subscriptionTopic}, tr.GetDiscoveredTopics())
-		require.Equal(t, []string{"c6ecb76c"}, mockFrkMgr.observedDigests)
 
 		tr.Trace(&pubsubpb.TraceEvent{
 			Type: pubsubpb.TraceEvent_SEND_RPC.Enum(),
