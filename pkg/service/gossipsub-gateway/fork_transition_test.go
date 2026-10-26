@@ -1,6 +1,7 @@
 package gossipsub_gateway
 
 import (
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -160,12 +161,7 @@ func TestForkTransitionAggregatedAttestations(t *testing.T) {
 
 	newTp := cl.subscribe(t, newTopic)
 	require.Eventually(t, func() bool {
-		for _, tp := range svc.peerTopicTracer.GetDiscoveredTopics() {
-			if tp == newTopic {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(svc.peerTopicTracer.GetDiscoveredTopics(), newTopic)
 	}, 10*time.Second, 50*time.Millisecond)
 	require.Equal(t, forkCurDigest, fm.ActiveDigest())
 
