@@ -109,6 +109,7 @@ The gateway receives automatic config updates from bootstrap.
 | `join_key` | `OPT_JOIN_KEY` | *(empty)* | Org-wide join key (`ojk_live_...`). **Set via env, not YAML.** Mutually exclusive with `api_key`. See [Gateway Self-Enrollment](07_gateway_self_enrollment.md) |
 | `enroll_cred_dir` | `OPT_ENROLL_CRED_DIR` | `identity_mump2p_dir` | Enrollment credential directory (`enrollment.json`). **Must be persistent** |
 | `gateway_id` | `OPT_GATEWAY_ID` | `dev-gateway` | Join-key path only: enrollment label at first boot (unique per host). Overwritten by JWT `sub` after mint. Ignored for API-key path |
+| `chain` | `OPT_DEV_CHAIN` | *(empty)* | Auth-off development only: `hoodi`, `mainnet`, or a numeric chain ID. Ignored when a credential is set |
 | `gateway_cluster_id` | `OPT_GATEWAY_CLUSTER_ID` | *(required)* | Cluster ID assigned by Optimum during onboarding |
 | `agent_lib_p2p_port` | `OPT_AGENT_LIB_P2P_PORT` | 33212 | CL clients connect here (inbound) |
 | `agent_mump2p_port` | `OPT_AGENT_MUMP2P_PORT` | 33213 | mump2p agent port (inbound) |

@@ -1032,7 +1032,7 @@ Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
         "type": "prometheus",
         "uid": "${ds_prometheus}"
       },
-      "description": "Success share over the last $auth_prom_interval (6h). If no mints occurred in that window but the token is still valid, shows 100% (healthy idle). JWT refresh runs every ~3h.",
+      "description": "Success share over the last $auth_prom_interval (6h). If no mints occurred in that window but the token is still valid, shows 100% (healthy idle). JWT refresh runs every 10-20m, so a 6h window with no mints is unusual even while the token is valid.",
       "fieldConfig": {
         "defaults": {
           "color": {

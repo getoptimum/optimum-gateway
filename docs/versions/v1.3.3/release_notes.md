@@ -4,13 +4,21 @@
 
 ## Highlights
 
-* **Critical certificate-trust fix.** The gateway is built with Go 1.27.3, which stops trusting a set of compromised certificate-authority intermediates (CVE-2026-111943). HTTPS calls from the gateway reject those chains. No partner configuration change.
+* **Certificate-trust fix (medium severity).** The gateway is built with Go 1.27.3, which stops trusting a set of compromised certificate-authority intermediates (CVE-2026-111943). HTTPS calls from the gateway reject those chains. No partner configuration change.
 * **Traffic stays on the current fork until your CL uses the next one** (new in v1.3.3). Consensus clients subscribe to the next fork a few minutes early. The gateway used to follow that subscription and publish attestations on the next-fork topic before the fork. It now stays on the current fork until a message arrives on the next one, then follows that. No partner configuration change.
 * **Turning propagation off stops attestations too.** With propagation disabled, attestations from mump2p are no longer forwarded to your CL, the same as blocks. Traffic from your CL into mump2p is unchanged.
-* **Health works with telemetry off.** `GET /health` answers when the metrics exporter is disabled. The last-block age in that response is taken when the block arrives.
+* **Health works with telemetry off.** `GET /health` answers when the metrics exporter is disabled. `mump2p_gateway_last_block_received_timestamp` is now set when a block arrives, not when `/health` is called.
 * **Large beacon blocks are accepted.** The CL connection accepts a block up to the compressed size the gateway can decode, so a large block is not dropped before it is read.
-* **A bad attestation subnet is dropped.** An aggregated attestation whose subnet is outside 0–63 is discarded instead of being published on a topic that does not exist.
+* **Memory-exhaustion fix for aggregated attestations (medium severity, [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787)).** A mump2p peer with publish scope could send an aggregated attestation pack with out-of-range subnet indexes and make every subscribed gateway allocate far more memory than the message size. The gateway now rejects the whole pack if any subnet is outside 0–63. v1.3.2 and earlier are affected.
 * **The access token refreshes about every 15 minutes.** The gateway mints a new token on a 10–20 minute spread, so a change to gateway type or validator set shows up well before the six-hour token expires. Connected peers still learn the new handshake after a restart.
+
+### Telemetry changes
+
+* `mump2p_gateway_auth_token_mint_total`, `mump2p_gateway_auth_enrollment_total` and `mump2p_gateway_p2p_handshake_cluster_claim_total` export every `result` at 0 from startup, so alerts can target failure series directly. Rules built on `absent()` need review.
+* `mump2p_gateway_app_build_info` moves to the new `paired_with` value when the gateway type changes; the old series is removed.
+* Block latency: a gateway's own publish counts as its mump2p first-seen, and only the first copy of a block sets first-seen times.
+* An accelerate-slots poll that returns no horizon no longer refreshes the freshness gauge.
+* Auth mint counters advance about 12× faster with the shorter refresh interval. Revisit rate-based alerts.
 
 Beacon blocks on every slot, join-key enrollment, and the consumer block stream carry forward from v1.3.2 unchanged.
 
