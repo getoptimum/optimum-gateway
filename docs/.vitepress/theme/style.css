@@ -166,7 +166,7 @@ html.dark .dark-mode-only {
   display: block !important;
 }
 
-/* Position version switcher between search and GitHub nav link */
+/* Position version switcher between search and the nav menu */
 .VPNavBar .content-body > .search            { order: 1; }
 .VPNavBar .content-body > .version-switcher  { order: 2; display: flex; align-items: center; }
 .VPNavBar .content-body > .menu              { order: 3; }
