@@ -1,6 +1,6 @@
 # v1.3.3
 
-> **Current release.** v1.3.3 is the current release. v1.3.2 remains supported. Networking and CL peering are unchanged — same ports and firewall rules.
+> **Current release.** v1.3.3 is the current release. v1.3.2 remains supported, but upgrading is recommended because it is affected by [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787). Networking and CL peering are unchanged — same ports and firewall rules.
 
 ## Highlights
 
@@ -55,14 +55,14 @@ If you run consumer streams, treat [Holding a stream open for weeks](06_block_st
 
 ## Version Status
 
-| Version     | Status                    |
-| ----------- | ------------------------- |
-| v1.3.3      | **CURRENT**               |
-| v1.3.2      | supported                 |
-| v1.3.1      | DEPRECATED / unsupported  |
-| v1.3.0      | DEPRECATED / unsupported  |
-| v1.2.0      | DEPRECATED / unsupported  |
-| v1.1.1      | DEPRECATED / unsupported  |
-| v1.0.2      | DEPRECATED / unsupported  |
-| v0.0.1-rc12 | REMOVED / unsupported     |
-| v0.0.1-rc11 | REMOVED / unsupported     |
+| Version     | Status                          |
+| ----------- | ------------------------------- |
+| v1.3.3      | **CURRENT**                     |
+| v1.3.2      | supported / upgrade recommended |
+| v1.3.1      | DEPRECATED / unsupported        |
+| v1.3.0      | DEPRECATED / unsupported        |
+| v1.2.0      | DEPRECATED / unsupported        |
+| v1.1.1      | DEPRECATED / unsupported        |
+| v1.0.2      | DEPRECATED / unsupported        |
+| v0.0.1-rc12 | REMOVED / unsupported           |
+| v0.0.1-rc11 | REMOVED / unsupported           |

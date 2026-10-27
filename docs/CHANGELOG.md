@@ -5,16 +5,16 @@
 
 ## Supported Versions
 
-| Version | Status    | Docker Image                |
-| ------- | --------- | --------------------------- |
-| v1.3.3  | CURRENT   | `getoptimum/gateway:v1.3.3` |
-| v1.3.2  | supported | `getoptimum/gateway:v1.3.2` |
+| Version | Status                          | Docker Image                |
+| ------- | ------------------------------- | --------------------------- |
+| v1.3.3  | CURRENT                         | `getoptimum/gateway:v1.3.3` |
+| v1.3.2  | supported / upgrade recommended | `getoptimum/gateway:v1.3.2` |
 
 ## v1.3.3 (Current)
 
 **Docker Image:** `getoptimum/gateway:v1.3.3`
 
-v1.3.3 is the current release. v1.3.2 remains supported. Networking and CL peering are unchanged — same ports and firewall rules.
+v1.3.3 is the current release. v1.3.2 remains supported, but upgrading is recommended because it is affected by [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787). Networking and CL peering are unchanged — same ports and firewall rules.
 
 ### Highlights
 
@@ -32,7 +32,7 @@ v1.3.3 is the current release. v1.3.2 remains supported. Networking and CL peeri
 
 **Docker Image:** `getoptimum/gateway:v1.3.2`
 
-v1.3.2 remains supported. Networking and CL peering are unchanged — same ports and firewall rules.
+v1.3.2 remains supported, but upgrading is recommended because it is affected by [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787). Networking and CL peering are unchanged — same ports and firewall rules.
 
 ### Highlights
 
