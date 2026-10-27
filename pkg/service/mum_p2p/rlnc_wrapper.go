@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"time"
 
+	"google.golang.org/protobuf/proto"
+
 	mump2pcfg "github.com/getoptimum/mump2p-protocol/pkg/config"
 	rlncpbshm "github.com/getoptimum/mump2p-protocol/pkg/rlncpb/shm"
 	rlncshm "github.com/getoptimum/mump2p-protocol/pkg/shm"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
-	"google.golang.org/protobuf/proto"
 )
 
 type RLNCWrapper struct {
