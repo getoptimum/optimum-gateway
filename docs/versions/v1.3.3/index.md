@@ -1,6 +1,6 @@
 # Optimum Gateway - User Guide
 
-> **Current release:** v1.3.3 is the current release. v1.3.2 remains supported. Networking and CL peering are unchanged.
+> **Current release:** v1.3.3 is the current release. v1.3.2 remains supported, but upgrading is recommended because it is affected by [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787). Networking and CL peering are unchanged.
 
 > **Release Notes:** [What's new in v1.3.3](./release_notes.md)
 

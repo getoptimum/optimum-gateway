@@ -5,25 +5,25 @@
 
 ## Supported Versions
 
-| Version | Status    | Docker Image                |
-| ------- | --------- | --------------------------- |
-| v1.3.3  | CURRENT   | `getoptimum/gateway:v1.3.3` |
-| v1.3.2  | supported | `getoptimum/gateway:v1.3.2` |
+| Version | Status                          | Docker Image                |
+| ------- | ------------------------------- | --------------------------- |
+| v1.3.3  | CURRENT                         | `getoptimum/gateway:v1.3.3` |
+| v1.3.2  | supported / upgrade recommended | `getoptimum/gateway:v1.3.2` |
 
 ## v1.3.3 (Current)
 
 **Docker Image:** `getoptimum/gateway:v1.3.3`
 
-v1.3.3 is the current release. v1.3.2 remains supported. Networking and CL peering are unchanged — same ports and firewall rules.
+v1.3.3 is the current release. v1.3.2 remains supported, but upgrading is recommended because it is affected by [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787). Networking and CL peering are unchanged — same ports and firewall rules.
 
 ### Highlights
 
-* **Critical certificate-trust fix.** The gateway is built with Go 1.27.3, which stops trusting a set of compromised certificate-authority intermediates (CVE-2026-111943). HTTPS calls from the gateway reject those chains. No partner configuration change.
+* **Certificate-trust fix (medium severity).** The gateway is built with Go 1.27.3, which stops trusting a set of compromised certificate-authority intermediates (CVE-2026-111943). HTTPS calls from the gateway reject those chains. No partner configuration change.
 * **Traffic stays on the current fork until your CL uses the next one.** An early subscription to the next fork no longer moves attestations onto that topic. The gateway follows once a message arrives on it.
 * **Turning propagation off stops attestations too.** Attestations from mump2p are no longer forwarded to your CL when propagation is disabled, the same as blocks.
-* **Health works with telemetry off.** `GET /health` answers when the metrics exporter is disabled, and the last-block age is taken when the block arrives.
+* **Health works with telemetry off.** `GET /health` answers when the metrics exporter is disabled, and `mump2p_gateway_last_block_received_timestamp` is set when a block arrives.
 * **Large beacon blocks are accepted.** The CL connection accepts a block up to the compressed size the gateway can decode.
-* **A bad attestation subnet is dropped.** An aggregated attestation whose subnet is outside 0–63 is discarded.
+* **Memory-exhaustion fix for aggregated attestations (medium severity, [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787)).** A pack with any subnet outside 0–63 is rejected whole. v1.3.2 and earlier are affected.
 * **The access token refreshes about every 15 minutes.** A change to gateway type or validator set shows up well before the six-hour token expires.
 
 [Full release notes](./versions/v1.3.3/release_notes.md) · [Documentation](./versions/v1.3.3/index.md)
@@ -32,7 +32,7 @@ v1.3.3 is the current release. v1.3.2 remains supported. Networking and CL peeri
 
 **Docker Image:** `getoptimum/gateway:v1.3.2`
 
-v1.3.2 remains supported. Networking and CL peering are unchanged — same ports and firewall rules.
+v1.3.2 remains supported, but upgrading is recommended because it is affected by [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787). Networking and CL peering are unchanged — same ports and firewall rules.
 
 ### Highlights
 
