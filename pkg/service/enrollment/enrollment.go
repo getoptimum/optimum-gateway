@@ -266,7 +266,8 @@ func Load(dir string) (*Credential, error) {
 	if derived != c.Thumbprint {
 		return nil, fmt.Errorf(
 			"enrollment: %s pairs client_id %s with a key whose thumbprint is %s, not the recorded %s",
-			credentialPath(dir), c.ClientID, derived, c.Thumbprint)
+			credentialPath(dir), c.ClientID, derived, c.Thumbprint,
+		)
 	}
 	return &c, nil
 }
@@ -487,7 +488,8 @@ func LoadOrEnroll(ctx context.Context, log logger.AppLogger, opts *Options) (cre
 		if cred.PeerID != "" && opts.PeerID != "" && cred.PeerID != opts.PeerID {
 			return nil, false, fmt.Errorf(
 				"enrollment: %s was enrolled for peer %s but this node is %s; the mumP2P identity changed",
-				credentialPath(opts.Dir), cred.PeerID, opts.PeerID)
+				credentialPath(opts.Dir), cred.PeerID, opts.PeerID,
+			)
 		}
 		// A credential makes any pending key stale. Left in place it would be
 		// resubmitted if the credential were ever deleted to force re-enrollment,

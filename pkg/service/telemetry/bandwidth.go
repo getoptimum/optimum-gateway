@@ -22,17 +22,20 @@ func initBandwidthMetrics() {
 		"total_bytes",
 		"bandwidth",
 		"Total traffic",
-		[]string{"direction"})
+		[]string{"direction"},
+	)
 	messagesPerProtocol = commonmetrics.NewCounterVec(
 		"messages_total",
 		"bandwidth",
 		"Messages per protocol",
-		[]string{labelProtocol, labelDirection})
+		[]string{labelProtocol, labelDirection},
+	)
 	trafficPerProtocol = commonmetrics.NewCounterVec(
 		"traffic_bytes_total",
 		"bandwidth",
 		"Traffic per protocol",
-		[]string{labelProtocol, labelDirection})
+		[]string{labelProtocol, labelDirection},
+	)
 }
 
 type BandwidthCollector struct{}
@@ -59,6 +62,7 @@ func (b *BandwidthCollector) GetBandwidthForPeer(peer.ID) metrics.Stats { return
 func (b *BandwidthCollector) GetBandwidthForProtocol(protocol.ID) metrics.Stats {
 	return metrics.Stats{}
 }
+
 func (b *BandwidthCollector) GetBandwidthTotals() metrics.Stats                     { return metrics.Stats{} }
 func (b *BandwidthCollector) GetBandwidthByPeer() map[peer.ID]metrics.Stats         { return nil }
 func (b *BandwidthCollector) GetBandwidthByProtocol() map[protocol.ID]metrics.Stats { return nil }
