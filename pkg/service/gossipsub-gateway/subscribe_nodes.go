@@ -92,14 +92,7 @@ func (s *Service) subscribeToTopic(topic string) error {
 
 func (s *Service) subscribeLocalNode() {
 	s.log.Info("subscribing to local libp2p node")
-	filteredTopics := s.filterAndBuildEthTopics(s.srvForkMgr.ActiveDigest(), false)
-	for _, targetTopic := range filteredTopics {
-		if err := s.subscribeToTopic(targetTopic); err != nil {
-			s.log.Error("failed to subscribe to topic", err, logger.WithTopic(targetTopic))
-			continue
-		}
-	}
-	s.refreshTopics() // refresh topics to catch any new discovered topics from previous runs
+	s.refreshTopics()
 }
 
 func (s *Service) handleSubscription(ctx context.Context, topicName string, sub *libp2ppubsub.Subscription) {
