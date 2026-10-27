@@ -15,10 +15,12 @@ import (
 	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
 	"github.com/getoptimum/optimum-common/pkg/pointers"
 	"github.com/getoptimum/optimum-gateway/pkg/protocol/consensus"
+	"github.com/getoptimum/optimum-gateway/pkg/protocol/forks"
 	"github.com/getoptimum/optimum-gateway/pkg/protocol/topics"
 	"github.com/getoptimum/optimum-gateway/pkg/service/aggregator"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry/tracer"
 	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
+	"github.com/getoptimum/optimum-gateway/pkg/utils"
 )
 
 const (
@@ -33,7 +35,7 @@ func startForkGatewayHost(t *testing.T, svc *Service) {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = h.Close() })
 	svc.hostLibP2P = h
-	svc.peerTopicTracer = tracer.NewPeerTopicTracer(svc.log, svc.GetForkDigestManager(), svc.onZeroPeersForTopic)
+	svc.peerTopicTracer = tracer.NewPeerTopicTracer(svc.log, svc.GetForkDigestManager())
 	svc.ps, err = libp2ppubsub.NewGossipSub(svc.ctx, h,
 		libp2ppubsub.WithMessageSignaturePolicy(libp2ppubsub.StrictNoSign),
 		libp2ppubsub.WithNoAuthor(),
@@ -185,4 +187,109 @@ func TestForkTransitionAggregatedAttestations(t *testing.T) {
 	deliver(4)
 	waitCount(newTopic, 2)
 	require.Equal(t, 2, cl.count(oldTopic))
+}
+
+func TestRefreshTopicsFollowsBootstrapForkDigests(t *testing.T) {
+	prevSync := forks.SyncInterval
+	forks.SyncInterval = 100 * time.Millisecond
+	t.Cleanup(func() { forks.SyncInterval = prevSync })
+
+	svc, bootstrap := newGateway(t)
+	fm := svc.GetForkDigestManager()
+	startForkGatewayHost(t, svc)
+	svc.nodeMumP2P = test_utils.NewTestNode(t.Context(), t, svc.log, "fork-topics", t.TempDir())
+
+	const unknownDigest = "abcdef12"
+	allTopics := len(svc.filterAndBuildEthTopics(forkCurDigest, false))
+	block := func(digest string) string { return topics.BuildFullTopic(digest, utils.BeaconBlockBase) }
+	joined := func(digest string) int {
+		n := 0
+		for _, topic := range svc.libP2PTopics.Keys() {
+			if topics.GetForkDigestFromTopic(topic) == digest {
+				n++
+			}
+		}
+		return n
+	}
+	onMum := func(topic string) bool { return slices.Contains(svc.nodeMumP2P.GetTopics(), topic) }
+	setFork := func(current, dropped string) {
+		bootstrap.SetForkResponse(map[string]any{"chain_id": "hoodi", "fork_digest": current, "future_fork": ""})
+		require.Eventually(t, func() bool {
+			return fm.CheckForkSupported(current) && !fm.CheckForkSupported(dropped)
+		}, 10*time.Second, 50*time.Millisecond)
+		require.Equal(t, current, fm.ActiveDigest())
+	}
+	refresh := func() {
+		done := make(chan struct{})
+		go func() {
+			svc.refreshTopics()
+			close(done)
+		}()
+		select {
+		case <-done:
+		case <-time.After(10 * time.Second):
+			t.Fatal("refreshTopics blocked")
+		}
+	}
+
+	// startup joins every topic of the active digest
+	svc.subscribeOnce()
+	require.Equal(t, allTopics, joined(forkCurDigest))
+	require.Zero(t, joined(forkNextDigest))
+	require.True(t, onMum(block(forkCurDigest)))
+
+	// overlap: the CL advertises next-fork topics and one unsupported digest
+	cl := startForkCL(t, svc)
+	advertised := []string{
+		block(forkCurDigest),
+		block(forkNextDigest),
+		topics.BuildFullTopic(forkNextDigest, "beacon_attestation_5"),
+		block(unknownDigest),
+	}
+	for _, topic := range advertised {
+		cl.subscribe(t, topic)
+	}
+	require.Eventually(t, func() bool {
+		discovered := svc.peerTopicTracer.GetDiscoveredTopics()
+		return !slices.ContainsFunc(advertised, func(topic string) bool { return !slices.Contains(discovered, topic) })
+	}, 10*time.Second, 50*time.Millisecond)
+	refresh()
+	require.Equal(t, allTopics, joined(forkCurDigest))
+	require.Equal(t, 2, joined(forkNextDigest))
+	require.Zero(t, joined(unknownDigest))
+	require.True(t, onMum(block(forkCurDigest)))
+	require.True(t, onMum(block(forkNextDigest)))
+	require.False(t, onMum(block(unknownDigest)))
+	waitForkMesh(t, svc, cl, block(forkCurDigest))
+
+	// bootstrap drops the old digest: leave its topics, keep the new fork
+	setFork(forkNextDigest, forkCurDigest)
+	refresh()
+	require.Zero(t, joined(forkCurDigest))
+	require.False(t, onMum(block(forkCurDigest)))
+	require.Equal(t, allTopics, joined(forkNextDigest))
+	require.True(t, onMum(block(forkNextDigest)))
+	require.Zero(t, joined(unknownDigest))
+	require.Eventually(t, func() bool { return len(cl.ps.ListPeers(block(forkCurDigest))) == 0 }, 10*time.Second, 50*time.Millisecond)
+
+	// the CL is still subscribed to the old topic, so a later refresh must not rejoin it
+	refresh()
+	require.Zero(t, joined(forkCurDigest))
+	require.False(t, onMum(block(forkCurDigest)))
+
+	// bootstrap flaps back and forth: every topic of the active digest comes back each time
+	setFork(forkCurDigest, forkNextDigest)
+	refresh()
+	require.Equal(t, allTopics, joined(forkCurDigest))
+	require.True(t, onMum(block(forkCurDigest)))
+	require.Zero(t, joined(forkNextDigest))
+	require.False(t, onMum(block(forkNextDigest)))
+
+	setFork(forkNextDigest, forkCurDigest)
+	refresh()
+	require.Equal(t, allTopics, joined(forkNextDigest))
+	require.True(t, onMum(block(forkNextDigest)))
+	require.Zero(t, joined(forkCurDigest))
+	require.False(t, onMum(block(forkCurDigest)))
+	require.Zero(t, joined(unknownDigest))
 }

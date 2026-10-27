@@ -23,10 +23,7 @@ func TestPeerTopicTracerTraceJoinLeaveAndUnsubscribe(t *testing.T) {
 	topic := "/eth2/c6ecb76c/beacon_attestation_17/ssz_snappy"
 	peerID := peer.ID("peer-1")
 
-	var emptied []string
-	tr := tracer.NewPeerTopicTracer(logger.NewAppSLogger(logger.Debug), &mockForkManager{}, func(topic string) {
-		emptied = append(emptied, topic)
-	})
+	tr := tracer.NewPeerTopicTracer(logger.NewAppSLogger(logger.Debug), &mockForkManager{})
 
 	tr.Trace(&pubsubpb.TraceEvent{
 		Type:   pubsubpb.TraceEvent_JOIN.Enum(),
@@ -48,9 +45,6 @@ func TestPeerTopicTracerTraceJoinLeaveAndUnsubscribe(t *testing.T) {
 	})
 
 	require.Empty(t, tr.GetDiscoveredTopics())
-	require.Equal(t, []string{topic}, emptied)
-	require.Equal(t, []string{topic}, tr.GetAndEraseUnsubscribeTopics())
-	require.Empty(t, tr.GetAndEraseUnsubscribeTopics())
 }
 
 func TestPeerTopicTracerTraceGraftAndPruneUseEventPeerID(t *testing.T) {
@@ -62,10 +56,7 @@ func TestPeerTopicTracerTraceGraftAndPruneUseEventPeerID(t *testing.T) {
 			supportedDigests: map[string]bool{"c6ecb76c": true},
 		}
 
-		var emptied []string
-		tr := tracer.NewPeerTopicTracer(l, forks, func(topic string) {
-			emptied = append(emptied, topic)
-		})
+		tr := tracer.NewPeerTopicTracer(l, forks)
 
 		tr.Trace(&pubsubpb.TraceEvent{
 			Type:  pubsubpb.TraceEvent_GRAFT.Enum(),
@@ -80,7 +71,6 @@ func TestPeerTopicTracerTraceGraftAndPruneUseEventPeerID(t *testing.T) {
 		})
 
 		require.Empty(t, tr.GetDiscoveredTopics())
-		require.Equal(t, []string{topic}, emptied)
 	})
 
 	t.Run("unsupported fork digest is not observed", func(t *testing.T) {
@@ -90,7 +80,7 @@ func TestPeerTopicTracerTraceGraftAndPruneUseEventPeerID(t *testing.T) {
 			supportedDigests: map[string]bool{"c6ecb76c": true},
 		}
 
-		tr := tracer.NewPeerTopicTracer(l, forks, nil)
+		tr := tracer.NewPeerTopicTracer(l, forks)
 		tr.Trace(&pubsubpb.TraceEvent{
 			Type:  pubsubpb.TraceEvent_GRAFT.Enum(),
 			Graft: &pubsubpb.TraceEvent_Graft{PeerID: []byte(peerID), Topic: new(topic)},
@@ -106,7 +96,7 @@ func TestPeerTopicTracerTraceGraftAndPruneUseEventPeerID(t *testing.T) {
 		mockFrkMgr := &mockForkManager{
 			supportedDigests: map[string]bool{"c6ecb76c": true},
 		}
-		tr := tracer.NewPeerTopicTracer(l, mockFrkMgr, nil)
+		tr := tracer.NewPeerTopicTracer(l, mockFrkMgr)
 
 		tr.Trace(&pubsubpb.TraceEvent{
 			Type: pubsubpb.TraceEvent_RECV_RPC.Enum(),
