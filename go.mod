@@ -1,6 +1,6 @@
 module github.com/getoptimum/optimum-gateway
 
-go 1.27.2
+go 1.27.3
 
 tool (
 	github.com/bufbuild/buf/cmd/buf
