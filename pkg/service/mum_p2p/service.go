@@ -162,7 +162,8 @@ func NewNodeWithHost(
 			}
 			if errV := handshake.Validate(cfg.ClusterID); errV != nil {
 				return pubsub.PeerCapability{}, fmt.Errorf(
-					"validating handshake response, remote cluster `%s`: %w", handshake.ClusterID, errV)
+					"validating handshake response, remote cluster `%s`: %w", handshake.ClusterID, errV,
+				)
 			}
 			return pubsub.PeerCapability{CanPublish: true}, nil
 		},

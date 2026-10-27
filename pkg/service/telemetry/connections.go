@@ -17,7 +17,8 @@ func initConnMetrics() {
 		"total_connections",
 		"conn",
 		"Active libp2p connections",
-		[]string{"direction"})
+		[]string{"direction"},
+	)
 }
 
 // ConnectionsMeter implements network.Notifiee for connection counts.
