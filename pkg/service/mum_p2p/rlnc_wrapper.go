@@ -8,6 +8,7 @@ import (
 	rlncpbshm "github.com/getoptimum/mump2p-protocol/pkg/rlncpb/shm"
 	rlncshm "github.com/getoptimum/mump2p-protocol/pkg/shm"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
+	"google.golang.org/protobuf/proto"
 )
 
 type RLNCWrapper struct {
@@ -31,4 +32,15 @@ func (r *RLNCWrapper) ExecuteOp(op rlncpbshm.OperationType, data []byte) ([]byte
 	res, err := r.srv.ExecuteOp(op, data)
 	telemetry.MeasureRLNC(op.String(), time.Since(start))
 	return res, err
+}
+
+// ExecuteMessage mirrors ExecuteOp for the proto-typed path engine.SHMService
+// requires from mump2p-protocol v0.3.0 onward. This type is a telemetry
+// decorator only, so the method exists to keep the same measurement around the
+// new call rather than to add behaviour.
+func (r *RLNCWrapper) ExecuteMessage(op rlncpbshm.OperationType, req, resp proto.Message) error {
+	start := time.Now()
+	err := r.srv.ExecuteMessage(op, req, resp)
+	telemetry.MeasureRLNC(op.String(), time.Since(start))
+	return err
 }
