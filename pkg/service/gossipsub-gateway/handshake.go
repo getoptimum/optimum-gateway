@@ -81,7 +81,8 @@ func (s *Service) handshakeHandler(peerID peer.ID, decoder *json.Decoder) (pubsu
 	if !slices.Contains(claims.ClusterIDs, s.cfg.GatewayClusterID) {
 		telemetry.IncClusterClaimResult(telemetry.ClusterClaimRejected)
 		return pubsub.PeerCapability{}, fmt.Errorf(
-			"cluster not authorized: %s not in %v", s.cfg.GatewayClusterID, claims.ClusterIDs)
+			"cluster not authorized: %s not in %v", s.cfg.GatewayClusterID, claims.ClusterIDs,
+		)
 	}
 	telemetry.IncClusterClaimResult(telemetry.ClusterClaimAuthorized)
 

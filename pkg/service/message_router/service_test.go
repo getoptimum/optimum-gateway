@@ -228,7 +228,7 @@ func TestService_ResolveValidatorChunkUsesSortedValidatorSet(t *testing.T) {
 	for i := range uint64(68) {
 		knownValidators = append(knownValidators, i)
 	}
-	rand.Shuffle(knownValidators)
+	require.NoError(t, rand.Shuffle(knownValidators))
 	service.SetKnownValidators(knownValidators)
 
 	cases := map[uint64][]uint64{
