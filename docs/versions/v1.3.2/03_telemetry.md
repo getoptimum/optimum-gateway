@@ -47,6 +47,16 @@ If any check fails, `status` becomes `"degraded"` and the failing checks are lis
 
 A check can also be `skipped`, meaning it does not apply to this node's mode. A `stream_only` gateway never starts the CL host, so `cl_peers`, `cl_health` and `subscribed_topics` are `skipped` and left out of `failing` and of the 200/503 roll-up. The `mump2p_gateway_cl_health_status` and `mump2p_gateway_cl_peers` gauges have no such notion and still read 0 on those nodes, so exclude them from alerts there, including the "Status" panel below, which multiplies `cl_peers` by `mump2p_peers`.
 
+## Alerts to set
+
+Set these on the Prometheus that pages you, before go-live, so a dropped CL is caught on your side. The setup they correspond to is [Connecting your CL client](08_cl_clients.md).
+
+* `mump2p_gateway_cl_peers == 0` for 2–5 minutes. This is the disconnected CL.
+* `/health` returning 503, or `time() - mump2p_gateway_last_block_received_timestamp > 120`. The CL can be connected and still silent.
+* Leave `mump2p_gateway_cl_health_status` out of the alert. It can read 1 while `libp2p.total_peers` is 0, because mesh publishes also tick it.
+
+Leave `stream_only` gateways out of the `cl_peers` alert. The gauge stays 0 there, as noted above.
+
 **Propagation:** `mump2p_gateway_propagation_state` reports whether the gateway is relaying mump2p traffic to your CL (`1` = on, `0` = disabled via Optimum dynamic config). The same state appears as `propagation_enabled` in `/api/v1/self_info`.
 
 ## Self Info

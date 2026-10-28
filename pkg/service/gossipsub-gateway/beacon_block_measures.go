@@ -30,6 +30,7 @@ func (s *Service) processBeaconBlockArrival(
 	upstreamPeerID string,
 ) (slot uint64, forward bool) {
 	s.lastBlockReceivedAt.Store(recvAt)
+	telemetry.SetLastBlockReceivedTimestamp(float64(recvAt) / 1000)
 
 	blockDecoded, err := consensus.DecodeBeaconBlockHeader(msg)
 	if err != nil {

@@ -125,12 +125,11 @@ func (s *Service) dumpServiceStat() {
 	}
 }
 
-// refreshForkDigestFromPeers periodically refreshes fork digest from discovered peer topics to detect fork migration.
-// This runs with the same cadence as CL re-syncs topics (every epoch).
+// refreshForkDigestFromPeers joins topics the CL has advertised and leaves topics of digests
+// bootstrap dropped. CL clients subscribe to the next fork one or two epochs ahead, so a
+// one-minute tick joins those topics before the fork.
 func (s *Service) refreshForkDigestFromPeers() {
-	// Check every epoch (32 slots * 12 seconds = ~6.4 minutes)
-	// Using 7 minutes to be safe
-	ticker := time.NewTicker(7 * time.Minute)
+	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
 	for {
@@ -148,12 +147,18 @@ func (s *Service) refreshForkDigestFromPeers() {
 }
 
 func (s *Service) refreshTopics() {
-	for _, topicUnsubscribe := range s.peerTopicTracer.GetAndEraseUnsubscribeTopics() {
-		s.log.Info("cleaning up abandoned topic (0 CL peers)", logger.WithTopic(topicUnsubscribe))
-		s.unsubscribeFromTopic(topicUnsubscribe)
+	for _, topic := range s.libP2PTopics.Keys() {
+		if !s.srvForkMgr.TopicSupported(topic) {
+			s.log.Info("leaving topic of a fork digest bootstrap no longer supports", logger.WithTopic(topic))
+			s.unsubscribeFromTopic(topic)
+		}
 	}
 
-	for _, topicSubscribe := range s.peerTopicTracer.GetDiscoveredTopics() {
+	wanted := append(s.filterAndBuildEthTopics(s.srvForkMgr.ActiveDigest(), false), s.peerTopicTracer.GetDiscoveredTopics()...)
+	for _, topicSubscribe := range wanted {
+		if !s.srvForkMgr.TopicSupported(topicSubscribe) {
+			continue
+		}
 		l := s.log.With(logger.WithTopic(topicSubscribe))
 		if utils.IsBeaconBlockTopic(topicSubscribe) && s.nodeMumP2P != nil {
 			// we subscribe mump2p just for 2 topics - beacon and aggregate

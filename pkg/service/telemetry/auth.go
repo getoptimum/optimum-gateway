@@ -6,6 +6,9 @@ import (
 	commonmetrics "github.com/getoptimum/optimum-common/pkg/telemetry"
 )
 
+// labelResult is the shared label name on the auth counters.
+const labelResult = "result"
+
 // Result label values for auth_token_mint_total.
 const (
 	AuthMintResultSuccess      = "success"
@@ -68,6 +71,22 @@ func initAuthMetrics() {
 		"Cluster-binding check outcome at the mumP2P handshake (result=authorized|rejected)",
 		[]string{labelResult},
 	)
+
+	// Create every result child at init so a failure series exists at 0.
+	for _, r := range []string{
+		AuthMintResultSuccess, AuthMintResultUnknownKey, AuthMintResultRevoked,
+		AuthMintResultSuspended, AuthMintResultForbidden, AuthMintResultBadStatus,
+		AuthMintResultNetworkError, AuthMintResultEmptyToken, AuthMintResultVerifyFailed,
+		AuthMintResultAssertionFailed,
+	} {
+		authTokenMintTotal.WithLabelValues(r)
+	}
+	for _, r := range []string{EnrollmentResultSuccess, EnrollmentResultReused} {
+		authEnrollmentTotal.WithLabelValues(r)
+	}
+	for _, r := range []string{ClusterClaimAuthorized, ClusterClaimRejected} {
+		handshakeClusterClaimTotal.WithLabelValues(r)
+	}
 }
 
 func IncAuthMintResult(result string) {

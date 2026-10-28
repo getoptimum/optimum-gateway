@@ -11,7 +11,11 @@ import (
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	"github.com/getoptimum/optimum-common/pkg/version"
 	"github.com/getoptimum/optimum-gateway/pkg/config"
+	"github.com/getoptimum/optimum-gateway/pkg/protocol/forks"
+	"github.com/getoptimum/optimum-gateway/pkg/service/auth_token"
+	"github.com/getoptimum/optimum-gateway/pkg/service/jwks_verifier"
 	"github.com/getoptimum/optimum-gateway/pkg/service/stream"
+	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
 )
 
 const (
@@ -66,6 +70,7 @@ func TestLoadConfig_FromEnvOnly(t *testing.T) {
 	t.Setenv("OPT_IDENTITY_LIBP2P_DIR", "./libid")
 	t.Setenv("OPT_IDENTITY_MUMP2P_DIR", "./mump2pid")
 	t.Setenv("OPT_GATEWAY_ID", "gw-env")
+	t.Setenv("OPT_DEV_CHAIN", "hoodi")
 	t.Setenv("OPT_GATEWAY_CLUSTER_ID", "gw-cluster-env")
 	t.Setenv("OPT_ENABLE_TELEMETRY", "true")
 	t.Setenv("OPT_TELEMETRY_PORT", "8888")
@@ -76,6 +81,7 @@ func TestLoadConfig_FromEnvOnly(t *testing.T) {
 	require.Equal(t, 5000, cfg.AgentLibP2PPort)
 	require.True(t, cfg.TelemetryEnable)
 	require.Equal(t, "gw-env", cfg.GatewayID)
+	require.Equal(t, "hoodi", cfg.Chain)
 	require.Equal(t, 8888, cfg.TelemetryPort)
 	require.Equal(t, "127.0.0.1:6060", cfg.PProfAddr)
 	require.Equal(t, version.GetVersion(), cfg.Version)
@@ -257,6 +263,7 @@ telemetry_enable: true
 telemetry_port: 48123
 gateway_cluster_id: optimum_hoodi_v0_1
 gateway_id: local-dockerized
+chain: hoodi
 `
 	confPath := writeTempConfig(t, confYml)
 
@@ -268,7 +275,75 @@ gateway_id: local-dockerized
 	require.Equal(t, 43213, cfg.AgentMumP2PPort)
 	require.True(t, cfg.TelemetryEnable)
 	require.Equal(t, "local-dockerized", cfg.GatewayID)
+	require.Equal(t, "hoodi", cfg.Chain)
 	require.Equal(t, "optimum_hoodi_v0_1", cfg.GatewayClusterID)
+}
+
+func TestInitRuntime_DevChainWhenClaimEmpty(t *testing.T) {
+	log := logger.NewAppSLogger(logger.Debug)
+
+	t.Run("yaml chain is used when the claim is empty", func(t *testing.T) {
+		cfg := &config.AppConfig{
+			Chain:            "hoodi",
+			GatewayClusterID: "optimum_hoodi_v0_3",
+		}
+		require.NoError(t, cfg.InitRuntime(t.Context(), log, "", "", "", ""))
+	})
+
+	t.Run("empty claim and empty chain still fail", func(t *testing.T) {
+		cfg := &config.AppConfig{GatewayClusterID: "optimum_hoodi_v0_3"}
+		err := cfg.InitRuntime(t.Context(), log, "  ", "", "", "")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "empty chain ID")
+	})
+
+	t.Run("jwt claim wins over an unusable dev chain", func(t *testing.T) {
+		cfg := &config.AppConfig{
+			Chain:            "not-a-chain",
+			GatewayClusterID: "optimum_hoodi_v0_3",
+		}
+		require.NoError(t, cfg.InitRuntime(t.Context(), log, "560048", "", "", ""))
+	})
+
+	// Auth on: a chain / OPT_DEV_CHAIN value must not replace the minted claim,
+	// including when that value would not parse.
+	for _, override := range []string{"hoodi", "not-a-chain"} {
+		t.Run("auth on ignores chain override "+override, func(t *testing.T) {
+			rig := test_utils.NewAuthTestRig(t)
+			rig.ClaimMod = func(c *jwks_verifier.Claims) { c.ChainID = "1" }
+			bootstrap := test_utils.NewLocalBootstrapServerWithRig(t, rig)
+			bootstrap.SetForkResponse(map[string]any{
+				"chain_id":    "mainnet",
+				"fork_digest": "deadbeef",
+				"future_fork": "",
+			})
+
+			cfg := rig.AppCfg(t)
+			cfg.EnableAuth = true
+			cfg.Chain = override
+			cfg.RemoteBootstrapURL = bootstrap.URL()
+
+			mgr, err := auth_token.New(t.Context(), log, cfg)
+			require.NoError(t, err)
+			_, err = mgr.Token(t.Context())
+			require.NoError(t, err)
+			require.True(t, mgr.IsEnabled())
+			require.Equal(t, "mainnet", mgr.Chain().String())
+
+			chainID := ""
+			if c := mgr.OwnClaims(); c != nil {
+				chainID = c.ChainID
+			}
+			require.Equal(t, "1", chainID)
+			require.NoError(t, cfg.InitRuntime(t.Context(), log, chainID, "", "", ""))
+			require.Equal(t, override, cfg.Chain)
+
+			srv, err := forks.NewService(t.Context(), cfg, log, mgr)
+			require.NoError(t, err)
+			require.Equal(t, "mainnet", srv.AppChain().String())
+			require.Equal(t, uint64(1), srv.AppChainID())
+		})
+	}
 }
 
 // The stream is off by default, and when enabled auth may be disabled only on

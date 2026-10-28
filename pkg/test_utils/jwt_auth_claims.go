@@ -135,21 +135,17 @@ func (r *AuthTestRig) MustSignToken(t *testing.T, key *ecdsa.PrivateKey, modify 
 
 	now := time.Now()
 	claims := jwks_verifier.Claims{
-		GatewayClaims: commonentities.GatewayClaims{
-			ScopeVersion: 1,
-			Type:         "partner",
-			ChainID:      "hoodi",
-			CNF: &commonentities.GatewayConfirmation{
-				PeerID: r.DefaultPeerID,
-			},
-			RegisteredClaims: jwt.RegisteredClaims{
-				Issuer:    r.server.URL,
-				Subject:   "gw-test",
-				IssuedAt:  jwt.NewNumericDate(now),
-				ExpiresAt: jwt.NewNumericDate(now.Add(1 * time.Hour)),
-				Audience:  jwt.ClaimStrings{jwks_verifier.AudP2P},
-			},
+		ScopeVersion: 1,
+		Type:         "partner",
+		ChainID:      "hoodi",
+		CNF: &commonentities.GatewayConfirmation{
+			PeerID: r.DefaultPeerID,
 		},
+		Issuer:    r.server.URL,
+		Subject:   "gw-test",
+		IssuedAt:  jwt.NewNumericDate(now),
+		ExpiresAt: jwt.NewNumericDate(now.Add(1 * time.Hour)),
+		Audience:  jwt.ClaimStrings{jwks_verifier.AudP2P},
 	}
 	// Apply the rig-wide ClaimMod first (parity with the mint stub), then the
 	// per-call modify last so an explicit override wins (e.g. cluster nil/mismatch cases).
@@ -232,21 +228,17 @@ func NewAuthTestRig(t *testing.T, opts ...Option) *AuthTestRig {
 		}
 		now := time.Now()
 		claims := jwks_verifier.Claims{
-			GatewayClaims: commonentities.GatewayClaims{
-				ScopeVersion: 1,
-				Type:         "partner",
-				ChainID:      "hoodi",
-				CNF: &commonentities.GatewayConfirmation{
-					PeerID: payload["peer_id"],
-				},
-				RegisteredClaims: jwt.RegisteredClaims{
-					Issuer:    rig.server.URL,
-					Subject:   "gw-test",
-					IssuedAt:  jwt.NewNumericDate(now),
-					ExpiresAt: jwt.NewNumericDate(now.Add(1 * time.Hour)),
-					Audience:  jwt.ClaimStrings{jwks_verifier.AudP2P},
-				},
+			ScopeVersion: 1,
+			Type:         "partner",
+			ChainID:      "hoodi",
+			CNF: &commonentities.GatewayConfirmation{
+				PeerID: payload["peer_id"],
 			},
+			Issuer:    rig.server.URL,
+			Subject:   "gw-test",
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(1 * time.Hour)),
+			Audience:  jwt.ClaimStrings{jwks_verifier.AudP2P},
 		}
 		if claims.CNF.PeerID == "" {
 			claims.CNF.PeerID = rig.DefaultPeerID

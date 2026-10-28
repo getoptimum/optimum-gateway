@@ -18,7 +18,7 @@ The gateway’s responsibilities are:
 * Apply topic‑level aggregation for high‑volume topics to reduce bandwidth.
 * Provide observability on message volume, size, latency, and peer health.
 * Enforce basic safety and compatibility constraints (fork digests, topic
-  mapping, AB testing for latency experiments).
+  mapping, a fleet-wide propagation switch).
 
 This ADR documents the current design and architecture so that later
 feature‑specific ADRs (such as ADR‑0002 for beacon block latency) have a
@@ -95,10 +95,10 @@ high‑level structure:
      read-only streaming API (WebSocket + gRPC) is proposed separately in
      [ADR-0011](./0011-gateway-consumer-block-stream.md).
 
-7. **AB testing**
-   * Slot‑level AB testing is supported via `cfg.PropagationEnabled()` (dynamic-config rotator):
-     * Even slots can be excluded from certain tracking/reporting to
-       compare different configurations.
+7. **Propagation switch**
+   * `cfg.PropagationEnabled()` (dynamic-config `propagation_enabled`) is a
+     fleet-wide on/off switch for mump2p → CL forwarding of blocks and
+     attestations. CL → mump2p forwarding and arrival measurement are not gated.
 
 ---
 
@@ -121,7 +121,7 @@ high‑level structure:
     * This keeps metric naming and labels consistent.
 
 * **Config‑driven behavior**
-    * Features such as aggregation, telemetry, and AB testing are toggled
+    * Features such as aggregation, telemetry, and propagation are toggled
     via `AppConfig`, so deployments can gradually enable more complex
     behavior.
 

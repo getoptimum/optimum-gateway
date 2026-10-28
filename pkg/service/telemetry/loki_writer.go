@@ -84,7 +84,7 @@ func (w *LokiWriter) Write(p []byte) (int, error) {
 // closed once the final flush has completed so callers can wait for clean shutdown.
 func (w *LokiWriter) Start(ctx context.Context) <-chan struct{} {
 	done := make(chan struct{})
-	go w.run(ctx, done) //nolint:gosec // G118: ctx drives lifecycle; Background used only for post-cancel flush
+	go w.run(ctx, done) // #nosec G118 -- ctx drives lifecycle; Background is only for the post-cancel flush
 	return done
 }
 

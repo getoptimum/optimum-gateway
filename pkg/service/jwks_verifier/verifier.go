@@ -31,10 +31,9 @@ const (
 	AudStream   = string(commonentities.TokenAudienceStream)
 )
 
-// maxTokenLifetime caps exp - iat at the value the upstream auth service
-// is documented to mint (6h, see auth_token.refreshIntervalMinSec). The
-// gateway enforces the bound itself so a mis-issued long-lived token is
-// rejected even if the JWKS signature and issuer both check out.
+// maxTokenLifetime caps exp - iat at the 6h lifetime the upstream auth service
+// is documented to mint. The gateway enforces the bound itself so a mis-issued
+// long-lived token is rejected even if the JWKS signature and issuer both check out.
 const maxTokenLifetime = 6 * time.Hour
 
 // maxTokenLifetimeSkew is a small additive buffer on top of maxTokenLifetime

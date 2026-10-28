@@ -61,7 +61,7 @@ func (s *Service) buildFullTopic(forkDigest, topic string) string {
 func (s *Service) subscribeToTopic(topic string) error {
 	valid := utils.IsBeaconBlockTopic(topic) || utils.IsAttestationTopic(topic) // validate topic format
 	if !valid {
-		s.log.Info("skipping subscription to topic, not a beacon block or attestation topic", logger.WithTopic(topic))
+		s.log.Debug("skipping subscription to topic, not a beacon block or attestation topic", logger.WithTopic(topic))
 		return nil
 	}
 	// Check if already subscribed
@@ -92,18 +92,12 @@ func (s *Service) subscribeToTopic(topic string) error {
 
 func (s *Service) subscribeLocalNode() {
 	s.log.Info("subscribing to local libp2p node")
-	filteredTopics := s.filterAndBuildEthTopics(s.srvForkMgr.ActiveDigest(), false)
-	for _, targetTopic := range filteredTopics {
-		if err := s.subscribeToTopic(targetTopic); err != nil {
-			s.log.Error("failed to subscribe to topic", err, logger.WithTopic(targetTopic))
-			continue
-		}
-	}
-	s.refreshTopics() // refresh topics to catch any new discovered topics from previous runs
+	s.refreshTopics()
 }
 
 func (s *Service) handleSubscription(ctx context.Context, topicName string, sub *libp2ppubsub.Subscription) {
 	defer s.unsubscribeFromTopic(topicName)
+	forkDigest := topics.GetForkDigestFromTopic(topicName)
 	for {
 		select {
 		case <-ctx.Done():
@@ -123,6 +117,13 @@ func (s *Service) handleSubscription(ctx context.Context, topicName string, sub 
 
 			if msg.ReceivedFrom == s.hostLibP2P.ID() {
 				continue
+			}
+			if s.srvForkMgr.ObserveMessageDigest(forkDigest) {
+				s.log.Info("active fork digest updated from CL traffic",
+					logger.WithString("fork_digest", forkDigest),
+					logger.WithTopic(topicName),
+					logger.WithPeerID(msg.ReceivedFrom),
+				)
 			}
 
 			select {

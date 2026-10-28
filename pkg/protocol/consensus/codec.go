@@ -101,6 +101,9 @@ func (SSZSnappyCodec) DecodeWithMaxLength(r io.Reader, msg Unmarshaler) error {
 
 func maxCompressedLen(n int) int { return 32 + n + n/6 }
 
+// MaxCompressedGossipSize is the largest compressed gossip payload the codec accepts.
+func MaxCompressedGossipSize() int { return maxCompressedLen(utils.MaxGossipPayloadSize) }
+
 // oneByteReader adapts an io.Reader to io.ByteReader, reading exactly one byte
 // per call so the varint decode never consumes bytes past the length prefix.
 type oneByteReader struct{ r io.Reader }

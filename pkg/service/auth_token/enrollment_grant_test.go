@@ -228,8 +228,6 @@ func TestMintErrorIsTerminal(t *testing.T) {
 }
 
 func TestRetryBackoffClimbsToACeiling(t *testing.T) {
-	// A failed refresh must retry sooner than the next full interval: another 3h
-	// sleep can land after the cached 6h token has expired.
 	got := []time.Duration{}
 	d := time.Duration(0)
 	for range 8 {
@@ -238,7 +236,16 @@ func TestRetryBackoffClimbsToACeiling(t *testing.T) {
 	}
 	require.Equal(t, time.Minute, got[0])
 	require.Equal(t, 30*time.Minute, got[len(got)-1])
-	for _, d := range got {
-		require.Less(t, d, 155*time.Minute, "must be well inside the refresh interval")
+}
+
+// A token minted at the latest possible refresh must survive enough retries to ride
+// out an auth outage before its 6h lifetime ends.
+func TestTokenOutlivesRefreshAndRetries(t *testing.T) {
+	elapsed := time.Duration(auth_token.RefreshIntervalMaxSec) * time.Second
+	retries := 0
+	for d := auth_token.NextRetryBackoff(0); elapsed+d < 6*time.Hour; d = auth_token.NextRetryBackoff(d) {
+		elapsed += d
+		retries++
 	}
+	require.GreaterOrEqual(t, retries, 10)
 }

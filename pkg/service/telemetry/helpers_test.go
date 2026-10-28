@@ -34,6 +34,9 @@ func initTestMetricsRegistry(t *testing.T, initFns ...func()) *prometheus.Regist
 	prevLastMum := lastMumMessageAt.Load()
 	prevCLWorking := clWorking.Load()
 	prevMumWorking := mumWorking.Load()
+	prevAppBuildInfo := appBuildInfo
+	prevAppBuildBaseLabels := appBuildBaseLabels
+	prevAppBuildPairedWith := appBuildPairedWith
 
 	reg := prometheus.NewRegistry()
 	CustomRegistry = reg
@@ -49,6 +52,9 @@ func initTestMetricsRegistry(t *testing.T, initFns ...func()) *prometheus.Regist
 	lastMumMessageAt.Store(0)
 	clWorking.Store(0)
 	mumWorking.Store(0)
+	appBuildInfo = nil
+	appBuildBaseLabels = nil
+	appBuildPairedWith = ""
 
 	for _, initFn := range initFns {
 		initFn()
@@ -67,6 +73,9 @@ func initTestMetricsRegistry(t *testing.T, initFns ...func()) *prometheus.Regist
 		lastMumMessageAt.Store(prevLastMum)
 		clWorking.Store(prevCLWorking)
 		mumWorking.Store(prevMumWorking)
+		appBuildInfo = prevAppBuildInfo
+		appBuildBaseLabels = prevAppBuildBaseLabels
+		appBuildPairedWith = prevAppBuildPairedWith
 		if prevLabeledRegistry != nil {
 			commonmetrics.SetLabeledRegistry(prevLabeledRegistry, prevNamespace)
 		}

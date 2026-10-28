@@ -81,6 +81,16 @@ func (s *Service) RefreshAccelerateSlots(ctx context.Context) {
 		s.log.Error("accelerate_slots poll failed, keeping previous list", err, logger.WithInt("status_code", code))
 		return
 	}
+	// A non-positive to_slot is not a window: keep the previous list and skip the
+	// gauge, so freshness cannot advance on a failed poll. Only log once a horizon
+	// exists -- to_slot 0 is the normal state for a chain with nothing published.
+	if res.ToSlot <= 0 {
+		if s.accelerateToSlot.Load() > 0 {
+			s.log.Error("accelerate_slots poll returned a non-positive to_slot, keeping previous list",
+				nil, logger.WithInt("to_slot", int(res.ToSlot)), logger.WithInt("slots", len(res.Slots)))
+		}
+		return
+	}
 	// Put slots before advancing to_slot so a slot on the new list that is
 	// still past the old horizon fail-opens rather than reading as not_on_list.
 	for _, slot := range res.Slots {
@@ -88,8 +98,6 @@ func (s *Service) RefreshAccelerateSlots(ctx context.Context) {
 			s.accelerateSlots.Put(uint64(slot), struct{}{})
 		}
 	}
-	if res.ToSlot > 0 {
-		s.accelerateToSlot.Store(uint64(res.ToSlot))
-	}
+	s.accelerateToSlot.Store(uint64(res.ToSlot))
 	telemetry.SetAccelerateWindow(s.accelerateToSlot.Load(), res.GeneratedAtMs)
 }

@@ -25,7 +25,7 @@ This guide covers the operational issues you can hit running the Optimum Gateway
 | `agent_lib_p2p_port`                          | Default `33212`; CL connects here                                          |
 | `agent_mump2p_port`                          | Default `33213`; Optimum network peers connect here (inbound)              |
 | `telemetry_enable` / `telemetry_port`         | Default port `48123`                                                       |
-| `direct_cl_peers`                             | Optional, **strongly recommended** for Lighthouse / Nimbus                 |
+| `direct_cl_peers`                             | CL multiaddr the gateway dials; also an allowlist when set. See [Connecting your CL client](08_cl_clients.md) |
 | `remote_push_enable`                          | Optional; pushes logs/metrics to Optimum for support visibility            |
 | `log_level`                                   | `debug` / `info`                                                           |
 
@@ -67,7 +67,7 @@ A check is `ok`, `fail`, or `skipped`. `skipped` means the check does not apply 
 
 | Failing check        | What it means                          | Fix                                                                                                                                          |
 | -------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cl_peers`           | No CL client connected on `:33212`     | Configure CL peering; add `direct_cl_peers`; open **33212 inbound**; use a reachable IP in the multiaddr; restart CL after a gateway restart |
+| `cl_peers`           | No CL client connected on `:33212`     | [Connecting your CL client](08_cl_clients.md): reachable multiaddr, open **33212**, and a matching `direct_cl_peers` entry when that list is set |
 | `mump2p_peers`       | Not connected to the Optimum mesh      | Check **33213 inbound** + HTTPS to bootstrap; verify `api_key` + `gateway_cluster_id`; wait 2-5 min after start                              |
 | `subscribed_topics`  | Topic subscription failed (expect ~65) | Usually a chain/cluster mismatch (wrong API key for the network); check logs for subscribe errors                                            |
 | `last_block_age_sec` | No beacon block in ~60s                | CL is connected but **silent** — CL not synced, EL stuck, or CL OOM/restart; fix the CL first                                                |
@@ -186,115 +186,18 @@ curl -s http://localhost:48123/api/v1/self_info | jq '.chain, .fork_digest'
 
 ## CL client connection (most common issue)
 
-| Issue                                    | Fix                                                                                                                                                                                                          |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `cl_peers: 0`                            | Point the CL at the `self_info` multiaddr + `peer_id`; open **33212 inbound**                                                                                                                                |
-| Disconnected after a **gateway restart** | Lighthouse/Nimbus don't re-dial. Add the CL to `direct_cl_peers` so the gateway keeps retrying                                                                                                               |
-| Wrong peer ID in CL config               | Identity dirs not persisted -> new peer ID each run. Mount volumes; refresh CL config from current `self_info.peer_id`                                                                                       |
-| Lighthouse v8.x drops gateway            | PeerDAS change. Use a fixed gateway version; on Lighthouse add `--semi-supernode`, `--target-peers=500`, `--trusted-peers=<gateway_peer_id>`                                                                 |
-| Teku disconnects the gateway             | Upgrade Teku to **v26.4.0+**; use `--p2p-direct-peers` (not just `--p2p-static-peers`)                                                                                                                       |
-| Nimbus won't stay connected              | Use a stable `--netkey-file` (not `random`); add Nimbus to `direct_cl_peers` with its public IP:port; open Nimbus P2P port                                                                                   |
-| Prysm shows connected but no blocks      | Silent CL / EL not synced. Prysm can follow in optimistic sync while Geth catches up — `cl_peers` OK but `last_block_age_sec` / `cl_health` fail. Check EL logs; wait for EL, then Prysm `/healthz` goes 200 |
-| Docker NAT / wrong IP in multiaddr       | CL on host + gateway in bridge network -> use the host IP or `--network host`                                                                                                                                |
+Flags, versions, and the per-client fixes are in [Connecting your CL client](08_cl_clients.md#if-the-link-fails). The short version:
 
-> **Recommended:** Prysm **v7.1.8**; Lighthouse **v8.2.1+**; Teku **v26.6.0+** (minimum v26.4.0); Nimbus **v26.7.0+**.
-
-### Getting the gateway's peer info for the CL
-
-```bash
-curl -s http://localhost:48123/api/v1/self_info | jq -r '.peer_id'
-curl -s http://localhost:48123/api/v1/self_info | jq -r '.libp2p.multiaddrs'
-```
-
-### `direct_cl_peers` (recommended for all partners)
-
-Lighthouse and Nimbus do not reliably re-dial the gateway after a **gateway** restart. Add the CL node so the gateway runs a background goroutine that keeps retrying:
-
-```yaml
-direct_cl_peers:
-  - /ip4/YOUR_CL_IP/tcp/9000/p2p/YOUR_CL_PEER_ID
-```
-
-### PeerDAS / custody metadata
-
-The gateway advertises a **custody group count of 8** (Fulu `VALIDATOR_CUSTODY_REQUIREMENT`) in its libp2p metadata so PeerDAS-aware clients — Lighthouse in particular — keep the gateway as a useful peer. See the [Fulu p2p metadata spec](https://github.com/ethereum/consensus-specs/blob/master/specs/fulu/p2p-interface.md#metadata).
-
-### Lighthouse v8.x PeerDAS Configuration (Important)
-
-Use Lighthouse **v8.2.1+** with:
-
-```yaml
-command:
-  - lighthouse
-  - beacon_node
-  - --network=hoodi
-  - --semi-supernode
-  - --target-peers=500
-  - --boot-nodes=/ip4/YOUR_GATEWAY_IP/tcp/33212/p2p/YOUR_GATEWAY_PEER_ID
-  - --trusted-peers=YOUR_GATEWAY_PEER_ID
-```
-
-**Why:** PeerDAS changes peer requirements; `--semi-supernode` and `--target-peers=500` prevent pruning.
-
-[Lighthouse v8.2.0 Release Notes](https://github.com/sigp/lighthouse/releases/tag/v8.2.0)
-
-### Teku PeerDAS Configuration (Important)
-
-**Minimum version:** Teku **v26.4.0** or later. Older versions have a known bug (`NoSuchElementException` at `MetadataDasPeerCustodyTracker.onPeerMetadataUpdate`) that causes recurring errors when exchanging metadata with peers.
-
-Use **`--p2p-direct-peers`** (not just `--p2p-static-peers`): static peers can be pruned during peer management; direct peers maintain a persistent, protected connection.
-
-```sh
-teku \
-  --network=hoodi \
-  --p2p-direct-peers=/ip4/YOUR_GATEWAY_IP/tcp/33212/p2p/YOUR_GATEWAY_PEER_ID \
-  --p2p-static-peers=/ip4/YOUR_GATEWAY_IP/tcp/33212/p2p/YOUR_GATEWAY_PEER_ID \
-  --p2p-subscribe-all-subnets-enabled \
-  --p2p-subscribe-all-custody-subnets-enabled \
-  ...
-```
-
-| Symptom                                                     | Cause                           | Fix                       |
-| ----------------------------------------------------------- | ------------------------------- | ------------------------- |
-| `NoSuchElementException` at `MetadataDasPeerCustodyTracker` | Teku version too old            | Upgrade to v26.4.0+       |
-| Gateway peer keeps disconnecting                            | Using `--p2p-static-peers` only | Add `--p2p-direct-peers`  |
-| `Payload marked as invalid by Execution Client`             | EL still syncing                | Wait for the EL to finish |
-
-### Nimbus
-
-Connect Nimbus to the gateway and add Nimbus to the gateway's `direct_cl_peers`:
-
-```sh
-nimbus_beacon_node \
-  --direct-peer=/ip4/YOUR_GATEWAY_IP/tcp/33212/p2p/YOUR_GATEWAY_PEER_ID \
-  --netkey-file=/data/netkey \
-  ...
-```
-
-Verify Nimbus sees the gateway:
-
-```sh
-curl -s http://localhost:9596/eth/v1/node/peers/YOUR_GATEWAY_PEER_ID | jq '.data | {state, agent}'
-```
-
-Expected: `"state": "connected"` with an agent containing `optimum-gateway`.
-
-**Nimbus behavior — what is normal (not a gateway bug):**
-
-1. **Warmup is normal.** Nimbus may take a few hours after start to settle. Gossip/scoring can look off early but stabilizes on its own — don't treat early instability as a failure.
-2. **Peer drop + reconnect is expected.** Nimbus drops peers when a connection closes or peer score drops low, then reconnects with fresh scores. Transient `cl_peers` flapping is normal.
-3. **The connection itself is reliable.** On a gateway restart you immediately see `mump2p_gateway_cl_peers 1`; Nimbus reconnects fast and stays connected (held over a full weekend in testing).
-4. **Behavior differs from Prysm/Lighthouse.** Prysm doesn't show this drop/reconnect pattern and Lighthouse syncs in parallel — don't benchmark Nimbus's warmup/scoring against them.
-5. **Ignore the stale issue tracker.** Nimbus has many old open issues (2020-2022), but its commit history is active; those open issues don't indicate a broken integration.
-
-| Symptom                                                   | Cause                                        | Fix                                                                                                               |
-| --------------------------------------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `Adding privileged direct peer` in logs but no connection | Firewall or wrong IP/port                    | Open 33212 (Nimbus -> gateway) and your Nimbus P2P port (gateway -> Nimbus); use a public IP in `direct_cl_peers` |
-| Gateway peer always `disconnected` in REST                | Missing `direct_cl_peers` or unstable netkey | Add `direct_cl_peers`; use a stable `--netkey-file`                                                               |
-
-### Lodestar
-
-Lodestar is supported. Add the gateway as a trusted/direct peer in Lodestar, and add the Lodestar node to the gateway's `direct_cl_peers` so the gateway re-dials after restarts. Verify with `curl -s http://localhost:48123/health | jq '.checks.cl_peers'`.
+| Issue                                    | Fix                                                                                                                                                          |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `cl_peers: 0`                            | CL flag uses `self_info.peer_id` and an address the CL can route. Open **33212** to the CL only.                                                             |
+| Disconnected after a **gateway restart** | Lighthouse and Nimbus do not re-dial. Add the CL to `direct_cl_peers`.                                                                                       |
+| Wrong peer ID in CL config               | Identity dirs not persisted, or the beacon `.data.peer_id` / `mump2p.peer_ids` was pasted into the CL flag.                                                 |
+| Lighthouse drops the gateway             | `--boot-nodes` plus `--trusted-peers=<gateway peer_id>`. `--semi-supernode` is custody, not the session.                                                     |
+| Teku disconnects the gateway             | Teku **26.4.0+**, and `--p2p-direct-peers` rather than `--p2p-static-peers` alone.                                                                          |
+| Nimbus won't stay connected              | Stable `--netkey-file`, Nimbus in `direct_cl_peers`, both P2P ports open.                                                                                   |
+| Connected but no blocks                  | Execution client still syncing. `cl_peers` can be ok while `last_block_age_sec` fails.                                                                      |
+| Docker NAT / wrong IP in multiaddr       | `libp2p.multiaddrs[0]` is often a bridge address. Use the host IP or `--network host`.                                                                      |
 
 
 ## Network / firewall / Docker
@@ -384,19 +287,6 @@ Runtime `gateway_id` in `/health` and metrics is the enrolled `client_id` (JWT `
 | Gateway missing from the bootstrap list                            | Usually chain/cluster/key mismatch or no heartbeat (TTL ~1h) |
 
 
-## CL client-specific quick reference
-
-| Client         | Recurring issue                     | Fix                                                                        |
-| -------------- | ----------------------------------- | -------------------------------------------------------------------------- |
-| Lighthouse     | No reconnect after gateway restart  | `direct_cl_peers` + `--boot-nodes` / trusted peer                          |
-| Lighthouse v8+ | Goodbye / custody metadata mismatch | Updated gateway + PeerDAS flags (`--semi-supernode`, `--target-peers=500`) |
-| Prysm          | Connected but no gossip             | EL sync; restart beacon node. Use v7.1.8+                                  |
-| Teku           | `NoSuchElementException` metadata   | Upgrade to v26.4.0+                                                        |
-| Teku           | Gateway peer pruned                 | Use `--p2p-direct-peers` (not just `--p2p-static-peers`)                   |
-| Nimbus         | Privileged peer fails               | Stable `--netkey-file` + public IP in `direct_cl_peers`                    |
-
-
-
 ## Operational mistakes
 
 | Issue                                       | Fix                                                                                                       |
@@ -424,9 +314,9 @@ failed to load topics data... file does not exist
 
 ## Highest-frequency real-world issues (prioritize)
 
-1. **CL not connected** — missing `direct_cl_peers`, firewall, or wrong multiaddr
+1. **CL not connected** — [Connecting your CL client](08_cl_clients.md): wrong peer ID, firewall, or a multiaddr the CL cannot route
 2. **CL connected, no blocks** — silent CL / EL sync (`last_block_age_sec`)
 3. **Wrong API key for the network** — Hoodi key on a Mainnet cluster (or vice versa)
 4. **Identity not persisted** — peer ID drift breaks CL config
 5. **Local Grafana empty** — telemetry off or Prometheus target wrong
-6. **Lighthouse v8 PeerDAS** — custody/metadata disconnect
+6. **Lighthouse drops the gateway** — `--boot-nodes` and `--trusted-peers`, in [Connecting your CL client](08_cl_clients.md#lighthouse)

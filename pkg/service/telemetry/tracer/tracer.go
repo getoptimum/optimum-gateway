@@ -9,28 +9,24 @@ import (
 
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	commonmaps "github.com/getoptimum/optimum-common/pkg/maps"
-	"github.com/getoptimum/optimum-common/pkg/syncx"
 	"github.com/getoptimum/optimum-gateway/pkg/protocol/topics"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
 )
 
-// PeerTopicTracer implements libp2p pubsub EventTracer to discover topics from connected peers
+// PeerTopicTracer implements libp2p pubsub EventTracer to discover topics from connected peers.
+// Trace runs inside the pubsub event loop, so it must not join, leave or cancel subscriptions.
 type PeerTopicTracer struct {
-	log               logger.AppLogger
-	discoveredTopics  map[string]map[peer.ID]struct{} // topic -> set of peer IDs
-	unsubscribeTopics *syncx.RWSlice[string]
-	mu                sync.RWMutex
-	onTopicEmpty      func(topic string) // callback to unsubscribe gateway when topic has 0 peers
-	forkManager       ForkManager
+	log              logger.AppLogger
+	discoveredTopics map[string]map[peer.ID]struct{} // topic -> set of peer IDs
+	mu               sync.RWMutex
+	forkManager      ForkManager
 }
 
-func NewPeerTopicTracer(log logger.AppLogger, s ForkManager, onTopicEmpty func(topic string)) *PeerTopicTracer {
+func NewPeerTopicTracer(log logger.AppLogger, s ForkManager) *PeerTopicTracer {
 	return &PeerTopicTracer{
-		forkManager:       s,
-		log:               log,
-		discoveredTopics:  make(map[string]map[peer.ID]struct{}),
-		unsubscribeTopics: syncx.NewRWSlice[string](),
-		onTopicEmpty:      onTopicEmpty,
+		forkManager:      s,
+		log:              log,
+		discoveredTopics: make(map[string]map[peer.ID]struct{}),
 	}
 }
 
@@ -161,7 +157,6 @@ func (t *PeerTopicTracer) addPeerTopic(peerID peer.ID, topic string) {
 		)
 		if t.forkManager.CheckForkSupported(forkDigest) {
 			l.Debug("remote peer subscribed to new topic with supported fork digest")
-			t.forkManager.SetObservedDigest(forkDigest)
 		} else {
 			l.Error("remote peer subscribed to non-supported fork digest", fmt.Errorf("non-supported fork digest"))
 		}
@@ -176,11 +171,6 @@ func (t *PeerTopicTracer) removePeerTopic(peerID peer.ID, topic string) {
 		delete(peers, peerID)
 		if len(peers) == 0 {
 			delete(t.discoveredTopics, topic)
-			// If topic has 0 peers, unsubscribe gateway from this topic
-			if t.onTopicEmpty != nil {
-				t.onTopicEmpty(topic)
-			}
-			t.unsubscribeTopics.Add(topic)
 		}
 	}
 }
@@ -190,8 +180,4 @@ func (t *PeerTopicTracer) GetDiscoveredTopics() []string {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	return commonmaps.MapKeys(t.discoveredTopics)
-}
-
-func (t *PeerTopicTracer) GetAndEraseUnsubscribeTopics() []string {
-	return t.unsubscribeTopics.LoadAndErase()
 }
