@@ -1,7 +1,9 @@
 # ADR-0009: Slot-Aware Attestation Aggregation Gate
 
-**Status:** Accepted (per-gateway jitter removed 2026-05-27)
+**Status:** Accepted (per-gateway jitter removed 2026-05-27; block-aware release recorded 2026-10-28)
 **Date:** 2026-04-27
+
+**Current rule (section 4):** release 2s after the latest beacon-block arrival this slot. If none has arrived this slot, release 4s after slot start. Stop at 8s either way. The gate only holds the aggregator's emit onto mump2p.
 
 ---
 
@@ -45,7 +47,9 @@ Add a configurable **slot-aware publish gate** to the aggregator. Until the gate
 
 ### 2.1 Publish-window parameters
 
-In the current code these are **compile-time constants** in `pkg/config/config.go` (not env/yaml configurable), read through getter methods:
+> **Superseded release time.** The fixed open at 4s in this section is the original decision. [Section 4](#4-followup-block-aware-release) is the release rule in the code. The 8s cap still applies.
+
+In the original decision these are **compile-time constants** in `pkg/config/config.go` (not env/yaml configurable), read through getter methods:
 
 | Constant | Value | Getter | Meaning |
 | --- | --- | --- | --- |
@@ -53,7 +57,7 @@ In the current code these are **compile-time constants** in `pkg/config/config.g
 | `DefaultAttestationPublishCapMs` | `8000` | `GetAttestationPublishCap()` | Cap — close the publish window 8s into the slot (Ethereum's attestation aggregation deadline). |
 | `DefaultAttestationMaxSlotAge` | `0` | `GetAttestationMaxSlotAge()` | Max slot age (in slots) of attestations the router forwards to mump2p. `0` = current slot only. |
 
-The publish window per slot is **`[gate, cap)` = `[4s, 8s)`**:
+The publish window in the original decision is **`[gate, cap)` = `[4s, 8s)`**:
 
 * Before `gate`: aggregator accumulates, no emit (block propagation window — block must not be drowned out by attestation traffic)
 * Between `gate` and `cap`: emit normally on every 25 ms tick — attestations flow to mump2p
@@ -64,6 +68,8 @@ The publish window per slot is **`[gate, cap)` = `[4s, 8s)`**:
 **Default selection.** 4s aligns with Ethereum's attestation deadline (1/3 of a 12s slot) — by then the block has typically propagated and validators are publishing attestations. The 8s cap matches Ethereum's attestation aggregation deadline (2/3 of the slot). Past 8s, attestations from the current slot are unlikely to make it into an aggregate before the next proposer needs them, so emitting wastes mump2p bandwidth.
 
 ### 2.2 Behaviour
+
+> Original behaviour, including the per-gateway jitter removed in [section 3](#3-followup-per-gateway-jitter-removed-2026-05-27). The release time is superseded by [section 4](#4-followup-block-aware-release).
 
 ```sh
 slot N timeline with gate=4000, cap=8000, jitter=1500 (defaults):
@@ -84,6 +90,8 @@ Outside the `[gate, cap)` window, the aggregator continues to accept new attesta
 A zero gate (`GetAttestationPublishGate() <= 0`) disables the gate completely — restoring pre-ADR behaviour (publish on every 25 ms tick). In the current code the gate is the constant `4000 ms`, so this disabled path is not reachable without a code change.
 
 ### 2.3 Logic
+
+> Original logic, before the block-aware release in [section 4](#4-followup-block-aware-release). The function in the tree is the one described there.
 
 In the aggregator loop's tick handler ([aggregator.go](../../pkg/service/aggregator/aggregator.go)):
 
@@ -161,7 +169,7 @@ The default jitter range is **1500 ms**. The 500 ms range we shipped initially s
 
 ### What changed
 
-Section 2.4 ("Per-gateway jitter") is no longer in effect. The `gateJitter` field on the aggregator, the `gateJitterForGateway` / `jitterFromCfg` / `gatewayIDFromCfg` helpers, and the `OPT_ATTESTATION_PUBLISH_JITTER_MS` / `DefaultAttestationPublishJitterMs` config knob have all been removed. The aggregator now flushes at the configured gate (`attestation_publish_after_ms`, default 4000 ms) on every gateway with no per-gateway offset. The publish window is `[4 s, 8 s)` fleet-wide.
+Section 2.4 ("Per-gateway jitter") is no longer in effect. The `gateJitter` field on the aggregator, the `gateJitterForGateway` / `jitterFromCfg` / `gatewayIDFromCfg` helpers, and the `OPT_ATTESTATION_PUBLISH_JITTER_MS` / `DefaultAttestationPublishJitterMs` config knob have all been removed. After this change the aggregator flushed at 4s on every gateway, with no per-gateway offset, and the publish window was `[4 s, 8 s)` fleet-wide. [Section 4](#4-followup-block-aware-release) replaces that release time. The 8s cap is unchanged, and there is still no per-gateway offset.
 
 ### Why
 
@@ -172,3 +180,59 @@ That assumption no longer holds. The auth mint response now returns a `validator
 ### If the burst comes back
 
 If validator-scoping doesn't end up evenly distributing publish load (e.g., one operator's gateway serves a disproportionately large validator set), the right response is **bounded jitter on the tick rate** (ms-scale, inside the publish window), not the slot-level offset we just removed. Revisit this section before re-introducing the slot-offset mechanism.
+
+---
+
+## 4. Followup: block-aware release
+
+### What changed
+
+The fixed open at 4s in sections 2.1–2.3, and the `[4 s, 8 s)` window left by section 3, are no longer the release rule. Jitter stays removed. The 8s cap is unchanged. The aggregator still accumulates while it holds, and the hold still applies only to its emit onto mump2p.
+
+`shouldHoldForSlotGate` in [`aggregator.go`](../../pkg/service/aggregator/aggregator.go) is evaluated on every aggregation tick. It releases from the latest beacon-block arrival this gateway recorded:
+
+| Input | Value | Meaning |
+| --- | --- | --- |
+| `blockSeenPublishDelay` | `2000` ms | Compile-time constant in `aggregator.go`. Release this long after the latest beacon-block arrival in the current slot. |
+| `DefaultAttestationPublishAfterMs` | `4000` | `GetAttestationPublishGate()`. Fallback when no beacon-block arrival has been recorded this slot. |
+| `DefaultAttestationPublishCapMs` | `8000` | `GetAttestationPublishCap()`. Close the window. |
+
+The arrival time is `LastBlockReceivedMs()`. `processBeaconBlockArrival` overwrites it on every beacon-block message from libp2p or mump2p, before decoding, the stale-slot check and cross-path dedup. It counts for this slot only when it is strictly after the slot start. `0` or a time from an earlier slot falls back to 4s.
+
+```text
+last_block = latest beacon-block arrival, either path
+
+release =
+  last_block + 2s    when last_block is in this slot
+  slot_start + 4s    otherwise
+
+emit while release <= now < slot_start + 8s
+hold otherwise
+```
+
+Consequences:
+
+* **The latest copy sets the release.** The same block normally arrives once on each path, so release is 2s after the later copy.
+* **A later arrival re-holds an open window.** That includes a block arriving after the 4s fallback, a second copy, and an earlier-slot or undecodable message on a beacon-block topic. Each one holds the emit until 2s after it.
+* **The fallback does not cap the block release.** A block after 2s pushes the overlay publish past 4s.
+* **A block at or after 6s means no publish this slot.** `last_block + 2s` lands at or past the cap.
+
+Worked examples, with slot start at t=0:
+
+| Beacon-block arrivals | Overlay publish |
+| --- | --- |
+| 0.4s (mump2p), 0.6s (libp2p) | from 2.6s, stop at 8s |
+| 3s | from 5s, stop at 8s |
+| 6.5s | none this slot (`last_block + 2s` is 8.5s, past the cap) |
+| none | from 4s, stop at 8s |
+| none by 4s, then 5s | 4s–5s, hold, from 7s, stop at 8s |
+
+Attestations held past the cap stay in the aggregator's buffer and go out at the next slot's release. The router's current-slot filter runs at enqueue and does not re-check them, so they reach mump2p a slot late.
+
+The gate does not delay block forwarding, and it does not delay the consensus client's own attestation gossip.
+
+A zero fallback (`GetAttestationPublishGate() <= 0`) still disables the gate and restores a publish on every aggregation tick (25 ms by default). The getter returns the constant `4000`, so that path is still unreachable without a code change. None of these three values are env or yaml settings.
+
+### Why this is recorded here
+
+The block-aware check shipped in `shouldHoldForSlotGate` (marked `#620` in the function) without an amendment to this ADR. The function comment pointed at [ADR-0010](./0010-attestation-synchronization.md), which keeps the slot-aware window in place and does not define this release. This section is the current rule.
