@@ -109,6 +109,8 @@ func main() {
 	l.Info("app starting",
 		logger.WithString("version", appConf.Version),
 		logger.WithString("commit", appConf.CommitHash),
+		logger.WithString("gateway_type", appConf.GatewayType),
+		logger.WithString("log_level", appConf.LogLevel),
 		logger.WithGatewayID(appConf.GatewayID),
 		logger.WithClusterID(appConf.GatewayClusterID),
 		logger.WithInt("libp2p_port", appConf.AgentLibP2PPort),
