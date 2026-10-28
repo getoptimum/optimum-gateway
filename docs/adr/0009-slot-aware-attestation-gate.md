@@ -1,6 +1,6 @@
 # ADR-0009: Slot-Aware Attestation Aggregation Gate
 
-**Status:** Accepted (per-gateway jitter removed 2026-05-27; block-aware release recorded 2026-10-28)
+**Status:** Superseded by [ADR-0014](./0014-attestation-gate-benchmark.md) (gate removed 2026-10-28; per-gateway jitter removed 2026-05-27; block-aware release recorded 2026-10-28)
 **Date:** 2026-04-27
 
 **Current rule (section 4):** release 2s after the latest beacon-block arrival this slot. If none has arrived this slot, release 4s after slot start. Stop at 8s either way. The gate only holds the aggregator's emit onto mump2p.

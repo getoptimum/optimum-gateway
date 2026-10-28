@@ -11,21 +11,18 @@ import (
 
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	"github.com/getoptimum/optimum-gateway/pkg/config"
-	chainstate "github.com/getoptimum/optimum-gateway/pkg/protocol/chain_state"
 	"github.com/getoptimum/optimum-gateway/pkg/protocol/topics"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
 )
 
 var (
-	PrefixPacker          = []byte{0, 8}                     // PrefixPacker is the wire prefix marking a payload as packer-encoded aggregated attestations.
-	PrefixNaive           = []byte{0, 7}                     // PrefixNaive is the wire prefix marking a payload as a naive proto-marshaled aggregated Msg.
-	blockSeenPublishDelay = (2 * time.Second).Milliseconds() // blockSeenPublishDelay is the delay after a block is seen before attestations are released for publishing.
+	PrefixPacker = []byte{0, 8} // PrefixPacker is the wire prefix marking a payload as packer-encoded aggregated attestations.
+	PrefixNaive  = []byte{0, 7} // PrefixNaive is the wire prefix marking a payload as a naive proto-marshaled aggregated Msg.
 )
 
 // Emitter publishes the marshaled protobuf blob (e.g., single libp2p topic).
 type Emitter interface {
 	EmitAggregatedMessage(payload []byte)
-	LastBlockReceivedMs() int64
 }
 
 type AggregateItem struct {
@@ -178,58 +175,9 @@ func (a *Service) loop() {
 			}
 			byTopic[it.Topic] = append(byTopic[it.Topic], it.Data)
 		case <-t.C:
-			// Slot-aware gate (ADR-0009): hold the mump2p emit until 2s after the
-			// latest beacon-block arrival this slot, or 4s without one; stop at 8s.
-			// Accumulation continues regardless — only the emit is suppressed.
-			if a.shouldHoldForSlotGate(time.Now()) {
-				continue
-			}
 			buildAndEmit()
 		}
 	}
-}
-
-// shouldHoldForSlotGate reports whether the aggregator should keep accumulating
-// without emitting. See ADR-0009.
-//
-// Release is 2s after the latest beacon-block arrival this slot on either path,
-// or 4s after slot start without one. A later arrival re-holds an open window.
-// The window closes 8s into the slot. A non-positive fallback gate disables the
-// hold.
-func (a *Service) shouldHoldForSlotGate(now time.Time) bool {
-	if a.cfg == nil {
-		return false
-	}
-	noBlockFallback := a.cfg.GetAttestationPublishGate()
-	if noBlockFallback <= 0 {
-		return false
-	}
-
-	slotStart := chainstate.SlotStartTime(chainstate.CurrentSlot(now))
-	elapsed := now.Sub(slotStart)
-	lastBlockMs := a.em.LastBlockReceivedMs()
-
-	// Block-aware gate (#620): emit when block seen + 2s, else at no-block fallback (default 4s).
-	shouldEmit := false
-	if lastBlockMs > 0 && lastBlockMs > slotStart.UnixMilli() {
-		// Block this slot (ignore stale timestamps from earlier slots).
-		shouldEmit = now.UnixMilli() >= lastBlockMs+blockSeenPublishDelay
-	} else if now.UnixMilli() >= slotStart.Add(noBlockFallback).UnixMilli() {
-		// No block by fallback deadline: release attestations anyway.
-		shouldEmit = true
-	}
-
-	if !shouldEmit {
-		return true // still before gate release
-	}
-
-	// After cap: window closed for this slot, hold until next slot's gate.
-	publishCap := a.cfg.GetAttestationPublishCap()
-	if publishCap > 0 && elapsed >= publishCap {
-		return true
-	}
-
-	return false
 }
 
 func (a *Service) currentInterval() time.Duration {
