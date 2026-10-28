@@ -60,18 +60,18 @@
   },
   "components": [
     {
-      "bom-ref": "pkg:golang/cloud.google.com/go/auth@v0.18.2?type=module",
+      "bom-ref": "pkg:golang/cloud.google.com/go/auth@v0.23.2?type=module",
       "type": "library",
       "name": "cloud.google.com/go/auth",
-      "version": "v0.18.2",
+      "version": "v0.23.2",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "f8d6ede44bf4c44ab194d8dde9cfb26147a8b10e53b4451a35c37fdc5a3395a3"
+          "content": "a71482a5f8a38b8d61a73a4f74c09fb445027b3a60a6a9a60dd62202308a5f1a"
         }
       ],
-      "purl": "pkg:golang/cloud.google.com/go/auth@v0.18.2?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/cloud.google.com/go/auth@v0.23.2?goarch=amd64&goos=linux&type=module",
       "evidence": {
         "licenses": [
           {
@@ -175,18 +175,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azcore@v1.21.0?type=module",
+      "bom-ref": "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azcore@v1.22.0?type=module",
       "type": "library",
       "name": "github.com/Azure/azure-sdk-for-go/sdk/azcore",
-      "version": "v1.21.0",
+      "version": "v1.22.0",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "7e8bbedbe5854e26f8ee74be9f3fe8ce11019ef53de9b287cba2e346c638136f"
+          "content": "6a8928a9c1ef6868e23375698ca0df30c9c5ffc7a927e4351cb27b0ae773b6a1"
         }
       ],
-      "purl": "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azcore@v1.21.0?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azcore@v1.22.0?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/Azure/azure-sdk-for-go/sdk/azcore",
@@ -204,18 +204,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azidentity@v1.13.1?type=module",
+      "bom-ref": "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azidentity@v1.14.0?type=module",
       "type": "library",
       "name": "github.com/Azure/azure-sdk-for-go/sdk/azidentity",
-      "version": "v1.13.1",
+      "version": "v1.14.0",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "1e4e500716500b58dbd85c23ea6a7399edfbc5b08374d4f153b3bd79be7e2c1e"
+          "content": "094e3e1097898b74ca61611c62e49d5ac8f3c349d5b0afc7d0c4903a23dcca65"
         }
       ],
-      "purl": "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azidentity@v1.13.1?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azidentity@v1.14.0?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/Azure/azure-sdk-for-go/sdk/azidentity",
@@ -233,18 +233,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/internal@v1.11.2?type=module",
+      "bom-ref": "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/internal@v1.12.0?type=module",
       "type": "library",
       "name": "github.com/Azure/azure-sdk-for-go/sdk/internal",
-      "version": "v1.11.2",
+      "version": "v1.12.0",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "f6279f0a595aee26297d859dccf0910e8cdd9a77634e6f035dda42ccf6a33200"
+          "content": "7e1aa92c4dd41178bd94f68146943a5ee456d2753b860838ce599965af9af6ae"
         }
       ],
-      "purl": "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/internal@v1.11.2?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/internal@v1.12.0?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/Azure/azure-sdk-for-go/sdk/internal",
@@ -262,18 +262,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/AzureAD/microsoft-authentication-library-for-go@v1.6.0?type=module",
+      "bom-ref": "pkg:golang/github.com/AzureAD/microsoft-authentication-library-for-go@v1.7.2?type=module",
       "type": "library",
       "name": "github.com/AzureAD/microsoft-authentication-library-for-go",
-      "version": "v1.6.0",
+      "version": "v1.7.2",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "5d1ce155e997760bc9a821f4b057eb0544e7509481ac17fbfbeca993eb70b51b"
+          "content": "4472bb6d2f8740cb256f5b19a40a2452dfb34d59ae7b484a4acd82efdd618735"
         }
       ],
-      "purl": "pkg:golang/github.com/AzureAD/microsoft-authentication-library-for-go@v1.6.0?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/AzureAD/microsoft-authentication-library-for-go@v1.7.2?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/AzureAD/microsoft-authentication-library-for-go",
@@ -291,18 +291,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/MicahParks/jwkset@v0.11.1?type=module",
+      "bom-ref": "pkg:golang/github.com/MicahParks/jwkset@v0.11.3?type=module",
       "type": "library",
       "name": "github.com/MicahParks/jwkset",
-      "version": "v0.11.1",
+      "version": "v0.11.3",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "1abfba25e62827bb70ab20467fc317c63d8d48228fa17f1114cb5ecb7198f4dc"
+          "content": "3e1962e117530dd21d2d7669b8eeda6e4c19cb3224d110d350f5550473d17644"
         }
       ],
-      "purl": "pkg:golang/github.com/MicahParks/jwkset@v0.11.1?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/MicahParks/jwkset@v0.11.3?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/MicahParks/jwkset",
@@ -320,18 +320,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/MicahParks/keyfunc/v3@v3.8.1?type=module",
+      "bom-ref": "pkg:golang/github.com/MicahParks/keyfunc/v3@v3.8.2?type=module",
       "type": "library",
       "name": "github.com/MicahParks/keyfunc/v3",
-      "version": "v3.8.1",
+      "version": "v3.8.2",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "551de3944b36c33d711a3bd45305077a807e789ea052706ba67201c91aed8fa8"
+          "content": "7b2744c24fe904056b0c8a6615f07f82409cae9fbec50ed86178abac8db39561"
         }
       ],
-      "purl": "pkg:golang/github.com/MicahParks/keyfunc/v3@v3.8.1?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/MicahParks/keyfunc/v3@v3.8.2?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/MicahParks/keyfunc",
@@ -407,18 +407,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.41.4?type=module",
+      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.43.4?type=module",
       "type": "library",
       "name": "github.com/aws/aws-sdk-go-v2",
-      "version": "v1.41.4",
+      "version": "v1.43.4",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "d747f9d06ed6c94d364f9ea8c75c165eafb34d7f48d73c46e3a1d8b86d611ff9"
+          "content": "6fd153bdb470cbe242b1fa765a9eb057f29b3b1dc08fb9e4a056f67115f42211"
         }
       ],
-      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.41.4?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.43.4?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/aws/aws-sdk-go-v2",
@@ -436,18 +436,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/config@v1.32.12?type=module",
+      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/config@v1.32.35?type=module",
       "type": "library",
       "name": "github.com/aws/aws-sdk-go-v2/config",
-      "version": "v1.32.12",
+      "version": "v1.32.35",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "3b772c0bb1d41a7dbcf7978dacbcad38941da0bdb1c89cb48985e1a19d4e98fd"
+          "content": "504cd7b844fc138da5c413e28ee002bbfb442bbbf99453e593443e193e560fd1"
         }
       ],
-      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/config@v1.32.12?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/config@v1.32.35?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/aws/aws-sdk-go-v2/config",
@@ -465,18 +465,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/credentials@v1.19.12?type=module",
+      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/credentials@v1.19.34?type=module",
       "type": "library",
       "name": "github.com/aws/aws-sdk-go-v2/credentials",
-      "version": "v1.19.12",
+      "version": "v1.19.34",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "a2ab40eaffb2e5f660fffb5c4d66a1c8df4f127e5e0d4fd6a6f736fa4278698f"
+          "content": "cba1a44a672fe66c9dd6782b61b1a688b97042a07a4d084eb8dfed6d24ae5836"
         }
       ],
-      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/credentials@v1.19.12?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/credentials@v1.19.34?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/aws/aws-sdk-go-v2/credentials",
@@ -494,18 +494,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/feature/ec2/imds@v1.18.20?type=module",
+      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/feature/ec2/imds@v1.18.35?type=module",
       "type": "library",
       "name": "github.com/aws/aws-sdk-go-v2/feature/ec2/imds",
-      "version": "v1.18.20",
+      "version": "v1.18.35",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "cce82adee7b39799f39dfa0adce0eea9b8558352730060d48573ac534203080a"
+          "content": "f92ee46c9a0b0c3439b44fa51eb50180c9330bc34b82c6a2a12d85ddd5681401"
         }
       ],
-      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/feature/ec2/imds@v1.18.20?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/feature/ec2/imds@v1.18.35?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/aws/aws-sdk-go-v2/feature/ec2/imds",
@@ -523,18 +523,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.20?type=module",
+      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.35?type=module",
       "type": "library",
       "name": "github.com/aws/aws-sdk-go-v2/internal/configsources",
-      "version": "v1.4.20",
+      "version": "v1.4.35",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "08d5ceee6be04e1146a8e1606cd00fda7a25daa01604e19fa91ffbb5096f2e67"
+          "content": "93356e1a56ad42d6229f0049104c8b01b8207a90a86afa2c89a1c75fdf9f0fe7"
         }
       ],
-      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.20?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.35?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/aws/aws-sdk-go-v2/internal/configsources",
@@ -552,18 +552,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.20?type=module",
+      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.35?type=module",
       "type": "library",
       "name": "github.com/aws/aws-sdk-go-v2/internal/endpoints/v2",
-      "version": "v2.7.20",
+      "version": "v2.7.35",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "b4de96fe183ea6433eb5ff570e45946c312318b6feadaa01305b13a1d72860ac"
+          "content": "58ae828e2853b8b8ac0a348a29b8a5749efdb0665981b073de235aed5b0a2215"
         }
       ],
-      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.20?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.35?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/aws/aws-sdk-go-v2/internal/endpoints",
@@ -581,21 +581,21 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/ini@v1.8.6?type=module",
+      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/v4a@v1.4.36?type=module",
       "type": "library",
-      "name": "github.com/aws/aws-sdk-go-v2/internal/ini",
-      "version": "v1.8.6",
+      "name": "github.com/aws/aws-sdk-go-v2/internal/v4a",
+      "version": "v1.4.36",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "a98438a734363b3e96a50f13dc7bc61e7672740ef63272ee14af6d2709ab6c7c"
+          "content": "8db198e025cbcd9125397806b1ec650b71e2fb760cd2b4a6938a291572aa83f9"
         }
       ],
-      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/ini@v1.8.6?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/v4a@v1.4.36?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
-          "url": "https://github.com/aws/aws-sdk-go-v2/internal/ini",
+          "url": "https://github.com/aws/aws-sdk-go-v2/internal/v4a",
           "type": "vcs"
         }
       ],
@@ -610,18 +610,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding@v1.13.7?type=module",
+      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding@v1.13.15?type=module",
       "type": "library",
       "name": "github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding",
-      "version": "v1.13.7",
+      "version": "v1.13.15",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "e449e22a12d97b8c732fb6be7d4dc2dad7d43789d622a94b7ac7eb8e4b8f1536"
+          "content": "2492c1431c18f80170b8f022e62bc67350a19d3754b7871732fedeefa9b673f6"
         }
       ],
-      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding@v1.13.7?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding@v1.13.15?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding",
@@ -639,18 +639,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/presigned-url@v1.13.20?type=module",
+      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/presigned-url@v1.13.35?type=module",
       "type": "library",
       "name": "github.com/aws/aws-sdk-go-v2/service/internal/presigned-url",
-      "version": "v1.13.20",
+      "version": "v1.13.35",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "d87bd5008abe62a806a2d2ba12431ff8a204a93212993621e732e9632793a356"
+          "content": "04110494a8786beacab21be3adfa5a8d37bd09ba59beb6dbe09920d8f07b4730"
         }
       ],
-      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/presigned-url@v1.13.20?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/presigned-url@v1.13.35?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/aws/aws-sdk-go-v2/service/internal/presigned-url",
@@ -668,18 +668,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/signin@v1.0.8?type=module",
+      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/signin@v1.5.4?type=module",
       "type": "library",
       "name": "github.com/aws/aws-sdk-go-v2/service/signin",
-      "version": "v1.0.8",
+      "version": "v1.5.4",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "d0614e2f311b3b2640052dcf8587c1231dab34100261c2adcbe5c6913830d68c"
+          "content": "70e2442d536bab943751daf2d862ee1d433b321c2979a4117586a86ba188ff22"
         }
       ],
-      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/signin@v1.0.8?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/signin@v1.5.4?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/aws/aws-sdk-go-v2/service/signin",
@@ -697,18 +697,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sso@v1.30.13?type=module",
+      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sso@v1.33.4?type=module",
       "type": "library",
       "name": "github.com/aws/aws-sdk-go-v2/service/sso",
-      "version": "v1.30.13",
+      "version": "v1.33.4",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "9222032d9d34e4470aa26618213b5fb239fb76d3b01c3385cbb21b3d729e936a"
+          "content": "00c5bb6bb4bc8906878c1619754dcf0aae062913e28d33d101cedee97b444e16"
         }
       ],
-      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sso@v1.30.13?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sso@v1.33.4?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/aws/aws-sdk-go-v2/service/sso",
@@ -726,18 +726,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/ssooidc@v1.35.17?type=module",
+      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/ssooidc@v1.38.4?type=module",
       "type": "library",
       "name": "github.com/aws/aws-sdk-go-v2/service/ssooidc",
-      "version": "v1.35.17",
+      "version": "v1.38.4",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "8f32805c896166125b9d8c076ef51064407c29f80012e1b475cd3c06475aecd5"
+          "content": "02c6d97090103d19870c91bc2b5374a687ffd733d68d54fc4c59535ae18b4afa"
         }
       ],
-      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/ssooidc@v1.35.17?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/ssooidc@v1.38.4?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/aws/aws-sdk-go-v2/service/ssooidc",
@@ -755,18 +755,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sts@v1.41.9?type=module",
+      "bom-ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sts@v1.45.4?type=module",
       "type": "library",
       "name": "github.com/aws/aws-sdk-go-v2/service/sts",
-      "version": "v1.41.9",
+      "version": "v1.45.4",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "0a783e38ec021e61658d7231a445570063270626bc31253a0a1e62f4f80191c5"
+          "content": "c3f02bc8360c8d2500352436ba8671268bd4b0c4f0589353bf720c7b1df463ee"
         }
       ],
-      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sts@v1.41.9?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sts@v1.45.4?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/aws/aws-sdk-go-v2/service/sts",
@@ -784,18 +784,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/aws/smithy-go@v1.24.2?type=module",
+      "bom-ref": "pkg:golang/github.com/aws/smithy-go@v1.27.6?type=module",
       "type": "library",
       "name": "github.com/aws/smithy-go",
-      "version": "v1.24.2",
+      "version": "v1.27.6",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "1730376eefe7b7fbc3be69e483e47c5e5e3a826cc40da9ba999d61ce6c171678"
+          "content": "d338d3f2380ade36eb4d3ec9277104e89b0c857f094eb67e7f5b049dd6035eb0"
         }
       ],
-      "purl": "pkg:golang/github.com/aws/smithy-go@v1.24.2?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/aws/smithy-go@v1.27.6?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/aws/smithy-go",
@@ -1268,18 +1268,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.2.0?type=module",
+      "bom-ref": "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.3.1-0.20261028001421-86e1818fedcb?type=module",
       "type": "library",
       "name": "github.com/getoptimum/mump2p-protocol",
-      "version": "v0.2.0",
+      "version": "v0.3.1-0.20261028001421-86e1818fedcb",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "6326b434d72dc0296692bcb4f7f154c001e4f2386a8988194241d33f422901b1"
+          "content": "40377cdec719fd4efb58139ad8a974cbf5a36ac476836b963a6de60de7fc337b"
         }
       ],
-      "purl": "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.2.0?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.3.1-0.20261028001421-86e1818fedcb?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/getoptimum/mump2p-protocol",
@@ -1288,18 +1288,18 @@
       ]
     },
     {
-      "bom-ref": "pkg:golang/github.com/getoptimum/optimum-common@v0.1.8?type=module",
+      "bom-ref": "pkg:golang/github.com/getoptimum/optimum-common@v0.1.11?type=module",
       "type": "library",
       "name": "github.com/getoptimum/optimum-common",
-      "version": "v0.1.8",
+      "version": "v0.1.11",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "61094d9e1730051330370ad3ec5a0949a862dc84bd1b78858a661fe05cc91cd2"
+          "content": "ef5a3d4d524999d9848f13667f29f6b6fe0ebe31b746d12518b144da2c05eb7c"
         }
       ],
-      "purl": "pkg:golang/github.com/getoptimum/optimum-common@v0.1.8?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/getoptimum/optimum-common@v0.1.11?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/getoptimum/optimum-common",
@@ -1337,18 +1337,18 @@
       ]
     },
     {
-      "bom-ref": "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module",
+      "bom-ref": "pkg:golang/github.com/go-logr/logr@v1.4.4?type=module",
       "type": "library",
       "name": "github.com/go-logr/logr",
-      "version": "v1.4.3",
+      "version": "v1.4.4",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "0a39c3947abc8a47fa138f76aba78a6e818e0b44fc08368ebe41c2220f227442"
+          "content": "b46e3187dc8cb110808a874b553c72ae4cd267dfa8d0bd4a83ff9c3d571b3fff"
         }
       ],
-      "purl": "pkg:golang/github.com/go-logr/logr@v1.4.3?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/go-logr/logr@v1.4.4?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/go-logr/logr",
@@ -1830,18 +1830,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/googleapis/enterprise-certificate-proxy@v0.3.14?type=module",
+      "bom-ref": "pkg:golang/github.com/googleapis/enterprise-certificate-proxy@v0.3.20?type=module",
       "type": "library",
       "name": "github.com/googleapis/enterprise-certificate-proxy",
-      "version": "v0.3.14",
+      "version": "v0.3.20",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "ca1f2772ab1b518e2c8510f9740e919738c9693e218b790823ecd8c3cc262dbf"
+          "content": "b7fc4beb8554a0debd32e31142e2444ea6063b0e19f6649124af5ea4812dc059"
         }
       ],
-      "purl": "pkg:golang/github.com/googleapis/enterprise-certificate-proxy@v0.3.14?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/googleapis/enterprise-certificate-proxy@v0.3.20?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/googleapis/enterprise-certificate-proxy",
@@ -1859,18 +1859,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/googleapis/gax-go/v2@v2.18.0?type=module",
+      "bom-ref": "pkg:golang/github.com/googleapis/gax-go/v2@v2.24.0?type=module",
       "type": "library",
       "name": "github.com/googleapis/gax-go/v2",
-      "version": "v2.18.0",
+      "version": "v2.24.0",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "8f13f952ea376f19b733a806b55f783f89658957ada020785a4db1f1003ce8b2"
+          "content": "9b231a3d8c85f4c79c126bd0a8caa8988c27f6dff828264df6a9f0b12efac258"
         }
       ],
-      "purl": "pkg:golang/github.com/googleapis/gax-go/v2@v2.18.0?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/googleapis/gax-go/v2@v2.24.0?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/googleapis/gax-go",
@@ -2381,18 +2381,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/klauspost/compress@v1.19.1?type=module",
+      "bom-ref": "pkg:golang/github.com/klauspost/compress@v1.20.1?type=module",
       "type": "library",
       "name": "github.com/klauspost/compress",
-      "version": "v1.19.1",
+      "version": "v1.20.1",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "56c0781cfb308a1ee6999f1695e48543be5cfd48b5338b6b5f9a00b099e14a59"
+          "content": "4fb90a1255d4317ad427613d421421c45b5c2b9acfc8b76c199bdd6cb30f7624"
         }
       ],
-      "purl": "pkg:golang/github.com/klauspost/compress@v1.19.1?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/klauspost/compress@v1.20.1?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/klauspost/compress",
@@ -4672,18 +4672,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/prometheus/client_golang@v1.24.1?type=module",
+      "bom-ref": "pkg:golang/github.com/prometheus/client_golang@v1.25.0?type=module",
       "type": "library",
       "name": "github.com/prometheus/client_golang",
-      "version": "v1.24.1",
+      "version": "v1.25.0",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "2672644445f35b151d0ae3c5a4859988f8aca53f71555e7dba2bb24766cf9675"
+          "content": "703b56d53705b0c8b544973c921c02281e15873c15d3868aa9b62d34e5ee88ad"
         }
       ],
-      "purl": "pkg:golang/github.com/prometheus/client_golang@v1.24.1?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/prometheus/client_golang@v1.25.0?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/prometheus/client_golang",
@@ -4759,18 +4759,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/prometheus/common@v0.70.1?type=module",
+      "bom-ref": "pkg:golang/github.com/prometheus/common@v0.72.0?type=module",
       "type": "library",
       "name": "github.com/prometheus/common",
-      "version": "v0.70.1",
+      "version": "v0.72.0",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "d47be33f80f9a0bdedf11b0f970c40f689efbd2b63b481d81395eebb03a2fcf6"
+          "content": "b4062c13eb0f2712277030286e6e07e5a4239a8c7d67110822a3db89f7daf06e"
         }
       ],
-      "purl": "pkg:golang/github.com/prometheus/common@v0.70.1?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/prometheus/common@v0.72.0?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/prometheus/common",
@@ -4817,18 +4817,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/github.com/prometheus/procfs@v0.21.1?type=module",
+      "bom-ref": "pkg:golang/github.com/prometheus/procfs@v0.22.0?type=module",
       "type": "library",
       "name": "github.com/prometheus/procfs",
-      "version": "v0.21.1",
+      "version": "v0.22.0",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "1a58d90adfb34934be359abcf1cc90d4b8d9f91087a77b95b9a6c1580e7e3892"
+          "content": "eaaf7efc92fd20a00f6c2981aeff67e4ee53cb734a9dc895e57ed81b0d2889cb"
         }
       ],
-      "purl": "pkg:golang/github.com/prometheus/procfs@v0.21.1?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/prometheus/procfs@v0.22.0?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/prometheus/procfs",
@@ -5563,18 +5563,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.69.0?type=module",
+      "bom-ref": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.70.0?type=module",
       "type": "library",
       "name": "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
-      "version": "v0.69.0",
+      "version": "v0.70.0",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "f2dbc8083e2f49338eb0daec2382e37fa0bee942afa53107e5763724ca323e8a"
+          "content": "2ccbb2080c9f6a54a30f28dd0bae672ba374ce84d3eb7f84feef795f4268bd92"
         }
       ],
-      "purl": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.69.0?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.70.0?goarch=amd64&goos=linux&type=module",
       "evidence": {
         "licenses": [
           {
@@ -5586,18 +5586,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/go.opentelemetry.io/otel@v1.44.0?type=module",
+      "bom-ref": "pkg:golang/go.opentelemetry.io/otel@v1.45.0?type=module",
       "type": "library",
       "name": "go.opentelemetry.io/otel",
-      "version": "v1.44.0",
+      "version": "v1.45.0",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "263c07987a40e22677c01c65baed9f6db13b8f892a944f235f20323d71fb1ea5"
+          "content": "a5dad698b1e87e9b9b980ac1bf52e0152bf567421efe9a5d673bbe91437911e5"
         }
       ],
-      "purl": "pkg:golang/go.opentelemetry.io/otel@v1.44.0?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/go.opentelemetry.io/otel@v1.45.0?goarch=amd64&goos=linux&type=module",
       "evidence": {
         "licenses": [
           {
@@ -5609,18 +5609,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/go.opentelemetry.io/otel/metric@v1.44.0?type=module",
+      "bom-ref": "pkg:golang/go.opentelemetry.io/otel/metric@v1.45.0?type=module",
       "type": "library",
       "name": "go.opentelemetry.io/otel/metric",
-      "version": "v1.44.0",
+      "version": "v1.45.0",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "d70d2020b4dc1ddaf7608fa2c4bca37a6c2b567b0c5116d3645ad26027437667"
+          "content": "ec4835b87ec2279717bfd8acead9c17b5148eab8f59f051d6c5ca9466ddbaff3"
         }
       ],
-      "purl": "pkg:golang/go.opentelemetry.io/otel/metric@v1.44.0?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/go.opentelemetry.io/otel/metric@v1.45.0?goarch=amd64&goos=linux&type=module",
       "evidence": {
         "licenses": [
           {
@@ -5632,18 +5632,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/go.opentelemetry.io/otel/trace@v1.44.0?type=module",
+      "bom-ref": "pkg:golang/go.opentelemetry.io/otel/trace@v1.45.0?type=module",
       "type": "library",
       "name": "go.opentelemetry.io/otel/trace",
-      "version": "v1.44.0",
+      "version": "v1.45.0",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "8f11790ac19809eef8302471d97e20ed6b18fd504a46aaa936f5e55ffea0b489"
+          "content": "97f98fe94bfba0d3bbfd36e56e1a5b80c89dc61ab5b8efeb3ec8a43b2561c5a8"
         }
       ],
-      "purl": "pkg:golang/go.opentelemetry.io/otel/trace@v1.44.0?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/go.opentelemetry.io/otel/trace@v1.45.0?goarch=amd64&goos=linux&type=module",
       "evidence": {
         "licenses": [
           {
@@ -5839,18 +5839,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
+      "bom-ref": "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
       "type": "library",
       "name": "golang.org/x/crypto",
-      "version": "v0.55.0",
+      "version": "v0.57.0",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "f8a5878db80e68043ae9d87f625919287973f59525abad40162ac047d9ed3fc3"
+          "content": "dd95428dff06833ef39de47f107455c7af02b5ffb6a6620c3f6505861f5c0ba3"
         }
       ],
-      "purl": "pkg:golang/golang.org/x/crypto@v0.55.0?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/golang.org/x/crypto@v0.57.0?goarch=amd64&goos=linux&type=module",
       "evidence": {
         "licenses": [
           {
@@ -5885,18 +5885,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/golang.org/x/net@v0.58.0?type=module",
+      "bom-ref": "pkg:golang/golang.org/x/net@v0.59.0?type=module",
       "type": "library",
       "name": "golang.org/x/net",
-      "version": "v0.58.0",
+      "version": "v0.59.0",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "ca7586eeba988b871ca5312e3d9d901961e4b5510cf433028fdcb30c4d10ed3a"
+          "content": "e737d8967fb0e570b1c2b9cc3093ee7d180da1711a1b1974c28e46a8f5f2b9eb"
         }
       ],
-      "purl": "pkg:golang/golang.org/x/net@v0.58.0?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/golang.org/x/net@v0.59.0?goarch=amd64&goos=linux&type=module",
       "evidence": {
         "licenses": [
           {
@@ -5908,18 +5908,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
+      "bom-ref": "pkg:golang/golang.org/x/oauth2@v0.37.0?type=module",
       "type": "library",
       "name": "golang.org/x/oauth2",
-      "version": "v0.36.0",
+      "version": "v0.37.0",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "a5e67fd73dbb7e2f6150e142019687caba561b99707b444910411e1f44e1948b"
+          "content": "25495cc40f2802d6ae2df887f055f6fc590058701d8b442d18219cfa1a1f13df"
         }
       ],
-      "purl": "pkg:golang/golang.org/x/oauth2@v0.36.0?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/golang.org/x/oauth2@v0.37.0?goarch=amd64&goos=linux&type=module",
       "evidence": {
         "licenses": [
           {
@@ -5931,18 +5931,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/golang.org/x/sync@v0.22.0?type=module",
+      "bom-ref": "pkg:golang/golang.org/x/sync@v0.23.0?type=module",
       "type": "library",
       "name": "golang.org/x/sync",
-      "version": "v0.22.0",
+      "version": "v0.23.0",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "4998e96de2e6ac2938c614526453595b980551e09e1608de92f23ffa07d271e9"
+          "content": "29a99e1087dcd48925b99c9758b9f7f56778b5445ce866c28884868999b66d09"
         }
       ],
-      "purl": "pkg:golang/golang.org/x/sync@v0.22.0?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/golang.org/x/sync@v0.23.0?goarch=amd64&goos=linux&type=module",
       "evidence": {
         "licenses": [
           {
@@ -5954,18 +5954,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+      "bom-ref": "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
       "type": "library",
       "name": "golang.org/x/sys",
-      "version": "v0.47.0",
+      "version": "v0.48.0",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "a3b5c63af6500800c1410e18ed536ad9d456411ec998e516f0ac71e19b0d816b"
+          "content": "6db5ff8bfe8c813f4154b33d453d6d866c4bd38c9e4c085b133e12c9a75b5e8a"
         }
       ],
-      "purl": "pkg:golang/golang.org/x/sys@v0.47.0?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/golang.org/x/sys@v0.48.0?goarch=amd64&goos=linux&type=module",
       "evidence": {
         "licenses": [
           {
@@ -5977,18 +5977,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/golang.org/x/term@v0.45.0?type=module",
+      "bom-ref": "pkg:golang/golang.org/x/term@v0.46.0?type=module",
       "type": "library",
       "name": "golang.org/x/term",
-      "version": "v0.45.0",
+      "version": "v0.46.0",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "3705b2066a0909b7d31e9c6b5a867d0bafd5c4e7fb89cdb5f48f3165915dadfd"
+          "content": "dfe397b936da28383093c8d38b76922c7465996a871140d4b719db16280ee181"
         }
       ],
-      "purl": "pkg:golang/golang.org/x/term@v0.45.0?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/golang.org/x/term@v0.46.0?goarch=amd64&goos=linux&type=module",
       "evidence": {
         "licenses": [
           {
@@ -6000,18 +6000,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/golang.org/x/text@v0.41.0?type=module",
+      "bom-ref": "pkg:golang/golang.org/x/text@v0.42.0?type=module",
       "type": "library",
       "name": "golang.org/x/text",
-      "version": "v0.41.0",
+      "version": "v0.42.0",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "bf3fec780d259d7f3b3ad86ed9fff42f6e11720ad70fdfd81534ae1a38f7ac7f"
+          "content": "25b3995e07de08f53d81a715b5896226a3a10fece1ac4a8ae0b7dda6695466a2"
         }
       ],
-      "purl": "pkg:golang/golang.org/x/text@v0.41.0?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/golang.org/x/text@v0.42.0?goarch=amd64&goos=linux&type=module",
       "evidence": {
         "licenses": [
           {
@@ -6069,18 +6069,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/google.golang.org/api@v0.272.0?type=module",
+      "bom-ref": "pkg:golang/google.golang.org/api@v0.293.0?type=module",
       "type": "library",
       "name": "google.golang.org/api",
-      "version": "v0.272.0",
+      "version": "v0.293.0",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "78b5106469c04b73879f7d544517fdb00991937c36263331dfb77693c0232660"
+          "content": "a7d5c858e7fadd4e0e818c75db4670554f3ebe5e174cf9967e054f9e63804bdc"
         }
       ],
-      "purl": "pkg:golang/google.golang.org/api@v0.272.0?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/google.golang.org/api@v0.293.0?goarch=amd64&goos=linux&type=module",
       "evidence": {
         "licenses": [
           {
@@ -6092,18 +6092,18 @@
       }
     },
     {
-      "bom-ref": "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
+      "bom-ref": "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260819154853-08b0e4226688?type=module",
       "type": "library",
       "name": "google.golang.org/genproto/googleapis/rpc",
-      "version": "v0.0.0-20260610212136-7ab31c22f7ad",
+      "version": "v0.0.0-20260819154853-08b0e4226688",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "e395a626f215e82dbe3bf8e32e43d41fe17768e8ffd66883a14d830f4f8d59b8"
+          "content": "718340cc8dac53086609ca23f53c6f8a14abaacc6deae2248f7ac3461483996e"
         }
       ],
-      "purl": "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260819154853-08b0e4226688?goarch=amd64&goos=linux&type=module",
       "evidence": {
         "licenses": [
           {
@@ -6483,8 +6483,8 @@
       "ref": "pkg:golang/github.com/getoptimum/optimum-gateway@0.0.0-dev?type=module#cmd",
       "dependsOn": [
         "pkg:golang/github.com/ferranbt/fastssz@v1.0.1-0.20251203093649-0b1f38e43198?type=module",
-        "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.2.0?type=module",
-        "pkg:golang/github.com/getoptimum/optimum-common@v0.1.8?type=module",
+        "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.3.1-0.20261028001421-86e1818fedcb?type=module",
+        "pkg:golang/github.com/getoptimum/optimum-common@v0.1.11?type=module",
         "pkg:golang/github.com/gofiber/fiber/v3@v3.4.0?type=module",
         "pkg:golang/github.com/golang-jwt/jwt/v5@v5.3.1?type=module",
         "pkg:golang/github.com/golang/snappy@v1.0.0?type=module",
@@ -6499,9 +6499,9 @@
         "pkg:golang/github.com/libp2p/go-mplex@v0.7.0?type=module",
         "pkg:golang/github.com/montanaflynn/stats@v0.7.1?type=module",
         "pkg:golang/github.com/multiformats/go-multiaddr@v0.16.1?type=module",
-        "pkg:golang/github.com/prometheus/client_golang@v1.24.1?type=module",
+        "pkg:golang/github.com/prometheus/client_golang@v1.25.0?type=module",
         "pkg:golang/github.com/prometheus/client_model@v0.6.3?type=module",
-        "pkg:golang/github.com/prometheus/common@v0.70.1?type=module",
+        "pkg:golang/github.com/prometheus/common@v0.72.0?type=module",
         "pkg:golang/github.com/prometheus/prometheus@v0.311.3?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
         "pkg:golang/google.golang.org/grpc@v1.83.2?type=module",
@@ -6510,31 +6510,32 @@
       ]
     },
     {
-      "ref": "pkg:golang/cloud.google.com/go/auth@v0.18.2?type=module",
+      "ref": "pkg:golang/cloud.google.com/go/auth@v0.23.2?type=module",
       "dependsOn": [
         "pkg:golang/cloud.google.com/go/compute/metadata@v0.9.0?type=module",
         "pkg:golang/github.com/cespare/xxhash/v2@v2.3.0?type=module",
         "pkg:golang/github.com/felixge/httpsnoop@v1.1.0?type=module",
-        "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module",
+        "pkg:golang/github.com/go-logr/logr@v1.4.4?type=module",
         "pkg:golang/github.com/go-logr/stdr@v1.2.2?type=module",
         "pkg:golang/github.com/google/go-cmp@v0.7.0?type=module",
         "pkg:golang/github.com/google/s2a-go@v0.1.9?type=module",
         "pkg:golang/github.com/google/uuid@v1.6.0?type=module",
-        "pkg:golang/github.com/googleapis/enterprise-certificate-proxy@v0.3.14?type=module",
-        "pkg:golang/github.com/googleapis/gax-go/v2@v2.18.0?type=module",
+        "pkg:golang/github.com/googleapis/enterprise-certificate-proxy@v0.3.20?type=module",
+        "pkg:golang/github.com/googleapis/gax-go/v2@v2.24.0?type=module",
         "pkg:golang/go.opentelemetry.io/auto/sdk@v1.2.1?type=module",
-        "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.69.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/metric@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/trace@v1.44.0?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
-        "pkg:golang/golang.org/x/sync@v0.22.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
+        "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.70.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/metric@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/trace@v1.45.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/oauth2@v0.37.0?type=module",
+        "pkg:golang/golang.org/x/sync@v0.23.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module",
         "pkg:golang/golang.org/x/time@v0.15.0?type=module",
-        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
+        "pkg:golang/google.golang.org/api@v0.293.0?type=module",
+        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260819154853-08b0e4226688?type=module",
         "pkg:golang/google.golang.org/grpc@v1.83.2?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module"
       ]
@@ -6542,15 +6543,15 @@
     {
       "ref": "pkg:golang/cloud.google.com/go/auth/oauth2adapt@v0.2.8?type=module",
       "dependsOn": [
-        "pkg:golang/cloud.google.com/go/auth@v0.18.2?type=module",
+        "pkg:golang/cloud.google.com/go/auth@v0.23.2?type=module",
         "pkg:golang/cloud.google.com/go/compute/metadata@v0.9.0?type=module",
         "pkg:golang/github.com/google/go-cmp@v0.7.0?type=module",
-        "pkg:golang/github.com/googleapis/enterprise-certificate-proxy@v0.3.14?type=module",
-        "pkg:golang/github.com/googleapis/gax-go/v2@v2.18.0?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
+        "pkg:golang/github.com/googleapis/enterprise-certificate-proxy@v0.3.20?type=module",
+        "pkg:golang/github.com/googleapis/gax-go/v2@v2.24.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/oauth2@v0.37.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260819154853-08b0e4226688?type=module",
         "pkg:golang/google.golang.org/grpc@v1.83.2?type=module"
       ]
     },
@@ -6558,93 +6559,93 @@
       "ref": "pkg:golang/cloud.google.com/go/compute/metadata@v0.9.0?type=module",
       "dependsOn": [
         "pkg:golang/github.com/google/go-cmp@v0.7.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module"
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module"
       ]
     },
     {
       "ref": "pkg:golang/filippo.io/bigmod@v0.1.1-0.20260103110540-f8a47775ebe5?type=module",
       "dependsOn": [
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module"
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module"
       ]
     },
     {
       "ref": "pkg:golang/filippo.io/keygen@v0.0.0-20260114151900-8e2790ea4c5b?type=module",
       "dependsOn": [
         "pkg:golang/filippo.io/bigmod@v0.1.1-0.20260103110540-f8a47775ebe5?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module"
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azcore@v1.21.0?type=module",
+      "ref": "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azcore@v1.22.0?type=module",
       "dependsOn": [
-        "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/internal@v1.11.2?type=module",
+        "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/internal@v1.12.0?type=module",
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azidentity@v1.13.1?type=module",
+      "ref": "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azidentity@v1.14.0?type=module",
       "dependsOn": [
-        "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azcore@v1.21.0?type=module",
-        "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/internal@v1.11.2?type=module",
-        "pkg:golang/github.com/AzureAD/microsoft-authentication-library-for-go@v1.6.0?type=module",
-        "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
-        "pkg:golang/github.com/golang-jwt/jwt/v5@v5.3.1?type=module",
-        "pkg:golang/github.com/google/uuid@v1.6.0?type=module",
-        "pkg:golang/github.com/kylelemons/godebug@v1.1.0?type=module",
-        "pkg:golang/github.com/pkg/browser@v0.0.0-20240102092130-5ac0b6a4141c?type=module",
-        "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
-        "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
-      ]
-    },
-    {
-      "ref": "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/internal@v1.11.2?type=module",
-      "dependsOn": [
-        "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azcore@v1.21.0?type=module",
-        "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azidentity@v1.13.1?type=module",
-        "pkg:golang/github.com/AzureAD/microsoft-authentication-library-for-go@v1.6.0?type=module",
+        "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azcore@v1.22.0?type=module",
+        "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/internal@v1.12.0?type=module",
+        "pkg:golang/github.com/AzureAD/microsoft-authentication-library-for-go@v1.7.2?type=module",
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
         "pkg:golang/github.com/golang-jwt/jwt/v5@v5.3.1?type=module",
         "pkg:golang/github.com/google/uuid@v1.6.0?type=module",
         "pkg:golang/github.com/kylelemons/godebug@v1.1.0?type=module",
         "pkg:golang/github.com/pkg/browser@v0.0.0-20240102092130-5ac0b6a4141c?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/github.com/AzureAD/microsoft-authentication-library-for-go@v1.6.0?type=module",
+      "ref": "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/internal@v1.12.0?type=module",
+      "dependsOn": [
+        "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azcore@v1.22.0?type=module",
+        "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azidentity@v1.14.0?type=module",
+        "pkg:golang/github.com/AzureAD/microsoft-authentication-library-for-go@v1.7.2?type=module",
+        "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
+        "pkg:golang/github.com/golang-jwt/jwt/v5@v5.3.1?type=module",
+        "pkg:golang/github.com/google/uuid@v1.6.0?type=module",
+        "pkg:golang/github.com/kylelemons/godebug@v1.1.0?type=module",
+        "pkg:golang/github.com/pkg/browser@v0.0.0-20240102092130-5ac0b6a4141c?type=module",
+        "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module",
+        "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/AzureAD/microsoft-authentication-library-for-go@v1.7.2?type=module",
       "dependsOn": [
         "pkg:golang/github.com/golang-jwt/jwt/v5@v5.3.1?type=module",
         "pkg:golang/github.com/google/uuid@v1.6.0?type=module",
         "pkg:golang/github.com/kylelemons/godebug@v1.1.0?type=module",
         "pkg:golang/github.com/montanaflynn/stats@v0.7.1?type=module",
         "pkg:golang/github.com/pkg/browser@v0.0.0-20240102092130-5ac0b6a4141c?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module"
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/github.com/MicahParks/jwkset@v0.11.1?type=module",
+      "ref": "pkg:golang/github.com/MicahParks/jwkset@v0.11.3?type=module",
       "dependsOn": [
         "pkg:golang/golang.org/x/time@v0.15.0?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/github.com/MicahParks/keyfunc/v3@v3.8.1?type=module",
+      "ref": "pkg:golang/github.com/MicahParks/keyfunc/v3@v3.8.2?type=module",
       "dependsOn": [
-        "pkg:golang/github.com/MicahParks/jwkset@v0.11.1?type=module",
+        "pkg:golang/github.com/MicahParks/jwkset@v0.11.3?type=module",
         "pkg:golang/github.com/golang-jwt/jwt/v5@v5.3.1?type=module",
         "pkg:golang/golang.org/x/time@v0.15.0?type=module"
       ]
@@ -6659,122 +6660,128 @@
       "ref": "pkg:golang/github.com/andybalholm/brotli@v1.2.2?type=module"
     },
     {
-      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.41.4?type=module",
+      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.43.4?type=module",
       "dependsOn": [
-        "pkg:golang/github.com/aws/smithy-go@v1.24.2?type=module"
+        "pkg:golang/github.com/aws/smithy-go@v1.27.6?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/config@v1.32.12?type=module",
+      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/config@v1.32.35?type=module",
       "dependsOn": [
-        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.41.4?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/credentials@v1.19.12?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/feature/ec2/imds@v1.18.20?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.20?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.20?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/ini@v1.8.6?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding@v1.13.7?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/presigned-url@v1.13.20?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/signin@v1.0.8?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sso@v1.30.13?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/ssooidc@v1.35.17?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sts@v1.41.9?type=module",
-        "pkg:golang/github.com/aws/smithy-go@v1.24.2?type=module"
+        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.43.4?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/credentials@v1.19.34?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/feature/ec2/imds@v1.18.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/v4a@v1.4.36?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding@v1.13.15?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/presigned-url@v1.13.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/signin@v1.5.4?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sso@v1.33.4?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/ssooidc@v1.38.4?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sts@v1.45.4?type=module",
+        "pkg:golang/github.com/aws/smithy-go@v1.27.6?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/credentials@v1.19.12?type=module",
+      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/credentials@v1.19.34?type=module",
       "dependsOn": [
-        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.41.4?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/feature/ec2/imds@v1.18.20?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.20?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.20?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding@v1.13.7?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/presigned-url@v1.13.20?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/signin@v1.0.8?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sso@v1.30.13?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/ssooidc@v1.35.17?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sts@v1.41.9?type=module",
-        "pkg:golang/github.com/aws/smithy-go@v1.24.2?type=module"
+        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.43.4?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/feature/ec2/imds@v1.18.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/v4a@v1.4.36?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding@v1.13.15?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/presigned-url@v1.13.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/signin@v1.5.4?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sso@v1.33.4?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/ssooidc@v1.38.4?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sts@v1.45.4?type=module",
+        "pkg:golang/github.com/aws/smithy-go@v1.27.6?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/feature/ec2/imds@v1.18.20?type=module",
+      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/feature/ec2/imds@v1.18.35?type=module",
       "dependsOn": [
-        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.41.4?type=module",
-        "pkg:golang/github.com/aws/smithy-go@v1.24.2?type=module"
+        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.43.4?type=module",
+        "pkg:golang/github.com/aws/smithy-go@v1.27.6?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.20?type=module",
+      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.35?type=module",
       "dependsOn": [
-        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.41.4?type=module",
-        "pkg:golang/github.com/aws/smithy-go@v1.24.2?type=module"
+        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.43.4?type=module",
+        "pkg:golang/github.com/aws/smithy-go@v1.27.6?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.20?type=module",
+      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.35?type=module",
       "dependsOn": [
-        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.41.4?type=module",
-        "pkg:golang/github.com/aws/smithy-go@v1.24.2?type=module"
+        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.43.4?type=module",
+        "pkg:golang/github.com/aws/smithy-go@v1.27.6?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/ini@v1.8.6?type=module"
-    },
-    {
-      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding@v1.13.7?type=module",
+      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/v4a@v1.4.36?type=module",
       "dependsOn": [
-        "pkg:golang/github.com/aws/smithy-go@v1.24.2?type=module"
+        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.43.4?type=module",
+        "pkg:golang/github.com/aws/smithy-go@v1.27.6?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/presigned-url@v1.13.20?type=module",
+      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding@v1.13.15?type=module",
       "dependsOn": [
-        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.41.4?type=module",
-        "pkg:golang/github.com/aws/smithy-go@v1.24.2?type=module"
+        "pkg:golang/github.com/aws/smithy-go@v1.27.6?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/signin@v1.0.8?type=module",
+      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/presigned-url@v1.13.35?type=module",
       "dependsOn": [
-        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.41.4?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.20?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.20?type=module",
-        "pkg:golang/github.com/aws/smithy-go@v1.24.2?type=module"
+        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.43.4?type=module",
+        "pkg:golang/github.com/aws/smithy-go@v1.27.6?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sso@v1.30.13?type=module",
+      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/signin@v1.5.4?type=module",
       "dependsOn": [
-        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.41.4?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.20?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.20?type=module",
-        "pkg:golang/github.com/aws/smithy-go@v1.24.2?type=module"
+        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.43.4?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.35?type=module",
+        "pkg:golang/github.com/aws/smithy-go@v1.27.6?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/ssooidc@v1.35.17?type=module",
+      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sso@v1.33.4?type=module",
       "dependsOn": [
-        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.41.4?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.20?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.20?type=module",
-        "pkg:golang/github.com/aws/smithy-go@v1.24.2?type=module"
+        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.43.4?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.35?type=module",
+        "pkg:golang/github.com/aws/smithy-go@v1.27.6?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sts@v1.41.9?type=module",
+      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/ssooidc@v1.38.4?type=module",
       "dependsOn": [
-        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.41.4?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.20?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.20?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding@v1.13.7?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/presigned-url@v1.13.20?type=module",
-        "pkg:golang/github.com/aws/smithy-go@v1.24.2?type=module"
+        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.43.4?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.35?type=module",
+        "pkg:golang/github.com/aws/smithy-go@v1.27.6?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/github.com/aws/smithy-go@v1.24.2?type=module"
+      "ref": "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sts@v1.45.4?type=module",
+      "dependsOn": [
+        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.43.4?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/v4a@v1.4.36?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding@v1.13.15?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/presigned-url@v1.13.35?type=module",
+        "pkg:golang/github.com/aws/smithy-go@v1.27.6?type=module"
+      ]
+    },
+    {
+      "ref": "pkg:golang/github.com/aws/smithy-go@v1.27.6?type=module"
     },
     {
       "ref": "pkg:golang/github.com/bboreham/go-loser@v0.0.0-20230920113527-fcc2c21820a3?type=module",
@@ -6797,8 +6804,8 @@
     {
       "ref": "pkg:golang/github.com/davidlazar/go-crypto@v0.0.0-20200604182044-b73af7476f6c?type=module",
       "dependsOn": [
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module"
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module"
       ]
     },
     {
@@ -6833,13 +6840,13 @@
     {
       "ref": "pkg:golang/github.com/flynn/noise@v1.1.0?type=module",
       "dependsOn": [
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module"
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module"
       ]
     },
     {
       "ref": "pkg:golang/github.com/fsnotify/fsnotify@v1.9.0?type=module",
       "dependsOn": [
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module"
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module"
       ]
     },
     {
@@ -6852,7 +6859,7 @@
       "ref": "pkg:golang/github.com/gabriel-vasile/mimetype@v1.4.13?type=module"
     },
     {
-      "ref": "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.2.0?type=module",
+      "ref": "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.3.1-0.20261028001421-86e1818fedcb?type=module",
       "dependsOn": [
         "pkg:golang/filippo.io/bigmod@v0.1.1-0.20260103110540-f8a47775ebe5?type=module",
         "pkg:golang/filippo.io/keygen@v0.0.0-20260114151900-8e2790ea4c5b?type=module",
@@ -6867,9 +6874,9 @@
         "pkg:golang/github.com/flynn/noise@v1.1.0?type=module",
         "pkg:golang/github.com/fsnotify/fsnotify@v1.9.0?type=module",
         "pkg:golang/github.com/gabriel-vasile/mimetype@v1.4.13?type=module",
-        "pkg:golang/github.com/getoptimum/optimum-common@v0.1.8?type=module",
+        "pkg:golang/github.com/getoptimum/optimum-common@v0.1.11?type=module",
         "pkg:golang/github.com/getoptimum/shm@v0.5.0?type=module",
-        "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module",
+        "pkg:golang/github.com/go-logr/logr@v1.4.4?type=module",
         "pkg:golang/github.com/go-logr/stdr@v1.2.2?type=module",
         "pkg:golang/github.com/go-playground/locales@v0.14.1?type=module",
         "pkg:golang/github.com/go-playground/universal-translator@v0.18.1?type=module",
@@ -6886,7 +6893,7 @@
         "pkg:golang/github.com/jackpal/go-nat-pmp@v1.0.2?type=module",
         "pkg:golang/github.com/jbenet/go-temp-err-catcher@v0.1.0?type=module",
         "pkg:golang/github.com/jellydator/ttlcache/v3@v3.4.0?type=module",
-        "pkg:golang/github.com/klauspost/compress@v1.19.1?type=module",
+        "pkg:golang/github.com/klauspost/compress@v1.20.1?type=module",
         "pkg:golang/github.com/klauspost/cpuid/v2@v2.3.0?type=module",
         "pkg:golang/github.com/knadh/koanf/maps@v0.1.2?type=module",
         "pkg:golang/github.com/knadh/koanf/parsers/yaml@v1.1.0?type=module",
@@ -6943,10 +6950,10 @@
         "pkg:golang/github.com/pion/transport/v4@v4.0.1?type=module",
         "pkg:golang/github.com/pion/turn/v4@v4.0.2?type=module",
         "pkg:golang/github.com/pion/webrtc/v4@v4.1.2?type=module",
-        "pkg:golang/github.com/prometheus/client_golang@v1.24.1?type=module",
+        "pkg:golang/github.com/prometheus/client_golang@v1.25.0?type=module",
         "pkg:golang/github.com/prometheus/client_model@v0.6.3?type=module",
-        "pkg:golang/github.com/prometheus/common@v0.70.1?type=module",
-        "pkg:golang/github.com/prometheus/procfs@v0.21.1?type=module",
+        "pkg:golang/github.com/prometheus/common@v0.72.0?type=module",
+        "pkg:golang/github.com/prometheus/procfs@v0.22.0?type=module",
         "pkg:golang/github.com/quic-go/qpack@v0.6.0?type=module",
         "pkg:golang/github.com/quic-go/quic-go@v0.60.0?type=module",
         "pkg:golang/github.com/quic-go/webtransport-go@v0.11.1?type=module",
@@ -6956,24 +6963,24 @@
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
         "pkg:golang/github.com/wlynxg/anet@v0.0.5?type=module",
         "pkg:golang/go.opentelemetry.io/auto/sdk@v1.2.1?type=module",
-        "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.69.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/metric@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/trace@v1.44.0?type=module",
+        "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.70.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/metric@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/trace@v1.45.0?type=module",
         "pkg:golang/go.uber.org/dig@v1.19.0?type=module",
         "pkg:golang/go.uber.org/fx@v1.24.0?type=module",
         "pkg:golang/go.uber.org/multierr@v1.11.0?type=module",
         "pkg:golang/go.uber.org/zap@v1.28.0?type=module",
         "pkg:golang/go.yaml.in/yaml/v3@v3.0.5?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
         "pkg:golang/golang.org/x/exp@v0.0.0-20260611194520-c48552f49976?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/sync@v0.22.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/term@v0.45.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/sync@v0.23.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/term@v0.46.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module",
         "pkg:golang/golang.org/x/time@v0.15.0?type=module",
-        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
+        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260819154853-08b0e4226688?type=module",
         "pkg:golang/google.golang.org/grpc@v1.83.2?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module",
@@ -6981,38 +6988,38 @@
       ]
     },
     {
-      "ref": "pkg:golang/github.com/getoptimum/optimum-common@v0.1.8?type=module",
+      "ref": "pkg:golang/github.com/getoptimum/optimum-common@v0.1.11?type=module",
       "dependsOn": [
-        "pkg:golang/cloud.google.com/go/auth@v0.18.2?type=module",
+        "pkg:golang/cloud.google.com/go/auth@v0.23.2?type=module",
         "pkg:golang/cloud.google.com/go/auth/oauth2adapt@v0.2.8?type=module",
         "pkg:golang/cloud.google.com/go/compute/metadata@v0.9.0?type=module",
-        "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azcore@v1.21.0?type=module",
-        "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azidentity@v1.13.1?type=module",
-        "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/internal@v1.11.2?type=module",
-        "pkg:golang/github.com/AzureAD/microsoft-authentication-library-for-go@v1.6.0?type=module",
-        "pkg:golang/github.com/MicahParks/jwkset@v0.11.1?type=module",
-        "pkg:golang/github.com/MicahParks/keyfunc/v3@v3.8.1?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.41.4?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/config@v1.32.12?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/credentials@v1.19.12?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/feature/ec2/imds@v1.18.20?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.20?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.20?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/ini@v1.8.6?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding@v1.13.7?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/presigned-url@v1.13.20?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/signin@v1.0.8?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sso@v1.30.13?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/ssooidc@v1.35.17?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sts@v1.41.9?type=module",
-        "pkg:golang/github.com/aws/smithy-go@v1.24.2?type=module",
+        "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azcore@v1.22.0?type=module",
+        "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azidentity@v1.14.0?type=module",
+        "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/internal@v1.12.0?type=module",
+        "pkg:golang/github.com/AzureAD/microsoft-authentication-library-for-go@v1.7.2?type=module",
+        "pkg:golang/github.com/MicahParks/jwkset@v0.11.3?type=module",
+        "pkg:golang/github.com/MicahParks/keyfunc/v3@v3.8.2?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.43.4?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/config@v1.32.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/credentials@v1.19.34?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/feature/ec2/imds@v1.18.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/v4a@v1.4.36?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding@v1.13.15?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/presigned-url@v1.13.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/signin@v1.5.4?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sso@v1.33.4?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/ssooidc@v1.38.4?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sts@v1.45.4?type=module",
+        "pkg:golang/github.com/aws/smithy-go@v1.27.6?type=module",
         "pkg:golang/github.com/beorn7/perks@v1.0.1?type=module",
         "pkg:golang/github.com/cespare/xxhash/v2@v2.3.0?type=module",
         "pkg:golang/github.com/decred/dcrd/dcrec/secp256k1/v4@v4.4.0?type=module",
         "pkg:golang/github.com/felixge/httpsnoop@v1.1.0?type=module",
         "pkg:golang/github.com/fsnotify/fsnotify@v1.9.0?type=module",
         "pkg:golang/github.com/gabriel-vasile/mimetype@v1.4.13?type=module",
-        "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module",
+        "pkg:golang/github.com/go-logr/logr@v1.4.4?type=module",
         "pkg:golang/github.com/go-logr/stdr@v1.2.2?type=module",
         "pkg:golang/github.com/go-viper/mapstructure/v2@v2.5.0?type=module",
         "pkg:golang/github.com/gobwas/glob@v0.2.3?type=module",
@@ -7021,8 +7028,8 @@
         "pkg:golang/github.com/google/go-cmp@v0.7.0?type=module",
         "pkg:golang/github.com/google/s2a-go@v0.1.9?type=module",
         "pkg:golang/github.com/google/uuid@v1.6.0?type=module",
-        "pkg:golang/github.com/googleapis/enterprise-certificate-proxy@v0.3.14?type=module",
-        "pkg:golang/github.com/googleapis/gax-go/v2@v2.18.0?type=module",
+        "pkg:golang/github.com/googleapis/enterprise-certificate-proxy@v0.3.20?type=module",
+        "pkg:golang/github.com/googleapis/gax-go/v2@v2.24.0?type=module",
         "pkg:golang/github.com/gorilla/websocket@v1.5.4-0.20250319132907-e064f32e3674?type=module",
         "pkg:golang/github.com/hashicorp/go-version@v1.9.0?type=module",
         "pkg:golang/github.com/hashicorp/golang-lru@v1.0.2?type=module",
@@ -7031,7 +7038,7 @@
         "pkg:golang/github.com/ipfs/go-datastore@v0.8.2?type=module",
         "pkg:golang/github.com/ipfs/go-log@v1.0.5?type=module",
         "pkg:golang/github.com/ipfs/go-log/v2@v2.6.0?type=module",
-        "pkg:golang/github.com/klauspost/compress@v1.19.1?type=module",
+        "pkg:golang/github.com/klauspost/compress@v1.20.1?type=module",
         "pkg:golang/github.com/klauspost/cpuid/v2@v2.3.0?type=module",
         "pkg:golang/github.com/kylelemons/godebug@v1.1.0?type=module",
         "pkg:golang/github.com/libp2p/go-buffer-pool@v0.1.0?type=module",
@@ -7049,41 +7056,43 @@
         "pkg:golang/github.com/multiformats/go-multihash@v0.2.3?type=module",
         "pkg:golang/github.com/multiformats/go-varint@v0.1.0?type=module",
         "pkg:golang/github.com/munnerz/goautoneg@v0.0.0-20191010083416-a7dc8b61c822?type=module",
+        "pkg:golang/github.com/oklog/ulid/v2@v2.1.1?type=module",
         "pkg:golang/github.com/opentracing/opentracing-go@v1.2.0?type=module",
         "pkg:golang/github.com/pkg/browser@v0.0.0-20240102092130-5ac0b6a4141c?type=module",
         "pkg:golang/github.com/polydawn/refmt@v0.89.1-0.20221221234430-40501e09de1f?type=module",
-        "pkg:golang/github.com/prometheus/client_golang@v1.24.1?type=module",
+        "pkg:golang/github.com/prometheus/client_golang@v1.25.0?type=module",
         "pkg:golang/github.com/prometheus/client_model@v0.6.3?type=module",
-        "pkg:golang/github.com/prometheus/common@v0.70.1?type=module",
-        "pkg:golang/github.com/prometheus/procfs@v0.21.1?type=module",
+        "pkg:golang/github.com/prometheus/common@v0.72.0?type=module",
+        "pkg:golang/github.com/prometheus/procfs@v0.22.0?type=module",
         "pkg:golang/github.com/spaolacci/murmur3@v1.1.0?type=module",
         "pkg:golang/github.com/spf13/cobra@v1.10.2?type=module",
         "pkg:golang/github.com/spf13/pflag@v1.0.10?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
         "pkg:golang/go.opentelemetry.io/auto/sdk@v1.2.1?type=module",
-        "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.69.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/metric@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/trace@v1.44.0?type=module",
+        "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.70.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/metric@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/trace@v1.45.0?type=module",
         "pkg:golang/go.uber.org/atomic@v1.11.0?type=module",
         "pkg:golang/go.uber.org/multierr@v1.11.0?type=module",
         "pkg:golang/go.uber.org/zap@v1.28.0?type=module",
         "pkg:golang/go.yaml.in/yaml/v2@v2.4.4?type=module",
         "pkg:golang/go.yaml.in/yaml/v3@v3.0.5?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
         "pkg:golang/golang.org/x/exp@v0.0.0-20260611194520-c48552f49976?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
-        "pkg:golang/golang.org/x/sync@v0.22.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/term@v0.45.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/oauth2@v0.37.0?type=module",
+        "pkg:golang/golang.org/x/sync@v0.23.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/term@v0.46.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module",
         "pkg:golang/golang.org/x/time@v0.15.0?type=module",
-        "pkg:golang/google.golang.org/api@v0.272.0?type=module",
-        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
+        "pkg:golang/google.golang.org/api@v0.293.0?type=module",
+        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260819154853-08b0e4226688?type=module",
         "pkg:golang/google.golang.org/grpc@v1.83.2?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module",
+        "pkg:golang/k8s.io/klog/v2@v2.140.0?type=module",
         "pkg:golang/lukechampine.com/blake3@v1.4.1?type=module",
         "pkg:golang/sigs.k8s.io/yaml@v1.6.0?type=module"
       ]
@@ -7092,18 +7101,18 @@
       "ref": "pkg:golang/github.com/getoptimum/shm@v0.5.0?type=module"
     },
     {
-      "ref": "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module"
+      "ref": "pkg:golang/github.com/go-logr/logr@v1.4.4?type=module"
     },
     {
       "ref": "pkg:golang/github.com/go-logr/stdr@v1.2.2?type=module",
       "dependsOn": [
-        "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module"
+        "pkg:golang/github.com/go-logr/logr@v1.4.4?type=module"
       ]
     },
     {
       "ref": "pkg:golang/github.com/go-playground/locales@v0.14.1?type=module",
       "dependsOn": [
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module"
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module"
       ]
     },
     {
@@ -7119,9 +7128,9 @@
         "pkg:golang/github.com/go-playground/locales@v0.14.1?type=module",
         "pkg:golang/github.com/go-playground/universal-translator@v0.18.1?type=module",
         "pkg:golang/github.com/leodido/go-urn@v1.4.0?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module"
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module"
       ]
     },
     {
@@ -7139,7 +7148,7 @@
         "pkg:golang/github.com/gofiber/schema@v1.8.0?type=module",
         "pkg:golang/github.com/gofiber/utils/v2@v2.1.1?type=module",
         "pkg:golang/github.com/google/uuid@v1.6.0?type=module",
-        "pkg:golang/github.com/klauspost/compress@v1.19.1?type=module",
+        "pkg:golang/github.com/klauspost/compress@v1.20.1?type=module",
         "pkg:golang/github.com/mattn/go-colorable@v0.1.15?type=module",
         "pkg:golang/github.com/mattn/go-isatty@v0.0.22?type=module",
         "pkg:golang/github.com/philhofer/fwd@v1.2.0?type=module",
@@ -7148,10 +7157,10 @@
         "pkg:golang/github.com/valyala/bytebufferpool@v1.0.0?type=module",
         "pkg:golang/github.com/valyala/fasthttp@v1.72.0?type=module",
         "pkg:golang/github.com/x448/float16@v0.8.4?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
@@ -7188,35 +7197,35 @@
     {
       "ref": "pkg:golang/github.com/google/gopacket@v1.1.19?type=module",
       "dependsOn": [
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module"
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module"
       ]
     },
     {
       "ref": "pkg:golang/github.com/google/s2a-go@v0.1.9?type=module",
       "dependsOn": [
-        "pkg:golang/cloud.google.com/go/auth@v0.18.2?type=module",
+        "pkg:golang/cloud.google.com/go/auth@v0.23.2?type=module",
         "pkg:golang/cloud.google.com/go/auth/oauth2adapt@v0.2.8?type=module",
         "pkg:golang/cloud.google.com/go/compute/metadata@v0.9.0?type=module",
         "pkg:golang/github.com/felixge/httpsnoop@v1.1.0?type=module",
-        "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module",
+        "pkg:golang/github.com/go-logr/logr@v1.4.4?type=module",
         "pkg:golang/github.com/go-logr/stdr@v1.2.2?type=module",
         "pkg:golang/github.com/google/go-cmp@v0.7.0?type=module",
-        "pkg:golang/github.com/googleapis/enterprise-certificate-proxy@v0.3.14?type=module",
-        "pkg:golang/github.com/googleapis/gax-go/v2@v2.18.0?type=module",
-        "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.69.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/metric@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/trace@v1.44.0?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
-        "pkg:golang/golang.org/x/sync@v0.22.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
+        "pkg:golang/github.com/googleapis/enterprise-certificate-proxy@v0.3.20?type=module",
+        "pkg:golang/github.com/googleapis/gax-go/v2@v2.24.0?type=module",
+        "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.70.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/metric@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/trace@v1.45.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/oauth2@v0.37.0?type=module",
+        "pkg:golang/golang.org/x/sync@v0.23.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module",
         "pkg:golang/golang.org/x/time@v0.15.0?type=module",
-        "pkg:golang/google.golang.org/api@v0.272.0?type=module",
-        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
+        "pkg:golang/google.golang.org/api@v0.293.0?type=module",
+        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260819154853-08b0e4226688?type=module",
         "pkg:golang/google.golang.org/grpc@v1.83.2?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module"
       ]
@@ -7225,21 +7234,30 @@
       "ref": "pkg:golang/github.com/google/uuid@v1.6.0?type=module"
     },
     {
-      "ref": "pkg:golang/github.com/googleapis/enterprise-certificate-proxy@v0.3.14?type=module",
+      "ref": "pkg:golang/github.com/googleapis/enterprise-certificate-proxy@v0.3.20?type=module",
       "dependsOn": [
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module"
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/github.com/googleapis/gax-go/v2@v2.18.0?type=module",
+      "ref": "pkg:golang/github.com/googleapis/gax-go/v2@v2.24.0?type=module",
       "dependsOn": [
+        "pkg:golang/github.com/cespare/xxhash/v2@v2.3.0?type=module",
+        "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
+        "pkg:golang/github.com/go-logr/logr@v1.4.4?type=module",
+        "pkg:golang/github.com/go-logr/stdr@v1.2.2?type=module",
         "pkg:golang/github.com/google/go-cmp@v0.7.0?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
-        "pkg:golang/google.golang.org/api@v0.272.0?type=module",
-        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
+        "pkg:golang/github.com/google/uuid@v1.6.0?type=module",
+        "pkg:golang/go.opentelemetry.io/auto/sdk@v1.2.1?type=module",
+        "pkg:golang/go.opentelemetry.io/otel@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/metric@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/trace@v1.45.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module",
+        "pkg:golang/google.golang.org/api@v0.293.0?type=module",
+        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260819154853-08b0e4226688?type=module",
         "pkg:golang/google.golang.org/grpc@v1.83.2?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module"
       ]
@@ -7247,7 +7265,7 @@
     {
       "ref": "pkg:golang/github.com/gorilla/websocket@v1.5.4-0.20250319132907-e064f32e3674?type=module",
       "dependsOn": [
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module"
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module"
       ]
     },
     {
@@ -7265,7 +7283,7 @@
     {
       "ref": "pkg:golang/github.com/huin/goupnp@v1.3.0?type=module",
       "dependsOn": [
-        "pkg:golang/golang.org/x/sync@v0.22.0?type=module"
+        "pkg:golang/golang.org/x/sync@v0.23.0?type=module"
       ]
     },
     {
@@ -7281,7 +7299,7 @@
         "pkg:golang/github.com/felixge/httpsnoop@v1.1.0?type=module",
         "pkg:golang/github.com/flynn/noise@v1.1.0?type=module",
         "pkg:golang/github.com/gabriel-vasile/mimetype@v1.4.13?type=module",
-        "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module",
+        "pkg:golang/github.com/go-logr/logr@v1.4.4?type=module",
         "pkg:golang/github.com/go-logr/stdr@v1.2.2?type=module",
         "pkg:golang/github.com/gogo/protobuf@v1.3.2?type=module",
         "pkg:golang/github.com/google/gopacket@v1.1.19?type=module",
@@ -7297,7 +7315,7 @@
         "pkg:golang/github.com/ipld/go-ipld-prime@v0.21.0?type=module",
         "pkg:golang/github.com/jackpal/go-nat-pmp@v1.0.2?type=module",
         "pkg:golang/github.com/jbenet/go-temp-err-catcher@v0.1.0?type=module",
-        "pkg:golang/github.com/klauspost/compress@v1.19.1?type=module",
+        "pkg:golang/github.com/klauspost/compress@v1.20.1?type=module",
         "pkg:golang/github.com/klauspost/cpuid/v2@v2.3.0?type=module",
         "pkg:golang/github.com/koron/go-ssdp@v0.0.6?type=module",
         "pkg:golang/github.com/libp2p/go-buffer-pool@v0.1.0?type=module",
@@ -7350,10 +7368,10 @@
         "pkg:golang/github.com/pion/turn/v4@v4.0.2?type=module",
         "pkg:golang/github.com/pion/webrtc/v4@v4.1.2?type=module",
         "pkg:golang/github.com/polydawn/refmt@v0.89.1-0.20221221234430-40501e09de1f?type=module",
-        "pkg:golang/github.com/prometheus/client_golang@v1.24.1?type=module",
+        "pkg:golang/github.com/prometheus/client_golang@v1.25.0?type=module",
         "pkg:golang/github.com/prometheus/client_model@v0.6.3?type=module",
-        "pkg:golang/github.com/prometheus/common@v0.70.1?type=module",
-        "pkg:golang/github.com/prometheus/procfs@v0.21.1?type=module",
+        "pkg:golang/github.com/prometheus/common@v0.72.0?type=module",
+        "pkg:golang/github.com/prometheus/procfs@v0.22.0?type=module",
         "pkg:golang/github.com/quic-go/qpack@v0.6.0?type=module",
         "pkg:golang/github.com/quic-go/quic-go@v0.60.0?type=module",
         "pkg:golang/github.com/quic-go/webtransport-go@v0.11.1?type=module",
@@ -7362,24 +7380,24 @@
         "pkg:golang/github.com/whyrusleeping/go-keyspace@v0.0.0-20160322163242-5b898ac5add1?type=module",
         "pkg:golang/github.com/wlynxg/anet@v0.0.5?type=module",
         "pkg:golang/go.opentelemetry.io/auto/sdk@v1.2.1?type=module",
-        "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.69.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/metric@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/trace@v1.44.0?type=module",
+        "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.70.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/metric@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/trace@v1.45.0?type=module",
         "pkg:golang/go.uber.org/atomic@v1.11.0?type=module",
         "pkg:golang/go.uber.org/dig@v1.19.0?type=module",
         "pkg:golang/go.uber.org/fx@v1.24.0?type=module",
         "pkg:golang/go.uber.org/multierr@v1.11.0?type=module",
         "pkg:golang/go.uber.org/zap@v1.28.0?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
         "pkg:golang/golang.org/x/exp@v0.0.0-20260611194520-c48552f49976?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
-        "pkg:golang/golang.org/x/sync@v0.22.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/oauth2@v0.37.0?type=module",
+        "pkg:golang/golang.org/x/sync@v0.23.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module",
         "pkg:golang/gonum.org/v1/gonum@v0.17.0?type=module",
-        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
+        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260819154853-08b0e4226688?type=module",
         "pkg:golang/google.golang.org/grpc@v1.83.2?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module",
@@ -7398,21 +7416,21 @@
         "pkg:golang/github.com/multiformats/go-multihash@v0.2.3?type=module",
         "pkg:golang/github.com/multiformats/go-varint@v0.1.0?type=module",
         "pkg:golang/github.com/spaolacci/murmur3@v1.1.0?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
         "pkg:golang/lukechampine.com/blake3@v1.4.1?type=module"
       ]
     },
     {
       "ref": "pkg:golang/github.com/ipfs/go-datastore@v0.8.2?type=module",
       "dependsOn": [
-        "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module",
+        "pkg:golang/github.com/go-logr/logr@v1.4.4?type=module",
         "pkg:golang/github.com/go-logr/stdr@v1.2.2?type=module",
         "pkg:golang/github.com/google/uuid@v1.6.0?type=module",
         "pkg:golang/go.opentelemetry.io/auto/sdk@v1.2.1?type=module",
-        "pkg:golang/go.opentelemetry.io/otel@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/metric@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/trace@v1.44.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/metric@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/trace@v1.45.0?type=module",
         "pkg:golang/go.uber.org/multierr@v1.11.0?type=module"
       ]
     },
@@ -7431,7 +7449,7 @@
         "pkg:golang/github.com/mattn/go-isatty@v0.0.22?type=module",
         "pkg:golang/go.uber.org/multierr@v1.11.0?type=module",
         "pkg:golang/go.uber.org/zap@v1.28.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module"
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module"
       ]
     },
     {
@@ -7450,8 +7468,8 @@
         "pkg:golang/github.com/multiformats/go-varint@v0.1.0?type=module",
         "pkg:golang/github.com/polydawn/refmt@v0.89.1-0.20221221234430-40501e09de1f?type=module",
         "pkg:golang/github.com/spaolacci/murmur3@v1.1.0?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
         "pkg:golang/gopkg.in/yaml.v2@v2.4.0?type=module",
         "pkg:golang/lukechampine.com/blake3@v1.4.1?type=module"
       ]
@@ -7468,7 +7486,7 @@
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
         "pkg:golang/go.uber.org/goleak@v1.3.0?type=module",
-        "pkg:golang/golang.org/x/sync@v0.22.0?type=module",
+        "pkg:golang/golang.org/x/sync@v0.23.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
@@ -7485,12 +7503,12 @@
       ]
     },
     {
-      "ref": "pkg:golang/github.com/klauspost/compress@v1.19.1?type=module"
+      "ref": "pkg:golang/github.com/klauspost/compress@v1.20.1?type=module"
     },
     {
       "ref": "pkg:golang/github.com/klauspost/cpuid/v2@v2.3.0?type=module",
       "dependsOn": [
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module"
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module"
       ]
     },
     {
@@ -7532,7 +7550,7 @@
       "ref": "pkg:golang/github.com/knadh/koanf/providers/file@v1.2.1?type=module",
       "dependsOn": [
         "pkg:golang/github.com/fsnotify/fsnotify@v1.9.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module"
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module"
       ]
     },
     {
@@ -7547,8 +7565,8 @@
     {
       "ref": "pkg:golang/github.com/koron/go-ssdp@v0.0.6?type=module",
       "dependsOn": [
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module"
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module"
       ]
     },
     {
@@ -7642,10 +7660,10 @@
         "pkg:golang/github.com/pion/transport/v4@v4.0.1?type=module",
         "pkg:golang/github.com/pion/turn/v4@v4.0.2?type=module",
         "pkg:golang/github.com/pion/webrtc/v4@v4.1.2?type=module",
-        "pkg:golang/github.com/prometheus/client_golang@v1.24.1?type=module",
+        "pkg:golang/github.com/prometheus/client_golang@v1.25.0?type=module",
         "pkg:golang/github.com/prometheus/client_model@v0.6.3?type=module",
-        "pkg:golang/github.com/prometheus/common@v0.70.1?type=module",
-        "pkg:golang/github.com/prometheus/procfs@v0.21.1?type=module",
+        "pkg:golang/github.com/prometheus/common@v0.72.0?type=module",
+        "pkg:golang/github.com/prometheus/procfs@v0.22.0?type=module",
         "pkg:golang/github.com/quic-go/qpack@v0.6.0?type=module",
         "pkg:golang/github.com/quic-go/quic-go@v0.60.0?type=module",
         "pkg:golang/github.com/quic-go/webtransport-go@v0.11.1?type=module",
@@ -7657,12 +7675,12 @@
         "pkg:golang/go.uber.org/goleak@v1.3.0?type=module",
         "pkg:golang/go.uber.org/multierr@v1.11.0?type=module",
         "pkg:golang/go.uber.org/zap@v1.28.0?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
         "pkg:golang/golang.org/x/exp@v0.0.0-20260611194520-c48552f49976?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/sync@v0.22.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/sync@v0.23.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module",
         "pkg:golang/golang.org/x/time@v0.15.0?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module",
@@ -7688,7 +7706,7 @@
         "pkg:golang/github.com/davidlazar/go-crypto@v0.0.0-20200604182044-b73af7476f6c?type=module",
         "pkg:golang/github.com/decred/dcrd/dcrec/secp256k1/v4@v4.4.0?type=module",
         "pkg:golang/github.com/flynn/noise@v1.1.0?type=module",
-        "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module",
+        "pkg:golang/github.com/go-logr/logr@v1.4.4?type=module",
         "pkg:golang/github.com/go-logr/stdr@v1.2.2?type=module",
         "pkg:golang/github.com/gogo/protobuf@v1.3.2?type=module",
         "pkg:golang/github.com/google/gopacket@v1.1.19?type=module",
@@ -7703,7 +7721,7 @@
         "pkg:golang/github.com/ipld/go-ipld-prime@v0.21.0?type=module",
         "pkg:golang/github.com/jackpal/go-nat-pmp@v1.0.2?type=module",
         "pkg:golang/github.com/jbenet/go-temp-err-catcher@v0.1.0?type=module",
-        "pkg:golang/github.com/klauspost/compress@v1.19.1?type=module",
+        "pkg:golang/github.com/klauspost/compress@v1.20.1?type=module",
         "pkg:golang/github.com/klauspost/cpuid/v2@v2.3.0?type=module",
         "pkg:golang/github.com/koron/go-ssdp@v0.0.6?type=module",
         "pkg:golang/github.com/libp2p/go-buffer-pool@v0.1.0?type=module",
@@ -7754,10 +7772,10 @@
         "pkg:golang/github.com/pion/turn/v4@v4.0.2?type=module",
         "pkg:golang/github.com/pion/webrtc/v4@v4.1.2?type=module",
         "pkg:golang/github.com/polydawn/refmt@v0.89.1-0.20221221234430-40501e09de1f?type=module",
-        "pkg:golang/github.com/prometheus/client_golang@v1.24.1?type=module",
+        "pkg:golang/github.com/prometheus/client_golang@v1.25.0?type=module",
         "pkg:golang/github.com/prometheus/client_model@v0.6.3?type=module",
-        "pkg:golang/github.com/prometheus/common@v0.70.1?type=module",
-        "pkg:golang/github.com/prometheus/procfs@v0.21.1?type=module",
+        "pkg:golang/github.com/prometheus/common@v0.72.0?type=module",
+        "pkg:golang/github.com/prometheus/procfs@v0.22.0?type=module",
         "pkg:golang/github.com/quic-go/qpack@v0.6.0?type=module",
         "pkg:golang/github.com/quic-go/quic-go@v0.60.0?type=module",
         "pkg:golang/github.com/quic-go/webtransport-go@v0.11.1?type=module",
@@ -7766,19 +7784,19 @@
         "pkg:golang/github.com/whyrusleeping/go-keyspace@v0.0.0-20160322163242-5b898ac5add1?type=module",
         "pkg:golang/github.com/wlynxg/anet@v0.0.5?type=module",
         "pkg:golang/go.opentelemetry.io/auto/sdk@v1.2.1?type=module",
-        "pkg:golang/go.opentelemetry.io/otel@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/metric@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/trace@v1.44.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/metric@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/trace@v1.45.0?type=module",
         "pkg:golang/go.uber.org/dig@v1.19.0?type=module",
         "pkg:golang/go.uber.org/fx@v1.24.0?type=module",
         "pkg:golang/go.uber.org/multierr@v1.11.0?type=module",
         "pkg:golang/go.uber.org/zap@v1.28.0?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
         "pkg:golang/golang.org/x/exp@v0.0.0-20260611194520-c48552f49976?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/sync@v0.22.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/sync@v0.23.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module",
         "pkg:golang/gonum.org/v1/gonum@v0.17.0?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module",
@@ -7813,9 +7831,9 @@
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
         "pkg:golang/go.uber.org/multierr@v1.11.0?type=module",
         "pkg:golang/go.uber.org/zap@v1.28.0?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
         "pkg:golang/golang.org/x/exp@v0.0.0-20260611194520-c48552f49976?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module",
         "pkg:golang/lukechampine.com/blake3@v1.4.1?type=module"
@@ -7847,9 +7865,9 @@
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
         "pkg:golang/go.uber.org/multierr@v1.11.0?type=module",
         "pkg:golang/go.uber.org/zap@v1.28.0?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
         "pkg:golang/golang.org/x/exp@v0.0.0-20260611194520-c48552f49976?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module",
         "pkg:golang/lukechampine.com/blake3@v1.4.1?type=module"
@@ -7917,10 +7935,10 @@
         "pkg:golang/github.com/pion/transport/v3@v3.0.7?type=module",
         "pkg:golang/github.com/pion/turn/v4@v4.0.2?type=module",
         "pkg:golang/github.com/pion/webrtc/v4@v4.1.2?type=module",
-        "pkg:golang/github.com/prometheus/client_golang@v1.24.1?type=module",
+        "pkg:golang/github.com/prometheus/client_golang@v1.25.0?type=module",
         "pkg:golang/github.com/prometheus/client_model@v0.6.3?type=module",
-        "pkg:golang/github.com/prometheus/common@v0.70.1?type=module",
-        "pkg:golang/github.com/prometheus/procfs@v0.21.1?type=module",
+        "pkg:golang/github.com/prometheus/common@v0.72.0?type=module",
+        "pkg:golang/github.com/prometheus/procfs@v0.22.0?type=module",
         "pkg:golang/github.com/quic-go/qpack@v0.6.0?type=module",
         "pkg:golang/github.com/quic-go/quic-go@v0.60.0?type=module",
         "pkg:golang/github.com/quic-go/webtransport-go@v0.11.1?type=module",
@@ -7931,12 +7949,12 @@
         "pkg:golang/go.uber.org/fx@v1.24.0?type=module",
         "pkg:golang/go.uber.org/multierr@v1.11.0?type=module",
         "pkg:golang/go.uber.org/zap@v1.28.0?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
         "pkg:golang/golang.org/x/exp@v0.0.0-20260611194520-c48552f49976?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/sync@v0.22.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/sync@v0.23.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module",
         "pkg:golang/golang.org/x/time@v0.15.0?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module",
@@ -7961,9 +7979,9 @@
         "pkg:golang/github.com/multiformats/go-multihash@v0.2.3?type=module",
         "pkg:golang/github.com/multiformats/go-varint@v0.1.0?type=module",
         "pkg:golang/github.com/spaolacci/murmur3@v1.1.0?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
         "pkg:golang/golang.org/x/exp@v0.0.0-20260611194520-c48552f49976?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module",
         "pkg:golang/lukechampine.com/blake3@v1.4.1?type=module"
       ]
@@ -7973,7 +7991,7 @@
       "dependsOn": [
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
         "pkg:golang/github.com/decred/dcrd/dcrec/secp256k1/v4@v4.4.0?type=module",
-        "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module",
+        "pkg:golang/github.com/go-logr/logr@v1.4.4?type=module",
         "pkg:golang/github.com/go-logr/stdr@v1.2.2?type=module",
         "pkg:golang/github.com/ipfs/go-cid@v0.5.0?type=module",
         "pkg:golang/github.com/ipfs/go-log/v2@v2.6.0?type=module",
@@ -7993,14 +8011,14 @@
         "pkg:golang/github.com/multiformats/go-varint@v0.1.0?type=module",
         "pkg:golang/github.com/spaolacci/murmur3@v1.1.0?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
-        "pkg:golang/go.opentelemetry.io/otel@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/metric@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/trace@v1.44.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/metric@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/trace@v1.45.0?type=module",
         "pkg:golang/go.uber.org/multierr@v1.11.0?type=module",
         "pkg:golang/go.uber.org/zap@v1.28.0?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
         "pkg:golang/golang.org/x/exp@v0.0.0-20260611194520-c48552f49976?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module",
         "pkg:golang/lukechampine.com/blake3@v1.4.1?type=module"
@@ -8016,7 +8034,7 @@
         "pkg:golang/go.uber.org/atomic@v1.11.0?type=module",
         "pkg:golang/go.uber.org/multierr@v1.11.0?type=module",
         "pkg:golang/go.uber.org/zap@v1.28.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module"
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module"
       ]
     },
     {
@@ -8033,8 +8051,8 @@
       "dependsOn": [
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
@@ -8043,7 +8061,7 @@
       "dependsOn": [
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
@@ -8061,28 +8079,28 @@
       "dependsOn": [
         "pkg:golang/github.com/mikioh/tcpinfo@v0.0.0-20190314235526-30a79bb1804b?type=module",
         "pkg:golang/github.com/mikioh/tcpopt@v0.0.0-20190314235656-172688c1accc?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module"
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module"
       ]
     },
     {
       "ref": "pkg:golang/github.com/mattn/go-colorable@v0.1.15?type=module",
       "dependsOn": [
         "pkg:golang/github.com/mattn/go-isatty@v0.0.22?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module"
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module"
       ]
     },
     {
       "ref": "pkg:golang/github.com/mattn/go-isatty@v0.0.22?type=module",
       "dependsOn": [
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module"
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module"
       ]
     },
     {
       "ref": "pkg:golang/github.com/miekg/dns@v1.1.72?type=module",
       "dependsOn": [
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/sync@v0.22.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module"
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/sync@v0.23.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module"
       ]
     },
     {
@@ -8095,7 +8113,7 @@
       "ref": "pkg:golang/github.com/minio/sha256-simd@v1.0.1?type=module",
       "dependsOn": [
         "pkg:golang/github.com/klauspost/cpuid/v2@v2.3.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module"
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module"
       ]
     },
     {
@@ -8143,9 +8161,9 @@
         "pkg:golang/github.com/multiformats/go-varint@v0.1.0?type=module",
         "pkg:golang/github.com/spaolacci/murmur3@v1.1.0?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
         "pkg:golang/golang.org/x/exp@v0.0.0-20260611194520-c48552f49976?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module",
         "pkg:golang/lukechampine.com/blake3@v1.4.1?type=module"
       ]
@@ -8165,10 +8183,10 @@
         "pkg:golang/github.com/multiformats/go-multihash@v0.2.3?type=module",
         "pkg:golang/github.com/multiformats/go-varint@v0.1.0?type=module",
         "pkg:golang/github.com/spaolacci/murmur3@v1.1.0?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
         "pkg:golang/golang.org/x/exp@v0.0.0-20260611194520-c48552f49976?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
         "pkg:golang/lukechampine.com/blake3@v1.4.1?type=module"
       ]
     },
@@ -8197,8 +8215,8 @@
         "pkg:golang/github.com/mr-tron/base58@v1.3.0?type=module",
         "pkg:golang/github.com/multiformats/go-varint@v0.1.0?type=module",
         "pkg:golang/github.com/spaolacci/murmur3@v1.1.0?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
         "pkg:golang/lukechampine.com/blake3@v1.4.1?type=module"
       ]
     },
@@ -8259,7 +8277,7 @@
       "dependsOn": [
         "pkg:golang/github.com/cespare/xxhash/v2@v2.3.0?type=module",
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
-        "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module",
+        "pkg:golang/github.com/go-logr/logr@v1.4.4?type=module",
         "pkg:golang/github.com/go-logr/stdr@v1.2.2?type=module",
         "pkg:golang/github.com/go-viper/mapstructure/v2@v2.5.0?type=module",
         "pkg:golang/github.com/gobwas/glob@v0.2.3?type=module",
@@ -8288,14 +8306,14 @@
         "pkg:golang/go.opentelemetry.io/collector/pdata@v1.54.0?type=module",
         "pkg:golang/go.opentelemetry.io/collector/pipeline@v1.54.0?type=module",
         "pkg:golang/go.opentelemetry.io/collector/processor@v1.54.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/metric@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/trace@v1.44.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/metric@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/trace@v1.45.0?type=module",
         "pkg:golang/go.uber.org/goleak@v1.3.0?type=module",
         "pkg:golang/go.uber.org/multierr@v1.11.0?type=module",
         "pkg:golang/go.uber.org/zap@v1.28.0?type=module",
         "pkg:golang/go.yaml.in/yaml/v3@v3.0.5?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
@@ -8330,9 +8348,9 @@
         "pkg:golang/github.com/pion/logging@v0.2.4?type=module",
         "pkg:golang/github.com/pion/transport/v4@v4.0.1?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
@@ -8350,9 +8368,9 @@
         "pkg:golang/github.com/pion/turn/v4@v4.0.2?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
         "pkg:golang/github.com/wlynxg/anet@v0.0.5?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
@@ -8382,8 +8400,8 @@
       "dependsOn": [
         "pkg:golang/github.com/pion/logging@v0.2.4?type=module",
         "pkg:golang/github.com/pion/transport/v3@v3.0.7?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module"
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module"
       ]
     },
     {
@@ -8436,7 +8454,7 @@
         "pkg:golang/github.com/pion/rtp@v1.8.19?type=module",
         "pkg:golang/github.com/pion/transport/v3@v3.0.7?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
@@ -8449,8 +8467,8 @@
         "pkg:golang/github.com/pion/transport/v4@v4.0.1?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
         "pkg:golang/github.com/wlynxg/anet@v0.0.5?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
@@ -8461,8 +8479,8 @@
         "pkg:golang/github.com/pion/logging@v0.2.4?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
         "pkg:golang/github.com/wlynxg/anet@v0.0.5?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
@@ -8473,8 +8491,8 @@
         "pkg:golang/github.com/pion/logging@v0.2.4?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
         "pkg:golang/github.com/wlynxg/anet@v0.0.5?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
         "pkg:golang/golang.org/x/time@v0.15.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
@@ -8490,8 +8508,8 @@
         "pkg:golang/github.com/pion/transport/v3@v3.0.7?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
         "pkg:golang/github.com/wlynxg/anet@v0.0.5?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
@@ -8517,23 +8535,23 @@
         "pkg:golang/github.com/pion/turn/v4@v4.0.2?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
         "pkg:golang/github.com/wlynxg/anet@v0.0.5?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
     {
       "ref": "pkg:golang/github.com/pkg/browser@v0.0.0-20240102092130-5ac0b6a4141c?type=module",
       "dependsOn": [
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module"
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module"
       ]
     },
     {
       "ref": "pkg:golang/github.com/polydawn/refmt@v0.89.1-0.20221221234430-40501e09de1f?type=module"
     },
     {
-      "ref": "pkg:golang/github.com/prometheus/client_golang@v1.24.1?type=module",
+      "ref": "pkg:golang/github.com/prometheus/client_golang@v1.25.0?type=module",
       "dependsOn": [
         "pkg:golang/github.com/beorn7/perks@v1.0.1?type=module",
         "pkg:golang/github.com/cespare/xxhash/v2@v2.3.0?type=module",
@@ -8542,21 +8560,21 @@
         "pkg:golang/github.com/google/uuid@v1.6.0?type=module",
         "pkg:golang/github.com/jpillora/backoff@v1.0.0?type=module",
         "pkg:golang/github.com/json-iterator/go@v1.1.12?type=module",
-        "pkg:golang/github.com/klauspost/compress@v1.19.1?type=module",
+        "pkg:golang/github.com/klauspost/compress@v1.20.1?type=module",
         "pkg:golang/github.com/kylelemons/godebug@v1.1.0?type=module",
         "pkg:golang/github.com/modern-go/concurrent@v0.0.0-20180306012644-bacd9c7ef1dd?type=module",
         "pkg:golang/github.com/modern-go/reflect2@v1.0.3-0.20250322232337-35a7c28c31ee?type=module",
         "pkg:golang/github.com/munnerz/goautoneg@v0.0.0-20191010083416-a7dc8b61c822?type=module",
         "pkg:golang/github.com/mwitkow/go-conntrack@v0.0.0-20190716064945-2f068394615f?type=module",
         "pkg:golang/github.com/prometheus/client_model@v0.6.3?type=module",
-        "pkg:golang/github.com/prometheus/common@v0.70.1?type=module",
-        "pkg:golang/github.com/prometheus/procfs@v0.21.1?type=module",
+        "pkg:golang/github.com/prometheus/common@v0.72.0?type=module",
+        "pkg:golang/github.com/prometheus/procfs@v0.22.0?type=module",
         "pkg:golang/go.uber.org/goleak@v1.3.0?type=module",
         "pkg:golang/go.yaml.in/yaml/v2@v2.4.4?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/oauth2@v0.37.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module"
       ]
     },
@@ -8564,9 +8582,9 @@
       "ref": "pkg:golang/github.com/prometheus/client_golang/exp@v0.0.0-20260325093428-d8591d0db856?type=module",
       "dependsOn": [
         "pkg:golang/github.com/google/go-cmp@v0.7.0?type=module",
-        "pkg:golang/github.com/klauspost/compress@v1.19.1?type=module",
+        "pkg:golang/github.com/klauspost/compress@v1.20.1?type=module",
         "pkg:golang/github.com/prometheus/client_model@v0.6.3?type=module",
-        "pkg:golang/github.com/prometheus/common@v0.70.1?type=module",
+        "pkg:golang/github.com/prometheus/common@v0.72.0?type=module",
         "pkg:golang/go.yaml.in/yaml/v2@v2.4.4?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module"
       ]
@@ -8578,67 +8596,65 @@
       ]
     },
     {
-      "ref": "pkg:golang/github.com/prometheus/common@v0.70.1?type=module",
+      "ref": "pkg:golang/github.com/prometheus/common@v0.72.0?type=module",
       "dependsOn": [
         "pkg:golang/github.com/alecthomas/units@v0.0.0-20240927000941-0f3dac36c52b?type=module",
         "pkg:golang/github.com/beorn7/perks@v1.0.1?type=module",
         "pkg:golang/github.com/cespare/xxhash/v2@v2.3.0?type=module",
-        "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
         "pkg:golang/github.com/golang-jwt/jwt/v5@v5.3.1?type=module",
         "pkg:golang/github.com/google/go-cmp@v0.7.0?type=module",
         "pkg:golang/github.com/google/uuid@v1.6.0?type=module",
         "pkg:golang/github.com/jpillora/backoff@v1.0.0?type=module",
         "pkg:golang/github.com/munnerz/goautoneg@v0.0.0-20191010083416-a7dc8b61c822?type=module",
         "pkg:golang/github.com/mwitkow/go-conntrack@v0.0.0-20190716064945-2f068394615f?type=module",
-        "pkg:golang/github.com/prometheus/client_golang@v1.24.1?type=module",
+        "pkg:golang/github.com/prometheus/client_golang@v1.25.0?type=module",
         "pkg:golang/github.com/prometheus/client_model@v0.6.3?type=module",
-        "pkg:golang/github.com/prometheus/procfs@v0.21.1?type=module",
+        "pkg:golang/github.com/prometheus/procfs@v0.22.0?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
         "pkg:golang/go.yaml.in/yaml/v2@v2.4.4?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
-        "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module",
-        "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
+        "pkg:golang/go.yaml.in/yaml/v3@v3.0.5?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/oauth2@v0.37.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module",
+        "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module"
       ]
     },
     {
       "ref": "pkg:golang/github.com/prometheus/otlptranslator@v1.0.0?type=module"
     },
     {
-      "ref": "pkg:golang/github.com/prometheus/procfs@v0.21.1?type=module",
+      "ref": "pkg:golang/github.com/prometheus/procfs@v0.22.0?type=module",
       "dependsOn": [
         "pkg:golang/github.com/google/go-cmp@v0.7.0?type=module",
-        "pkg:golang/golang.org/x/sync@v0.22.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module"
+        "pkg:golang/golang.org/x/sync@v0.23.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module"
       ]
     },
     {
       "ref": "pkg:golang/github.com/prometheus/prometheus@v0.311.3?type=module",
       "dependsOn": [
-        "pkg:golang/cloud.google.com/go/auth@v0.18.2?type=module",
+        "pkg:golang/cloud.google.com/go/auth@v0.23.2?type=module",
         "pkg:golang/cloud.google.com/go/auth/oauth2adapt@v0.2.8?type=module",
         "pkg:golang/cloud.google.com/go/compute/metadata@v0.9.0?type=module",
-        "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azcore@v1.21.0?type=module",
-        "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azidentity@v1.13.1?type=module",
-        "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/internal@v1.11.2?type=module",
-        "pkg:golang/github.com/AzureAD/microsoft-authentication-library-for-go@v1.6.0?type=module",
+        "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azcore@v1.22.0?type=module",
+        "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/azidentity@v1.14.0?type=module",
+        "pkg:golang/github.com/Azure/azure-sdk-for-go/sdk/internal@v1.12.0?type=module",
+        "pkg:golang/github.com/AzureAD/microsoft-authentication-library-for-go@v1.7.2?type=module",
         "pkg:golang/github.com/alecthomas/units@v0.0.0-20240927000941-0f3dac36c52b?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.41.4?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/config@v1.32.12?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/credentials@v1.19.12?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/feature/ec2/imds@v1.18.20?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.20?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.20?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/ini@v1.8.6?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding@v1.13.7?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/presigned-url@v1.13.20?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/signin@v1.0.8?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sso@v1.30.13?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/ssooidc@v1.35.17?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sts@v1.41.9?type=module",
-        "pkg:golang/github.com/aws/smithy-go@v1.24.2?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.43.4?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/config@v1.32.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/credentials@v1.19.34?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/feature/ec2/imds@v1.18.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding@v1.13.15?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/presigned-url@v1.13.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/signin@v1.5.4?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sso@v1.33.4?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/ssooidc@v1.38.4?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sts@v1.45.4?type=module",
+        "pkg:golang/github.com/aws/smithy-go@v1.27.6?type=module",
         "pkg:golang/github.com/bboreham/go-loser@v0.0.0-20230920113527-fcc2c21820a3?type=module",
         "pkg:golang/github.com/beorn7/perks@v1.0.1?type=module",
         "pkg:golang/github.com/cespare/xxhash/v2@v2.3.0?type=module",
@@ -8647,7 +8663,7 @@
         "pkg:golang/github.com/felixge/httpsnoop@v1.1.0?type=module",
         "pkg:golang/github.com/fsnotify/fsnotify@v1.9.0?type=module",
         "pkg:golang/github.com/fxamacker/cbor/v2@v2.9.2?type=module",
-        "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module",
+        "pkg:golang/github.com/go-logr/logr@v1.4.4?type=module",
         "pkg:golang/github.com/go-logr/stdr@v1.2.2?type=module",
         "pkg:golang/github.com/go-viper/mapstructure/v2@v2.5.0?type=module",
         "pkg:golang/github.com/gobwas/glob@v0.2.3?type=module",
@@ -8657,15 +8673,15 @@
         "pkg:golang/github.com/google/go-cmp@v0.7.0?type=module",
         "pkg:golang/github.com/google/s2a-go@v0.1.9?type=module",
         "pkg:golang/github.com/google/uuid@v1.6.0?type=module",
-        "pkg:golang/github.com/googleapis/enterprise-certificate-proxy@v0.3.14?type=module",
-        "pkg:golang/github.com/googleapis/gax-go/v2@v2.18.0?type=module",
+        "pkg:golang/github.com/googleapis/enterprise-certificate-proxy@v0.3.20?type=module",
+        "pkg:golang/github.com/googleapis/gax-go/v2@v2.24.0?type=module",
         "pkg:golang/github.com/gorilla/websocket@v1.5.4-0.20250319132907-e064f32e3674?type=module",
         "pkg:golang/github.com/grafana/regexp@v0.0.0-20250905093917-f7b3be9d1853?type=module",
         "pkg:golang/github.com/hashicorp/go-version@v1.9.0?type=module",
         "pkg:golang/github.com/hashicorp/golang-lru@v1.0.2?type=module",
         "pkg:golang/github.com/jpillora/backoff@v1.0.0?type=module",
         "pkg:golang/github.com/json-iterator/go@v1.1.12?type=module",
-        "pkg:golang/github.com/klauspost/compress@v1.19.1?type=module",
+        "pkg:golang/github.com/klauspost/compress@v1.20.1?type=module",
         "pkg:golang/github.com/knadh/koanf/maps@v0.1.2?type=module",
         "pkg:golang/github.com/knadh/koanf/providers/confmap@v1.0.0?type=module",
         "pkg:golang/github.com/knadh/koanf/v2@v2.3.4?type=module",
@@ -8686,12 +8702,12 @@
         "pkg:golang/github.com/open-telemetry/opentelemetry-collector-contrib/processor/deltatocumulativeprocessor@v0.148.0?type=module",
         "pkg:golang/github.com/pbnjay/memory@v0.0.0-20210728143218-7b4eea64cf58?type=module",
         "pkg:golang/github.com/pkg/browser@v0.0.0-20240102092130-5ac0b6a4141c?type=module",
-        "pkg:golang/github.com/prometheus/client_golang@v1.24.1?type=module",
+        "pkg:golang/github.com/prometheus/client_golang@v1.25.0?type=module",
         "pkg:golang/github.com/prometheus/client_golang/exp@v0.0.0-20260325093428-d8591d0db856?type=module",
         "pkg:golang/github.com/prometheus/client_model@v0.6.3?type=module",
-        "pkg:golang/github.com/prometheus/common@v0.70.1?type=module",
+        "pkg:golang/github.com/prometheus/common@v0.72.0?type=module",
         "pkg:golang/github.com/prometheus/otlptranslator@v1.0.0?type=module",
-        "pkg:golang/github.com/prometheus/procfs@v0.21.1?type=module",
+        "pkg:golang/github.com/prometheus/procfs@v0.22.0?type=module",
         "pkg:golang/github.com/prometheus/sigv4@v0.4.1?type=module",
         "pkg:golang/github.com/puzpuzpuz/xsync/v4@v4.4.0?type=module",
         "pkg:golang/github.com/spf13/pflag@v1.0.10?type=module",
@@ -8708,27 +8724,27 @@
         "pkg:golang/go.opentelemetry.io/collector/pipeline@v1.54.0?type=module",
         "pkg:golang/go.opentelemetry.io/collector/processor@v1.54.0?type=module",
         "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace@v0.67.0?type=module",
-        "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.69.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/metric@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/trace@v1.44.0?type=module",
+        "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.70.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/metric@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/trace@v1.45.0?type=module",
         "pkg:golang/go.uber.org/atomic@v1.11.0?type=module",
         "pkg:golang/go.uber.org/goleak@v1.3.0?type=module",
         "pkg:golang/go.uber.org/multierr@v1.11.0?type=module",
         "pkg:golang/go.uber.org/zap@v1.28.0?type=module",
         "pkg:golang/go.yaml.in/yaml/v2@v2.4.4?type=module",
         "pkg:golang/go.yaml.in/yaml/v3@v3.0.5?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
         "pkg:golang/golang.org/x/exp@v0.0.0-20260611194520-c48552f49976?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
-        "pkg:golang/golang.org/x/sync@v0.22.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/term@v0.45.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/oauth2@v0.37.0?type=module",
+        "pkg:golang/golang.org/x/sync@v0.23.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/term@v0.46.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module",
         "pkg:golang/golang.org/x/time@v0.15.0?type=module",
-        "pkg:golang/google.golang.org/api@v0.272.0?type=module",
-        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
+        "pkg:golang/google.golang.org/api@v0.293.0?type=module",
+        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260819154853-08b0e4226688?type=module",
         "pkg:golang/google.golang.org/grpc@v1.83.2?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module",
         "pkg:golang/gopkg.in/inf.v0@v0.9.1?type=module",
@@ -8748,20 +8764,19 @@
     {
       "ref": "pkg:golang/github.com/prometheus/sigv4@v0.4.1?type=module",
       "dependsOn": [
-        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.41.4?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/config@v1.32.12?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/credentials@v1.19.12?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/feature/ec2/imds@v1.18.20?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.20?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.20?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/ini@v1.8.6?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding@v1.13.7?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/presigned-url@v1.13.20?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/signin@v1.0.8?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sso@v1.30.13?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/ssooidc@v1.35.17?type=module",
-        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sts@v1.41.9?type=module",
-        "pkg:golang/github.com/aws/smithy-go@v1.24.2?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2@v1.43.4?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/config@v1.32.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/credentials@v1.19.34?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/feature/ec2/imds@v1.18.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/configsources@v1.4.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/internal/endpoints/v2@v2.7.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding@v1.13.15?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/internal/presigned-url@v1.13.35?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/signin@v1.5.4?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sso@v1.33.4?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/ssooidc@v1.38.4?type=module",
+        "pkg:golang/github.com/aws/aws-sdk-go-v2/service/sts@v1.45.4?type=module",
+        "pkg:golang/github.com/aws/smithy-go@v1.27.6?type=module",
         "pkg:golang/github.com/beorn7/perks@v1.0.1?type=module",
         "pkg:golang/github.com/cespare/xxhash/v2@v2.3.0?type=module",
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
@@ -8770,16 +8785,16 @@
         "pkg:golang/github.com/jpillora/backoff@v1.0.0?type=module",
         "pkg:golang/github.com/munnerz/goautoneg@v0.0.0-20191010083416-a7dc8b61c822?type=module",
         "pkg:golang/github.com/mwitkow/go-conntrack@v0.0.0-20190716064945-2f068394615f?type=module",
-        "pkg:golang/github.com/prometheus/client_golang@v1.24.1?type=module",
+        "pkg:golang/github.com/prometheus/client_golang@v1.25.0?type=module",
         "pkg:golang/github.com/prometheus/client_model@v0.6.3?type=module",
-        "pkg:golang/github.com/prometheus/common@v0.70.1?type=module",
-        "pkg:golang/github.com/prometheus/procfs@v0.21.1?type=module",
+        "pkg:golang/github.com/prometheus/common@v0.72.0?type=module",
+        "pkg:golang/github.com/prometheus/procfs@v0.22.0?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
         "pkg:golang/go.yaml.in/yaml/v2@v2.4.4?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/oauth2@v0.37.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module",
         "pkg:golang/gopkg.in/yaml.v2@v2.4.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
@@ -8793,7 +8808,7 @@
       "dependsOn": [
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
@@ -8803,11 +8818,11 @@
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
         "pkg:golang/github.com/quic-go/qpack@v0.6.0?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/sync@v0.22.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/sync@v0.23.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
@@ -8819,11 +8834,11 @@
         "pkg:golang/github.com/quic-go/qpack@v0.6.0?type=module",
         "pkg:golang/github.com/quic-go/quic-go@v0.60.0?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/sync@v0.22.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/sync@v0.23.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
@@ -8859,12 +8874,12 @@
       "ref": "pkg:golang/github.com/valyala/fasthttp@v1.72.0?type=module",
       "dependsOn": [
         "pkg:golang/github.com/andybalholm/brotli@v1.2.2?type=module",
-        "pkg:golang/github.com/klauspost/compress@v1.19.1?type=module",
+        "pkg:golang/github.com/klauspost/compress@v1.20.1?type=module",
         "pkg:golang/github.com/valyala/bytebufferpool@v1.0.0?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module"
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module"
       ]
     },
     {
@@ -8881,8 +8896,8 @@
       "dependsOn": [
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
-        "pkg:golang/go.opentelemetry.io/otel@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/trace@v1.44.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/trace@v1.45.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
@@ -8898,9 +8913,9 @@
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
         "pkg:golang/go.opentelemetry.io/collector/featuregate@v1.54.0?type=module",
         "pkg:golang/go.opentelemetry.io/collector/pdata@v1.54.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/metric@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/trace@v1.44.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/metric@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/trace@v1.45.0?type=module",
         "pkg:golang/go.uber.org/goleak@v1.3.0?type=module",
         "pkg:golang/go.uber.org/multierr@v1.11.0?type=module",
         "pkg:golang/go.uber.org/zap@v1.28.0?type=module",
@@ -8989,9 +9004,9 @@
         "pkg:golang/go.opentelemetry.io/collector/component@v1.54.0?type=module",
         "pkg:golang/go.opentelemetry.io/collector/featuregate@v1.54.0?type=module",
         "pkg:golang/go.opentelemetry.io/collector/pdata@v1.54.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/metric@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/trace@v1.44.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/metric@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/trace@v1.45.0?type=module",
         "pkg:golang/go.uber.org/multierr@v1.11.0?type=module",
         "pkg:golang/go.uber.org/zap@v1.28.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
@@ -9009,10 +9024,10 @@
         "pkg:golang/go.opentelemetry.io/collector/featuregate@v1.54.0?type=module",
         "pkg:golang/go.uber.org/goleak@v1.3.0?type=module",
         "pkg:golang/go.uber.org/multierr@v1.11.0?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
-        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module",
+        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260819154853-08b0e4226688?type=module",
         "pkg:golang/google.golang.org/grpc@v1.83.2?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
@@ -9042,9 +9057,9 @@
         "pkg:golang/go.opentelemetry.io/collector/internal/componentalias@v0.148.0?type=module",
         "pkg:golang/go.opentelemetry.io/collector/pdata@v1.54.0?type=module",
         "pkg:golang/go.opentelemetry.io/collector/pipeline@v1.54.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/metric@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/trace@v1.44.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/metric@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/trace@v1.45.0?type=module",
         "pkg:golang/go.uber.org/goleak@v1.3.0?type=module",
         "pkg:golang/go.uber.org/multierr@v1.11.0?type=module",
         "pkg:golang/go.uber.org/zap@v1.28.0?type=module",
@@ -9057,75 +9072,75 @@
         "pkg:golang/github.com/cespare/xxhash/v2@v2.3.0?type=module",
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
         "pkg:golang/github.com/felixge/httpsnoop@v1.1.0?type=module",
-        "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module",
+        "pkg:golang/github.com/go-logr/logr@v1.4.4?type=module",
         "pkg:golang/github.com/go-logr/stdr@v1.2.2?type=module",
         "pkg:golang/github.com/google/go-cmp@v0.7.0?type=module",
         "pkg:golang/github.com/google/uuid@v1.6.0?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
         "pkg:golang/go.opentelemetry.io/auto/sdk@v1.2.1?type=module",
-        "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.69.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/metric@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/trace@v1.44.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+        "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.70.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/metric@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/trace@v1.45.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.69.0?type=module",
+      "ref": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.70.0?type=module",
       "dependsOn": [
         "pkg:golang/github.com/cespare/xxhash/v2@v2.3.0?type=module",
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
         "pkg:golang/github.com/felixge/httpsnoop@v1.1.0?type=module",
-        "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module",
+        "pkg:golang/github.com/go-logr/logr@v1.4.4?type=module",
         "pkg:golang/github.com/go-logr/stdr@v1.2.2?type=module",
         "pkg:golang/github.com/google/uuid@v1.6.0?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
         "pkg:golang/go.opentelemetry.io/auto/sdk@v1.2.1?type=module",
-        "pkg:golang/go.opentelemetry.io/otel@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/metric@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/trace@v1.44.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/metric@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/trace@v1.45.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/go.opentelemetry.io/otel@v1.44.0?type=module",
+      "ref": "pkg:golang/go.opentelemetry.io/otel@v1.45.0?type=module",
       "dependsOn": [
         "pkg:golang/github.com/cespare/xxhash/v2@v2.3.0?type=module",
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
-        "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module",
+        "pkg:golang/github.com/go-logr/logr@v1.4.4?type=module",
         "pkg:golang/github.com/go-logr/stdr@v1.2.2?type=module",
         "pkg:golang/github.com/google/go-cmp@v0.7.0?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
         "pkg:golang/go.opentelemetry.io/auto/sdk@v1.2.1?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/metric@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/trace@v1.44.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/metric@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/trace@v1.45.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/go.opentelemetry.io/otel/metric@v1.44.0?type=module",
+      "ref": "pkg:golang/go.opentelemetry.io/otel/metric@v1.45.0?type=module",
       "dependsOn": [
         "pkg:golang/github.com/cespare/xxhash/v2@v2.3.0?type=module",
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
-        "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module",
+        "pkg:golang/github.com/go-logr/logr@v1.4.4?type=module",
         "pkg:golang/github.com/go-logr/stdr@v1.2.2?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
         "pkg:golang/go.opentelemetry.io/auto/sdk@v1.2.1?type=module",
-        "pkg:golang/go.opentelemetry.io/otel@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/trace@v1.44.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/trace@v1.45.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/go.opentelemetry.io/otel/trace@v1.44.0?type=module",
+      "ref": "pkg:golang/go.opentelemetry.io/otel/trace@v1.45.0?type=module",
       "dependsOn": [
         "pkg:golang/github.com/cespare/xxhash/v2@v2.3.0?type=module",
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
         "pkg:golang/github.com/google/go-cmp@v0.7.0?type=module",
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
-        "pkg:golang/go.opentelemetry.io/otel@v1.44.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel@v1.45.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
@@ -9153,7 +9168,7 @@
         "pkg:golang/go.uber.org/goleak@v1.3.0?type=module",
         "pkg:golang/go.uber.org/multierr@v1.11.0?type=module",
         "pkg:golang/go.uber.org/zap@v1.28.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module"
       ]
     },
@@ -9191,52 +9206,52 @@
       "ref": "pkg:golang/go.yaml.in/yaml/v3@v3.0.5?type=module"
     },
     {
-      "ref": "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
+      "ref": "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
       "dependsOn": [
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/term@v0.45.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module"
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/term@v0.46.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module"
       ]
     },
     {
       "ref": "pkg:golang/golang.org/x/exp@v0.0.0-20260611194520-c48552f49976?type=module",
       "dependsOn": [
         "pkg:golang/github.com/google/go-cmp@v0.7.0?type=module",
-        "pkg:golang/golang.org/x/sync@v0.22.0?type=module"
+        "pkg:golang/golang.org/x/sync@v0.23.0?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/golang.org/x/net@v0.58.0?type=module",
+      "ref": "pkg:golang/golang.org/x/net@v0.59.0?type=module",
       "dependsOn": [
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/term@v0.45.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module"
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/term@v0.46.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
+      "ref": "pkg:golang/golang.org/x/oauth2@v0.37.0?type=module",
       "dependsOn": [
         "pkg:golang/cloud.google.com/go/compute/metadata@v0.9.0?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/golang.org/x/sync@v0.22.0?type=module"
+      "ref": "pkg:golang/golang.org/x/sync@v0.23.0?type=module"
     },
     {
-      "ref": "pkg:golang/golang.org/x/sys@v0.47.0?type=module"
+      "ref": "pkg:golang/golang.org/x/sys@v0.48.0?type=module"
     },
     {
-      "ref": "pkg:golang/golang.org/x/term@v0.45.0?type=module",
+      "ref": "pkg:golang/golang.org/x/term@v0.46.0?type=module",
       "dependsOn": [
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module"
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/golang.org/x/text@v0.41.0?type=module",
+      "ref": "pkg:golang/golang.org/x/text@v0.42.0?type=module",
       "dependsOn": [
-        "pkg:golang/golang.org/x/sync@v0.22.0?type=module"
+        "pkg:golang/golang.org/x/sync@v0.23.0?type=module"
       ]
     },
     {
@@ -9246,44 +9261,44 @@
       "ref": "pkg:golang/gonum.org/v1/gonum@v0.17.0?type=module",
       "dependsOn": [
         "pkg:golang/github.com/google/go-cmp@v0.7.0?type=module",
-        "pkg:golang/golang.org/x/sync@v0.22.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module"
+        "pkg:golang/golang.org/x/sync@v0.23.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/google.golang.org/api@v0.272.0?type=module",
+      "ref": "pkg:golang/google.golang.org/api@v0.293.0?type=module",
       "dependsOn": [
-        "pkg:golang/cloud.google.com/go/auth@v0.18.2?type=module",
+        "pkg:golang/cloud.google.com/go/auth@v0.23.2?type=module",
         "pkg:golang/cloud.google.com/go/auth/oauth2adapt@v0.2.8?type=module",
         "pkg:golang/cloud.google.com/go/compute/metadata@v0.9.0?type=module",
         "pkg:golang/github.com/cespare/xxhash/v2@v2.3.0?type=module",
         "pkg:golang/github.com/felixge/httpsnoop@v1.1.0?type=module",
-        "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module",
+        "pkg:golang/github.com/go-logr/logr@v1.4.4?type=module",
         "pkg:golang/github.com/go-logr/stdr@v1.2.2?type=module",
         "pkg:golang/github.com/google/go-cmp@v0.7.0?type=module",
         "pkg:golang/github.com/google/s2a-go@v0.1.9?type=module",
         "pkg:golang/github.com/google/uuid@v1.6.0?type=module",
-        "pkg:golang/github.com/googleapis/enterprise-certificate-proxy@v0.3.14?type=module",
-        "pkg:golang/github.com/googleapis/gax-go/v2@v2.18.0?type=module",
+        "pkg:golang/github.com/googleapis/enterprise-certificate-proxy@v0.3.20?type=module",
+        "pkg:golang/github.com/googleapis/gax-go/v2@v2.24.0?type=module",
         "pkg:golang/go.opentelemetry.io/auto/sdk@v1.2.1?type=module",
-        "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.69.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/metric@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/trace@v1.44.0?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
-        "pkg:golang/golang.org/x/sync@v0.22.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
+        "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.70.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/metric@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/trace@v1.45.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/oauth2@v0.37.0?type=module",
+        "pkg:golang/golang.org/x/sync@v0.23.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module",
         "pkg:golang/golang.org/x/time@v0.15.0?type=module",
-        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
+        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260819154853-08b0e4226688?type=module",
         "pkg:golang/google.golang.org/grpc@v1.83.2?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module"
       ]
     },
     {
-      "ref": "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
+      "ref": "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260819154853-08b0e4226688?type=module",
       "dependsOn": [
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module"
       ]
@@ -9291,30 +9306,30 @@
     {
       "ref": "pkg:golang/google.golang.org/grpc@v1.83.2?type=module",
       "dependsOn": [
-        "pkg:golang/cloud.google.com/go/auth@v0.18.2?type=module",
+        "pkg:golang/cloud.google.com/go/auth@v0.23.2?type=module",
         "pkg:golang/cloud.google.com/go/compute/metadata@v0.9.0?type=module",
         "pkg:golang/github.com/cespare/xxhash/v2@v2.3.0?type=module",
         "pkg:golang/github.com/felixge/httpsnoop@v1.1.0?type=module",
-        "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module",
+        "pkg:golang/github.com/go-logr/logr@v1.4.4?type=module",
         "pkg:golang/github.com/go-logr/stdr@v1.2.2?type=module",
         "pkg:golang/github.com/google/go-cmp@v0.7.0?type=module",
         "pkg:golang/github.com/google/s2a-go@v0.1.9?type=module",
         "pkg:golang/github.com/google/uuid@v1.6.0?type=module",
-        "pkg:golang/github.com/googleapis/enterprise-certificate-proxy@v0.3.14?type=module",
-        "pkg:golang/github.com/googleapis/gax-go/v2@v2.18.0?type=module",
+        "pkg:golang/github.com/googleapis/enterprise-certificate-proxy@v0.3.20?type=module",
+        "pkg:golang/github.com/googleapis/gax-go/v2@v2.24.0?type=module",
         "pkg:golang/go.opentelemetry.io/auto/sdk@v1.2.1?type=module",
-        "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.69.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/metric@v1.44.0?type=module",
-        "pkg:golang/go.opentelemetry.io/otel/trace@v1.44.0?type=module",
-        "pkg:golang/golang.org/x/crypto@v0.55.0?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
-        "pkg:golang/golang.org/x/sync@v0.22.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
+        "pkg:golang/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp@v0.70.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/metric@v1.45.0?type=module",
+        "pkg:golang/go.opentelemetry.io/otel/trace@v1.45.0?type=module",
+        "pkg:golang/golang.org/x/crypto@v0.57.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/oauth2@v0.37.0?type=module",
+        "pkg:golang/golang.org/x/sync@v0.23.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module",
         "pkg:golang/gonum.org/v1/gonum@v0.17.0?type=module",
-        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260610212136-7ab31c22f7ad?type=module",
+        "pkg:golang/google.golang.org/genproto/googleapis/rpc@v0.0.0-20260819154853-08b0e4226688?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module"
       ]
     },
@@ -9338,7 +9353,7 @@
       "dependsOn": [
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
         "pkg:golang/github.com/fxamacker/cbor/v2@v2.9.2?type=module",
-        "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module",
+        "pkg:golang/github.com/go-logr/logr@v1.4.4?type=module",
         "pkg:golang/github.com/google/go-cmp@v0.7.0?type=module",
         "pkg:golang/github.com/google/uuid@v1.6.0?type=module",
         "pkg:golang/github.com/json-iterator/go@v1.1.12?type=module",
@@ -9349,8 +9364,8 @@
         "pkg:golang/github.com/x448/float16@v0.8.4?type=module",
         "pkg:golang/go.yaml.in/yaml/v2@v2.4.4?type=module",
         "pkg:golang/go.yaml.in/yaml/v3@v3.0.5?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module",
         "pkg:golang/golang.org/x/time@v0.15.0?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module",
         "pkg:golang/gopkg.in/inf.v0@v0.9.1?type=module",
@@ -9369,7 +9384,7 @@
       "dependsOn": [
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
         "pkg:golang/github.com/fxamacker/cbor/v2@v2.9.2?type=module",
-        "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module",
+        "pkg:golang/github.com/go-logr/logr@v1.4.4?type=module",
         "pkg:golang/github.com/google/go-cmp@v0.7.0?type=module",
         "pkg:golang/github.com/google/uuid@v1.6.0?type=module",
         "pkg:golang/github.com/gorilla/websocket@v1.5.4-0.20250319132907-e064f32e3674?type=module",
@@ -9383,11 +9398,11 @@
         "pkg:golang/go.uber.org/goleak@v1.3.0?type=module",
         "pkg:golang/go.yaml.in/yaml/v2@v2.4.4?type=module",
         "pkg:golang/go.yaml.in/yaml/v3@v3.0.5?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/oauth2@v0.36.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/term@v0.45.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/oauth2@v0.37.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/term@v0.46.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module",
         "pkg:golang/golang.org/x/time@v0.15.0?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module",
         "pkg:golang/gopkg.in/inf.v0@v0.9.1?type=module",
@@ -9405,14 +9420,14 @@
     {
       "ref": "pkg:golang/k8s.io/klog/v2@v2.140.0?type=module",
       "dependsOn": [
-        "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module"
+        "pkg:golang/github.com/go-logr/logr@v1.4.4?type=module"
       ]
     },
     {
       "ref": "pkg:golang/k8s.io/kube-openapi@v0.0.0-20250910181357-589584f1c912?type=module",
       "dependsOn": [
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
-        "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module",
+        "pkg:golang/github.com/go-logr/logr@v1.4.4?type=module",
         "pkg:golang/github.com/google/go-cmp@v0.7.0?type=module",
         "pkg:golang/github.com/google/uuid@v1.6.0?type=module",
         "pkg:golang/github.com/json-iterator/go@v1.1.12?type=module",
@@ -9423,10 +9438,10 @@
         "pkg:golang/github.com/stretchr/testify@v1.12.1?type=module",
         "pkg:golang/go.yaml.in/yaml/v2@v2.4.4?type=module",
         "pkg:golang/go.yaml.in/yaml/v3@v3.0.5?type=module",
-        "pkg:golang/golang.org/x/net@v0.58.0?type=module",
-        "pkg:golang/golang.org/x/sync@v0.22.0?type=module",
-        "pkg:golang/golang.org/x/sys@v0.47.0?type=module",
-        "pkg:golang/golang.org/x/text@v0.41.0?type=module",
+        "pkg:golang/golang.org/x/net@v0.59.0?type=module",
+        "pkg:golang/golang.org/x/sync@v0.23.0?type=module",
+        "pkg:golang/golang.org/x/sys@v0.48.0?type=module",
+        "pkg:golang/golang.org/x/text@v0.42.0?type=module",
         "pkg:golang/google.golang.org/protobuf@v1.36.12?type=module",
         "pkg:golang/gopkg.in/yaml.v3@v3.0.1?type=module",
         "pkg:golang/k8s.io/klog/v2@v2.140.0?type=module",
@@ -9441,7 +9456,7 @@
       "ref": "pkg:golang/k8s.io/utils@v0.0.0-20251002143259-bc988d571ff4?type=module",
       "dependsOn": [
         "pkg:golang/github.com/davecgh/go-spew@v1.1.2-0.20180830191138-d8f796af33cc?type=module",
-        "pkg:golang/github.com/go-logr/logr@v1.4.3?type=module",
+        "pkg:golang/github.com/go-logr/logr@v1.4.4?type=module",
         "pkg:golang/k8s.io/klog/v2@v2.140.0?type=module"
       ]
     },
