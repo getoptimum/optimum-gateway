@@ -3,12 +3,11 @@ package telemetry
 import (
 	"testing"
 
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
-
-	pubsub "github.com/getoptimum/optimum-p2p/optimum-pubsub"
-	pb "github.com/getoptimum/optimum-p2p/optimum-pubsub/pb"
 )
 
 func mumMsg(topic string, data []byte) *pubsub.Message {
@@ -95,4 +94,34 @@ func TestMumP2PCollector(t *testing.T) {
 	} {
 		require.Equal(t, float64(1), counterVal(t, reg, mump2pMetric(name), map[string]string{}))
 	}
+}
+
+func TestMumP2PCollectorMeshPeers(t *testing.T) {
+	c := NewMumP2PCollector()
+	peerA := peer.ID("peer-a")
+	peerB := peer.ID("peer-b")
+
+	c.Graft(peerA, "topic-a")
+	c.Graft(peerA, "topic-a")
+	c.Graft(peerB, "topic-a")
+	snapshot := c.MeshPeers("topic-a")
+	require.ElementsMatch(t, []peer.ID{peerA, peerB}, snapshot)
+
+	c.Prune(peerA, "topic-a")
+	require.ElementsMatch(t, []peer.ID{peerA, peerB}, snapshot)
+	require.Equal(t, []peer.ID{peerB}, c.MeshPeers("topic-a"))
+
+	c.Leave("topic-a")
+	require.Empty(t, c.MeshPeers("topic-a"))
+
+	c.Graft(peerA, "topic-b")
+	c.Graft(peerA, "topic-c")
+	c.Graft(peerB, "topic-c")
+	c.OnClosedOutboundStream(peerA)
+	require.Empty(t, c.MeshPeers("topic-b"))
+	require.Equal(t, []peer.ID{peerB}, c.MeshPeers("topic-c"))
+
+	c.AddPeer(peerB, "proto")
+	c.RemovePeer(peerB)
+	require.Empty(t, c.MeshPeers("topic-c"))
 }

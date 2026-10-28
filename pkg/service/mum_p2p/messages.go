@@ -3,6 +3,8 @@ package mum_p2p
 import (
 	"context"
 	"fmt"
+
+	commonhash "github.com/getoptimum/optimum-common/pkg/hash"
 )
 
 // PublishMessage publishes a message to the specified topic.
@@ -13,17 +15,21 @@ func (n *Node) PublishMessage(
 	topicName string,
 	msg []byte,
 ) error {
-	topic, ok := n.topics.Load(topicName)
-	if !ok {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if _, ok := n.topics.Load(topicName); !ok {
 		if err := n.SubscribeTopic(topicName); err != nil {
 			return fmt.Errorf("failed to subscribe to topic %s: %w", topicName, err)
 		}
-		topic, ok = n.topics.Load(topicName)
+		_, ok = n.topics.Load(topicName)
 		if !ok {
 			return fmt.Errorf("topic %s not found after subscribing", topicName)
 		}
 	}
-	if err := topic.Publish(ctx, msg); err != nil {
+	msgID := commonhash.SHA256(msg)
+	n.logRLNCMessage("rlnc encode", topicName, msgID, len(msg))
+	if err := n.psRouter.Publish(topicName, msgID, msg); err != nil {
 		return fmt.Errorf("failed to publish message: %w", err)
 	}
 	return nil

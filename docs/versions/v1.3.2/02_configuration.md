@@ -62,6 +62,8 @@ direct_cl_peers:
 
 Which peer ID goes in that multiaddr, and the flag on each CL, is in [Connecting your CL client](08_cl_clients.md). Firewall `agent_lib_p2p_port` (default `33212`) to your CL either way.
 
+Set `allow_non_direct_cl_peers: true` to keep auto-reconnect while accepting peers outside `direct_cl_peers`.
+
 ## Topics
 
 Topic subscription is **baked into the binary** — `beacon_block` plus all 64 attestation subnets (`beacon_attestation_0` through `beacon_attestation_63`). There is no `eth_topics_subscribe` field to configure. The full topic paths (with fork digest) are resolved automatically.
@@ -117,6 +119,7 @@ The gateway receives automatic config updates from bootstrap.
 | `identity_libp2p_dir` | `OPT_IDENTITY_LIBP2P_DIR` | /tmp/libp2p | libp2p identity dir — **persist as a volume** |
 | `identity_mump2p_dir` | `OPT_IDENTITY_MUMP2P_DIR` | /tmp/mump2p | mump2p identity dir — **persist as a volume** |
 | `direct_cl_peers` | `OPT_DIRECT_CL_PEERS` | *(empty)* | CL node multiaddrs for auto-reconnect; when set, only listed peer IDs may stay connected |
+| `allow_non_direct_cl_peers` | `OPT_ALLOW_NON_DIRECT_CL_PEERS` | false | Accept peers outside `direct_cl_peers`; disables its peer-ID allowlist |
 | `log_level` | `OPT_LOG_LEVEL` | debug | `debug` / `info` |
 | `remote_push_enable` | `OPT_REMOTE_PUSH_ENABLE` | false | Optional Loki/Mimir push (requires `telemetry_enable: true`) |
 | `stream_enable` | `OPT_STREAM_ENABLE` | false | Enable the consumer block stream (WebSocket + gRPC) |

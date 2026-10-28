@@ -10,7 +10,8 @@ import (
 )
 
 var (
-	badMessage *prometheus.CounterVec
+	badMessage           *prometheus.CounterVec
+	beaconBlockSizeBytes prometheus.Histogram
 
 	badMsgToMum = uint64(0)
 	badMsgToCL  = uint64(0)
@@ -23,6 +24,18 @@ func initMessageSizeMetrics() {
 		"Total number of bad messages sent to CL nodes",
 		[]string{"direction"},
 	)
+	beaconBlockSizeBytes = commonmetrics.NewSimpleHistogram(
+		"beacon_block_size_bytes",
+		subsystem,
+		"Size of received beacon block messages in bytes",
+		prometheus.ExponentialBuckets(64, 2, 16),
+	)
+}
+
+func ObserveBeaconBlockSize(sizeBytes int) {
+	if enabledMetrics {
+		beaconBlockSizeBytes.Observe(float64(sizeBytes))
+	}
 }
 
 func IncreaseBadMessages(source entities.Source) {

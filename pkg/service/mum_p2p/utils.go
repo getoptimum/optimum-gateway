@@ -22,6 +22,7 @@ func (n *Node) DumpState(clusterID string) {
 			for _, topic := range n.GetTopics() {
 				n.log.Info("topic peers", logger.WithTopic(topic), logger.WithInt("peers", len(n.GetMeshPeers(topic))))
 			}
+			n.logRLNCTopicMap()
 		}
 	}
 }

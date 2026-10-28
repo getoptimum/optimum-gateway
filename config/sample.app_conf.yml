@@ -72,3 +72,4 @@ telemetry_port: 48123
 # ─── Direct CL peers (optional) ──────────────────────────────────────────────
 # direct_cl_peers:
 #   - /ip4/1.2.3.4/tcp/13000/p2p/16Uiu2...
+# allow_non_direct_cl_peers: false

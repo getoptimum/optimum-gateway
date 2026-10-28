@@ -11,6 +11,13 @@ COVERAGE_PASS_THRESHOLD := $(shell echo "$(COVERAGE_TOTAL) $(COVERAGE_THRESHOLD)
 # (#955/#951) so the impact is bounded. Rationale in govulncheck.yaml and #924.
 VULN_EXCEPTION_NAMES := ["GO-2024-3218"]
 
+RLNC_VERSION ?= v0.10.0
+RLNC_REPOSITORY ?= https://github.com/getoptimum/rlnc.git
+RLNC_SERVER_OUTPUT ?= ./bin/rlnc-server
+
+GO_LICENSES_RUN := go run github.com/google/go-licenses@v1.6.0
+CYCLONEDX_RUN   := go run github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@v1.10.0
+
 help: ## Show help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
@@ -91,8 +98,19 @@ build: ## Builds binary
 	@echo "-- building binary"
 	go build -o ./bin/optimum-gateway ./cmd
 
-GO_LICENSES_RUN := go run github.com/google/go-licenses@v1.6.0
-CYCLONEDX_RUN   := go run github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@v1.10.0
+build-rlnc-server:
+	rm -rf /tmp/rlnc
+	git clone --depth 1 --branch "$(RLNC_VERSION)" "$(RLNC_REPOSITORY)" /tmp/rlnc
+	echo "⚙️  Building RLNC server binary...";
+	(cd "/tmp/rlnc" && CGO_ENABLED=1 go build -ldflags "-linkmode=external" -o "$(abspath $(RLNC_SERVER_OUTPUT))" ./cmd/rlnc-server);
+	echo "✅ RLNC server built at $(abspath $(RLNC_SERVER_OUTPUT))"
+
+run-rlnc-server: ## Run RLNC server. if binary not exist it will build it first
+	@echo "-- running rlnc-server"
+	@if [ ! -f "./bin/rlnc-server" ]; then \
+		$(MAKE) build-rlnc-server; \
+	fi
+	./bin/rlnc-server --lanes 20 --name mump2p-protocol
 
 license-check: ## Check shipped binary (./cmd) deps for strong copyleft (strict)
 	@echo "Running license check (shipped binary)..."

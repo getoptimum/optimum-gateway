@@ -1,8 +1,8 @@
 package entities
 
 import (
+	tracepb "github.com/getoptimum/mump2p-protocol/pkg/pb"
 	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
-	pboptimum "github.com/getoptimum/optimum-p2p/optimum-pubsub/pb"
 )
 
 type MumP2PCommand uint8
@@ -16,5 +16,5 @@ const (
 type MumP2PResponse struct {
 	Command    MumP2PCommand
 	Message    *commonentities.P2PMessage
-	TraceEvent *pboptimum.TraceEvent
+	TraceEvent *tracepb.TraceEvent
 }

@@ -39,6 +39,7 @@ func (s *Service) processBeaconBlockArrival(
 		l.Error("failed to decode beacon block slot/proposer index", err)
 		return 0, false
 	}
+	telemetry.ObserveBeaconBlockSize(len(msg))
 
 	s.srvBootstrapper.HandleBeaconBlock(source,
 		blockDecoded.Header.Slot,
