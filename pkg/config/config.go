@@ -427,14 +427,16 @@ func (c *AppConfig) GetAggregationInterval() time.Duration {
 	return time.Duration(c.aggregationIntervalMs.Load()) * time.Millisecond
 }
 
-// GetAttestationPublishGate is the fallback attestation release from slot start (default 4s).
-// If a block is seen earlier, the aggregator releases 2s after it; 0 disables the gate.
+// GetAttestationPublishGate is the no-block fallback: 4s after slot start.
+// When a beacon block has arrived this slot, the aggregator releases 2s after
+// the latest arrival instead, including when that is later than 4s. A
+// non-positive value disables the gate. See ADR-0009.
 func (c *AppConfig) GetAttestationPublishGate() time.Duration {
 	return time.Duration(DefaultAttestationPublishAfterMs) * time.Millisecond
 }
 
 // GetAttestationPublishCap returns the slot-aware cap duration that closes the
-// publish window. 0 means no cap (publish until slot end). See ADR-010.
+// publish window (8s). 0 means no cap (publish until slot end). See ADR-0009.
 func (c *AppConfig) GetAttestationPublishCap() time.Duration {
 	return time.Duration(DefaultAttestationPublishCapMs) * time.Millisecond
 }

@@ -178,8 +178,8 @@ func (a *Service) loop() {
 			}
 			byTopic[it.Topic] = append(byTopic[it.Topic], it.Data)
 		case <-t.C:
-			// Slot-aware gate (ADR-009): hold publishes during the early part of a
-			// slot so attestation traffic doesn't compete with block propagation.
+			// Slot-aware gate (ADR-0009): hold the mump2p emit until 2s after the
+			// latest beacon-block arrival this slot, or 4s without one; stop at 8s.
 			// Accumulation continues regardless — only the emit is suppressed.
 			if a.shouldHoldForSlotGate(time.Now()) {
 				continue
@@ -189,15 +189,13 @@ func (a *Service) loop() {
 	}
 }
 
-// shouldHoldForSlotGate returns true if the slot-aware publish window is closed
-// and the aggregator should keep accumulating without emitting yet.
+// shouldHoldForSlotGate reports whether the aggregator should keep accumulating
+// without emitting. See ADR-0009.
 //
-// The publish window per slot is [gate, cap):
-//   - before gate: hold
-//   - between gate and cap: emit normally on every tick
-//   - at or after cap: hold (next emit waits for next slot's gate release)
-//
-// Returns false when the gate is disabled. See ADR-010.
+// Release is 2s after the latest beacon-block arrival this slot on either path,
+// or 4s after slot start without one. A later arrival re-holds an open window.
+// The window closes 8s into the slot. A non-positive fallback gate disables the
+// hold.
 func (a *Service) shouldHoldForSlotGate(now time.Time) bool {
 	if a.cfg == nil {
 		return false
