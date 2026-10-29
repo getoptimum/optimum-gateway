@@ -15,7 +15,7 @@
 
 **Docker Image:** `getoptimum/gateway:v1.3.4`
 
-v1.3.4 is the current release. v1.3.3 and v1.3.2 remain supported; upgrade if you run with host networking ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)). v1.3.2 is also affected by [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787). CL peering is unchanged; see the release notes for the `48123` action.
+v1.3.4 is the current release. v1.3.3 and v1.3.2 remain supported; if you run with host networking, upgrade and take the `48123` action in the release notes ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)). v1.3.2 is also affected by [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787). CL peering is unchanged.
 
 ### Highlights
 
@@ -30,7 +30,7 @@ v1.3.4 is the current release. v1.3.3 and v1.3.2 remain supported; upgrade if yo
 
 **Docker Image:** `getoptimum/gateway:v1.3.3`
 
-v1.3.3 remains supported; if you run with host networking, upgrade and set `telemetry_addr: 127.0.0.1`, or with Helm move to chart 0.5.0 ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)). Networking and CL peering are unchanged: same ports and firewall rules.
+v1.3.3 remains supported; if you run with host networking, upgrade and set `telemetry_addr: 127.0.0.1`, or with Helm move to chart 0.5.0 and gateway v1.3.4 together ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)). Networking and CL peering are unchanged: same ports and firewall rules.
 
 ### Highlights
 
@@ -48,7 +48,7 @@ v1.3.3 remains supported; if you run with host networking, upgrade and set `tele
 
 **Docker Image:** `getoptimum/gateway:v1.3.2`
 
-v1.3.2 remains supported, but upgrading is recommended because it is affected by [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787). If you run with host networking, upgrade and set `telemetry_addr: 127.0.0.1`, or with Helm move to chart 0.5.0 ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)). Networking and CL peering are unchanged: same ports and firewall rules.
+v1.3.2 remains supported, but upgrading is recommended because it is affected by [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787). If you run with host networking, upgrade and set `telemetry_addr: 127.0.0.1`, or with Helm move to chart 0.5.0 and gateway v1.3.4 together ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)). Networking and CL peering are unchanged: same ports and firewall rules.
 
 ### Highlights
 
