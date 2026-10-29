@@ -15,13 +15,13 @@
 
 **Docker Image:** `getoptimum/gateway:v1.3.4`
 
-v1.3.4 is the current release. v1.3.3 and v1.3.2 remain supported; if you run with host networking, upgrade and take the `48123` action in the release notes ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)). v1.3.2 is also affected by [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787). CL peering is unchanged.
+v1.3.4 is the current release. v1.3.3 and v1.3.2 remain supported; if you run with host networking, upgrade and take the `48123` action in the release notes ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)). Upgrading v1.3.2 is recommended because it is also affected by [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787). CL peering is unchanged.
 
 ### Highlights
 
 * **Telemetry stays on the host ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)).** With `--network host` or the Helm chart's `hostNetwork`, the read-only telemetry endpoints on `48123` listened on every host IPv4 interface. Gateways started with the current Console command are not affected. Any gateway run with `--network host` is, for example from the join-key `docker run` in the v1.3.2 and v1.3.3 docs or a Console command copied before 29 September 2026. With `--network host`, set the new `telemetry_addr: 127.0.0.1` (`-p` does not apply). With Helm, move to chart 0.5.0 and gateway v1.3.4 together.
 * **New `telemetry_addr` option** (`OPT_TELEMETRY_ADDR`) sets the telemetry bind address. The default is unchanged.
-* **Helm chart 0.5.0** binds telemetry to node loopback and makes the join key the default credential. It needs gateway v1.3.4; older images ignore its loopback bind.
+* **Helm chart 0.5.0** binds telemetry to node loopback and adds join-key enrollment. It needs gateway v1.3.4; older images ignore its loopback bind.
 * **Registration no longer sends the unused `gateway_http_addr`.**
 
 [Full release notes](./versions/v1.3.4/release_notes.md) · [Documentation](./versions/v1.3.4/index.md)
