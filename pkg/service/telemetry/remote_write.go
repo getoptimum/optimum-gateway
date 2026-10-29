@@ -196,14 +196,14 @@ func runMimirRemoteWrite(ctx context.Context, log logger.AppLogger, cfg *config.
 		return fmt.Errorf("apply discovery config: %w", err)
 	}
 
-	if err := waitForMetricsEndpoint(ctx, cfg.TelemetryPort); err != nil {
+	if err := waitForMetricsEndpoint(ctx, cfg); err != nil {
 		return err
 	}
 
 	log.Info("starting mimir remote write",
 		logger.WithString("url", mimirRemoteWriteURL(cfg)),
 		logger.WithString("wal_dir", walDir),
-		logger.WithInt("telemetry_port", cfg.TelemetryPort),
+		logger.WithString("telemetry_target", cfg.TelemetryLocalTarget()),
 		logger.WithBool("bearer_token_set", currentPushToken() != ""),
 	)
 
@@ -214,15 +214,16 @@ func runMimirRemoteWrite(ctx context.Context, log logger.AppLogger, cfg *config.
 	return ctx.Err()
 }
 
-func waitForMetricsEndpoint(ctx context.Context, port int) error {
-	if port <= 0 {
+func waitForMetricsEndpoint(ctx context.Context, cfg *config.AppConfig) error {
+	if cfg.TelemetryPort <= 0 {
 		return fmt.Errorf("telemetry port is not configured")
 	}
 	deadlineCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 
-	metricsURL := fmt.Sprintf("http://127.0.0.1:%d/metrics", port)
-	client := &http.Client{Timeout: metricsProbeTimeout}
+	metricsURL := "http://" + cfg.TelemetryLocalTarget() + "/metrics"
+	// No proxy: a non-loopback telemetry_addr must still be probed directly, as the scrape is.
+	client := &http.Client{Timeout: metricsProbeTimeout, Transport: &http.Transport{Proxy: nil, DisableKeepAlives: true}}
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
@@ -261,7 +262,7 @@ func buildMimirPromConfig(cfg *config.AppConfig, scrapeInterval time.Duration) (
 	rwCfg.URL = &commonconfig.URL{URL: pushURL}
 	rwCfg.Name = "mimir"
 
-	target := fmt.Sprintf("127.0.0.1:%d", cfg.TelemetryPort)
+	target := cfg.TelemetryLocalTarget()
 	scrapeCfg := &promconfig.ScrapeConfig{
 		JobName:        "optimum_gateway",
 		ScrapeInterval: model.Duration(scrapeInterval),
@@ -273,6 +274,10 @@ func buildMimirPromConfig(cfg *config.AppConfig, scrapeInterval time.Duration) (
 				&targetgroup.Group{
 					Targets: []model.LabelSet{
 						{model.AddressLabel: model.LabelValue(target)},
+					},
+					// Keep instance stable so series do not split when telemetry_addr changes.
+					Labels: model.LabelSet{
+						model.InstanceLabel: model.LabelValue(cfg.TelemetryInstance()),
 					},
 				},
 			},

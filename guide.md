@@ -52,6 +52,7 @@ The gateway accepts configuration through environment variables as well. Environ
 - `OPT_AGENT_MUMP2P_PORT`: TCP port used for the gateway-to-gateway mesh
 - `OPT_ENABLE_TELEMETRY`: Enable local API and Prometheus metrics
 - `OPT_TELEMETRY_PORT`: HTTP port for `/health`, `/metrics`, `/api/v1/self_info`
+- `OPT_TELEMETRY_ADDR`: IP the telemetry server binds (default: all IPv4 interfaces). Set `127.0.0.1` under host networking
 - `OPT_REMOTE_PUSH_ENABLE`: Push metrics/logs to Optimum (requires telemetry + API key)
 
 ## Startup Flow

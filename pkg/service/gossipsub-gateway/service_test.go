@@ -192,7 +192,7 @@ func TestGatewayReal(t *testing.T) {
 
 	srv, appConf := getGatewayNode(ctx, t, logger.NewAppSLogger(logger.Debug), "local", false)
 	require.NoError(t, srv.Run())
-	appRouter := routes.NewAppRouter(l, srv, appConf, fmt.Sprintf(":%d", appConf.TelemetryPort))
+	appRouter := routes.NewAppRouter(l, srv, appConf)
 	go func() {
 		require.NoError(t, appRouter.Run(ctx))
 	}()
