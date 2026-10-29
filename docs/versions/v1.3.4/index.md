@@ -1,6 +1,6 @@
 # Optimum Gateway - User Guide
 
-> **Current release:** v1.3.4 is the current release. It includes a security fix; operators on v1.3.3 and earlier should upgrade. v1.3.2 and earlier are also affected by [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787). CL peering is unchanged; see the release notes for the `48123` action.
+> **Current release:** v1.3.4 is the current release. Operators on v1.3.3 and earlier should upgrade ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)). v1.3.2 and earlier are also affected by [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787). CL peering is unchanged; see the release notes for the `48123` action.
 
 > **Release Notes:** [What's new in v1.3.4](./release_notes.md)
 

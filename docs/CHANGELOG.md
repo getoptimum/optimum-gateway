@@ -1,20 +1,36 @@
 # Optimum Gateway - Version History & Changelog
 
-**Latest Release:** [v1.3.3](./versions/v1.3.3/release_notes.md)  
-**Latest Docs:** [v1.3.3 Documentation](./versions/v1.3.3/index.md)
+**Latest Release:** [v1.3.4](./versions/v1.3.4/release_notes.md)  
+**Latest Docs:** [v1.3.4 Documentation](./versions/v1.3.4/index.md)
 
 ## Supported Versions
 
 | Version | Status                          | Docker Image                |
 | ------- | ------------------------------- | --------------------------- |
-| v1.3.3  | CURRENT                         | `getoptimum/gateway:v1.3.3` |
+| v1.3.4  | CURRENT                         | `getoptimum/gateway:v1.3.4` |
+| v1.3.3  | supported / upgrade recommended | `getoptimum/gateway:v1.3.3` |
 | v1.3.2  | supported / upgrade recommended | `getoptimum/gateway:v1.3.2` |
 
-## v1.3.3 (Current)
+## v1.3.4 (Current)
+
+**Docker Image:** `getoptimum/gateway:v1.3.4`
+
+v1.3.4 is the current release. v1.3.3 and v1.3.2 remain supported, but upgrading is recommended because they are affected by [GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g). CL peering is unchanged; see the release notes for the `48123` action.
+
+### Highlights
+
+* **Telemetry port reachable from the network (medium severity, [GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)).** The unauthenticated telemetry server on `48123` listened on every host interface under `--network host` and the Helm chart's `hostNetwork`. Keep it on the host: publish `-p 127.0.0.1:48123:48123`, or set the new `telemetry_addr: 127.0.0.1` with host networking. v1.3.3 and earlier are affected.
+* **New `telemetry_addr` option** (`OPT_TELEMETRY_ADDR`) sets the telemetry bind address. The default is unchanged.
+* **Helm chart 0.5.0** binds telemetry to node loopback, makes the join key the default credential, and requires v1.3.4.
+* **Registration no longer sends the unused `gateway_http_addr`.**
+
+[Full release notes](./versions/v1.3.4/release_notes.md) · [Documentation](./versions/v1.3.4/index.md)
+
+## v1.3.3 (Supported)
 
 **Docker Image:** `getoptimum/gateway:v1.3.3`
 
-v1.3.3 is the current release. v1.3.2 remains supported, but upgrading is recommended because it is affected by [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787). Networking and CL peering are unchanged — same ports and firewall rules.
+v1.3.3 remains supported, but upgrading is recommended because it is affected by [GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g). Networking and CL peering are unchanged: same ports and firewall rules.
 
 ### Highlights
 
@@ -32,7 +48,7 @@ v1.3.3 is the current release. v1.3.2 remains supported, but upgrading is recomm
 
 **Docker Image:** `getoptimum/gateway:v1.3.2`
 
-v1.3.2 remains supported, but upgrading is recommended because it is affected by [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787). Networking and CL peering are unchanged — same ports and firewall rules.
+v1.3.2 remains supported, but upgrading is recommended because it is affected by [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787) and [GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g). Networking and CL peering are unchanged: same ports and firewall rules.
 
 ### Highlights
 
@@ -44,23 +60,23 @@ v1.3.2 remains supported, but upgrading is recommended because it is affected by
 
 ## v1.3.1 (Deprecated)
 
-**v1.3.1 is deprecated.** Docs for this release have been removed. Partners still on v1.3.1 must upgrade to **[v1.3.3](./versions/v1.3.3/release_notes.md)** (`getoptimum/gateway:v1.3.3`). v1.3.2 remains supported.
+**v1.3.1 is deprecated.** Docs for this release have been removed. Partners still on v1.3.1 must upgrade to **[v1.3.4](./versions/v1.3.4/release_notes.md)** (`getoptimum/gateway:v1.3.4`). v1.3.3 and v1.3.2 remain supported.
 
 ## v1.3.0 (Deprecated)
 
-**v1.3.0 is deprecated.** Docs for this release have been removed. Partners still on v1.3.0 must upgrade to **[v1.3.3](./versions/v1.3.3/release_notes.md)** (`getoptimum/gateway:v1.3.3`). v1.3.2 remains supported.
+**v1.3.0 is deprecated.** Docs for this release have been removed. Partners still on v1.3.0 must upgrade to **[v1.3.4](./versions/v1.3.4/release_notes.md)** (`getoptimum/gateway:v1.3.4`). v1.3.3 and v1.3.2 remain supported.
 
 ## v1.2.0 (Deprecated)
 
-**v1.2.0 is deprecated.** Docs for this release have been removed. Partners still on v1.2.0 must upgrade to **[v1.3.3](./versions/v1.3.3/release_notes.md)** (`getoptimum/gateway:v1.3.3`). v1.3.2 remains supported.
+**v1.2.0 is deprecated.** Docs for this release have been removed. Partners still on v1.2.0 must upgrade to **[v1.3.4](./versions/v1.3.4/release_notes.md)** (`getoptimum/gateway:v1.3.4`). v1.3.3 and v1.3.2 remain supported.
 
 ## v1.1.1 (Deprecated)
 
-**v1.1.1 is deprecated.** Docs for this release have been removed. Partners still on v1.1.1 must upgrade to **[v1.3.3](./versions/v1.3.3/release_notes.md)** (`getoptimum/gateway:v1.3.3`). v1.3.2 remains supported.
+**v1.1.1 is deprecated.** Docs for this release have been removed. Partners still on v1.1.1 must upgrade to **[v1.3.4](./versions/v1.3.4/release_notes.md)** (`getoptimum/gateway:v1.3.4`). v1.3.3 and v1.3.2 remain supported.
 
 ## v1.0.2 (Deprecated)
 
-**v1.0.2 is deprecated.** Docs for this release have been removed. Partners still on v1.0.2 must upgrade to **[v1.3.3](./versions/v1.3.3/release_notes.md)** (`getoptimum/gateway:v1.3.3`). v1.3.2 remains supported.
+**v1.0.2 is deprecated.** Docs for this release have been removed. Partners still on v1.0.2 must upgrade to **[v1.3.4](./versions/v1.3.4/release_notes.md)** (`getoptimum/gateway:v1.3.4`). v1.3.3 and v1.3.2 remain supported.
 
 ## Important: Deprecated Versions
 
