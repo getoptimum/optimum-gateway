@@ -258,7 +258,7 @@ Create `prometheus/targets.json`, using the gateway's container name:
 ]
 ```
 
-If Prometheus runs directly on the host rather than in Docker, use `localhost:48123` instead. If the gateway runs with `--network host`, it joins no Docker network; with `telemetry_addr: 127.0.0.1` it listens on the host's `127.0.0.1:48123`, which only a Prometheus on the host's network can reach (on the host itself, or in a container with `network_mode: host`): use `localhost:48123` there.
+If Prometheus runs directly on the host rather than in Docker, use `localhost:48123` instead. If the gateway runs with `--network host`, it joins no Docker network; with `telemetry_addr: 127.0.0.1` it listens on the host's `127.0.0.1:48123`, which a Prometheus running directly on the host can reach at `localhost:48123`.
 
 If you run Hoodi and Mainnet gateways at the same time, run each gateway container with `--network optimum` and its own host-side loopback port (for example `-p 127.0.0.1:48124:48123`), and add one target per container name in `targets.json`; use the dashboard **Network** dropdown to switch between them.
 
