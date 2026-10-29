@@ -15,11 +15,11 @@
 
 **Docker Image:** `getoptimum/gateway:v1.3.4`
 
-v1.3.4 is the current release. v1.3.3 and v1.3.2 remain supported, but upgrading is recommended because they are affected by [GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g). CL peering is unchanged; see the release notes for the `48123` action.
+v1.3.4 is the current release. v1.3.3 and v1.3.2 remain supported; upgrade if you run with host networking ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)). CL peering is unchanged; see the release notes for the `48123` action.
 
 ### Highlights
 
-* **Telemetry port reachable from the network (medium severity, [GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)).** The unauthenticated telemetry server on `48123` listened on every host interface under `--network host` and the Helm chart's `hostNetwork`. Keep it on the host: publish `-p 127.0.0.1:48123:48123`, or set the new `telemetry_addr: 127.0.0.1` with host networking. v1.3.3 and earlier are affected.
+* **Telemetry stays on the host ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)).** With `--network host` or the Helm chart's `hostNetwork`, the read-only telemetry endpoints on `48123` listened on every host interface. Gateways started with the Console command are not affected. Publish `-p 127.0.0.1:48123:48123`, or set the new `telemetry_addr: 127.0.0.1` with host networking.
 * **New `telemetry_addr` option** (`OPT_TELEMETRY_ADDR`) sets the telemetry bind address. The default is unchanged.
 * **Helm chart 0.5.0** binds telemetry to node loopback, makes the join key the default credential, and requires v1.3.4.
 * **Registration no longer sends the unused `gateway_http_addr`.**
@@ -30,7 +30,7 @@ v1.3.4 is the current release. v1.3.3 and v1.3.2 remain supported, but upgrading
 
 **Docker Image:** `getoptimum/gateway:v1.3.3`
 
-v1.3.3 remains supported, but upgrading is recommended because it is affected by [GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g). Networking and CL peering are unchanged: same ports and firewall rules.
+v1.3.3 remains supported; upgrade if you run with host networking ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)). Networking and CL peering are unchanged: same ports and firewall rules.
 
 ### Highlights
 
@@ -48,7 +48,7 @@ v1.3.3 remains supported, but upgrading is recommended because it is affected by
 
 **Docker Image:** `getoptimum/gateway:v1.3.2`
 
-v1.3.2 remains supported, but upgrading is recommended because it is affected by [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787) and [GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g). Networking and CL peering are unchanged: same ports and firewall rules.
+v1.3.2 remains supported, but upgrading is recommended because it is affected by [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787). Upgrade if you run with host networking ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)). Networking and CL peering are unchanged: same ports and firewall rules.
 
 ### Highlights
 
