@@ -115,7 +115,7 @@ The gateway receives automatic config updates from bootstrap.
 | `agent_mump2p_port` | `OPT_AGENT_MUMP2P_PORT` | 33213 | mump2p agent port (inbound) |
 | `telemetry_enable` | `OPT_ENABLE_TELEMETRY` | false | Enable the `/metrics` endpoint. `/health` and `/api/v1/self_info` stay available when this is false |
 | `telemetry_port` | `OPT_TELEMETRY_PORT` | 48123 | Telemetry HTTP port (`/health`, `/metrics`, `/api/v1/self_info`) |
-| `telemetry_addr` | `OPT_TELEMETRY_ADDR` | *(empty)* | IP (or `localhost`) the telemetry server binds, without a port. Empty binds all IPv4 interfaces; `::` binds IPv4 and IPv6 (needs IPv6 enabled on the host). Set `127.0.0.1` with `--network host` or `hostNetwork` |
+| `telemetry_addr` | `OPT_TELEMETRY_ADDR` | *(empty)* | IP (or `localhost`) the telemetry server binds, without a port. Empty binds all IPv4 interfaces; `::` binds IPv4 and IPv6 (needs IPv6 enabled on the host). Set `127.0.0.1` only with `--network host` or `hostNetwork`; in a bridged container it breaks the `-p` publish |
 | `identity_libp2p_dir` | `OPT_IDENTITY_LIBP2P_DIR` | /tmp/libp2p | libp2p identity dir — **persist as a volume** |
 | `identity_mump2p_dir` | `OPT_IDENTITY_MUMP2P_DIR` | /tmp/mump2p | mump2p identity dir — **persist as a volume** |
 | `direct_cl_peers` | `OPT_DIRECT_CL_PEERS` | *(empty)* | CL node multiaddrs for auto-reconnect; when set, only listed peer IDs may stay connected |
