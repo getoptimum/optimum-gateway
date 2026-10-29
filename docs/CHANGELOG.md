@@ -123,7 +123,7 @@ docker run --name optimum-gateway --rm \
   -config=/app/config/app_conf.yml
 ```
 
-With `--network host`, keep it, drop the `-p` flags and add `-e OPT_TELEMETRY_ADDR=127.0.0.1`.
+If you run with `--network host`, add it to this command, drop the `-p` flags and add `-e OPT_TELEMETRY_ADDR=127.0.0.1`.
 
 ## Support
 
