@@ -18,10 +18,12 @@ Publish **33212** (CL clients) and **33213** (Optimum mump2p mesh) to the networ
 docker run -p 33212:33212 -p 33213:33213 -p 127.0.0.1:48123:48123 \
   --name optimum-gateway \
   -e OPT_API_KEY=ogw_live_xxx \
-  getoptimum/gateway:v1.3.3
+  getoptimum/gateway:v1.3.4
 ```
 
-If Prometheus runs in another container on the same Docker network, omit the `48123` publish and scrape the gateway by container name instead.
+If Prometheus runs in another container, put both on one Docker network and scrape the gateway by container name (see [Metrics & Grafana](03_telemetry.md#step-3-prometheus-configuration)). Keep the loopback publish for local `curl` checks.
+
+Optimum never connects inbound to `48123`. If you run the gateway with `--network host`, `-p` does not apply, so set `telemetry_addr: 127.0.0.1` (or `OPT_TELEMETRY_ADDR=127.0.0.1`) to keep `48123` on loopback.
 
 ## Consumer block stream (optional)
 

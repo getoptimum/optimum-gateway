@@ -60,7 +60,7 @@ The gateway exchanges this key on startup at `auth.getoptimum.io/api/v1/auth/tok
 ## Installation
 
 ```sh
-docker pull getoptimum/gateway:v1.3.3
+docker pull getoptimum/gateway:v1.3.4
 ```
 
 ## Configuration
@@ -98,7 +98,7 @@ docker run --name optimum-gateway --rm \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data/libp2p:/tmp/libp2p \
   -v $(pwd)/data/mump2p:/tmp/mump2p \
-  getoptimum/gateway:v1.3.3 \
+  getoptimum/gateway:v1.3.4 \
   -config=/app/config/app_conf.yml
 ```
 
@@ -116,7 +116,7 @@ curl http://localhost:48123/health
 {
   "status": "healthy",
   "gateway_id": "optimum-dev-hoodi-kubernetes-validator-lighthouse",
-  "version": "v1.3.3",
+  "version": "v1.3.4",
   "commit_hash": "a0b2bc1",
   "uptime_seconds": 1639,
   "checks": {

@@ -20,7 +20,7 @@
 {
   "status": "healthy",
   "gateway_id": "optimum-dev-hoodi-kubernetes-validator-lighthouse",
-  "version": "v1.3.3",
+  "version": "v1.3.4",
   "commit_hash": "a0b2bc1",
   "uptime_seconds": 1639,
   "checks": {
@@ -75,7 +75,7 @@ Leave `stream_only` gateways out of the `cl_peers` alert. The gauge stays 0 ther
   "gateway_id": "optimum-dev-hoodi-kubernetes-validator-lighthouse",
   "paired_with": "partner",
   "remote_url": "bootstrap.getoptimum.io",
-  "version": "v1.3.3",
+  "version": "v1.3.4",
   "skip_messages_from_self": true,
   "peer_id": "12D3KooWNKZuPvVw5Sfnbq3nvyukxmhBBPZUXHeqzwcehmmwnKcR",
   "libp2p": {
@@ -171,7 +171,7 @@ services:
       - ./prometheus:/etc/prometheus
       - prometheus-data:/prometheus
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     restart: unless-stopped
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -192,7 +192,7 @@ services:
   grafana:
     image: grafana/grafana:latest
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     volumes:
       - ./grafana-provisioning:/etc/grafana/provisioning:ro
       - ./grafana-dashboards:/var/lib/grafana/dashboards:ro
@@ -217,7 +217,20 @@ services:
 volumes:
   prometheus-data:
   grafana-data:
+
+networks:
+  default:
+    name: optimum
+    external: true
 ```
+
+Prometheus reaches the gateway by container name on this shared network, so `48123` stays published on `127.0.0.1` only. Create the network once, outside this stack, so stopping the stack never removes it:
+
+```bash
+docker network create optimum
+```
+
+Then add `--network optimum` to the gateway's `docker run` command (keep its `-p` flags) and recreate the gateway, so every new gateway container joins the network.
 
 ### Step 3: Prometheus Configuration
 
@@ -234,31 +247,20 @@ scrape_configs:
           - /etc/prometheus/targets.json
 ```
 
-Create `prometheus/targets.json` (choose your platform):
-
-**Docker Desktop (macOS / Windows):**
+Create `prometheus/targets.json`, using the gateway's container name:
 
 ```json
 [
   {
-    "targets": ["host.docker.internal:48123"],
+    "targets": ["optimum-gateway:48123"],
     "labels": { "job": "gateway" }
   }
 ]
 ```
 
-**Linux Docker:**
+If Prometheus runs directly on the host rather than in Docker, use `localhost:48123` instead. If the gateway runs with `--network host`, it joins no Docker network and listens on the host's `127.0.0.1:48123`, which only a Prometheus running on the host itself can reach: use `localhost:48123` there.
 
-```json
-[
-  {
-    "targets": ["172.17.0.1:48123"],
-    "labels": { "job": "gateway" }
-  }
-]
-```
-
-If you run Hoodi and Mainnet gateways at the same time, add one scrape entry per gateway in `targets.json` (different ports); use the dashboard **Network** dropdown to switch between them.
+If you run Hoodi and Mainnet gateways at the same time, run each gateway container with `--network optimum` and its own host-side loopback port (for example `-p 127.0.0.1:48124:48123`), and add one target per container name in `targets.json`; use the dashboard **Network** dropdown to switch between them.
 
 ### Step 4: Grafana Provisioning
 
@@ -298,7 +300,7 @@ providers:
 Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
 
 <details>
-<summary><strong>Click to expand: Partner Dashboard JSON (v1.3.3)</strong></summary>
+<summary><strong>Click to expand: Partner Dashboard JSON (v1.3.4)</strong></summary>
 
 ```json
 {
@@ -318,7 +320,7 @@ Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
       }
     ]
   },
-  "description": "Partner-facing dashboard for Optimum Gateway v1.3.3. All metrics sourced from the gateway /metrics endpoint. Select your Prometheus datasource and Network (Hoodi or Mainnet), then your gateway (by gateway_label).",
+  "description": "Partner-facing dashboard for Optimum Gateway v1.3.4. All metrics sourced from the gateway /metrics endpoint. Select your Prometheus datasource and Network (Hoodi or Mainnet), then your gateway (by gateway_label).",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -1781,7 +1783,7 @@ Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
   "tags": [
     "optimum",
     "partner",
-    "v1.3.3"
+    "v1.3.4"
   ],
   "templating": {
     "list": [
@@ -1862,7 +1864,7 @@ Copy the JSON below into `grafana-dashboards/partner-dashboard.json`:
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Optimum Gateway - Partner Dashboard (v1.3.3)",
+  "title": "Optimum Gateway - Partner Dashboard (v1.3.4)",
   "uid": "partner-gateway-v1"
 }
 ```

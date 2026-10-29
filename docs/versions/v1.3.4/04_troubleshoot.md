@@ -82,7 +82,7 @@ A check is `ok`, `fail`, or `skipped`. `skipped` means the check does not apply 
 {
   "status": "healthy",
   "gateway_id": "optimum-eu-hoodi-01",
-  "version": "v1.3.3",
+  "version": "v1.3.4",
   "uptime_seconds": 1639,
   "checks": {
     "cl_peers": {"status": "ok", "value": 1},
@@ -197,7 +197,7 @@ Flags, versions, and the per-client fixes are in [Connecting your CL client](08_
 | Teku disconnects the gateway             | Teku **26.4.0+**, and `--p2p-direct-peers` rather than `--p2p-static-peers` alone.                                                                          |
 | Nimbus won't stay connected              | Stable `--netkey-file`, Nimbus in `direct_cl_peers`, both P2P ports open.                                                                                   |
 | Connected but no blocks                  | Execution client still syncing. `cl_peers` can be ok while `last_block_age_sec` fails.                                                                      |
-| Docker NAT / wrong IP in multiaddr       | `libp2p.multiaddrs[0]` is often a bridge address. Use the host IP or `--network host`.                                                                      |
+| Docker NAT / wrong IP in multiaddr       | `libp2p.multiaddrs[0]` is often a bridge address. Use the host IP in the CL peer multiaddr.                                                                |
 
 
 ## Network / firewall / Docker
@@ -215,7 +215,7 @@ sudo ufw allow 33212/tcp
 sudo ufw allow 33213/tcp
 ```
 
-**33213** must be reachable from the internet for the mesh. **33212** is for your CL (usually private). **Docker tip:** `--network host` exposes all ports on the host network interface.
+**33213** must be reachable from the internet for the mesh. **33212** is for your CL (usually private). **48123** is never needed from outside the host: publish it with `-p 127.0.0.1:48123:48123`. With `--network host`, set `telemetry_addr: 127.0.0.1`.
 
 
 ## Identity / persistence
@@ -238,7 +238,7 @@ Partners scrape the gateway `/metrics` **locally** with their own Prometheus + G
 | Issue                          | Fix                                                                                  |
 | ------------------------------ | ------------------------------------------------------------------------------------ |
 | Grafana empty / "no data"      | `telemetry_enable: false`. Set it to `true` and restart                              |
-| Prometheus can't scrape        | Wrong target. macOS/Windows: `host.docker.internal:48123`; Linux: `172.17.0.1:48123` |
+| Prometheus can't scrape        | Wrong target. Use `optimum-gateway:48123` on a shared Docker network, or `localhost:48123` from the host. See [Metrics & Grafana](03_telemetry.md#step-3-prometheus-configuration) |
 | Gateway not in the dropdown    | No successful scrape yet. Confirm `curl localhost:48123/metrics \| grep gateway_id`  |
 | Block/attestation panels empty | Gateway isn't receiving blocks/attestations. Fix CL + mesh first via `/health`       |
 | "mump2p-first slots" always 0  | No block race data yet. Needs a healthy CL + mesh + time on the network              |
@@ -261,18 +261,18 @@ curl -s http://localhost:48123/metrics | grep mump2p_gateway
 
 ## Gateway self-enrollment
 
-Applies when `OPT_JOIN_KEY` is set. See [Gateway Self-Enrollment](07_gateway_self_enrollment.md).
+Applies when `OPT_JOIN_KEY` is set. See [Gateway Self-Enrollment](07_gateway_self_enrollment.md), and on Helm [Fleet enrollment](05_kubernetes.md#fleet-enrollment-join-key).
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | Startup fails with `enroll gateway` / `401` | Join key unknown, expired, exhausted, or revoked; or host clock >~2 min slow | The `401` is deliberately the same for all four, so check the key under **Manage Gateways** → **Enrollment keys**: expired and exhausted show as a badge, revoked keys are removed from the list. Sync NTP. Generate a new key if needed |
-| Startup fails with `label_conflict` / `409` | Enrollment label already live in the org | Set a unique `OPT_GATEWAY_ID` per host, or revoke the orphan under **Manage Gateways** → **Gateway** tab, finding it by that label |
+| Startup fails with `label_conflict` / `409` | Enrollment label already live in the org | Set a unique `OPT_GATEWAY_ID` per host (on Helm, `gateway.gatewayId`), or revoke the orphan under **Manage Gateways** → **Gateway** tab, finding it by that label |
 | Startup fails with `gateway_key_limit` / `409` | Org at the 1000-gateway cap | Revoke unused credentials or contact Optimum |
 | Startup fails: peer ID mismatch | mumP2P identity changed under an existing credential. Raised by the gateway, not by auth | Restore the original `identity_mump2p_dir` volume, or revoke the enrolled credential and enroll fresh |
 | Corrupt credential on disk | `enrollment.json` unreadable, or the thumbprint recorded in it does not match the private key it carries. Raised by the gateway, not by auth | Do not delete and re-enroll blindly — that burns a join-key use. Restore `enrollment.json` from backup, or revoke the credential in the console first |
 | `auth_enrollment_total{result="success"}` on every restart | Credential directory not persisting | Mount `identity_mump2p_dir` (or `enroll_cred_dir`) as a volume. Repeated `success` across a fleet means enrollments are not being reused |
 | Log line `enrolling without a label` at startup | `OPT_GATEWAY_ID` left at default (`dev-gateway`), which sends an empty label | Set a unique `OPT_GATEWAY_ID` per host before first enroll. An empty label is exempt from the conflict check, so the host silently re-enrolls and burns a join-key use every time it loses its credential dir |
-| Mesh peers stay at 0 after enroll | Join key minted without matching `cluster_ids` | Mint a join key whose cluster scope includes your `gateway_cluster_id` |
+| Mesh peers stay at 0 after enroll | Join key minted without matching `cluster_ids` | Mint a join key whose cluster scope includes your `gateway_cluster_id`. The enrolled credential keeps its scope: set `OPT_JOIN_KEY` to the new key, revoke the credential, then remove `enrollment.json` and recreate the container to re-enroll |
 | Revoked join key, gateway still runs | Revoking a join key stops new enrollments only | Revoke the enrolled gateway credential separately if you need to cut access |
 
 Runtime `gateway_id` in `/health` and metrics is the enrolled `client_id` (JWT `sub`), not the `OPT_GATEWAY_ID` enrollment label.
@@ -291,7 +291,7 @@ Runtime `gateway_id` in `/health` and metrics is the enrolled `client_id` (JWT `
 
 | Issue                                       | Fix                                                                                                       |
 | ------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Wrong Docker image tag                      | Use `getoptimum/gateway:v1.3.3`                                                                           |
+| Wrong Docker image tag                      | Use `getoptimum/gateway:v1.3.4`                                                                           |
 | Config edited but container not restarted   | `docker restart optimum-gateway`                                                                          |
 | Running hoodi + mainnet on the same ports   | The second instance needs different ports + its own config + its own credential                           |
 | Duplicate gateway (same API key, two hosts) | One key -> one gateway; generate a second key                                                             |

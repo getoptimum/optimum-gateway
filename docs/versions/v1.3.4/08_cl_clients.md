@@ -248,7 +248,7 @@ A peered CL is `cl_peers.value` of at least 1 and `libp2p.total_peers` of at lea
 | CL flag was copied from `.data.peer_id` or from `mump2p.peer_ids` | Wrong ID | Replace it with `self_info.peer_id`. |
 | Worked, then died after a gateway restart | Lighthouse or Nimbus did not re-dial, or the peer ID changed | Persist the identity volume. Add `direct_cl_peers`. |
 | Worked, then the peer ID in `self_info` changed | Identity directory was not a volume | Mount `identity_libp2p_dir` and update the CL flag. |
-| Lighthouse says goodbye, or drops the gateway | Peer table prune, or a custody metadata mismatch on an old gateway build | `--boot-nodes` plus `--trusted-peers` as above, on gateway v1.3.3. `--semi-supernode` does not fix the session. |
+| Lighthouse says goodbye, or drops the gateway | Peer table prune, or a custody metadata mismatch on an old gateway build | `--boot-nodes` plus `--trusted-peers` as above, on gateway v1.3.3 or later. `--semi-supernode` does not fix the session. |
 | Teku `NoSuchElementException` at `MetadataDasPeerCustodyTracker` | Teku older than v26.4.0 | Upgrade. Current stable is 26.9.1. |
 | Teku connects, then the gateway disappears | `--p2p-static-peers` only | Switch to `--p2p-direct-peers`. |
 | Nimbus logs `Adding privileged direct peer` and never connects | Firewall, or the netkey is `random` | Stable `--netkey-file`, both ports open, public or routable IP in `direct_cl_peers`. |
