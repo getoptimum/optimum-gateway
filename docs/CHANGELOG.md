@@ -19,7 +19,7 @@ v1.3.4 is the current release. v1.3.3 and v1.3.2 remain supported; if you run wi
 
 ### Highlights
 
-* **Telemetry stays on the host ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)).** With `--network host` or the Helm chart's `hostNetwork`, the read-only telemetry endpoints on `48123` listened on every host interface. Gateways started with the current Console command are not affected; the v1.3.2 and v1.3.3 self-enrollment docs and a Console command copied before 29 September 2026 used `--network host`. Publish `-p 127.0.0.1:48123:48123`, or set the new `telemetry_addr: 127.0.0.1` with host networking.
+* **Telemetry stays on the host ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)).** With `--network host` or the Helm chart's `hostNetwork`, the read-only telemetry endpoints on `48123` listened on every host interface. Gateways started with the current Console command are not affected; the v1.3.2 and v1.3.3 self-enrollment docs and a Console command copied before 29 September 2026 used `--network host`. Publish `-p 127.0.0.1:48123:48123`, or set the new `telemetry_addr: 127.0.0.1` with host networking. With Helm, move to chart 0.5.0 and gateway v1.3.4 together.
 * **New `telemetry_addr` option** (`OPT_TELEMETRY_ADDR`) sets the telemetry bind address. The default is unchanged.
 * **Helm chart 0.5.0** binds telemetry to node loopback and makes the join key the default credential. It needs gateway v1.3.4; older images ignore its loopback bind.
 * **Registration no longer sends the unused `gateway_http_addr`.**
@@ -30,7 +30,7 @@ v1.3.4 is the current release. v1.3.3 and v1.3.2 remain supported; if you run wi
 
 **Docker Image:** `getoptimum/gateway:v1.3.3`
 
-v1.3.3 remains supported; if you run with host networking, upgrade and set `telemetry_addr: 127.0.0.1`, or with Helm move to chart 0.5.0 and gateway v1.3.4 together ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)). Networking and CL peering are unchanged: same ports and firewall rules.
+v1.3.3 remains supported; if you run with host networking, upgrade to v1.3.4 and set `telemetry_addr: 127.0.0.1`, or with Helm move to chart 0.5.0 and gateway v1.3.4 together ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)). Networking and CL peering are unchanged: same ports and firewall rules.
 
 ### Highlights
 
@@ -48,7 +48,7 @@ v1.3.3 remains supported; if you run with host networking, upgrade and set `tele
 
 **Docker Image:** `getoptimum/gateway:v1.3.2`
 
-v1.3.2 remains supported, but upgrading is recommended because it is affected by [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787). If you run with host networking, upgrade and set `telemetry_addr: 127.0.0.1`, or with Helm move to chart 0.5.0 and gateway v1.3.4 together ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)). Networking and CL peering are unchanged: same ports and firewall rules.
+v1.3.2 remains supported, but upgrading is recommended because it is affected by [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787). If you run with host networking, upgrade to v1.3.4 and set `telemetry_addr: 127.0.0.1`, or with Helm move to chart 0.5.0 and gateway v1.3.4 together ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)). Networking and CL peering are unchanged: same ports and firewall rules.
 
 ### Highlights
 
