@@ -22,6 +22,7 @@ import (
 	"github.com/getoptimum/mump2p-protocol/pkg/engine"
 	"github.com/getoptimum/mump2p-protocol/pkg/partial"
 	rlncps "github.com/getoptimum/mump2p-protocol/pkg/pubsub"
+	"github.com/getoptimum/mump2p-protocol/pkg/telemetry/rlnctrace"
 	"github.com/getoptimum/optimum-common/pkg/identity"
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	commonnet "github.com/getoptimum/optimum-common/pkg/net"
@@ -207,6 +208,10 @@ func NewNodeWithHost(
 	if err != nil {
 		return nil, fmt.Errorf("initialize RLNC shared memory: %w", err)
 	}
+	protocolTracer, err := enableProtocolMetrics(psCfg, cfg.ClusterID, h.ID().String(), log.Slog(), shmSvc)
+	if err != nil {
+		return nil, fmt.Errorf("init mump2p metrics: %w", err)
+	}
 
 	ret.rlncConfigs = config.RLNCConfigs{
 		"*": psCfg.RLNC,
@@ -219,7 +224,7 @@ func NewNodeWithHost(
 	}
 
 	optList := []rlncps.Option{
-		rlncps.WithRLNCTracer(ret.tracer),
+		rlncps.WithRLNCTracer(rlnctrace.NewMultiTracer(ret.tracer, protocolTracer)),
 		// todo fix it rlncps.WithPeerAdmissionControl(),
 		rlncps.WithPeerFilterFN(func(pid peer.ID, _ string) bool {
 			_, ok := ret.peersApprovedMap.Load(pid)

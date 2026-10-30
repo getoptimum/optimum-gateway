@@ -78,6 +78,61 @@ func TestNodeHandshakeAndTopicLifecycle(t *testing.T) {
 	require.NoError(t, nodeB.UnsubscribeTopic(topic))
 }
 
+func TestNodeSamePayloadGetsSameMessageIDAcrossPublishers(t *testing.T) {
+	cnt := test_utils.GetClean(t)
+	clusterID := "optimum_test_same_payload"
+	const topic = "beacon_block"
+
+	// Each pair stands in for a gateway publishing to its own peer. The pairs are not
+	// connected, so each publish is observed independently of the other.
+	newPair := func() (*mum_p2p.Node, chan *entities.MumP2PResponse) {
+		publisher := test_utils.NewTestNode(cnt.Ctx, t, cnt.Log, clusterID, t.TempDir())
+		receiver := test_utils.NewTestNode(cnt.Ctx, t, cnt.Log, clusterID, t.TempDir())
+		test_utils.ConnectNodes(cnt.Ctx, t, publisher, receiver)
+
+		require.NoError(t, publisher.SubscribeTopic(topic))
+		require.NoError(t, receiver.SubscribeTopic(topic))
+		require.Eventually(t, func() bool {
+			_, perTopicPeers := publisher.CountConnectedPeers()
+			return perTopicPeers[topic] > 0
+		}, 10*time.Second, 100*time.Millisecond)
+
+		listener := receiver.RegisterListener("same-payload")
+		t.Cleanup(func() {
+			receiver.UnregisterListener("same-payload")
+		})
+		return publisher, listener
+	}
+
+	publishAndReceive := func(publisher *mum_p2p.Node, listener chan *entities.MumP2PResponse, payload []byte) *entities.MumP2PResponse {
+		require.NoError(t, publisher.PublishMessage(cnt.Ctx, topic, payload))
+		deadline := time.After(10 * time.Second)
+		for {
+			select {
+			case msg := <-listener:
+				if msg.Command == entities.MumP2PCommandMessage {
+					require.Equal(t, payload, msg.Message.Message)
+					require.Equal(t, publisher.GetHostInfo().ID.String(), msg.Message.SourceNodeID)
+					return msg
+				}
+			case <-deadline:
+				t.Fatal("timed out waiting for published message")
+			}
+		}
+	}
+
+	nodeA, listenerB := newPair()
+	nodeC, listenerD := newPair()
+
+	payload := []byte("same block from two gateways")
+	fromA := publishAndReceive(nodeA, listenerB, payload)
+	fromC := publishAndReceive(nodeC, listenerD, payload)
+	require.Equal(t, fromA.Message.MessageID, fromC.Message.MessageID)
+
+	other := publishAndReceive(nodeC, listenerD, []byte("different block"))
+	require.NotEqual(t, fromC.Message.MessageID, other.Message.MessageID)
+}
+
 func TestNodeDisconnectsPeerOnClusterMismatch(t *testing.T) {
 	cnt := test_utils.GetClean(t)
 
