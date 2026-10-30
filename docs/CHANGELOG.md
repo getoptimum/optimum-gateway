@@ -23,7 +23,7 @@ v1.3.4 is the current release. v1.3.3 and v1.3.2 remain supported; if you run wi
 * **New `telemetry_addr` option** (`OPT_TELEMETRY_ADDR`) sets the telemetry bind address. The default is unchanged.
 * **Helm chart 0.5.0** binds telemetry to node loopback and adds join-key enrollment. It needs gateway v1.3.4; older images ignore its loopback bind.
 * **Registration no longer sends the unused `gateway_http_addr`.**
-* **Listeners use plain TCP ([CVE-2026-98432](https://www.cve.org/CVERecord?id=CVE-2026-98432)).** Go 1.24 and later accept MPTCP by default, the listener the published exploit uses. v1.3.4 turns that off. No partner configuration change. The kernel update still belongs on the host.
+* **Listeners use plain TCP ([CVE-2026-98432](https://www.cve.org/CVERecord?id=CVE-2026-98432)).** Go 1.24 and later accept MPTCP by default, the listener the published exploit uses. v1.3.4 turns that off. No partner configuration change. The complete fix lies on the partner's side, in the host kernel update.
 
 [Full release notes](./versions/v1.3.4/release_notes.md) · [Documentation](./versions/v1.3.4/index.md)
 
