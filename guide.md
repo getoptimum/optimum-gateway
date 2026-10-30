@@ -83,9 +83,11 @@ docker run --name optimum-gateway --rm \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data/libp2p:/tmp/libp2p \
   -v $(pwd)/data/mump2p:/tmp/mump2p \
-  getoptimum/gateway:v1.3.2 \
+  getoptimum/gateway:${version} \
   -config=/app/config/app_conf.yml
 ```
+
+`${version}` is the latest tag on the [releases](https://github.com/getoptimum/optimum-gateway/releases/latest) page.
 
 `agent_mump2p_port` (sample `43213`) is used for gateway-to-gateway mesh egress.
 
