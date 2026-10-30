@@ -9,6 +9,7 @@
 * **New `telemetry_addr` option** (`OPT_TELEMETRY_ADDR`). Sets the address the telemetry server (`/`, `/health`, `/metrics`, `/api/v1/self_info`) binds. The default is unchanged (all IPv4 interfaces). With `--network host`, set `telemetry_addr: 127.0.0.1`; with the Helm chart, use chart 0.5.0 (`gateway.telemetryAddr`). See [Network Requirements](00_network_requirements.md).
 * **Helm chart 0.5.0.** Binds telemetry to node loopback by default, probes it from inside the pod, and adds org-wide join-key enrollment. It needs gateway v1.3.4; older images ignore its loopback bind. See [Kubernetes](05_kubernetes.md).
 * **Registration no longer sends `gateway_http_addr`.** Bootstrap did not use it. No partner configuration change.
+* **Listeners use plain TCP ([CVE-2026-98432](https://www.cve.org/CVERecord?id=CVE-2026-98432)).** Go 1.24 and later accept MPTCP by default, and that is the listener the published exploit of this Linux kernel bug uses. v1.3.4 turns MPTCP off for every gateway listener. No partner configuration change. The kernel update still belongs on the host.
 
 Upgrading from v1.3.2 or earlier? Also read the [v1.3.3 release notes](../v1.3.3/release_notes.md).
 
