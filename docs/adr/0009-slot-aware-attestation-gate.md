@@ -1,9 +1,9 @@
 # ADR-0009: Slot-Aware Attestation Aggregation Gate
 
-**Status:** Accepted (per-gateway jitter removed 2026-05-27; block-aware release recorded 2026-10-28)
+**Status:** Superseded by [ADR-0014](./0014-attestation-gate-benchmark.md)
 **Date:** 2026-04-27
 
-**Current rule (section 4):** release 2s after the latest beacon-block arrival this slot. If none has arrived this slot, release 4s after slot start. Stop at 8s either way. The gate only holds the aggregator's emit onto mump2p.
+The gate was removed on 2026-10-28. The aggregator emits on every aggregation tick. Everything below is the decision as it stood, including the block-aware release in section 4. See [ADR-0014](./0014-attestation-gate-benchmark.md).
 
 ---
 
@@ -47,7 +47,7 @@ Add a configurable **slot-aware publish gate** to the aggregator. Until the gate
 
 ### 2.1 Publish-window parameters
 
-> **Superseded release time.** The fixed open at 4s in this section is the original decision. [Section 4](#4-followup-block-aware-release) is the release rule in the code. The 8s cap still applies.
+> **Superseded release time.** The fixed open at 4s in this section is the original decision. [Section 4](#4-followup-block-aware-release) is the release rule this ADR recorded. [ADR-0014](./0014-attestation-gate-benchmark.md) removed the gate.
 
 In the original decision these are **compile-time constants** in `pkg/config/config.go` (not env/yaml configurable), read through getter methods:
 
@@ -235,4 +235,4 @@ A zero fallback (`GetAttestationPublishGate() <= 0`) still disables the gate and
 
 ### Why this is recorded here
 
-The block-aware check shipped in `shouldHoldForSlotGate` (marked `#620` in the function) without an amendment to this ADR. The function comment pointed at [ADR-0010](./0010-attestation-synchronization.md), which keeps the slot-aware window in place and does not define this release. This section is the current rule.
+The block-aware check shipped in `shouldHoldForSlotGate` (marked `#620` in the function) without an amendment to this ADR. The function comment pointed at [ADR-0010](./0010-attestation-synchronization.md), which keeps the slot-aware window in place and does not define this release. This section recorded the rule until [ADR-0014](./0014-attestation-gate-benchmark.md) removed the gate.

@@ -82,11 +82,6 @@ type Service struct {
 	streamHub *streamhub.Service // consumer block-stream fan-out (ADR-0011); nil disables it
 }
 
-// LastBlockReceivedMs returns Unix ms of the last beacon block seen (0 if none).
-func (s *Service) LastBlockReceivedMs() int64 {
-	return s.lastBlockReceivedAt.Load()
-}
-
 // Option is a functional option applied to Service during construction.
 type Option func(*Service)
 
