@@ -73,9 +73,10 @@ export VER=$(helm show chart $CHART | awk '/^version:/{print $2}')
 kubectl create namespace optimum
 kubectl label namespace optimum pod-security.kubernetes.io/enforce=privileged
 
-# the join key, out of band (never in your values file)
-kubectl -n optimum create secret generic optimum-gateway-join-key \
-  --from-literal=join-key='<your join key>'
+# the join key, out of band (never in your values file or shell history)
+read -rs -p 'join key: ' JOIN_KEY && printf '%s' "$JOIN_KEY" | \
+  kubectl -n optimum create secret generic optimum-gateway-join-key \
+    --from-file=join-key=/dev/stdin; unset JOIN_KEY
 
 helm show values $CHART --version $VER > my-values.yaml
 # fill in the four values below
