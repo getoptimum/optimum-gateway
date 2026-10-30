@@ -11,7 +11,7 @@ services:
     ports:
       - "33212:33212"         # libp2p port (CL clients connect here)
       - "33213:33213"         # mump2p agent port
-      - "48123:48123"         # Telemetry/metrics port
+      - "127.0.0.1:48123:48123" # Telemetry/metrics port, unauthenticated
     volumes:
       - ./config:/app/config  # Config directory (must contain app_conf.yml)
       - ./identity/libp2p:/tmp/libp2p   # Persistent libp2p identity

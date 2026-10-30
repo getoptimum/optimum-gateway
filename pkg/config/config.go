@@ -53,6 +53,7 @@ type AppConfig struct {
 	DirectCLPeers         []string `yaml:"direct_cl_peers" env:"OPT_DIRECT_CL_PEERS"`
 	TelemetryEnable       bool     `yaml:"telemetry_enable" env:"OPT_ENABLE_TELEMETRY" default:"false"`
 	TelemetryPort         int      `yaml:"telemetry_port" env:"OPT_TELEMETRY_PORT" default:"48123"`
+	TelemetryAddr         string   `yaml:"telemetry_addr" env:"OPT_TELEMETRY_ADDR" default:""` // empty binds all IPv4 interfaces; use 127.0.0.1 under host networking
 	TelemetryNamespace    string   `yaml:"telemetry_namespace" env:"OPT_TELEMETRY_NAMESPACE" default:"mump2p"`
 	TelemetrySubsystem    string   `yaml:"telemetry_subsystem" env:"OPT_TELEMETRY_SUBSYSTEM" default:"gateway"`
 	GatewayClusterID      string   `yaml:"gateway_cluster_id" env:"OPT_GATEWAY_CLUSTER_ID"`
@@ -313,6 +314,9 @@ func (c *AppConfig) Validate() error {
 	if c.TelemetryPort <= 0 || c.TelemetryPort > 65535 {
 		return fmt.Errorf("OPT_TELEMETRY_PORT must be between 1 and 65535")
 	}
+	if host := c.telemetryHost(); host != "" && net.ParseIP(host) == nil {
+		return fmt.Errorf("OPT_TELEMETRY_ADDR (telemetry_addr) must be an IP address or localhost without a port, got %q", c.TelemetryAddr)
+	}
 	if c.EnablePProf {
 		addr := strings.TrimSpace(c.PProfAddr)
 		if addr == "" {
@@ -415,6 +419,53 @@ func isLoopbackHost(host string) bool {
 	return ip != nil && ip.IsLoopback()
 }
 
+// telemetryHost pins localhost to 127.0.0.1 so the bind never depends on
+// how a host or image resolves it.
+func (c *AppConfig) telemetryHost() string {
+	host := strings.TrimSpace(c.TelemetryAddr)
+	if strings.EqualFold(host, "localhost") {
+		return "127.0.0.1"
+	}
+	return host
+}
+
+func (c *AppConfig) telemetryHostPort(host string) string {
+	return net.JoinHostPort(host, strconv.Itoa(c.TelemetryPort))
+}
+
+// TelemetryListenAddr is the host:port the telemetry server binds.
+func (c *AppConfig) TelemetryListenAddr() string {
+	return c.telemetryHostPort(c.telemetryHost())
+}
+
+// TelemetryListenNetwork keeps the empty default IPv4-only, as Fiber's tcp4
+// default does, while "::" binds dual-stack and other IPv6 literals bind IPv6.
+func (c *AppConfig) TelemetryListenNetwork() string {
+	ip := net.ParseIP(c.telemetryHost())
+	switch {
+	case ip == nil || ip.To4() != nil:
+		return "tcp4"
+	case ip.IsUnspecified():
+		return "tcp"
+	default:
+		return "tcp6"
+	}
+}
+
+// TelemetryInstance is the stable Prometheus instance label.
+func (c *AppConfig) TelemetryInstance() string {
+	return c.telemetryHostPort("127.0.0.1")
+}
+
+// TelemetryLocalTarget is the host:port the in-process self-scrape dials.
+func (c *AppConfig) TelemetryLocalTarget() string {
+	host := c.telemetryHost()
+	if ip := net.ParseIP(host); host == "" || (ip != nil && ip.IsUnspecified()) {
+		return c.TelemetryInstance()
+	}
+	return c.telemetryHostPort(host)
+}
+
 func (c *AppConfig) PropagationEnabled() bool {
 	return c.propagationEnabled.Load()
 }
@@ -457,6 +508,7 @@ func (c *AppConfig) LogConfigState() {
 		logger.WithInt("libp2p_port", c.AgentLibP2PPort),
 		logger.WithInt("mump2p_port", c.AgentMumP2PPort),
 		logger.WithInt("telemetry_port", c.TelemetryPort),
+		logger.WithString("telemetry_listen_addr", c.TelemetryListenAddr()),
 		logger.WithBool("telemetry_enable", c.TelemetryEnable),
 		logger.WithBool("enable_pprof", c.EnablePProf),
 		logger.WithString("pprof_addr", c.PProfAddr),

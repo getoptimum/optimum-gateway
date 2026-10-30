@@ -48,9 +48,10 @@ func TestAppRouter(t *testing.T) {
 	// Register the gauge before the scrape. /health must not write it.
 	telemetry.InitMetrics(cnt.Ctx, cnt.Log, cfg)
 
-	port := test_utils.GetFreePortT(t)
-	addr := fmt.Sprintf("127.0.0.1:%d", port)
-	appRouter := routes.NewAppRouter(cnt.Log, srvGateway, cfg, addr)
+	cfg.TelemetryAddr = "127.0.0.1"
+	cfg.TelemetryPort = test_utils.GetFreePortT(t)
+	addr := cfg.TelemetryListenAddr()
+	appRouter := routes.NewAppRouter(cnt.Log, srvGateway, cfg)
 	t.Cleanup(func() {
 		require.NoError(t, appRouter.Stop())
 	})

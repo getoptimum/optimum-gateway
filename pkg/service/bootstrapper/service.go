@@ -4,9 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -81,7 +79,6 @@ func (s *Service) RegisterAndGetMumP2PPeers() ([]string, error) {
 	registerURL := utils.BootstrapRegisterURL(s.cfg.RemoteBootstrapURL)
 	payload := entities.GatewayInfo{
 		GatewayID:  s.cfg.GatewayID,
-		HTTPAddr:   net.JoinHostPort(publicIP, strconv.Itoa(s.cfg.TelemetryPort)),
 		P2PAddr:    commonnet.AddressInfoToString(predictedAddress),
 		ClusterID:  s.cfg.GatewayClusterID,
 		ChainID:    s.srvForkMgr.AppChain().String(),

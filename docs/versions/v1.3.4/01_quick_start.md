@@ -1,0 +1,190 @@
+# Quick Start (Docker)
+
+Get the Optimum Gateway running with Docker.
+
+> **Running on Kubernetes?** See [Kubernetes (Helm)](05_kubernetes.md) for the official Helm chart.
+
+> **Prerequisites:** [Requirements](index.md#requirements) and [Network Requirements](00_network_requirements.md). You also need a credential from [Console](https://console.getoptimum.xyz/): a **join key** (`OPT_JOIN_KEY`, [Gateway Self-Enrollment](07_gateway_self_enrollment.md)), or, on a partner account, an **API key** (`ogw_`, [Generate your API key](#generate-your-api-key)).
+
+## Hardware Requirements
+
+**Minimum:** 2+ vCPUs, 512MB RAM, 500MB+ disk  
+**Recommended:** 4+ vCPUs
+
+## Get a credential
+
+Open [Console](https://console.getoptimum.xyz/) and sign in with **Google** or **Microsoft**.
+
+If the card has a **Create account** tab, that is self-serve signup: **Sign up with Google** or **Sign up with Microsoft**. If the tab is missing, or [signup](https://console.getoptimum.xyz/signup) is a 404, Optimum has created the account. Sign in with the Google or Microsoft account you gave them, on **Continue with Google** or **Continue with Microsoft**.
+
+The command on **Connect your first gateway**, and on Signal under **Set up another gateway**, uses a **join key** (`ojk_…`) as `OPT_JOIN_KEY`. Mint it on **Enrollment keys**. With Signal on, that tab is under **Gateways & keys**. Otherwise it is **Manage Gateways** → **Enrollment keys**. One key enrolls many hosts, and each host gets its own name. The steps are in [Gateway Self-Enrollment](07_gateway_self_enrollment.md).
+
+Partner accounts that mint one key per gateway use the **API key** below (`ogw_…` as `OPT_API_KEY`).
+
+## Generate your API key
+
+This is the partner path: one `ogw_` key per gateway, from **Manage Gateways** → **Gateway**. The key binds the gateway's identity, chain, operator, and validator scope, so there is no per-network YAML to edit. A fleet can use one join key instead, via [Gateway Self-Enrollment](07_gateway_self_enrollment.md).
+
+1. **Sign in.** Open the [Partner Console](https://console.getoptimum.xyz/) and sign in with the **Google or Microsoft** account on the organisation.
+2. **Select your network.** Use the **Network** picker in the header (**Ethereum**, **Hoodi**, or **Mock Chain**). It defaults to **Ethereum**, and the key takes its chain from whatever is selected here — the generate dialog is titled for that network, with no chain field of its own.
+3. **Open Manage Gateways.** In the sidebar go to **Manage Gateways**, then select the **Gateway** tab.
+
+### Generate one key
+
+1. **Generate a key.** Click **GENERATE KEY** and fill in:
+   * **Clusters** — tick every cluster this key may join. At least one is required on any network that has clusters, and generation is refused without it.
+   * **Gateway details (optional)** — pick from the dropdowns where available: **Region**, **Consensus client**, **Hosting provider**, **DVT**. These label the gateway in monitoring.
+
+   The modal confirms the new key is provisioned as a **partner gateway**, and names it automatically. There is no name field, and the name cannot be changed afterwards.
+2. **Copy the key.** The key (format `ogw_live_...`) is **shown only once**. Copy and store it securely. If you lose it, generate a new one and revoke the old.
+
+### Bulk generate many keys
+
+> **Running a fleet?** You do not need one key per host at all. Mint a single org **join key** and let each gateway enroll itself on first boot — see [Gateway Self-Enrollment](07_gateway_self_enrollment.md). Bulk generation below remains supported for operators who prefer one key per gateway.
+
+Use **BULK GENERATE** when you need many gateway keys at once (for example a large fleet rollout). Each key is still **one per gateway** — bulk create saves clicking **GENERATE KEY** repeatedly.
+
+1. **Select your network and open Manage Gateways.** Same as above: header **Network** picker, then sidebar **Manage Gateways** -> **Gateway** tab.
+2. **Start bulk generate.** Click **BULK GENERATE**.
+3. **Choose how many.** Enter a count in **How many keys**, which is prefilled with `10`. Your operator quota is shown above it (for example `0 of 1000 used · 1000 remaining`).
+4. **Clusters and gateway details.** **Clusters** is required on any network that has them. **Region**, **Consensus client**, **Hosting provider**, and **DVT** are optional. All of them apply to **every** key in the batch — the same fields as single-key generation. Keys are **auto-named**; you do not enter a label per key.
+5. **Download your keys.** When creation finishes, download the batch as **CSV or JSON**. Raw keys (`ogw_live_...`) are **shown only once** — store the file securely before closing the dialog. **Keep the browser tab open until creation finishes**; that is when the secrets are at risk, and the dialog warns you if you try to close it without downloading.
+6. **Deploy one key per host.** Map each key to a gateway instance and set `OPT_API_KEY` on that host. Do not reuse a key across gateways.
+
+> **All-or-nothing.** If any key in a batch fails to create, the whole batch is rolled back — none of the keys are kept. Fix the issue (for example quota) and try again.
+
+> **One API key per gateway.** Each gateway instance needs its **own** key. Do not share a key across gateways — the gateway registers a single identity per key, and reuse causes registration conflicts. If you run multiple gateways (e.g. Hoodi + Mainnet, or several hosts), generate a separate key for each — use **BULK GENERATE** for large rollouts, or switch to [Gateway Self-Enrollment](07_gateway_self_enrollment.md).
+
+The gateway exchanges this key on startup at `auth.getoptimum.io/api/v1/auth/token` for a short-lived JWT that carries your `gateway_id`, `chain`, and validator scope.
+
+## Installation
+
+```sh
+docker pull getoptimum/gateway:v1.3.4
+```
+
+## Configuration
+
+Create `config/app_conf.yml`:
+
+```yaml
+log_level: info
+gateway_cluster_id: optimum_ethereum_hoodi_v0_1   # assigned by Optimum during onboarding
+
+agent_lib_p2p_port: 33212
+agent_mump2p_port: 33213
+telemetry_enable: true
+telemetry_port: 48123
+identity_libp2p_dir: /tmp/libp2p
+identity_mump2p_dir: /tmp/mump2p
+```
+
+> **Set your API key via the environment, not YAML.** Pass it as `OPT_API_KEY` so it never lives in a config file or image layer. Your `gateway_id`, `chain`, and validator scope are all derived from this key — do not set them in YAML.
+
+```sh
+export OPT_API_KEY=ogw_live_xxx
+```
+
+## Run
+
+```sh
+mkdir -p config data/libp2p data/mump2p
+
+docker run --name optimum-gateway --rm \
+  -p 33212:33212/tcp \
+  -p 33213:33213/tcp \
+  -p 127.0.0.1:48123:48123/tcp \
+  -e OPT_API_KEY=$OPT_API_KEY \
+  -v $(pwd)/config:/app/config \
+  -v $(pwd)/data/libp2p:/tmp/libp2p \
+  -v $(pwd)/data/mump2p:/tmp/mump2p \
+  getoptimum/gateway:v1.3.4 \
+  -config=/app/config/app_conf.yml
+```
+
+> Persist the identity volumes (`/tmp/libp2p`, `/tmp/mump2p`) across restarts — otherwise the gateway's peer ID changes on every run and your CL client config breaks.
+
+## Verify
+
+Health check:
+
+```sh
+curl http://localhost:48123/health
+```
+
+```json
+{
+  "status": "healthy",
+  "gateway_id": "optimum-dev-hoodi-kubernetes-validator-lighthouse",
+  "version": "v1.3.4",
+  "commit_hash": "a0b2bc1",
+  "uptime_seconds": 1639,
+  "checks": {
+    "cl_peers": {"status": "ok", "value": 1},
+    "mump2p_peers": {"status": "ok", "value": 13},
+    "subscribed_topics": {"status": "ok", "value": 65},
+    "last_block_age_sec": {"status": "ok", "value": 1},
+    "cl_health": {"status": "ok"},
+    "mump2p_health": {"status": "ok"}
+  }
+}
+```
+
+For a lightweight liveness probe (process + HTTP up), use the root endpoint:
+
+```sh
+curl http://localhost:48123/
+```
+
+```json
+{"status":"ok"}
+```
+
+Metrics with your gateway_id:
+
+```sh
+curl http://localhost:48123/metrics | grep gateway_id
+```
+
+```text
+mump2p_gateway_app_build_info{commit="a0b2bc1",gateway_id="your-gateway-id",paired_with="partner",...} 1
+mump2p_gateway_mump2p_peers{gateway_id="your-gateway-id"} 13
+...
+```
+
+Startup logs (fork digest, topics):
+
+```sh
+docker logs optimum-gateway
+```
+
+```text
+{"msg":"initialized fork digest from chain default","fork_digest":"c6ecb76c","chain":"hoodi"}
+{"msg":"fork digest updated from bootstrap","fork_digest":"c6ecb76c"}
+{"msg":"subscribed to topic","topic":"/eth2/c6ecb76c/beacon_block/ssz_snappy"}
+{"msg":"subscribed to topic","topic":"/eth2/c6ecb76c/beacon_attestation_0/ssz_snappy"}
+...
+```
+
+**Note:** "Failed to connect to bootstrap" during startup is normal. See [Troubleshooting](04_troubleshoot.md#normal-log-noise-safe-to-ignore).
+
+## Connecting your CL client
+
+Read `peer_id` from `self_info`, then set the flag for your beacon node. Versions, the ID each flag takes, and the failure cases are in [Connecting your CL client](08_cl_clients.md).
+
+```sh
+curl -s http://localhost:48123/api/v1/self_info | jq -r '.peer_id'
+```
+
+## Fleet rollout?
+
+If you run many gateways, you do not need one API key per host. Mint a single org **join key** (`ojk_`) and let each gateway self-enroll on first boot. See [Gateway Self-Enrollment](07_gateway_self_enrollment.md).
+
+## Next Steps
+
+* [Connecting your CL client](08_cl_clients.md) - Peer IDs, flags, and reconnects
+* [Configuration](02_configuration.md) - Ports, direct peers, advanced settings
+* [Gateway Self-Enrollment](07_gateway_self_enrollment.md) - Fleet rollout with a join key
+* [Consumer Block Stream](06_block_stream.md) - Opt-in WebSocket / gRPC feed of decoded blocks
+* [Troubleshooting](04_troubleshoot.md) - Gateway diagnosis and common issues
+* [Metrics](metrics.md) - Gateway and mesh metrics

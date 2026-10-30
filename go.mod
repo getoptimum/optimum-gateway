@@ -2,6 +2,9 @@ module github.com/getoptimum/optimum-gateway
 
 go 1.27.3
 
+// Go 1.24+ listeners accept MPTCP by default; keep them plain TCP.
+godebug multipathtcp=0
+
 tool (
 	github.com/bufbuild/buf/cmd/buf
 	github.com/golangci/golangci-lint/v2/cmd/golangci-lint
