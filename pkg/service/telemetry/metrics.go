@@ -53,12 +53,21 @@ const (
 	scrapePushTimeout = 5 * time.Second
 )
 
-// MetricsGatherer returns the gatherer used for /metrics, including remote-write when active.
+// MetricsGatherer returns the gatherer used for /metrics, including remote-write
+// when active and the mump2p-protocol series registered on the default registry.
 func MetricsGatherer() prometheus.Gatherer {
-	if r := mimirRemoteRegistry(); r != nil {
-		return prometheus.Gatherers{CustomRegistry, r}
+	parts := make(prometheus.Gatherers, 0, 3)
+	if CustomRegistry != nil {
+		parts = append(parts, CustomRegistry)
 	}
-	return CustomRegistry
+	if r := mimirRemoteRegistry(); r != nil {
+		parts = append(parts, r)
+	}
+	parts = append(parts, protocolMetricGatherer{})
+	if len(parts) == 1 {
+		return parts[0]
+	}
+	return parts
 }
 
 // HTTPMetricsGatherer re-resolves MetricsGatherer on each scrape so async remote-write metrics are included.
@@ -108,6 +117,7 @@ func InitMetrics(ctx context.Context, log logger.AppLogger, cfg *config.AppConfi
 			"org_id":             cfg.OrgID,
 		}
 		maps.Copy(baseLabels, cfg.MetaLabels)
+		SetProtocolIdentityLabels(baseLabels)
 		labeledRegistry = prometheus.WrapRegistererWith(baseLabels, CustomRegistry)
 		labeledRegistry.MustRegister(
 			collectors.NewGoCollector(),
