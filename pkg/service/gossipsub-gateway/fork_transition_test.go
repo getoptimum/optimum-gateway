@@ -293,3 +293,50 @@ func TestRefreshTopicsFollowsBootstrapForkDigests(t *testing.T) {
 	require.False(t, onMum(block(forkCurDigest)))
 	require.Zero(t, joined(unknownDigest))
 }
+
+// Stream-only has no CL tracer. Refresh joins the active beacon block on mump2p,
+// never the libp2p host, and leaves the previous digest's topic in place.
+func TestRefreshTopicsStreamOnlyNilTracer(t *testing.T) {
+	prevSync := forks.SyncInterval
+	forks.SyncInterval = 100 * time.Millisecond
+	t.Cleanup(func() { forks.SyncInterval = prevSync })
+
+	svc, bootstrap := newGateway(t)
+	startForkGatewayHost(t, svc) // real pubsub, so a libp2p subscribe would show up in libP2PTopics
+	svc.peerTopicTracer = nil
+	svc.cfg.StreamOnly = true
+	fm := svc.GetForkDigestManager()
+	block := func(digest string) string { return topics.BuildFullTopic(digest, utils.BeaconBlockBase) }
+	refresh := func() {
+		t.Helper()
+		done := make(chan struct{})
+		go func() {
+			svc.refreshTopics()
+			close(done)
+		}()
+		select {
+		case <-done:
+		case <-time.After(10 * time.Second):
+			t.Fatal("refreshTopics blocked")
+		}
+	}
+
+	refresh() // no mump2p node yet
+	require.Empty(t, svc.libP2PTopics.Keys())
+
+	svc.nodeMumP2P = test_utils.NewTestNode(t.Context(), t, svc.log, "stream-only", t.TempDir())
+	refresh()
+	require.ElementsMatch(t, []string{block(forkCurDigest)}, svc.nodeMumP2P.GetTopics())
+	require.Empty(t, svc.libP2PTopics.Keys())
+
+	refresh() // already joined: still one topic
+	require.ElementsMatch(t, []string{block(forkCurDigest)}, svc.nodeMumP2P.GetTopics())
+
+	bootstrap.SetForkResponse(map[string]any{"chain_id": "hoodi", "fork_digest": forkNextDigest, "future_fork": ""})
+	require.Eventually(t, func() bool {
+		return fm.ActiveDigest() == forkNextDigest && !fm.CheckForkSupported(forkCurDigest)
+	}, 10*time.Second, 50*time.Millisecond)
+	refresh()
+	require.ElementsMatch(t, []string{block(forkCurDigest), block(forkNextDigest)}, svc.nodeMumP2P.GetTopics())
+	require.Empty(t, svc.libP2PTopics.Keys())
+}
