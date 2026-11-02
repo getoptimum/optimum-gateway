@@ -137,7 +137,8 @@ func (s *Service) refreshForkDigestFromPeers() {
 		case <-s.ctx.Done():
 			return
 		case <-ticker.C:
-			if s.peerTopicTracer == nil {
+			// Stream-only has no CL host, so the tracer stays nil. Still refresh mump2p.
+			if s.peerTopicTracer == nil && !s.cfg.StreamOnly {
 				s.log.Debug("peer topic tracer not initialized yet, skipping refresh")
 				continue
 			}
@@ -154,7 +155,10 @@ func (s *Service) refreshTopics() {
 		}
 	}
 
-	wanted := append(s.filterAndBuildEthTopics(s.srvForkMgr.ActiveDigest(), false), s.peerTopicTracer.GetDiscoveredTopics()...)
+	wanted := s.filterAndBuildEthTopics(s.srvForkMgr.ActiveDigest(), false)
+	if s.peerTopicTracer != nil { // nil on a stream-only gateway: no CL host
+		wanted = append(wanted, s.peerTopicTracer.GetDiscoveredTopics()...)
+	}
 	for _, topicSubscribe := range wanted {
 		if !s.srvForkMgr.TopicSupported(topicSubscribe) {
 			continue
@@ -165,6 +169,9 @@ func (s *Service) refreshTopics() {
 			if err := s.nodeMumP2P.SubscribeTopic(topicSubscribe); err != nil {
 				l.Error("failed to subscribe local mump2p node to topic", err)
 			}
+		}
+		if s.cfg.StreamOnly {
+			continue // no libp2p host to subscribe
 		}
 		if err := s.subscribeToTopic(topicSubscribe); err != nil {
 			l.Error("failed to subscribe local libp2p node to topic", err)
