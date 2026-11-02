@@ -52,7 +52,7 @@ func (n *Node) handleSubscription(s *pubsub.Subscription, topicName string) {
 		default:
 			msg, err := s.Next(n.ctx)
 			if err != nil {
-				if errors.Is(err, context.Canceled) {
+				if errors.Is(err, context.Canceled) || errors.Is(err, pubsub.ErrSubscriptionCancelled) {
 					return
 				}
 				n.log.Error("failed to get message", err)
