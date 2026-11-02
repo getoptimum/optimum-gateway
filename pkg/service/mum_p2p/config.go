@@ -55,7 +55,7 @@ func toMumP2PConfig() *mump2pcfg.Config {
 	res.HeartbeatMS = 250
 	res.RLNC = mump2pcfg.RLNCConfig{
 		K:                     16,
-		MaxShardSize:          3300,
+		MaxShardSize:          8000, // hoodi shard-size test; 3300 was the rc4 run
 		RedundancyFraction:    1.5,
 		RelayCreditMultiplier: 5, // hoodi mesh 8/6/12 run; 1 is the protocol default
 	}
