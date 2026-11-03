@@ -13,9 +13,9 @@ func TestToMumP2PConfigRelayCreditMultiplier(t *testing.T) {
 
 	cfg := toMumP2PConfig()
 	require.Equal(t, 5, cfg.RLNC.RelayCreditMultiplier)
-	require.Equal(t, 12, cfg.MeshD)
-	require.Equal(t, 8, cfg.MeshDlo)
-	require.Equal(t, 16, cfg.MeshDhi)
+	require.Equal(t, 16, cfg.MeshD)
+	require.Equal(t, 12, cfg.MeshDlo)
+	require.Equal(t, 24, cfg.MeshDhi)
 	require.Equal(t, uint32(16), cfg.RLNC.K)
 	require.Equal(t, 1.5, cfg.RLNC.RedundancyFraction)
 	require.NoError(t, cfg.Validate())
