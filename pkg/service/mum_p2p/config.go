@@ -49,15 +49,15 @@ func (cfg *Config) Get() *commonentities.OptimumConfig {
 
 func toMumP2PConfig() *mump2pcfg.Config {
 	res := mump2pcfg.DefaultGossipSubConfig()
-	res.MeshD = 16
-	res.MeshDlo = 12
-	res.MeshDhi = 24
+	res.MeshD = 24
+	res.MeshDlo = 18
+	res.MeshDhi = 32
 	res.HeartbeatMS = 250
 	res.RLNC = mump2pcfg.RLNCConfig{
 		K:                     16,
 		MaxShardSize:          4096, // hoodi mesh test; 4096 is the coded size this series holds
 		RedundancyFraction:    1.5,
-		RelayCreditMultiplier: 5, // hoodi mesh Dlo 12 / D 16 / Dhi 24; 1 is the protocol default
+		RelayCreditMultiplier: 5, // hoodi mesh Dlo 18 / D 24 / Dhi 32; 1 is the protocol default
 	}
 	return res
 }
