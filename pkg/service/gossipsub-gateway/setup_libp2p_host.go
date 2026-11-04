@@ -226,14 +226,16 @@ func (s *Service) onPeerConnected(_ network.Network, conn network.Conn) {
 	}()
 }
 
-// onPeerDisconnected is the DisconnectedF notifiee callback. It clears peerstore and direct peer
-// state once the peer is fully disconnected and records the disconnect for telemetry.
+// onPeerDisconnected clears live peer state once the peer is fully disconnected.
+// Configured direct peers retain their peerstore addresses for GossipSub redials.
 func (s *Service) onPeerDisconnected(n network.Network, conn network.Conn) {
 	peerID := conn.RemotePeer()
 	if n.Connectedness(peerID) != network.Connected {
 		s.libP2PDirectPeers.Delete(peerID.String())
-		s.hostLibP2P.Peerstore().ClearAddrs(peerID)
-		s.hostLibP2P.Peerstore().RemovePeer(peerID)
+		if _, configured := s.directCLPeersAllowlist[peerID]; !configured {
+			s.hostLibP2P.Peerstore().ClearAddrs(peerID)
+			s.hostLibP2P.Peerstore().RemovePeer(peerID)
+		}
 	}
 	telemetry.CLPeerDisconnected()
 }
