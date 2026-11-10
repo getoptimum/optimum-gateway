@@ -182,7 +182,10 @@ func NewNodeWithHost(
 
 	log.Info("initializing optimum gossipsub")
 
-	psCfg := toMumP2PConfig()
+	if cfg.Rotator == nil || cfg.Rotator.Get() == nil {
+		return nil, fmt.Errorf("dynamic config is required")
+	}
+	psCfg := toMumP2PConfig(cfg.Rotator.Get())
 	ret.logRLNCConfig(psCfg.RLNC)
 
 	log.Info("log params",

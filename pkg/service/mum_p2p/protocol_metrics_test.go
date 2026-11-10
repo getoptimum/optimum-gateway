@@ -9,11 +9,21 @@ import (
 
 	tracepb "github.com/getoptimum/mump2p-protocol/pkg/pb"
 	protocoltelemetry "github.com/getoptimum/mump2p-protocol/pkg/telemetry"
+	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
 )
 
 func TestEnableProtocolMetricsRecordsPartialControl(t *testing.T) {
-	psCfg := toMumP2PConfig()
+	psCfg := toMumP2PConfig(&commonentities.OptimumConfig{
+		MeshDegreeTarget:      16,
+		MeshDegreeMin:         12,
+		MeshDegreeMax:         24,
+		HeartbeatMS:           250,
+		RLNCK:                 16,
+		MaxShardSize:          4096,
+		RedundancyFraction:    1.5,
+		RelayCreditMultiplier: 5,
+	})
 	metrics, err := newProtocolMetrics(psCfg, "optimum_test", "peer-1", slog.New(slog.DiscardHandler))
 	require.NoError(t, err)
 	require.Empty(t, psCfg.ClusterID, "metric identity must not rewrite the live config")

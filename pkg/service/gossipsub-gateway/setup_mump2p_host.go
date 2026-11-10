@@ -19,6 +19,9 @@ func (s *Service) setupMumP2PHost() error {
 	if err != nil {
 		return fmt.Errorf("failed register mump2p peer: %w", err)
 	}
+	if _, err = s.cfg.WaitDynamicConfig(s.ctx); err != nil {
+		return fmt.Errorf("dynamic config: %w", err)
+	}
 	s.log.Info("setting mump2p host")
 	optCfg := &mum_p2p.Config{
 		ListenPort:     s.cfg.AgentMumP2PPort,

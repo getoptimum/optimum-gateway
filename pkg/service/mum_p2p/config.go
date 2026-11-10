@@ -47,18 +47,19 @@ func (cfg *Config) Get() *commonentities.OptimumConfig {
 	return cfg.Rotator.Get()
 }
 
-func toMumP2PConfig() *mump2pcfg.Config {
+func toMumP2PConfig(opt *commonentities.OptimumConfig) *mump2pcfg.Config {
 	res := mump2pcfg.DefaultGossipSubConfig()
-	res.MeshD = 16
-	res.MeshDlo = 12
-	res.MeshDhi = 24
-	res.HeartbeatMS = 250
-	res.RLNC = mump2pcfg.RLNCConfig{
-		K:                     16,
-		MaxShardSize:          4096, // hoodi mesh test; 4096 is the coded size this series holds
-		RedundancyFraction:    1.5,
-		RelayCreditMultiplier: 5, // hoodi mesh Dlo 12 / D 16 / Dhi 24; 1 is the protocol default
-	}
+	res.MeshD = int(opt.MeshDegreeTarget)
+	res.MeshDlo = int(opt.MeshDegreeMin)
+	res.MeshDhi = int(opt.MeshDegreeMax)
+	res.HeartbeatMS = opt.HeartbeatMS
+	res.RLNC.K = opt.RLNCK
+	res.RLNC.MaxShardSize = opt.MaxShardSize
+	res.RLNC.RedundancyFraction = opt.RedundancyFraction
+	res.RLNC.RelayCreditMultiplier = opt.RelayCreditMultiplier
+	res.RLNC.MeshDegreeMin = int(opt.MeshDegreeMin)
+	res.RLNC.MeshDegreeTarget = int(opt.MeshDegreeTarget)
+	res.RLNC.MeshDegreeMax = int(opt.MeshDegreeMax)
 	return res
 }
 

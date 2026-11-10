@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -32,6 +33,7 @@ const (
 	DefaultAttestationPublishAfterMs int64   = 4000
 	DefaultAttestationPublishCapMs   int64   = 8000
 	DefaultAttestationMaxSlotAge     uint64  = 0
+	dynamicConfigFetchTimeout                = 30 * time.Second
 )
 
 // AppConfig holds all the configuration for the gateway service
@@ -147,6 +149,9 @@ type AppConfig struct {
 	RemotePushWALDir string `yaml:"remote_push_wal_dir" env:"OPT_REMOTE_PUSH_WAL_DIR" default:"/gateway/storage/wal"`
 
 	rotator               *commonconfig.Rotator
+	dcReady               chan struct{}
+	dcOnce                sync.Once
+	dcErr                 error
 	propagationEnabled    atomic.Bool
 	skipMessageFromSelf   atomic.Bool
 	aggregationIntervalMs atomic.Int64
@@ -203,6 +208,10 @@ func (c *AppConfig) InitRuntime(ctx context.Context, log logger.AppLogger, chain
 	if bootstrapURL != "" && !strings.HasPrefix(bootstrapURL, "http://") && !strings.HasPrefix(bootstrapURL, "https://") {
 		bootstrapURL = "https://" + bootstrapURL
 	}
+	c.dcReady = make(chan struct{})
+	c.dcErr = nil
+	c.dcOnce = sync.Once{}
+	wantVersion := "gateway-" + c.Version
 	c.rotator = commonconfig.NewConfigRotator(ctx,
 		log,
 		&commonentities.OptimumConfig{
@@ -217,8 +226,14 @@ func (c *AppConfig) InitRuntime(ctx context.Context, log logger.AppLogger, chain
 		func(dc *commonentities.DynamicConfig) {
 			c.propagationEnabled.Store(dc.PropagationEnabled)
 			c.skipMessageFromSelf.Store(dc.ExcludeSelfMessages)
+			c.dcOnce.Do(func() {
+				if dc.ServiceVersion != wantVersion {
+					c.dcErr = fmt.Errorf("dynamic config service_version %q, want %q", dc.ServiceVersion, wantVersion)
+				}
+				close(c.dcReady)
+			})
 		},
-		commonconfig.WithServiceVersion("gateway-"+c.Version),
+		commonconfig.WithServiceVersion(wantVersion),
 		commonconfig.WithBootstrapBaseURL(bootstrapURL),
 	)
 	// Start periodic config logging goroutine (every 10 minutes).
@@ -247,6 +262,31 @@ func (c *AppConfig) logConfigPeriodically(ctx context.Context) {
 
 func (c *AppConfig) GetDCRotator() *commonconfig.Rotator {
 	return c.rotator
+}
+
+// WaitDynamicConfig blocks until the first dynamic-config fetch is applied.
+// The mumP2P node reads mesh and coding from that row at process start.
+func (c *AppConfig) WaitDynamicConfig(ctx context.Context) (*commonentities.OptimumConfig, error) {
+	if c.dcReady == nil {
+		return nil, fmt.Errorf("dynamic config fetch has not started")
+	}
+	timer := time.NewTimer(dynamicConfigFetchTimeout)
+	defer timer.Stop()
+	select {
+	case <-c.dcReady:
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-timer.C:
+		return nil, fmt.Errorf("timed out waiting for dynamic config")
+	}
+	if c.dcErr != nil {
+		return nil, c.dcErr
+	}
+	cfg := c.rotator.Get()
+	if cfg == nil {
+		return nil, fmt.Errorf("dynamic config is empty")
+	}
+	return cfg, nil
 }
 
 // InitDerived seeds atomics from yaml/env fields. Required for hand-built configs;
