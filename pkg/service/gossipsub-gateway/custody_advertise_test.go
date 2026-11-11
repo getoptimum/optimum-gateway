@@ -2,6 +2,8 @@ package gossipsub_gateway
 
 import (
 	"encoding/hex"
+	"errors"
+	"io"
 	"testing"
 	"time"
 
@@ -30,9 +32,9 @@ func startReqRespGateway(t *testing.T) (*Service, host.Host) {
 	return svc, client
 }
 
-func request(t *testing.T, svc *Service, client host.Host, proto string, req consensus.Marshaler, resp consensus.Unmarshaler) {
+func request(t *testing.T, svc *Service, client host.Host, proto protocol.ID, req consensus.Marshaler, resp consensus.Unmarshaler) {
 	t.Helper()
-	stream, err := client.NewStream(t.Context(), svc.hostLibP2P.ID(), protocol.ID(proto))
+	stream, err := client.NewStream(t.Context(), svc.hostLibP2P.ID(), proto)
 	require.NoError(t, err)
 	defer stream.Close()
 	require.NoError(t, stream.SetDeadline(time.Now().Add(5*time.Second)))
@@ -69,7 +71,7 @@ func TestStatusV2ReplyAdvertisesNoData(t *testing.T) {
 	req := supportedStatusV2(t)
 
 	got := new(consensus.StatusV2)
-	request(t, svc, client, "/eth2/beacon_chain/req/status/2/ssz_snappy", req, got)
+	request(t, svc, client, statusV2Protocol, req, got)
 
 	want := *req
 	want.EarliestAvailableSlot = noDataEarliestAvailableSlot
@@ -95,7 +97,7 @@ func TestStatusV1ReplyIsEcho(t *testing.T) {
 	}
 
 	got := new(consensus.Status)
-	request(t, svc, client, "/eth2/beacon_chain/req/status/1/ssz_snappy", req, got)
+	request(t, svc, client, statusV1Protocol, req, got)
 	require.Equal(t, *req, *got)
 }
 
@@ -116,8 +118,13 @@ func statusPeer(t *testing.T, svc *Service, protos ...protocol.ID) (cl host.Host
 	for _, proto := range protos {
 		cl.SetStreamHandler(proto, func(stream network.Stream) {
 			defer stream.Close()
-			st := newStatusMessage(string(stream.Protocol()))
+			st := newStatusMessage(stream.Protocol())
 			if err := svc.sszEncoder.DecodeWithMaxLength(stream, st); err != nil {
+				return
+			}
+			// Only accept a request the gateway half-closed, as the spec requires.
+			_ = stream.SetReadDeadline(time.Now().Add(2 * time.Second))
+			if _, err := stream.Read(make([]byte, 1)); !errors.Is(err, io.EOF) {
 				return
 			}
 			sent <- st
@@ -142,7 +149,7 @@ func receivedStatus(t *testing.T, got <-chan consensus.StatusMessage) consensus.
 
 func TestOutboundHandshakeAdvertisesNoData(t *testing.T) {
 	svc, client := startReqRespGateway(t)
-	request(t, svc, client, string(statusV2Protocol), supportedStatusV2(t), new(consensus.StatusV2))
+	request(t, svc, client, statusV2Protocol, supportedStatusV2(t), new(consensus.StatusV2))
 	cl, got := statusPeer(t, svc, statusV2Protocol, statusV1Protocol)
 
 	require.NoError(t, svc.sendHandshakeForPeer(t.Context(), cl.ID()))
@@ -154,9 +161,9 @@ func TestOutboundHandshakeAdvertisesNoData(t *testing.T) {
 func TestOutboundHandshakeAfterStatusV1StillUsesV2(t *testing.T) {
 	svc, client := startReqRespGateway(t)
 	v2 := supportedStatusV2(t)
-	request(t, svc, client, string(statusV2Protocol), v2, new(consensus.StatusV2))
+	request(t, svc, client, statusV2Protocol, v2, new(consensus.StatusV2))
 	v1 := &consensus.Status{ForkDigest: v2.ForkDigest, FinalizedEpoch: 11, HeadSlot: 401}
-	request(t, svc, client, string(statusV1Protocol), v1, new(consensus.Status))
+	request(t, svc, client, statusV1Protocol, v1, new(consensus.Status))
 	cl, got := statusPeer(t, svc, statusV2Protocol, statusV1Protocol)
 
 	require.NoError(t, svc.sendHandshakeForPeer(t.Context(), cl.ID()))
@@ -167,7 +174,7 @@ func TestOutboundHandshakeAfterStatusV1StillUsesV2(t *testing.T) {
 
 func TestOutboundHandshakeFallsBackToStatusV1(t *testing.T) {
 	svc, client := startReqRespGateway(t)
-	request(t, svc, client, string(statusV2Protocol), supportedStatusV2(t), new(consensus.StatusV2))
+	request(t, svc, client, statusV2Protocol, supportedStatusV2(t), new(consensus.StatusV2))
 	cl, got := statusPeer(t, svc, statusV1Protocol)
 
 	require.NoError(t, svc.sendHandshakeForPeer(t.Context(), cl.ID()))

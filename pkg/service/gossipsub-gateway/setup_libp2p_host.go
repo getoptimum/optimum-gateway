@@ -240,8 +240,8 @@ func (s *Service) onPeerDisconnected(n network.Network, conn network.Conn) {
 }
 
 func (s *Service) sendHandshakeForPeer(ctx context.Context, peerID peer.ID) error {
-	netStatus := s.networkStatus.Load()
-	if netStatus == nil {
+	last := s.networkStatus.Load()
+	if last == nil {
 		return nil
 	}
 
@@ -252,12 +252,12 @@ func (s *Service) sendHandshakeForPeer(ctx context.Context, peerID peer.ID) erro
 	}
 	defer stream.Close()
 	proto := stream.Protocol()
-	out := outboundStatus(netStatus.status, proto)
-	if out == nil {
-		return fmt.Errorf("no status to send on %q", proto)
-	}
-	if _, err = s.sszEncoder.EncodeWithMaxLength(stream, out); err != nil {
+	if _, err = s.sszEncoder.EncodeWithMaxLength(stream, outboundStatus(last, proto)); err != nil {
 		return fmt.Errorf("unable to send handshake data to peer: %w", err)
+	}
+	// The spec requires the requester to half-close after writing its request.
+	if err = stream.CloseWrite(); err != nil {
+		return fmt.Errorf("unable to close handshake request: %w", err)
 	}
 
 	if err = stream.SetReadDeadline(time.Now().Add(10 * time.Second)); err != nil &&
@@ -269,7 +269,7 @@ func (s *Service) sendHandshakeForPeer(ctx context.Context, peerID peer.ID) erro
 		return fmt.Errorf("failed to read response from peer %s: %w", peerID, err)
 	}
 	if b[0] == entities.ResponseCodeSuccess {
-		msg := newStatusMessage(string(proto))
+		msg := newStatusMessage(proto)
 		if msg == nil {
 			return fmt.Errorf("unsupported status protocol %q", proto)
 		}
