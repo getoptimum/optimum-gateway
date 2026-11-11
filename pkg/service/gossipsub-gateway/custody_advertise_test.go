@@ -74,11 +74,13 @@ func TestStatusV2ReplyAdvertisesNoData(t *testing.T) {
 	want := *req
 	want.EarliestAvailableSlot = noDataEarliestAvailableSlot
 	require.Equal(t, want, *got)
+}
 
-	stored := svc.networkStatus.Load()
-	require.NotNil(t, stored)
-	require.Equal(t, &want, stored.status, "outbound handshakes reuse the advertised status")
-	require.EqualValues(t, 32, req.EarliestAvailableSlot, "the decoded request is not mutated")
+func TestAdvertisedStatusCopiesInput(t *testing.T) {
+	in := supportedStatusV2(t)
+	out := advertisedStatus(in)
+	require.Equal(t, noDataEarliestAvailableSlot, out.(*consensus.StatusV2).EarliestAvailableSlot)
+	require.EqualValues(t, 32, in.EarliestAvailableSlot, "the stored peer status must not change")
 }
 
 func TestStatusV1ReplyIsEcho(t *testing.T) {
@@ -105,45 +107,71 @@ func TestMetadataV3AdvertisesMinimumCustody(t *testing.T) {
 	require.EqualValues(t, 4, got.CustodyGroupCount)
 }
 
-func TestOutboundHandshakeAdvertisesNoData(t *testing.T) {
-	svc, client := startReqRespGateway(t)
-	// An inbound status/2 sets the status the gateway sends when it dials out.
-	request(t, svc, client, "/eth2/beacon_chain/req/status/2/ssz_snappy", supportedStatusV2(t), new(consensus.StatusV2))
-
+func statusPeer(t *testing.T, svc *Service, protos ...protocol.ID) (cl host.Host, got <-chan consensus.StatusMessage) {
+	t.Helper()
 	cl, err := libp2p.New(libp2p.ListenAddrStrings("/ip4/127.0.0.1/tcp/0"))
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = cl.Close() })
-	got := make(chan *consensus.StatusV2, 1)
-	cl.SetStreamHandler("/eth2/beacon_chain/req/status/2/ssz_snappy", func(stream network.Stream) {
-		defer stream.Close()
-		st := new(consensus.StatusV2)
-		if err := svc.sszEncoder.DecodeWithMaxLength(stream, st); err != nil {
-			return
-		}
-		got <- st
-		_, _ = stream.Write([]byte{entities.ResponseCodeSuccess})
-		_, _ = svc.sszEncoder.EncodeWithMaxLength(stream, st)
-	})
+	sent := make(chan consensus.StatusMessage, 1)
+	for _, proto := range protos {
+		cl.SetStreamHandler(proto, func(stream network.Stream) {
+			defer stream.Close()
+			st := newStatusMessage(string(stream.Protocol()))
+			if err := svc.sszEncoder.DecodeWithMaxLength(stream, st); err != nil {
+				return
+			}
+			sent <- st
+			_, _ = stream.Write([]byte{entities.ResponseCodeSuccess})
+			_, _ = svc.sszEncoder.EncodeWithMaxLength(stream, st)
+		})
+	}
 	require.NoError(t, svc.hostLibP2P.Connect(t.Context(), peer.AddrInfo{ID: cl.ID(), Addrs: cl.Addrs()}))
+	return cl, sent
+}
 
-	require.NoError(t, svc.sendHandshakeForPeer(t.Context(), cl.ID()))
+func receivedStatus(t *testing.T, got <-chan consensus.StatusMessage) consensus.StatusMessage {
+	t.Helper()
 	select {
-	case sent := <-got:
-		require.Equal(t, noDataEarliestAvailableSlot, sent.EarliestAvailableSlot)
-		require.EqualValues(t, 400, sent.HeadSlot)
+	case st := <-got:
+		return st
 	case <-time.After(5 * time.Second):
-		t.Fatal("no status/2 handshake reached the dialed peer")
+		t.Fatal("no status handshake reached the dialed peer")
+		return nil
 	}
 }
 
-func TestStatusV1DoesNotReplaceStoredV2(t *testing.T) {
+func TestOutboundHandshakeAdvertisesNoData(t *testing.T) {
+	svc, client := startReqRespGateway(t)
+	request(t, svc, client, string(statusV2Protocol), supportedStatusV2(t), new(consensus.StatusV2))
+	cl, got := statusPeer(t, svc, statusV2Protocol, statusV1Protocol)
+
+	require.NoError(t, svc.sendHandshakeForPeer(t.Context(), cl.ID()))
+	sent := receivedStatus(t, got).(*consensus.StatusV2)
+	require.Equal(t, noDataEarliestAvailableSlot, sent.EarliestAvailableSlot)
+	require.EqualValues(t, 400, sent.HeadSlot)
+}
+
+func TestOutboundHandshakeAfterStatusV1StillUsesV2(t *testing.T) {
 	svc, client := startReqRespGateway(t)
 	v2 := supportedStatusV2(t)
-	request(t, svc, client, "/eth2/beacon_chain/req/status/2/ssz_snappy", v2, new(consensus.StatusV2))
-	v1 := &consensus.Status{ForkDigest: v2.ForkDigest, HeadSlot: 401}
-	request(t, svc, client, "/eth2/beacon_chain/req/status/1/ssz_snappy", v1, new(consensus.Status))
+	request(t, svc, client, string(statusV2Protocol), v2, new(consensus.StatusV2))
+	v1 := &consensus.Status{ForkDigest: v2.ForkDigest, FinalizedEpoch: 11, HeadSlot: 401}
+	request(t, svc, client, string(statusV1Protocol), v1, new(consensus.Status))
+	cl, got := statusPeer(t, svc, statusV2Protocol, statusV1Protocol)
 
-	stored := svc.networkStatus.Load()
-	require.Equal(t, "/eth2/beacon_chain/req/status/2/ssz_snappy", stored.protocol)
-	require.Equal(t, noDataEarliestAvailableSlot, stored.status.(*consensus.StatusV2).EarliestAvailableSlot)
+	require.NoError(t, svc.sendHandshakeForPeer(t.Context(), cl.ID()))
+	sent := receivedStatus(t, got).(*consensus.StatusV2)
+	require.Equal(t, noDataEarliestAvailableSlot, sent.EarliestAvailableSlot)
+	require.EqualValues(t, 401, sent.HeadSlot, "chain fields come from the latest status, whatever its version")
+}
+
+func TestOutboundHandshakeFallsBackToStatusV1(t *testing.T) {
+	svc, client := startReqRespGateway(t)
+	request(t, svc, client, string(statusV2Protocol), supportedStatusV2(t), new(consensus.StatusV2))
+	cl, got := statusPeer(t, svc, statusV1Protocol)
+
+	require.NoError(t, svc.sendHandshakeForPeer(t.Context(), cl.ID()))
+	sent := receivedStatus(t, got)
+	require.IsType(t, &consensus.Status{}, sent)
+	require.EqualValues(t, 400, sent.(*consensus.Status).HeadSlot)
 }

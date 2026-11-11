@@ -26,6 +26,9 @@ const (
 	// The gateway serves no blocks or sidecars; a slot past any real one makes clients that honor
 	// earliest_available_slot skip it for those requests. 2^53-1 stays exact in JavaScript clients.
 	noDataEarliestAvailableSlot consensus.Slot = 1<<53 - 1
+
+	statusV1Protocol protocol.ID = "/eth2/beacon_chain/req/status/1/ssz_snappy"
+	statusV2Protocol protocol.ID = "/eth2/beacon_chain/req/status/2/ssz_snappy"
 )
 
 // filterAndBuildEthTopics returns full eth2 topics built from descriptors (using forkDigest) and, for mump2p nodes, also appends the internal aggregated-messages topic.
@@ -177,8 +180,8 @@ func (s *Service) handleHandshake() {
 	s.registerGoodByeHandler("/eth2/beacon_chain/req/goodbye/1/ssz_snappy")
 	s.registerPingHandler("/eth2/beacon_chain/req/ping/1/ssz_snappy")
 
-	s.hostLibP2P.SetStreamHandler("/eth2/beacon_chain/req/status/1/ssz_snappy", s.serveHandshake)
-	s.hostLibP2P.SetStreamHandler("/eth2/beacon_chain/req/status/2/ssz_snappy", s.serveHandshake)
+	s.hostLibP2P.SetStreamHandler(statusV1Protocol, s.serveHandshake)
+	s.hostLibP2P.SetStreamHandler(statusV2Protocol, s.serveHandshake)
 
 	s.hostLibP2P.SetStreamHandler("/eth2/beacon_chain/req/metadata/1/ssz_snappy", s.serveMetadata)
 	s.hostLibP2P.SetStreamHandler("/eth2/beacon_chain/req/metadata/2/ssz_snappy", s.serveMetadata)
@@ -212,25 +215,10 @@ func (s *Service) serveHandshake(stream network.Stream) {
 		s.rejectHandshakeForkMismatch(l, stream, forkDigest)
 		return
 	}
-	// Stored for outbound handshakes too, so every status the gateway sends advertises no data.
-	advertised := advertisedStatus(msg)
-	s.storeOutboundStatus(topicHandshake, advertised)
-	s.finishStream(l, stream, advertised)
+	s.setNetworkBeaconStatus(topicHandshake, msg)
+	s.finishStream(l, stream, advertisedStatus(msg))
 
 	go s.subscribeOnce()
-}
-
-// storeOutboundStatus keeps a stored status/2: a later status/1 has no earliest_available_slot, so
-// dialed peers would assume the gateway holds all data.
-func (s *Service) storeOutboundStatus(statusProtocol string, status consensus.StatusMessage) {
-	if _, v1 := status.(*consensus.Status); v1 {
-		if cur := s.networkStatus.Load(); cur != nil {
-			if _, curV2 := cur.status.(*consensus.StatusV2); curV2 {
-				return
-			}
-		}
-	}
-	s.setNetworkBeaconStatus(statusProtocol, status)
 }
 
 func newStatusMessage(topicHandshake string) consensus.StatusMessage {
@@ -251,6 +239,30 @@ func advertisedStatus(status consensus.StatusMessage) consensus.StatusMessage {
 	out := *v2
 	out.EarliestAvailableSlot = noDataEarliestAvailableSlot
 	return &out
+}
+
+// outboundStatus builds the status for a negotiated protocol from the last status a peer sent,
+// whichever version that was.
+func outboundStatus(last consensus.Marshaler, proto protocol.ID) consensus.StatusMessage {
+	var v2 consensus.StatusV2
+	switch st := last.(type) {
+	case *consensus.StatusV2:
+		v2 = *st
+	case *consensus.Status:
+		v2 = consensus.StatusV2{
+			ForkDigest: st.ForkDigest, FinalizedRoot: st.FinalizedRoot, FinalizedEpoch: st.FinalizedEpoch,
+			HeadRoot: st.HeadRoot, HeadSlot: st.HeadSlot,
+		}
+	default:
+		return nil
+	}
+	if proto == statusV1Protocol {
+		return &consensus.Status{
+			ForkDigest: v2.ForkDigest, FinalizedRoot: v2.FinalizedRoot, FinalizedEpoch: v2.FinalizedEpoch,
+			HeadRoot: v2.HeadRoot, HeadSlot: v2.HeadSlot,
+		}
+	}
+	return advertisedStatus(&v2)
 }
 
 func newMetadataMessage(topicMetadata string) consensus.Marshaler {
