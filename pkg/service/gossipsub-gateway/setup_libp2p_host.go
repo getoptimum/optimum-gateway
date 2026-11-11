@@ -251,7 +251,7 @@ func (s *Service) sendHandshakeForPeer(ctx context.Context, peerID peer.ID) erro
 		return fmt.Errorf("unable to create stream: %w", err)
 	}
 	defer stream.Close()
-	if _, err = s.sszEncoder.EncodeWithMaxLength(stream, advertisedStatus(netStatus.status)); err != nil {
+	if _, err = s.sszEncoder.EncodeWithMaxLength(stream, netStatus.status); err != nil {
 		return fmt.Errorf("unable to send handshake data to peer: %w", err)
 	}
 

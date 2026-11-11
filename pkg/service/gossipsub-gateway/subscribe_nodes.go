@@ -212,8 +212,10 @@ func (s *Service) serveHandshake(stream network.Stream) {
 		s.rejectHandshakeForkMismatch(l, stream, forkDigest)
 		return
 	}
-	s.setNetworkBeaconStatus(topicHandshake, msg)
-	s.finishStream(l, stream, advertisedStatus(msg))
+	// Stored for outbound handshakes too, so every status the gateway sends advertises no data.
+	advertised := advertisedStatus(msg)
+	s.setNetworkBeaconStatus(topicHandshake, advertised)
+	s.finishStream(l, stream, advertised)
 
 	go s.subscribeOnce()
 }
@@ -228,7 +230,7 @@ func newStatusMessage(topicHandshake string) consensus.StatusMessage {
 }
 
 // Only status v2 carries earliest_available_slot; a v1 reply stays a plain echo.
-func advertisedStatus(status consensus.Marshaler) consensus.Marshaler {
+func advertisedStatus(status consensus.StatusMessage) consensus.StatusMessage {
 	v2, ok := status.(*consensus.StatusV2)
 	if !ok {
 		return status

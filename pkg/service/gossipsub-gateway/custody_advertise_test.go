@@ -3,6 +3,7 @@ package gossipsub_gateway
 import (
 	"encoding/hex"
 	"testing"
+	"time"
 
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/core/host"
@@ -34,6 +35,7 @@ func request(t *testing.T, svc *Service, client host.Host, proto string, req con
 	stream, err := client.NewStream(t.Context(), svc.hostLibP2P.ID(), protocol.ID(proto))
 	require.NoError(t, err)
 	defer stream.Close()
+	require.NoError(t, stream.SetDeadline(time.Now().Add(5*time.Second)))
 	if req != nil {
 		_, err = svc.sszEncoder.EncodeWithMaxLength(stream, req)
 		require.NoError(t, err)
@@ -75,7 +77,8 @@ func TestStatusV2ReplyAdvertisesNoData(t *testing.T) {
 
 	stored := svc.networkStatus.Load()
 	require.NotNil(t, stored)
-	require.Equal(t, req, stored.status, "stored status must stay the peer's own")
+	require.Equal(t, &want, stored.status, "outbound handshakes reuse the advertised status")
+	require.EqualValues(t, 32, req.EarliestAvailableSlot, "the decoded request is not mutated")
 }
 
 func TestStatusV1ReplyIsEcho(t *testing.T) {
@@ -103,10 +106,9 @@ func TestMetadataV3AdvertisesMinimumCustody(t *testing.T) {
 }
 
 func TestOutboundHandshakeAdvertisesNoData(t *testing.T) {
-	svc, _ := newGateway(t)
-	startForkGatewayHost(t, svc)
-	stored := supportedStatusV2(t)
-	svc.setNetworkBeaconStatus("/eth2/beacon_chain/req/status/2/ssz_snappy", stored)
+	svc, client := startReqRespGateway(t)
+	// An inbound status/2 sets the status the gateway sends when it dials out.
+	request(t, svc, client, "/eth2/beacon_chain/req/status/2/ssz_snappy", supportedStatusV2(t), new(consensus.StatusV2))
 
 	cl, err := libp2p.New(libp2p.ListenAddrStrings("/ip4/127.0.0.1/tcp/0"))
 	require.NoError(t, err)
@@ -127,6 +129,5 @@ func TestOutboundHandshakeAdvertisesNoData(t *testing.T) {
 	require.NoError(t, svc.sendHandshakeForPeer(t.Context(), cl.ID()))
 	sent := <-got
 	require.Equal(t, noDataEarliestAvailableSlot, sent.EarliestAvailableSlot)
-	require.Equal(t, stored.HeadSlot, sent.HeadSlot)
-	require.EqualValues(t, 32, stored.EarliestAvailableSlot, "stored status must not be mutated")
+	require.EqualValues(t, 400, sent.HeadSlot)
 }
