@@ -3,9 +3,11 @@ package gossipsub_gateway
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"testing"
 	"time"
 
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/stretchr/testify/require"
 
@@ -89,4 +91,35 @@ func TestMetadataSeqHistory(t *testing.T) {
 	require.Len(t, metadataHistory, metadataSeqNumber, "append the new hash and bump metadataSeqNumber together")
 	require.Equal(t, metadataHistory[metadataSeqNumber-1], hex.EncodeToString(h.Sum(nil)),
 		"metadata changed: bump metadataSeqNumber and append the new hash")
+}
+
+type failingStream struct {
+	network.Stream
+	writes, failAt int
+	reset, closed  bool
+}
+
+func (f *failingStream) Write(p []byte) (int, error) {
+	f.writes++
+	if f.writes >= f.failAt {
+		return 0, errors.New("write failed")
+	}
+	return len(p), nil
+}
+func (f *failingStream) Reset() error { f.reset = true; return nil }
+func (f *failingStream) Close() error { f.closed = true; return nil }
+
+func TestResponseResetsOnPartialWrite(t *testing.T) {
+	svc, _ := newGateway(t)
+	pong := consensus.SSZUint64(1)
+
+	// The code byte goes out, then the chunk fails: the peer must see a reset, not a truncated reply.
+	partial := &failingStream{failAt: 2}
+	svc.finishStream(svc.log, partial, &pong)
+	require.True(t, partial.reset)
+
+	errReply := &failingStream{failAt: 2}
+	svc.terminateStream(svc.log, errReply, "invalid ping request")
+	require.True(t, errReply.reset)
+	require.False(t, errReply.closed)
 }

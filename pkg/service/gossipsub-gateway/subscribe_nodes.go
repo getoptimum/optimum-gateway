@@ -339,7 +339,7 @@ func (s *Service) registerPingHandler(topicPing string) {
 			logger.WithPeerID(stream.Conn().RemotePeer()),
 		)
 		l.Debug("received ping message")
-		// The peer's own seq is read only to drain the request; the reply carries ours.
+		// Decoding validates the request; the peer's seq itself is unused because the reply carries ours.
 		var peerSeq consensus.SSZUint64
 		if err := s.sszEncoder.DecodeWithMaxLength(stream, &peerSeq); err != nil {
 			// After a reset no one is left to answer; a half-close (io.EOF) still expects a reply.
@@ -363,29 +363,29 @@ func (s *Service) subscribeOnce() {
 }
 
 func (s *Service) finishStream(l logger.AppLogger, stream network.Stream, msg consensus.Marshaler) {
-	if _, err := stream.Write([]byte{entities.ResponseCodeSuccess}); err != nil {
+	s.writeResponse(l, stream, entities.ResponseCodeSuccess, msg)
+}
+
+// writeResponse resets on any write failure: a truncated chunk would read as corrupt data.
+func (s *Service) writeResponse(l logger.AppLogger, stream network.Stream, code byte, msg consensus.Marshaler) bool {
+	if _, err := stream.Write([]byte{code}); err != nil {
 		l.Error("failed to send response code to peer", err)
-		return
+		_ = stream.Reset()
+		return false
 	}
 	if _, err := s.sszEncoder.EncodeWithMaxLength(stream, msg); err != nil {
 		l.Error("failed to encode message to stream", err)
-		return
+		_ = stream.Reset()
+		return false
 	}
+	return true
 }
 
 // terminateStream answers InvalidRequest; the spec requires an ErrorMessage chunk after the code.
 func (s *Service) terminateStream(l logger.AppLogger, stream network.Stream, reason string) {
-	if _, err := stream.Write([]byte{entities.ResponseCodeInvalidRequest}); err != nil {
-		l.Error("failed to send error response code to peer", err)
-		_ = stream.Reset()
-		return
+	if s.writeResponse(l, stream, entities.ResponseCodeInvalidRequest, consensus.ErrorMessage(reason)) {
+		_ = stream.Close()
 	}
-	if _, err := s.sszEncoder.EncodeWithMaxLength(stream, consensus.ErrorMessage(reason)); err != nil {
-		l.Error("failed to send error message to peer", err)
-		_ = stream.Reset() // a truncated chunk would read as corrupt data
-		return
-	}
-	_ = stream.Close()
 }
 
 func (s *Service) rejectHandshakeForkMismatch(l logger.AppLogger, stream network.Stream, forkDigest string) {
