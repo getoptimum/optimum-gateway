@@ -12,10 +12,10 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/stretchr/testify/require"
 
+	cfgpkg "github.com/getoptimum/optimum-gateway/pkg/config"
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
 	"github.com/getoptimum/optimum-gateway/pkg/service/mum_p2p"
 	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
-	pubsub "github.com/getoptimum/optimum-p2p/optimum-pubsub"
 )
 
 func TestNodePublishMessageAutoSubscribes(t *testing.T) {
@@ -54,7 +54,8 @@ func TestNodeHandshakeAndTopicLifecycle(t *testing.T) {
 		nodeB.UnregisterListener("topic-flow")
 	})
 
-	payload := []byte("hello from mump2p")
+	payload := make([]byte, int(cfgpkg.DefaultRandomMessageSize*cfgpkg.DefaultShardFactor))
+	copy(payload, "hello from mump2p")
 	require.NoError(t, nodeA.PublishMessage(cnt.Ctx, topic, payload))
 
 	select {
@@ -75,6 +76,61 @@ func TestNodeHandshakeAndTopicLifecycle(t *testing.T) {
 	require.NoError(t, nodeB.UnsubscribeTopic(topic))
 	require.NotContains(t, nodeB.GetTopics(), topic)
 	require.NoError(t, nodeB.UnsubscribeTopic(topic))
+}
+
+func TestNodeSamePayloadGetsSameMessageIDAcrossPublishers(t *testing.T) {
+	cnt := test_utils.GetClean(t)
+	clusterID := "optimum_test_same_payload"
+	const topic = "beacon_block"
+
+	// Each pair stands in for a gateway publishing to its own peer. The pairs are not
+	// connected, so each publish is observed independently of the other.
+	newPair := func() (*mum_p2p.Node, chan *entities.MumP2PResponse) {
+		publisher := test_utils.NewTestNode(cnt.Ctx, t, cnt.Log, clusterID, t.TempDir())
+		receiver := test_utils.NewTestNode(cnt.Ctx, t, cnt.Log, clusterID, t.TempDir())
+		test_utils.ConnectNodes(cnt.Ctx, t, publisher, receiver)
+
+		require.NoError(t, publisher.SubscribeTopic(topic))
+		require.NoError(t, receiver.SubscribeTopic(topic))
+		require.Eventually(t, func() bool {
+			_, perTopicPeers := publisher.CountConnectedPeers()
+			return perTopicPeers[topic] > 0
+		}, 10*time.Second, 100*time.Millisecond)
+
+		listener := receiver.RegisterListener("same-payload")
+		t.Cleanup(func() {
+			receiver.UnregisterListener("same-payload")
+		})
+		return publisher, listener
+	}
+
+	publishAndReceive := func(publisher *mum_p2p.Node, listener chan *entities.MumP2PResponse, payload []byte) *entities.MumP2PResponse {
+		require.NoError(t, publisher.PublishMessage(cnt.Ctx, topic, payload))
+		deadline := time.After(10 * time.Second)
+		for {
+			select {
+			case msg := <-listener:
+				if msg.Command == entities.MumP2PCommandMessage {
+					require.Equal(t, payload, msg.Message.Message)
+					require.Equal(t, publisher.GetHostInfo().ID.String(), msg.Message.SourceNodeID)
+					return msg
+				}
+			case <-deadline:
+				t.Fatal("timed out waiting for published message")
+			}
+		}
+	}
+
+	nodeA, listenerB := newPair()
+	nodeC, listenerD := newPair()
+
+	payload := []byte("same block from two gateways")
+	fromA := publishAndReceive(nodeA, listenerB, payload)
+	fromC := publishAndReceive(nodeC, listenerD, payload)
+	require.Equal(t, fromA.Message.MessageID, fromC.Message.MessageID)
+
+	other := publishAndReceive(nodeC, listenerD, []byte("different block"))
+	require.NotEqual(t, fromC.Message.MessageID, other.Message.MessageID)
 }
 
 func TestNodeDisconnectsPeerOnClusterMismatch(t *testing.T) {
@@ -132,16 +188,16 @@ func customHandshakeOptions(counter *atomic.Int32) []mum_p2p.NodeOption {
 		mum_p2p.WithCustomHandshakeBuilder(func() any {
 			return customHandshake{Kind: "custom"}
 		}),
-		mum_p2p.WithCustomHandshakeHandler(func(_ peer.ID, decoder *json.Decoder) (pubsub.PeerCapability, error) {
+		mum_p2p.WithCustomHandshakeHandler(func(_ peer.ID, decoder *json.Decoder) (mum_p2p.PeerCapability, error) {
 			var handshake customHandshake
 			if err := decoder.Decode(&handshake); err != nil {
-				return pubsub.PeerCapability{}, err
+				return mum_p2p.PeerCapability{}, err
 			}
 			if handshake.Kind != "custom" {
-				return pubsub.PeerCapability{}, fmt.Errorf("unexpected handshake kind %q", handshake.Kind)
+				return mum_p2p.PeerCapability{}, fmt.Errorf("unexpected handshake kind %q", handshake.Kind)
 			}
 			counter.Add(1)
-			return pubsub.PeerCapability{CanPublish: true}, nil
+			return mum_p2p.PeerCapability{CanPublish: true}, nil
 		}),
 	}
 }

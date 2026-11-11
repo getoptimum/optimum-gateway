@@ -45,6 +45,9 @@ func (tk *Service) persist() {
 		case <-tk.ctx.Done():
 			return
 		case <-tk.topicsChan:
+			if tk.ctx.Err() != nil {
+				return
+			}
 			tk.DumpData()
 		}
 	}

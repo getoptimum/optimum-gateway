@@ -33,7 +33,7 @@ const (
 )
 
 // Result label values for p2p_handshake_cluster_claim_total: the outcome of the
-// cluster-binding check at the mumP2P handshake (#707).
+// cluster-binding check at the mump2p handshake (#707).
 const (
 	ClusterClaimAuthorized = "authorized" // cluster_ids present and a member
 	ClusterClaimRejected   = "rejected"   // cluster_ids missing or not a member
@@ -68,7 +68,7 @@ func initAuthMetrics() {
 	handshakeClusterClaimTotal = commonmetrics.NewCounterVec(
 		"p2p_handshake_cluster_claim_total",
 		subsystem,
-		"Cluster-binding check outcome at the mumP2P handshake (result=authorized|rejected)",
+		"Cluster-binding check outcome at the mump2p handshake (result=authorized|rejected)",
 		[]string{labelResult},
 	)
 

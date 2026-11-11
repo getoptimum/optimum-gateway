@@ -123,7 +123,7 @@ func NewService(
 		libP2PDirectPeers: syncx.NewRWMap[string, peer.AddrInfo](),
 		clMessages:        make(chan *entities.CLMessage, 1_000),
 		mumP2PMessages:    make(chan *commonentities.P2PMessage, 1_000),
-		messagesMap:       syncx.NewTTLMap[uint64, struct{}](30*time.Second, 30*time.Second),
+		messagesMap:       syncx.NewTTLMap[uint64, struct{}](2*time.Minute, 2*time.Minute),
 		streamDedup:       syncx.NewTTLMap[string, struct{}](streamDedupTTL, streamDedupTTL),
 		sszEncoder:        &consensus.SSZSnappyCodec{},
 		statSendMum:       syncx.NewRWMap[string, int](),

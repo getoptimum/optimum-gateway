@@ -7,13 +7,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
 
+	tracepb "github.com/getoptimum/mump2p-protocol/pkg/pb"
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	"github.com/getoptimum/optimum-common/pkg/syncx"
 	commontelemetry "github.com/getoptimum/optimum-common/pkg/telemetry"
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
 	"github.com/getoptimum/optimum-gateway/pkg/service/mum_p2p/tracer"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
-	pboptimum "github.com/getoptimum/optimum-p2p/optimum-pubsub/pb"
 )
 
 func TestTracerBroadcastsEnabledEventsOnly(t *testing.T) {
@@ -25,31 +25,31 @@ func TestTracerBroadcastsEnabledEventsOnly(t *testing.T) {
 
 	tracerMumP2P := tracer.NewTracerMumP2P(
 		broadcaster,
-		map[pboptimum.TraceEvent_Type]struct{}{
-			pboptimum.TraceEvent_NEW_SHARD: {},
+		map[entities.MumP2PTraceEventKind]struct{}{
+			entities.MumP2PTraceEventHelpfulSymbol: {},
 		},
 	)
 
-	newShard := &pboptimum.TraceEvent{
-		Type: pboptimum.TraceEvent_NEW_SHARD.Enum(),
-		NewShard: &pboptimum.TraceEvent_ShardContainer{
-			MessageID: []byte("message-1"),
+	helpfulSymbol := &tracepb.TraceEvent{
+		Event: &tracepb.TraceEvent_HelpfulSymbol{
+			HelpfulSymbol: &tracepb.SymbolContainer{
+				MessageId: []byte("message-1"),
+			},
 		},
 	}
-	go tracerMumP2P.Trace(newShard)
+	go tracerMumP2P.Trace(helpfulSymbol)
 
 	select {
 	case evt := <-listener:
 		require.Equal(t, entities.MumP2PCommandTraceMumP2P, evt.Command)
-		require.Equal(t, newShard, evt.TraceEvent)
+		require.Equal(t, helpfulSymbol, evt.TraceEvent)
 	case <-time.After(time.Second):
 		t.Fatal("timed out waiting for enabled trace fan-out")
 	}
 
-	tracerMumP2P.Trace(&pboptimum.TraceEvent{
-		Type: pboptimum.TraceEvent_RECV_RPC.Enum(),
-		RecvRPC: &pboptimum.TraceEvent_RecvRPC{
-			Length: new(uint64),
+	tracerMumP2P.Trace(&tracepb.TraceEvent{
+		Event: &tracepb.TraceEvent_RecvRpc{
+			RecvRpc: &tracepb.RecvRPC{},
 		},
 	})
 
@@ -69,13 +69,13 @@ func TestTracerIgnoresNilEvents(t *testing.T) {
 
 	tracerMumP2P := tracer.NewTracerMumP2P(
 		broadcaster,
-		map[pboptimum.TraceEvent_Type]struct{}{
-			pboptimum.TraceEvent_NEW_SHARD: {},
+		map[entities.MumP2PTraceEventKind]struct{}{
+			entities.MumP2PTraceEventHelpfulSymbol: {},
 		},
 	)
 
 	tracerMumP2P.Trace(nil)
-	tracerMumP2P.Trace(&pboptimum.TraceEvent{})
+	tracerMumP2P.Trace(&tracepb.TraceEvent{})
 
 	select {
 	case <-listener:
@@ -91,21 +91,54 @@ func TestTracerIncrementsShardMetrics(t *testing.T) {
 
 	tracerMumP2P := tracer.NewTracerMumP2P(
 		syncx.NewBroadcaster[*entities.MumP2PResponse](),
-		map[pboptimum.TraceEvent_Type]struct{}{},
+		map[entities.MumP2PTraceEventKind]struct{}{},
 	)
 
-	shardTypes := map[pboptimum.TraceEvent_Type]string{
-		pboptimum.TraceEvent_NEW_SHARD:         "testns_mump2p_shards_total",
-		pboptimum.TraceEvent_DUPLICATE_SHARD:   "testns_mump2p_shards_duplicate_total",
-		pboptimum.TraceEvent_UNNECESSARY_SHARD: "testns_mump2p_shards_unnecessary_total",
-		pboptimum.TraceEvent_UNHELPFUL_SHARD:   "testns_mump2p_shards_unhelpful_total",
+	shardEvents := []struct {
+		name           string
+		evt            *tracepb.TraceEvent
+		specificMetric string
+	}{
+		{
+			name: "helpful",
+			evt: &tracepb.TraceEvent{
+				Event: &tracepb.TraceEvent_HelpfulSymbol{},
+			},
+		},
+		{
+			name: "redundant",
+			evt: &tracepb.TraceEvent{
+				Event: &tracepb.TraceEvent_RedundantSymbol{},
+			},
+			specificMetric: "testns_mump2p_shards_duplicate_total",
+		},
+		{
+			name: "unnecessary",
+			evt: &tracepb.TraceEvent{
+				Event: &tracepb.TraceEvent_UnnecessarySymbol{},
+			},
+			specificMetric: "testns_mump2p_shards_unnecessary_total",
+		},
+		{
+			name: "inconsistent",
+			evt: &tracepb.TraceEvent{
+				Event: &tracepb.TraceEvent_InconsistentSymbol{},
+			},
+			specificMetric: "testns_mump2p_shards_unhelpful_total",
+		},
 	}
 
-	for evtType, metricName := range shardTypes {
-		tracerMumP2P.Trace(&pboptimum.TraceEvent{Type: evtType.Enum()})
-		require.Equal(t, float64(1), counterValue(t, reg, metricName),
-			"expected %s to increment for %s", metricName, evtType)
+	for _, tc := range shardEvents {
+		t.Run(tc.name, func(t *testing.T) {
+			tracerMumP2P.Trace(tc.evt)
+			if tc.specificMetric != "" {
+				require.Equal(t, float64(1), counterValue(t, reg, tc.specificMetric),
+					"expected %s to increment", tc.specificMetric)
+			}
+		})
 	}
+
+	require.Equal(t, float64(len(shardEvents)), counterValue(t, reg, "testns_mump2p_shards_total"))
 }
 
 func counterValue(t *testing.T, reg *prometheus.Registry, name string) float64 {

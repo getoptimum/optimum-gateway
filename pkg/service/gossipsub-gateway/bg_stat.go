@@ -118,7 +118,7 @@ func (s *Service) dumpServiceStat() {
 			s.log.Info("failed ssz decode from CL", logger.WithTopic(topic), logger.WithUint64("count", badMessages))
 		}
 		for topic, badMessages := range telemetry.GetMumSSZErrors() {
-			s.log.Info("failed ssz decode from MumP2P", logger.WithTopic(topic), logger.WithUint64("count", badMessages))
+			s.log.Info("failed ssz decode from mump2p", logger.WithTopic(topic), logger.WithUint64("count", badMessages))
 		}
 
 		<-ticker.C
