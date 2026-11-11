@@ -20,6 +20,12 @@ import (
 
 const (
 	mumP2PAggregatedMessagesTopic = "mump2p_aggregated_messages"
+
+	// Fulu CUSTODY_REQUIREMENT; Lighthouse and Grandine disconnect peers advertising less.
+	advertisedCustodyGroupCount = 4
+	// The gateway serves no blocks or sidecars; a slot past any real one makes clients that honor
+	// earliest_available_slot skip it for those requests. 2^53-1 stays exact in JavaScript clients.
+	noDataEarliestAvailableSlot consensus.Slot = 1<<53 - 1
 )
 
 // filterAndBuildEthTopics returns full eth2 topics built from descriptors (using forkDigest) and, for mump2p nodes, also appends the internal aggregated-messages topic.
@@ -207,7 +213,7 @@ func (s *Service) serveHandshake(stream network.Stream) {
 		return
 	}
 	s.setNetworkBeaconStatus(topicHandshake, msg)
-	s.finishStream(l, stream, msg)
+	s.finishStream(l, stream, advertisedStatus(msg))
 
 	go s.subscribeOnce()
 }
@@ -219,6 +225,17 @@ func newStatusMessage(topicHandshake string) consensus.StatusMessage {
 		return &consensus.Status{}
 	}
 	return nil
+}
+
+// Only status v2 carries earliest_available_slot; a v1 reply stays a plain echo.
+func advertisedStatus(status consensus.Marshaler) consensus.Marshaler {
+	v2, ok := status.(*consensus.StatusV2)
+	if !ok {
+		return status
+	}
+	out := *v2
+	out.EarliestAvailableSlot = noDataEarliestAvailableSlot
+	return &out
 }
 
 func newMetadataMessage(topicMetadata string) consensus.Marshaler {
@@ -241,7 +258,7 @@ func newMetadataMessage(topicMetadata string) consensus.Marshaler {
 		return &consensus.MetaDataV2{
 			Attnets:           attNets,
 			Syncnets:          syncNetsNone,
-			CustodyGroupCount: 8, // Fulu VALIDATOR_CUSTODY_REQUIREMENT; valid range [4, 128]
+			CustodyGroupCount: advertisedCustodyGroupCount,
 		}
 	}
 	return nil
