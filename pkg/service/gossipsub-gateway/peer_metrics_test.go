@@ -88,18 +88,6 @@ func TestDisconnectKeepsAgentForLateNotices(t *testing.T) {
 	require.Equal(t, before+2, counterSum(t, "cl_peer_disconnected_by_client_total", labels))
 }
 
-func TestWaitIdentifiedCoversFreshConnection(t *testing.T) {
-	svc := newMetricsGateway(t)
-	client, err := libp2p.New(libp2p.ListenAddrStrings("/ip4/127.0.0.1/tcp/0"), libp2p.UserAgent("teku/v26.10.3"))
-	require.NoError(t, err)
-	t.Cleanup(func() { _ = client.Close() })
-	// Connect returns once the client identified the gateway; the gateway's identify of the client may still run.
-	require.NoError(t, client.Connect(t.Context(), peer.AddrInfo{ID: svc.hostLibP2P.ID(), Addrs: svc.hostLibP2P.Addrs()}))
-
-	svc.waitIdentified(svc.hostLibP2P.Network().ConnsToPeer(client.ID())[0])
-	require.Equal(t, "teku", svc.peerClientFamily(client.ID()))
-}
-
 func TestGoodbyeLabelsClient(t *testing.T) {
 	svc := newMetricsGateway(t)
 	svc.handleHandshake()

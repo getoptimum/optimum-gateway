@@ -323,9 +323,6 @@ func (s *Service) registerGoodByeHandler(topicGoodbye string) {
 		if !s.isAllowedCLPeer(peerID) {
 			return
 		}
-		// Close first so waiting on identify doesn't hold the peer's stream open.
-		_ = stream.Close()
-		s.waitIdentified(stream.Conn())
 		telemetry.CLPeerGoodbye(s.peerClientFamily(peerID), reasonLabel)
 	})
 }

@@ -2,15 +2,11 @@ package gossipsub_gateway
 
 import (
 	"strings"
-	"time"
 
-	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/libp2p/go-libp2p/p2p/protocol/identify"
-)
 
-// identifyWaitTimeout bounds how long goodbye attribution waits for an identify still in flight.
-const identifyWaitTimeout = 2 * time.Second
+	commonslices "github.com/getoptimum/optimum-common/pkg/slices"
+)
 
 const unknownClient = "unknown"
 
@@ -21,10 +17,8 @@ var knownCLClients = []string{"lighthouse", "prysm", "teku", "nimbus", "lodestar
 // the string can't mislabel it. An identified peer with no agent is "other"; "unknown" means not identified.
 func clientFamily(agentVersion string) string {
 	name, _, _ := strings.Cut(strings.ToLower(agentVersion), "/")
-	for _, client := range knownCLClients {
-		if name == client {
-			return client
-		}
+	if commonslices.ContainsInSlice(knownCLClients, name) {
+		return name
 	}
 	return "other"
 }
@@ -36,19 +30,4 @@ func (s *Service) peerClientFamily(p peer.ID) string {
 	}
 	v, _ := agent.(string)
 	return clientFamily(v)
-}
-
-// waitIdentified lets a peer that says goodbye right after connecting still be attributed.
-func (s *Service) waitIdentified(conn network.Conn) {
-	ids, ok := s.hostLibP2P.(interface{ IDService() identify.IDService })
-	if !ok {
-		return
-	}
-	timer := time.NewTimer(identifyWaitTimeout)
-	defer timer.Stop()
-	select {
-	case <-ids.IDService().IdentifyWait(conn):
-	case <-timer.C:
-	case <-s.ctx.Done():
-	}
 }
