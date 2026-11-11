@@ -28,6 +28,9 @@ const (
 	// The gateway serves no blocks or sidecars; a slot past any real one makes clients that honor
 	// earliest_available_slot skip it for those requests. 2^53-1 stays exact in JavaScript clients.
 	noDataEarliestAvailableSlot consensus.Slot = 1<<53 - 1
+	// Bump with any change to the advertised metadata: peers that cached it under this persistent
+	// identity compare it with our ping reply to decide whether to re-fetch. TestMetadataSeqHistory checks this.
+	metadataSeqNumber = 1
 
 	statusV1Protocol protocol.ID = "/eth2/beacon_chain/req/status/1/ssz_snappy"
 	statusV2Protocol protocol.ID = "/eth2/beacon_chain/req/status/2/ssz_snappy"
@@ -265,16 +268,17 @@ func newMetadataMessage(topicMetadata string) consensus.Marshaler {
 	if strings.Contains(topicMetadata, "metadata/1") {
 		return &consensus.MetaDataV0{
 			Attnets:   attNets,
-			SeqNumber: 0, // initial; increase per request if ordering needed
+			SeqNumber: metadataSeqNumber,
 		}
 	} else if strings.Contains(topicMetadata, "metadata/2") {
 		return &consensus.MetaDataV1{
 			Attnets:   attNets,
-			SeqNumber: 0, // initial; increase per request if ordering needed
+			SeqNumber: metadataSeqNumber,
 			Syncnets:  syncNetsNone,
 		}
 	} else if strings.Contains(topicMetadata, "metadata/3") {
 		return &consensus.MetaDataV2{
+			SeqNumber:         metadataSeqNumber,
 			Attnets:           attNets,
 			Syncnets:          syncNetsNone,
 			CustodyGroupCount: advertisedCustodyGroupCount,
@@ -335,12 +339,19 @@ func (s *Service) registerPingHandler(topicPing string) {
 			logger.WithPeerID(stream.Conn().RemotePeer()),
 		)
 		l.Debug("received ping message")
-		msg := new(consensus.SSZUint64)
-		if err := s.sszEncoder.DecodeWithMaxLength(stream, msg); err != nil {
+		// The peer's own seq is read only to drain the request; the reply carries ours.
+		var peerSeq consensus.SSZUint64
+		if err := s.sszEncoder.DecodeWithMaxLength(stream, &peerSeq); err != nil {
+			// After a reset no one is left to answer; a half-close (io.EOF) still expects a reply.
+			if errors.Is(err, network.ErrReset) {
+				return
+			}
 			l.Error("failed to decode ping request", err)
+			s.terminateStream(l, stream, "invalid ping request")
 			return
 		}
-		s.finishStream(l, stream, msg)
+		pong := consensus.SSZUint64(metadataSeqNumber)
+		s.finishStream(l, stream, &pong)
 	})
 }
 
@@ -362,9 +373,17 @@ func (s *Service) finishStream(l logger.AppLogger, stream network.Stream, msg co
 	}
 }
 
-func (s *Service) terminateStream(l logger.AppLogger, stream network.Stream) {
+// terminateStream answers InvalidRequest; the spec requires an ErrorMessage chunk after the code.
+func (s *Service) terminateStream(l logger.AppLogger, stream network.Stream, reason string) {
 	if _, err := stream.Write([]byte{entities.ResponseCodeInvalidRequest}); err != nil {
 		l.Error("failed to send error response code to peer", err)
+		_ = stream.Reset()
+		return
+	}
+	if _, err := s.sszEncoder.EncodeWithMaxLength(stream, consensus.ErrorMessage(reason)); err != nil {
+		l.Error("failed to send error message to peer", err)
+		_ = stream.Reset() // a truncated chunk would read as corrupt data
+		return
 	}
 	_ = stream.Close()
 }
@@ -372,7 +391,7 @@ func (s *Service) terminateStream(l logger.AppLogger, stream network.Stream) {
 func (s *Service) rejectHandshakeForkMismatch(l logger.AppLogger, stream network.Stream, forkDigest string) {
 	peerID := stream.Conn().RemotePeer()
 	l.Info("handshake fork digest not supported, closing peer", logger.WithString("fork_digest", forkDigest))
-	s.terminateStream(l, stream)
+	s.terminateStream(l, stream, "unsupported fork digest")
 	if s.hostLibP2P != nil {
 		if err := s.hostLibP2P.Network().ClosePeer(peerID); err != nil {
 			l.Error("failed to close peer after fork mismatch", err, logger.WithPeerID(peerID))

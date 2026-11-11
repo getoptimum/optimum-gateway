@@ -2,6 +2,7 @@ package consensus_test
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -81,4 +82,13 @@ func TestGoodbyeCodeMessagesUseSpecCodes(t *testing.T) {
 	for _, stale := range []uint64{4, 5, 6} {
 		require.NotContains(t, consensus.GoodbyeCodeMessages, stale)
 	}
+}
+
+func TestErrorMessageTruncatesToSpecLimit(t *testing.T) {
+	b, err := consensus.ErrorMessage(strings.Repeat("x", 300)).MarshalSSZ()
+	require.NoError(t, err)
+	require.Len(t, b, 256)
+
+	var m consensus.ErrorMessage
+	require.Error(t, m.UnmarshalSSZ(make([]byte, 257)))
 }
