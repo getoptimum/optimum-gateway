@@ -127,7 +127,23 @@ func TestOutboundHandshakeAdvertisesNoData(t *testing.T) {
 	require.NoError(t, svc.hostLibP2P.Connect(t.Context(), peer.AddrInfo{ID: cl.ID(), Addrs: cl.Addrs()}))
 
 	require.NoError(t, svc.sendHandshakeForPeer(t.Context(), cl.ID()))
-	sent := <-got
-	require.Equal(t, noDataEarliestAvailableSlot, sent.EarliestAvailableSlot)
-	require.EqualValues(t, 400, sent.HeadSlot)
+	select {
+	case sent := <-got:
+		require.Equal(t, noDataEarliestAvailableSlot, sent.EarliestAvailableSlot)
+		require.EqualValues(t, 400, sent.HeadSlot)
+	case <-time.After(5 * time.Second):
+		t.Fatal("no status/2 handshake reached the dialed peer")
+	}
+}
+
+func TestStatusV1DoesNotReplaceStoredV2(t *testing.T) {
+	svc, client := startReqRespGateway(t)
+	v2 := supportedStatusV2(t)
+	request(t, svc, client, "/eth2/beacon_chain/req/status/2/ssz_snappy", v2, new(consensus.StatusV2))
+	v1 := &consensus.Status{ForkDigest: v2.ForkDigest, HeadSlot: 401}
+	request(t, svc, client, "/eth2/beacon_chain/req/status/1/ssz_snappy", v1, new(consensus.Status))
+
+	stored := svc.networkStatus.Load()
+	require.Equal(t, "/eth2/beacon_chain/req/status/2/ssz_snappy", stored.protocol)
+	require.Equal(t, noDataEarliestAvailableSlot, stored.status.(*consensus.StatusV2).EarliestAvailableSlot)
 }

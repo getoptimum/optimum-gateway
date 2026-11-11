@@ -214,10 +214,23 @@ func (s *Service) serveHandshake(stream network.Stream) {
 	}
 	// Stored for outbound handshakes too, so every status the gateway sends advertises no data.
 	advertised := advertisedStatus(msg)
-	s.setNetworkBeaconStatus(topicHandshake, advertised)
+	s.storeOutboundStatus(topicHandshake, advertised)
 	s.finishStream(l, stream, advertised)
 
 	go s.subscribeOnce()
+}
+
+// storeOutboundStatus keeps a stored status/2: a later status/1 has no earliest_available_slot, so
+// dialed peers would assume the gateway holds all data.
+func (s *Service) storeOutboundStatus(statusProtocol string, status consensus.StatusMessage) {
+	if _, v1 := status.(*consensus.Status); v1 {
+		if cur := s.networkStatus.Load(); cur != nil {
+			if _, curV2 := cur.status.(*consensus.StatusV2); curV2 {
+				return
+			}
+		}
+	}
+	s.setNetworkBeaconStatus(statusProtocol, status)
 }
 
 func newStatusMessage(topicHandshake string) consensus.StatusMessage {
