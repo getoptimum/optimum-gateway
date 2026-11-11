@@ -18,6 +18,20 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
 )
 
+func TestNewTestConfigCarriesCoding(t *testing.T) {
+	cnt := test_utils.GetClean(t)
+	cfg := test_utils.NewTestConfig(cnt.Ctx, cnt.Log, "optimum_test_coding", 1, nil)
+	got := cfg.Get()
+	require.Equal(t, int64(12), got.MeshDegreeMin)
+	require.Equal(t, int64(16), got.MeshDegreeTarget)
+	require.Equal(t, int64(24), got.MeshDegreeMax)
+	require.Equal(t, uint32(4096), got.MaxShardSize)
+	require.Equal(t, uint32(16), got.RLNCK)
+	require.Equal(t, 1.5, got.RedundancyFraction)
+	require.Equal(t, 5, got.RelayCreditMultiplier)
+	require.Equal(t, 250, got.HeartbeatMS)
+}
+
 func TestNodePublishMessageAutoSubscribes(t *testing.T) {
 	cnt := test_utils.GetClean(t)
 	node := test_utils.NewTestNode(cnt.Ctx, t, cnt.Log, "optimum_test_auto_subscribe", t.TempDir())
