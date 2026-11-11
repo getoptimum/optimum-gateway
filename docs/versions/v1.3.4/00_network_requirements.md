@@ -12,7 +12,7 @@ Before starting the Optimum Gateway, ensure your firewall allows these ports:
 
 ## Load balancers
 
-`33212` stays on the private network. The beacon node dials that sidecar by peer ID. Do not publish it, and do not put it behind a load balancer.
+`33212` stays on the private network. The beacon node dials that sidecar by peer ID. Keep it off the public internet, and do not put it behind a load balancer.
 
 `33213` is a long-lived raw TCP session. An HTTP load balancer cannot carry it. A TCP load balancer in front of the sidecar does not make the sidecar reachable either: the gateway announces the address it detects on the host, and it has no setting to announce the load balancer's address. Remote peers then dial the wrong place. The same limit is why the [Kubernetes install](05_kubernetes.md#networking-why-hostnetwork-is-required) uses the node's own address rather than a Service.
 
