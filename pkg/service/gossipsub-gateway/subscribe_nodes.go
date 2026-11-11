@@ -21,7 +21,7 @@ import (
 const (
 	mumP2PAggregatedMessagesTopic = "mump2p_aggregated_messages"
 
-	// Fulu CUSTODY_REQUIREMENT; Lighthouse and Grandine disconnect peers advertising less.
+	// Fulu CUSTODY_REQUIREMENT. Lighthouse disconnects a peer that advertises less.
 	advertisedCustodyGroupCount = 4
 	// The gateway serves no blocks or sidecars; a slot past any real one makes clients that honor
 	// earliest_available_slot skip it for those requests. 2^53-1 stays exact in JavaScript clients.

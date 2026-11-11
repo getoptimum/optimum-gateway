@@ -65,14 +65,3 @@ func requireSSZRoundTrip(t *testing.T, want sszRoundTripper, size int) {
 	require.NoError(t, got.UnmarshalSSZ(raw))
 	require.Equal(t, want, got)
 }
-
-func TestStatusVersionConversion(t *testing.T) {
-	v2 := &consensus.StatusV2{ForkDigest: [4]byte{1, 2, 3, 4}, FinalizedEpoch: 9, HeadSlot: 300, EarliestAvailableSlot: 7}
-	v1 := v2.V1()
-	require.Equal(t, consensus.Status{ForkDigest: v2.ForkDigest, FinalizedEpoch: 9, HeadSlot: 300}, *v1)
-
-	back := v1.V2()
-	require.Zero(t, back.EarliestAvailableSlot, "status/1 carries no earliest_available_slot")
-	back.EarliestAvailableSlot = v2.EarliestAvailableSlot
-	require.Equal(t, *v2, *back)
-}

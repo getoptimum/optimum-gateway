@@ -223,7 +223,7 @@ curl -s http://localhost:9596/eth/v1/node/identity | jq '.data.peer_id, .data.p2
 When `direct_cl_peers` is set, the gateway disconnects any libp2p peer whose ID is missing from that list, including a second beacon node you forgot to add. A wrong peer ID means `cl_peers` stays 0 even though the CL is dialing `33212`. An empty list applies no peer-ID filter. Either way, open `33212` only to the CL.
 :::
 
-The gateway advertises a custody group count of 8 in its libp2p metadata so PeerDAS clients keep it as a useful peer. That advertisement is in the binary. There is no custody flag to set on the gateway. See the [Fulu p2p metadata spec](https://github.com/ethereum/consensus-specs/blob/master/specs/fulu/p2p-interface.md#metadata).
+The gateway advertises a custody group count of 4 (the Fulu `CUSTODY_REQUIREMENT`) in its libp2p metadata, and advertises no data availability in its status reply (a far-future `earliest_available_slot`), so PeerDAS clients keep it as a peer but do not ask it for data columns it cannot serve. That advertisement is in the binary. There is no custody flag to set on the gateway. See the [Fulu p2p metadata spec](https://github.com/ethereum/consensus-specs/blob/master/specs/fulu/p2p-interface.md#metadata).
 
 ## Verify
 
