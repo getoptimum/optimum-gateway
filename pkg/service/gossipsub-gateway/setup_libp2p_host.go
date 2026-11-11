@@ -74,6 +74,19 @@ func (s *Service) setupLibP2PHost() error {
 	if os.Getenv("LIBP2P_DEBUG") == "1" {
 		debugLibP2P()
 	}
+	// Built before the host listens: the goodbye handler reads it without locking.
+	directCLPeers := make([]peer.AddrInfo, 0)
+	if len(s.cfg.DirectCLPeers) > 0 {
+		var err error
+		directCLPeers, err = utils.PeersFromStrings(s.cfg.DirectCLPeers)
+		if err != nil {
+			return fmt.Errorf("unable to parse direct CL peers: %w", err)
+		}
+	}
+	s.directCLPeersAllowlist = make(map[peer.ID]struct{}, len(directCLPeers))
+	for _, directPeer := range directCLPeers {
+		s.directCLPeersAllowlist[directPeer.ID] = struct{}{}
+	}
 	key, err := identity.EnsureIdentity(s.cfg.IdentityLibP2PDir)
 	if err != nil {
 		return fmt.Errorf("could not create libp2p identity: %w", err)
@@ -121,18 +134,6 @@ func (s *Service) setupLibP2PHost() error {
 		libp2p.AddrsFactory(func([]multiaddr.Multiaddr) []multiaddr.Multiaddr {
 			return resultAddrFactory
 		}),
-	}
-	// Built before the host listens: the goodbye handler reads it without locking.
-	directCLPeers := make([]peer.AddrInfo, 0)
-	if len(s.cfg.DirectCLPeers) > 0 {
-		directCLPeers, err = utils.PeersFromStrings(s.cfg.DirectCLPeers)
-		if err != nil {
-			return fmt.Errorf("unable to parse direct CL peers: %w", err)
-		}
-	}
-	s.directCLPeersAllowlist = make(map[peer.ID]struct{}, len(directCLPeers))
-	for _, directPeer := range directCLPeers {
-		s.directCLPeersAllowlist[directPeer.ID] = struct{}{}
 	}
 	gomplex.ResetStreamTimeout = 5 * time.Second // Configures stream timeouts on mplex
 	s.hostLibP2P, err = libp2p.New(libP2POpts...)
@@ -233,13 +234,12 @@ func (s *Service) onPeerDisconnected(n network.Network, conn network.Conn) {
 	allowed := s.isAllowedCLPeer(peerID)
 	if n.Connectedness(peerID) != network.Connected {
 		s.libP2PDirectPeers.Delete(peerID.String())
-		switch {
-		case !allowed:
+		if _, configured := s.directCLPeersAllowlist[peerID]; !configured {
 			s.hostLibP2P.Peerstore().ClearAddrs(peerID)
-			s.hostLibP2P.Peerstore().RemovePeer(peerID)
-		case len(s.directCLPeersAllowlist) == 0:
-			// libp2p's peerstore manager drops the rest after a grace period, so a late goodbye still finds the agent.
-			s.hostLibP2P.Peerstore().ClearAddrs(peerID)
+			// Otherwise libp2p's peerstore manager drops the rest after a grace period, so a late goodbye still finds the agent.
+			if !allowed {
+				s.hostLibP2P.Peerstore().RemovePeer(peerID)
+			}
 		}
 	}
 	// onPeerConnected rejected this peer without counting it, so don't count its disconnect.

@@ -133,10 +133,8 @@ func TestRejectedPeerIsNotCounted(t *testing.T) {
 
 	goodbyes := counterSum(t, "cl_peer_goodbye_total", nil)
 	sendGoodbye(t, svc, client, 1)
-	// Goodbyes are counted asynchronously, so watch for longer than that path takes.
-	require.Never(t, func() bool {
-		return counterSum(t, "cl_peer_goodbye_total", nil) != goodbyes
-	}, 500*time.Millisecond, 20*time.Millisecond)
+	// Rejection happens before the handler closes the stream, so the count is already final.
+	require.Equal(t, goodbyes, counterSum(t, "cl_peer_goodbye_total", nil))
 
 	disconnects := counterSum(t, "cl_peer_disconnected_total", nil)
 	disconnect(t, svc, client)
