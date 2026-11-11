@@ -29,7 +29,7 @@ const (
 	// earliest_available_slot skip it for those requests. 2^53-1 stays exact in JavaScript clients.
 	noDataEarliestAvailableSlot consensus.Slot = 1<<53 - 1
 	// Bump with any change to the advertised metadata: peers that cached it under this persistent
-	// identity compare it with our ping reply to decide whether to re-fetch. TestMetadataSeqHistory checks this.
+	// identity compare it with our ping reply to decide whether to re-fetch.
 	metadataSeqNumber = 1
 
 	statusV1Protocol protocol.ID = "/eth2/beacon_chain/req/status/1/ssz_snappy"
@@ -342,12 +342,7 @@ func (s *Service) registerPingHandler(topicPing string) {
 		// Decoding validates the request; the peer's seq itself is unused because the reply carries ours.
 		var peerSeq consensus.SSZUint64
 		if err := s.sszEncoder.DecodeWithMaxLength(stream, &peerSeq); err != nil {
-			// After a reset no one is left to answer; a half-close (io.EOF) still expects a reply.
-			if errors.Is(err, network.ErrReset) {
-				return
-			}
 			l.Error("failed to decode ping request", err)
-			s.terminateStream(l, stream, "invalid ping request")
 			return
 		}
 		pong := consensus.SSZUint64(metadataSeqNumber)
@@ -363,35 +358,27 @@ func (s *Service) subscribeOnce() {
 }
 
 func (s *Service) finishStream(l logger.AppLogger, stream network.Stream, msg consensus.Marshaler) {
-	s.writeResponse(l, stream, entities.ResponseCodeSuccess, msg)
-}
-
-// writeResponse resets on any write failure: a truncated chunk would read as corrupt data.
-func (s *Service) writeResponse(l logger.AppLogger, stream network.Stream, code byte, msg consensus.Marshaler) bool {
-	if _, err := stream.Write([]byte{code}); err != nil {
+	if _, err := stream.Write([]byte{entities.ResponseCodeSuccess}); err != nil {
 		l.Error("failed to send response code to peer", err)
-		_ = stream.Reset()
-		return false
+		return
 	}
 	if _, err := s.sszEncoder.EncodeWithMaxLength(stream, msg); err != nil {
 		l.Error("failed to encode message to stream", err)
-		_ = stream.Reset()
-		return false
+		return
 	}
-	return true
 }
 
-// terminateStream answers InvalidRequest; the spec requires an ErrorMessage chunk after the code.
-func (s *Service) terminateStream(l logger.AppLogger, stream network.Stream, reason string) {
-	if s.writeResponse(l, stream, entities.ResponseCodeInvalidRequest, consensus.ErrorMessage(reason)) {
-		_ = stream.Close()
+func (s *Service) terminateStream(l logger.AppLogger, stream network.Stream) {
+	if _, err := stream.Write([]byte{entities.ResponseCodeInvalidRequest}); err != nil {
+		l.Error("failed to send error response code to peer", err)
 	}
+	_ = stream.Close()
 }
 
 func (s *Service) rejectHandshakeForkMismatch(l logger.AppLogger, stream network.Stream, forkDigest string) {
 	peerID := stream.Conn().RemotePeer()
 	l.Info("handshake fork digest not supported, closing peer", logger.WithString("fork_digest", forkDigest))
-	s.terminateStream(l, stream, "unsupported fork digest")
+	s.terminateStream(l, stream)
 	if s.hostLibP2P != nil {
 		if err := s.hostLibP2P.Network().ClosePeer(peerID); err != nil {
 			l.Error("failed to close peer after fork mismatch", err, logger.WithPeerID(peerID))
