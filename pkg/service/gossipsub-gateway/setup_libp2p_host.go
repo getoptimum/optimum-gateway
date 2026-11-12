@@ -15,7 +15,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/peerstore"
-	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-libp2p/p2p/security/noise"
 	libp2ptcp "github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	gomplex "github.com/libp2p/go-mplex"
@@ -74,6 +73,19 @@ func debugLibP2P() {
 func (s *Service) setupLibP2PHost() error {
 	if os.Getenv("LIBP2P_DEBUG") == "1" {
 		debugLibP2P()
+	}
+	// Built before the host listens: the goodbye handler reads it without locking.
+	directCLPeers := make([]peer.AddrInfo, 0)
+	if len(s.cfg.DirectCLPeers) > 0 {
+		var err error
+		directCLPeers, err = utils.PeersFromStrings(s.cfg.DirectCLPeers)
+		if err != nil {
+			return fmt.Errorf("unable to parse direct CL peers: %w", err)
+		}
+	}
+	s.directCLPeersAllowlist = make(map[peer.ID]struct{}, len(directCLPeers))
+	for _, directPeer := range directCLPeers {
+		s.directCLPeersAllowlist[directPeer.ID] = struct{}{}
 	}
 	key, err := identity.EnsureIdentity(s.cfg.IdentityLibP2PDir)
 	if err != nil {
@@ -144,17 +156,6 @@ func (s *Service) setupLibP2PHost() error {
 		libp2ppubsub.WithMaxMessageSize(consensus.MaxCompressedGossipSize()),
 		libp2ppubsub.WithEventTracer(s.peerTopicTracer),
 	}
-	directCLPeers := make([]peer.AddrInfo, 0)
-	if len(s.cfg.DirectCLPeers) > 0 {
-		directCLPeers, err = utils.PeersFromStrings(s.cfg.DirectCLPeers)
-		if err != nil {
-			return fmt.Errorf("unable to parse direct CL peers: %w", err)
-		}
-	}
-	s.directCLPeersAllowlist = make(map[peer.ID]struct{}, len(directCLPeers))
-	for _, directPeer := range directCLPeers {
-		s.directCLPeersAllowlist[directPeer.ID] = struct{}{}
-	}
 	if len(directCLPeers) > 0 {
 		options = append(options,
 			libp2ppubsub.WithDirectPeers(directCLPeers),
@@ -191,7 +192,7 @@ func (s *Service) pubsubMsgID(pmsg *pubsubpb.Message) string {
 // config is set, unless allow_non_direct_cl_peers disables the allowlist.
 func (s *Service) onPeerConnected(_ network.Network, conn network.Conn) {
 	peerID := conn.RemotePeer()
-	if _, ok := s.directCLPeersAllowlist[peerID]; !s.cfg.AllowNonDirectCLPeers && !ok && len(s.directCLPeersAllowlist) > 0 {
+	if !s.isAllowedCLPeer(peerID) {
 		_ = s.hostLibP2P.Network().ClosePeer(peerID)
 		s.log.Info("disconnected peer not in direct peers allowlist", logger.WithPeerID(peerID))
 		return
@@ -230,29 +231,51 @@ func (s *Service) onPeerConnected(_ network.Network, conn network.Conn) {
 // Configured direct peers retain their peerstore addresses for GossipSub redials.
 func (s *Service) onPeerDisconnected(n network.Network, conn network.Conn) {
 	peerID := conn.RemotePeer()
+	allowed := s.isAllowedCLPeer(peerID)
 	if n.Connectedness(peerID) != network.Connected {
 		s.libP2PDirectPeers.Delete(peerID.String())
 		if _, configured := s.directCLPeersAllowlist[peerID]; !configured {
 			s.hostLibP2P.Peerstore().ClearAddrs(peerID)
-			s.hostLibP2P.Peerstore().RemovePeer(peerID)
+			// Otherwise libp2p's peerstore manager drops the rest after a grace period, so a late goodbye still finds the agent.
+			if !allowed {
+				s.hostLibP2P.Peerstore().RemovePeer(peerID)
+			}
 		}
 	}
-	telemetry.CLPeerDisconnected()
+	// onPeerConnected rejected this peer without counting it, so don't count its disconnect.
+	if !allowed {
+		return
+	}
+	telemetry.CLPeerDisconnected(s.peerClientFamily(peerID))
+}
+
+func (s *Service) isAllowedCLPeer(p peer.ID) bool {
+	if s.cfg != nil && s.cfg.AllowNonDirectCLPeers {
+		return true
+	}
+	_, ok := s.directCLPeersAllowlist[p]
+	return ok || len(s.directCLPeersAllowlist) == 0
 }
 
 func (s *Service) sendHandshakeForPeer(ctx context.Context, peerID peer.ID) error {
-	netStatus := s.networkStatus.Load()
-	if netStatus == nil {
+	last := s.networkStatus.Load()
+	if last == nil {
 		return nil
 	}
 
-	stream, err := s.hostLibP2P.NewStream(ctx, peerID, protocol.ID(netStatus.protocol))
+	// Prefer status/2 so the no-data earliest_available_slot reaches every peer that can read it.
+	stream, err := s.hostLibP2P.NewStream(ctx, peerID, statusV2Protocol, statusV1Protocol)
 	if err != nil {
 		return fmt.Errorf("unable to create stream: %w", err)
 	}
 	defer stream.Close()
-	if _, err = s.sszEncoder.EncodeWithMaxLength(stream, netStatus.status); err != nil {
+	proto := stream.Protocol()
+	if _, err = s.sszEncoder.EncodeWithMaxLength(stream, outboundStatus(last, proto)); err != nil {
 		return fmt.Errorf("unable to send handshake data to peer: %w", err)
+	}
+	// The spec requires the requester to half-close after writing its request.
+	if err = stream.CloseWrite(); err != nil {
+		return fmt.Errorf("unable to close handshake request: %w", err)
 	}
 
 	if err = stream.SetReadDeadline(time.Now().Add(10 * time.Second)); err != nil &&
@@ -264,9 +287,9 @@ func (s *Service) sendHandshakeForPeer(ctx context.Context, peerID peer.ID) erro
 		return fmt.Errorf("failed to read response from peer %s: %w", peerID, err)
 	}
 	if b[0] == entities.ResponseCodeSuccess {
-		msg := newStatusMessage(netStatus.protocol)
+		msg := newStatusMessage(proto)
 		if msg == nil {
-			return fmt.Errorf("unsupported status protocol %q", netStatus.protocol)
+			return fmt.Errorf("unsupported status protocol %q", proto)
 		}
 		if err = s.sszEncoder.DecodeWithMaxLength(stream, msg); err != nil {
 			return fmt.Errorf("failed to decode status at handshake: %w", err)

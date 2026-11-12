@@ -6,6 +6,12 @@ import (
 	commonmetrics "github.com/getoptimum/optimum-common/pkg/telemetry"
 )
 
+const (
+	// The remote peer's client, distinct from the operator's own consensus_client const label.
+	labelClient = "peer_client"
+	labelReason = "reason"
+)
+
 var (
 	clPeers     *prometheus.GaugeVec
 	mumP2PPeers *prometheus.GaugeVec
@@ -18,6 +24,9 @@ var (
 
 	clPeerConnected    *prometheus.CounterVec
 	clPeerDisconnected *prometheus.CounterVec
+	// Separate from clPeerDisconnected so existing unlabeled queries keep matching cl_peer_connected_total.
+	clPeerDisconnectedByClient *prometheus.CounterVec
+	clPeerGoodbye              *prometheus.CounterVec
 
 	mumP2PPeerConnected    *prometheus.CounterVec
 	mumP2PPeerDisconnected *prometheus.CounterVec
@@ -74,6 +83,18 @@ func initPeersMetrics() {
 		"CL peer disconnections",
 		nil,
 	)
+	clPeerDisconnectedByClient = commonmetrics.NewCounterVec(
+		"cl_peer_disconnected_by_client_total",
+		subsystem,
+		"CL peer disconnections by peer client",
+		[]string{labelClient},
+	)
+	clPeerGoodbye = commonmetrics.NewCounterVec(
+		"cl_peer_goodbye_total",
+		subsystem,
+		"Goodbye messages received from CL peers",
+		[]string{labelClient, labelReason},
+	)
 
 	mumP2PPeerConnected = commonmetrics.NewCounterVec(
 		"mump2p_peer_connected_total",
@@ -96,10 +117,17 @@ func CLPeerConnected() {
 	}
 }
 
-func CLPeerDisconnected() {
+func CLPeerDisconnected(client string) {
 	if enabledMetrics {
 		clPeers.WithLabelValues().Dec()
 		clPeerDisconnected.WithLabelValues().Inc()
+		clPeerDisconnectedByClient.WithLabelValues(client).Inc()
+	}
+}
+
+func CLPeerGoodbye(client, reason string) {
+	if enabledMetrics {
+		clPeerGoodbye.WithLabelValues(client, reason).Inc()
 	}
 }
 

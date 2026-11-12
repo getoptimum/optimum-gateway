@@ -28,12 +28,6 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry/tracer"
 )
 
-// networkBeaconStatus is the shared eth2 status + protocol used for all CL peers on one network.
-type networkBeaconStatus struct {
-	protocol string
-	status   consensus.Marshaler
-}
-
 // Service orchestrates the gateway: it relays messages between the beacon-chain libp2p host and
 // the mump2p node, manages topic subscriptions, and coordinates fork, auth, and bootstrap state.
 type Service struct {
@@ -65,7 +59,7 @@ type Service struct {
 	messagesMap   *syncx.TTLMap[uint64, struct{}]
 	streamDedup   *syncx.TTLMap[string, struct{}] // stream emit dedup: (source, slot, proposer, state_root)
 	sszEncoder    *consensus.SSZSnappyCodec
-	networkStatus atomic.Pointer[networkBeaconStatus]
+	networkStatus atomic.Pointer[consensus.StatusV2] // latest peer status, normalized to v2, for outbound handshakes
 
 	statSendMum *syncx.RWMap[string, int]
 	statSendLib *syncx.RWMap[string, int]

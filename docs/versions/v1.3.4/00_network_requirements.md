@@ -10,6 +10,14 @@ Before starting the Optimum Gateway, ensure your firewall allows these ports:
 | 33213 | Inbound   | mump2p agent - Optimum network peers connect here                   |
 | 48123 | Localhost | Telemetry / Health / API — **local access only** (see Docker below) |
 
+## Load balancers
+
+`33212` stays on the private network. The beacon node dials that sidecar by peer ID. Keep it off the public internet, and do not put it behind a load balancer.
+
+`33213` is a long-lived raw TCP session. An HTTP load balancer cannot carry it. A TCP load balancer in front of the sidecar does not make the sidecar reachable either: the gateway announces the address it detects on the host, and it has no setting to announce the load balancer's address. Remote peers then dial the wrong place. The same limit is why the [Kubernetes install](05_kubernetes.md#networking-why-hostnetwork-is-required) uses the node's own address rather than a Service.
+
+The sidecar joins the mesh by dialing out, so allow that egress. Keep one sidecar per beacon node. A balancer that sends the connection to a different process presents a different peer ID, and the beacon node will not stay connected to it.
+
 ## Docker
 
 Publish **33212** (CL clients) and **33213** (Optimum mump2p mesh) to the network. Bind **48123** to localhost only — metrics and health stay available on the host (e.g. local Grafana) but are not reachable from the public internet. Optimum receives telemetry via remote push; you do not need to expose 48123 externally.
