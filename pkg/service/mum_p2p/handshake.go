@@ -39,7 +39,8 @@ func (n *Node) RegisterHandshakeMessageSender(clusterID string) {
 			ConnectedF: func(_ network.Network, conn network.Conn) {
 				go n.handleNewConnection(clusterID, conn)
 			},
-			DisconnectedF: func(_ network.Network, conn network.Conn) {
+			DisconnectedF: func(net network.Network, conn network.Conn) {
+				n.revokePeerAdmissionIfDisconnected(conn.RemotePeer(), net.Connectedness(conn.RemotePeer()))
 				n.log.With(
 					logger.WithString("flow", "notify_disconnected"),
 					logger.WithPeerID(conn.RemotePeer()),
@@ -217,6 +218,14 @@ func (n *Node) disconnectPeer(peerID peer.ID) {
 
 func (n *Node) revokePeerAdmission(peerID peer.ID) {
 	n.peersApprovedMap.Delete(peerID)
+}
+
+// A peer may have more than one live connection. Keep its admission while any
+// connection remains; revoke it only after the last connection has closed.
+func (n *Node) revokePeerAdmissionIfDisconnected(peerID peer.ID, connectedness network.Connectedness) {
+	if connectedness == network.NotConnected {
+		n.revokePeerAdmission(peerID)
+	}
 }
 
 func setRPCStreamDeadlines(log logger.AppLogger, stream network.Stream) {
