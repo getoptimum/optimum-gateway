@@ -20,6 +20,15 @@ import (
 
 const (
 	mumP2PAggregatedMessagesTopic = "mump2p_aggregated_messages"
+
+	// Fulu CUSTODY_REQUIREMENT. Lighthouse disconnects a peer that advertises less.
+	advertisedCustodyGroupCount = 4
+	// The gateway serves no blocks or sidecars; a slot past any real one makes clients that honor
+	// earliest_available_slot skip it for those requests. 2^53-1 stays exact in JavaScript clients.
+	noDataEarliestAvailableSlot consensus.Slot = 1<<53 - 1
+
+	statusV1Protocol protocol.ID = "/eth2/beacon_chain/req/status/1/ssz_snappy"
+	statusV2Protocol protocol.ID = "/eth2/beacon_chain/req/status/2/ssz_snappy"
 )
 
 // filterAndBuildEthTopics returns full eth2 topics built from descriptors (using forkDigest) and, for mump2p nodes, also appends the internal aggregated-messages topic.
@@ -171,8 +180,8 @@ func (s *Service) handleHandshake() {
 	s.registerGoodByeHandler("/eth2/beacon_chain/req/goodbye/1/ssz_snappy")
 	s.registerPingHandler("/eth2/beacon_chain/req/ping/1/ssz_snappy")
 
-	s.hostLibP2P.SetStreamHandler("/eth2/beacon_chain/req/status/1/ssz_snappy", s.serveHandshake)
-	s.hostLibP2P.SetStreamHandler("/eth2/beacon_chain/req/status/2/ssz_snappy", s.serveHandshake)
+	s.hostLibP2P.SetStreamHandler(statusV1Protocol, s.serveHandshake)
+	s.hostLibP2P.SetStreamHandler(statusV2Protocol, s.serveHandshake)
 
 	s.hostLibP2P.SetStreamHandler("/eth2/beacon_chain/req/metadata/1/ssz_snappy", s.serveMetadata)
 	s.hostLibP2P.SetStreamHandler("/eth2/beacon_chain/req/metadata/2/ssz_snappy", s.serveMetadata)
@@ -183,10 +192,10 @@ func (s *Service) handleHandshake() {
 // Distinct from the mump2p auth Handshake in handshake.go.
 func (s *Service) serveHandshake(stream network.Stream) {
 	defer stream.Close()
-	topicHandshake := string(stream.Protocol())
+	topicHandshake := stream.Protocol()
 	l := s.log.With(
 		logger.WithFlow("handshake"),
-		logger.WithTopic(topicHandshake),
+		logger.WithTopic(string(topicHandshake)),
 		logger.WithPeerID(stream.Conn().RemotePeer()),
 	)
 	l.Debug("received handshake message stream")
@@ -206,19 +215,44 @@ func (s *Service) serveHandshake(stream network.Stream) {
 		s.rejectHandshakeForkMismatch(l, stream, forkDigest)
 		return
 	}
-	s.setNetworkBeaconStatus(topicHandshake, msg)
-	s.finishStream(l, stream, msg)
+	switch st := msg.(type) {
+	case *consensus.StatusV2:
+		s.networkStatus.Store(st)
+	case *consensus.Status:
+		s.networkStatus.Store(st.V2())
+	}
+	s.finishStream(l, stream, advertisedStatus(msg))
 
 	go s.subscribeOnce()
 }
 
-func newStatusMessage(topicHandshake string) consensus.StatusMessage {
-	if strings.Contains(topicHandshake, "req/status/2") {
+func newStatusMessage(proto protocol.ID) consensus.StatusMessage {
+	switch proto {
+	case statusV2Protocol:
 		return &consensus.StatusV2{}
-	} else if strings.Contains(topicHandshake, "req/status/1") {
+	case statusV1Protocol:
 		return &consensus.Status{}
 	}
 	return nil
+}
+
+// Only status v2 carries earliest_available_slot; a v1 reply stays a plain echo.
+func advertisedStatus(status consensus.StatusMessage) consensus.StatusMessage {
+	v2, ok := status.(*consensus.StatusV2)
+	if !ok {
+		return status
+	}
+	out := *v2
+	out.EarliestAvailableSlot = noDataEarliestAvailableSlot
+	return &out
+}
+
+// outboundStatus builds the status for a negotiated protocol from the latest peer status.
+func outboundStatus(last *consensus.StatusV2, proto protocol.ID) consensus.StatusMessage {
+	if proto == statusV1Protocol {
+		return last.V1()
+	}
+	return advertisedStatus(last)
 }
 
 func newMetadataMessage(topicMetadata string) consensus.Marshaler {
@@ -241,7 +275,7 @@ func newMetadataMessage(topicMetadata string) consensus.Marshaler {
 		return &consensus.MetaDataV2{
 			Attnets:           attNets,
 			Syncnets:          syncNetsNone,
-			CustodyGroupCount: 8, // Fulu VALIDATOR_CUSTODY_REQUIREMENT; valid range [4, 128]
+			CustodyGroupCount: advertisedCustodyGroupCount,
 		}
 	}
 	return nil
@@ -302,13 +336,6 @@ func (s *Service) subscribeOnce() {
 	s.oncer.Do(func() {
 		s.log.Info("subscribing local node to topics after handshake")
 		s.subscribeLocalNode()
-	})
-}
-
-func (s *Service) setNetworkBeaconStatus(statusProtocol string, status consensus.Marshaler) {
-	s.networkStatus.Store(&networkBeaconStatus{
-		protocol: statusProtocol,
-		status:   status,
 	})
 }
 

@@ -92,6 +92,22 @@ func (s *StatusV2) UnmarshalSSZ(b []byte) error {
 
 func (s *StatusV2) GetForkDigest() [forkDigestSize]byte { return s.ForkDigest }
 
+// V2 lifts a status/1 to the status/2 shape with earliest_available_slot 0.
+func (s *Status) V2() *StatusV2 {
+	return &StatusV2{
+		ForkDigest: s.ForkDigest, FinalizedRoot: s.FinalizedRoot, FinalizedEpoch: s.FinalizedEpoch,
+		HeadRoot: s.HeadRoot, HeadSlot: s.HeadSlot,
+	}
+}
+
+// V1 drops earliest_available_slot for a peer that only speaks status/1.
+func (s *StatusV2) V1() *Status {
+	return &Status{
+		ForkDigest: s.ForkDigest, FinalizedRoot: s.FinalizedRoot, FinalizedEpoch: s.FinalizedEpoch,
+		HeadRoot: s.HeadRoot, HeadSlot: s.HeadSlot,
+	}
+}
+
 // MetaDataV0 is the phase0 metadata message (fixed 16 bytes).
 type MetaDataV0 struct {
 	SeqNumber uint64

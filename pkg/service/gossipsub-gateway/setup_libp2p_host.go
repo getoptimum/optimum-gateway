@@ -15,7 +15,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/peerstore"
-	"github.com/libp2p/go-libp2p/core/protocol"
 	"github.com/libp2p/go-libp2p/p2p/security/noise"
 	libp2ptcp "github.com/libp2p/go-libp2p/p2p/transport/tcp"
 	gomplex "github.com/libp2p/go-mplex"
@@ -241,18 +240,24 @@ func (s *Service) onPeerDisconnected(n network.Network, conn network.Conn) {
 }
 
 func (s *Service) sendHandshakeForPeer(ctx context.Context, peerID peer.ID) error {
-	netStatus := s.networkStatus.Load()
-	if netStatus == nil {
+	last := s.networkStatus.Load()
+	if last == nil {
 		return nil
 	}
 
-	stream, err := s.hostLibP2P.NewStream(ctx, peerID, protocol.ID(netStatus.protocol))
+	// Prefer status/2 so the no-data earliest_available_slot reaches every peer that can read it.
+	stream, err := s.hostLibP2P.NewStream(ctx, peerID, statusV2Protocol, statusV1Protocol)
 	if err != nil {
 		return fmt.Errorf("unable to create stream: %w", err)
 	}
 	defer stream.Close()
-	if _, err = s.sszEncoder.EncodeWithMaxLength(stream, netStatus.status); err != nil {
+	proto := stream.Protocol()
+	if _, err = s.sszEncoder.EncodeWithMaxLength(stream, outboundStatus(last, proto)); err != nil {
 		return fmt.Errorf("unable to send handshake data to peer: %w", err)
+	}
+	// The spec requires the requester to half-close after writing its request.
+	if err = stream.CloseWrite(); err != nil {
+		return fmt.Errorf("unable to close handshake request: %w", err)
 	}
 
 	if err = stream.SetReadDeadline(time.Now().Add(10 * time.Second)); err != nil &&
@@ -264,9 +269,9 @@ func (s *Service) sendHandshakeForPeer(ctx context.Context, peerID peer.ID) erro
 		return fmt.Errorf("failed to read response from peer %s: %w", peerID, err)
 	}
 	if b[0] == entities.ResponseCodeSuccess {
-		msg := newStatusMessage(netStatus.protocol)
+		msg := newStatusMessage(proto)
 		if msg == nil {
-			return fmt.Errorf("unsupported status protocol %q", netStatus.protocol)
+			return fmt.Errorf("unsupported status protocol %q", proto)
 		}
 		if err = s.sszEncoder.DecodeWithMaxLength(stream, msg); err != nil {
 			return fmt.Errorf("failed to decode status at handshake: %w", err)
