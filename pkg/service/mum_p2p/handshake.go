@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/protocol"
@@ -171,8 +172,28 @@ func (n *Node) markHandshakeValid(peerID peer.ID, capability PeerCapability) {
 	n.allowPeerWithCapability(peerID, capability)
 }
 
-func (n *Node) allowPeerWithCapability(peerID peer.ID, _ PeerCapability) {
+// allowPeerWithCapability admits the peer to the mesh and records whether it may publish.
+// A read-only peer stays meshed. inspectIncomingRPC drops its payload.
+func (n *Node) allowPeerWithCapability(peerID peer.ID, capability PeerCapability) {
 	n.peersApprovedMap.Store(peerID, struct{}{})
+	n.peerCapabilities.Store(peerID, capability)
+}
+
+// inspectIncomingRPC runs on the GossipSub event loop. It may read the admission
+// maps and must not call back into the PubSub. Clearing the payload leaves
+// subscriptions and control in place. An error would drop those too.
+func (n *Node) inspectIncomingRPC(id peer.ID, rpc *pubsub.RPC) error {
+	if rpc == nil {
+		return nil
+	}
+	capability, hasCapability := n.peerCapabilities.Load(id)
+	_, approved := n.peersApprovedMap.Load(id)
+	if approved && hasCapability && capability.CanPublish {
+		return nil
+	}
+	rpc.Partial = nil
+	rpc.Publish = nil
+	return nil
 }
 
 // readmitCapability returns the cached capability for a peer with a valid handshake.

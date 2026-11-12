@@ -218,6 +218,9 @@ func NewNodeWithHost(
 			_, ok := ret.peersApprovedMap.Load(pid)
 			return ok
 		}),
+		// Drops inbound payload from a peer that is not admitted or cannot publish.
+		// Returning nil keeps the peer's subscriptions and control messages.
+		rlncps.WithRPCInspector(ret.inspectIncomingRPC),
 		rlncps.WithAppendRawTracer(ret.meshCollector),
 	}
 	ret.ps, ret.psRouter, err = rlncps.NewPartialRLNCPubSub(ctx,

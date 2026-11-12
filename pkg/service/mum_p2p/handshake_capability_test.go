@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	pb "github.com/libp2p/go-libp2p-pubsub/pb"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/stretchr/testify/require"
 
@@ -91,6 +93,57 @@ func TestReadmitFailsClosedOnCacheMiss(t *testing.T) {
 	n := newCapabilityNode(t)
 
 	require.False(t, n.readmitCapability(n.log, newTestPeerID(t)).CanPublish)
+}
+
+func TestInspectIncomingRPCKeepsSubscriptions(t *testing.T) {
+	n := newCapabilityNode(t)
+	publisher := newTestPeerID(t)
+	reader := newTestPeerID(t)
+	stranger := newTestPeerID(t)
+	n.markHandshakeValid(publisher, fullPublish)
+	n.markHandshakeValid(reader, readOnly)
+
+	for _, tc := range []struct {
+		name string
+		id   peer.ID
+		keep bool
+	}{
+		{name: "publisher keeps the payload", id: publisher, keep: true},
+		{name: "read-only peer loses the payload", id: reader},
+		{name: "unapproved peer loses the payload", id: stranger},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rpc := incomingRPC()
+			require.NoError(t, n.inspectIncomingRPC(tc.id, rpc))
+			require.Len(t, rpc.Subscriptions, 1)
+			require.NotNil(t, rpc.Control)
+			if tc.keep {
+				require.NotNil(t, rpc.Publish)
+				require.NotNil(t, rpc.Partial)
+				return
+			}
+			require.Nil(t, rpc.Publish)
+			require.Nil(t, rpc.Partial)
+		})
+	}
+
+	require.NoError(t, n.inspectIncomingRPC(publisher, nil))
+
+	n.peerCapabilities.Delete(publisher)
+	rpc := incomingRPC()
+	require.NoError(t, n.inspectIncomingRPC(publisher, rpc))
+	require.Nil(t, rpc.Publish)
+	require.Nil(t, rpc.Partial)
+	require.Len(t, rpc.Subscriptions, 1)
+}
+
+func incomingRPC() *pubsub.RPC {
+	return &pubsub.RPC{RPC: pb.RPC{
+		Subscriptions: []*pb.RPC_SubOpts{{}},
+		Publish:       []*pb.Message{{Data: []byte("hello")}},
+		Partial:       &pb.PartialMessagesExtension{},
+		Control:       &pb.ControlMessage{},
+	}}
 }
 
 func TestDisconnectClearsCachedCapability(t *testing.T) {
