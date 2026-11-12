@@ -15,6 +15,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	dto "github.com/prometheus/client_model/go"
 
+	protocoltelemetry "github.com/getoptimum/mump2p-protocol/pkg/telemetry"
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	commonnet "github.com/getoptimum/optimum-common/pkg/net"
 	commonmetrics "github.com/getoptimum/optimum-common/pkg/telemetry"
@@ -54,16 +55,16 @@ const (
 )
 
 // MetricsGatherer returns the gatherer used for /metrics, including remote-write
-// when active and the mump2p-protocol series registered on the default registry.
+// when active. Protocol series are on CustomRegistry: InitMetrics calls
+// SetRegisterer before the node creates them.
 func MetricsGatherer() prometheus.Gatherer {
-	parts := make(prometheus.Gatherers, 0, 3)
+	parts := make(prometheus.Gatherers, 0, 2)
 	if CustomRegistry != nil {
 		parts = append(parts, CustomRegistry)
 	}
 	if r := mimirRemoteRegistry(); r != nil {
 		parts = append(parts, r)
 	}
-	parts = append(parts, protocolMetricGatherer{})
 	if len(parts) == 1 {
 		return parts[0]
 	}
@@ -117,8 +118,10 @@ func InitMetrics(ctx context.Context, log logger.AppLogger, cfg *config.AppConfi
 			"org_id":             cfg.OrgID,
 		}
 		maps.Copy(baseLabels, cfg.MetaLabels)
-		SetProtocolIdentityLabels(baseLabels)
 		labeledRegistry = prometheus.WrapRegistererWith(baseLabels, CustomRegistry)
+		// Before NewMetrics. The protocol series then carry the gateway labels
+		// and are scraped with the rest of CustomRegistry.
+		protocoltelemetry.SetRegisterer(labeledRegistry)
 		labeledRegistry.MustRegister(
 			collectors.NewGoCollector(),
 			collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),

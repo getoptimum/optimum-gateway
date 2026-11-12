@@ -10,8 +10,8 @@ import (
 
 // enableProtocolMetrics registers the protocol metric set and returns the tracer
 // that fills it. Partial-control queues, stage wait, recode, relay credits, and
-// shared-memory lanes are recorded by that tracer and the SHM observer. The
-// gateway scrape in telemetry includes the resulting mump2p_* series.
+// shared-memory lanes are recorded by that tracer and the SHM observer.
+// InitMetrics has already pointed the protocol registerer at the gateway registry.
 func enableProtocolMetrics(
 	psCfg *mump2pcfg.Config,
 	clusterID, peerID string,
