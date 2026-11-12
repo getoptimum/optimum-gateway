@@ -72,7 +72,10 @@ func (s *Server) handleSelfInfo(ctx fiber.Ctx) error {
 	info := s.srvGateway.GetHostInfo()
 	totalLibP2PPeers, libP2PPeersPerTopic, libP2PPeerIDs, libP2PPeerIDsPerTopic := s.srvGateway.GetLibP2PPeers()
 	totalMumP2PPeers, mumP2PPeersPerTopic, mumP2PPeerIDs, mumP2PPeerIDsPerTopic := s.srvGateway.GetMumP2PPeers()
-	rlncCfg := s.cfg.GetDCRotator().Get()
+	rlncCfg := s.cfg.StartedOptimumConfig()
+	if rlncCfg == nil {
+		rlncCfg = s.cfg.GetDCRotator().Get()
+	}
 	pairedWith := ""
 	if c := s.srvGateway.GetAuthManager().OwnClaims(); c != nil {
 		pairedWith = c.Type.String()
@@ -95,6 +98,14 @@ func (s *Server) handleSelfInfo(ctx fiber.Ctx) error {
 			"rlnc_shard_factor":          rlncCfg.ShardFactor,
 			"publisher_shard_multiplier": rlncCfg.PublisherShardMultiplier,
 			"forward_shard_threshold":    rlncCfg.ForwardShardThreshold,
+			"mesh_degree_min":            rlncCfg.MeshDegreeMin,
+			"mesh_degree_target":         rlncCfg.MeshDegreeTarget,
+			"mesh_degree_max":            rlncCfg.MeshDegreeMax,
+			"max_shard_size":             rlncCfg.MaxShardSize,
+			"rlnc_k":                     rlncCfg.RLNCK,
+			"redundancy_fraction":        rlncCfg.RedundancyFraction,
+			"relay_credit_multiplier":    rlncCfg.RelayCreditMultiplier,
+			"heartbeat_ms":               rlncCfg.HeartbeatMS,
 		},
 		"chain": s.srvGateway.GetForkDigestManager().AppChain().String(),
 		"libp2p": map[string]any{

@@ -633,6 +633,6 @@ func TestLoadOrEnrollRejectsAChangedPeerIdentity(t *testing.T) {
 	moved.PeerID = "12D3KooWsecond"
 	_, _, err = enrollment.LoadOrEnroll(t.Context(), testLogger(), &moved)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "mumP2P identity changed")
+	require.Contains(t, err.Error(), "mump2p identity changed")
 	require.EqualValues(t, 1, auth.calls.Load(), "must not silently re-enroll")
 }

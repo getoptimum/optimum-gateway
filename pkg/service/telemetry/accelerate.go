@@ -17,7 +17,7 @@ func initAccelerateMetrics() {
 		"accelerate_decision_total",
 		subsystem,
 		"Beacon-block acceleration verdicts (ADR-0012): on_list, not_on_list, fail_open",
-		[]string{"result"},
+		[]string{labelResult},
 	)
 	accelerateToSlot = commonmetrics.NewGauge(
 		"accelerate_to_slot",

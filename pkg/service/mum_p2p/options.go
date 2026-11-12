@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 
 	"github.com/libp2p/go-libp2p/core/peer"
-
-	pubsub "github.com/getoptimum/optimum-p2p/optimum-pubsub"
 )
 
 // NodeOption configures a Node (e.g. WithCustomHandshakeBuilder).
@@ -19,9 +17,7 @@ func WithCustomHandshakeBuilder(handshakeBuilder func() any) NodeOption {
 	}
 }
 
-func WithCustomHandshakeHandler(
-	handshakeHandler func(peerID peer.ID, decoder *json.Decoder) (pubsub.PeerCapability, error),
-) NodeOption {
+func WithCustomHandshakeHandler(handshakeHandler func(peerID peer.ID, decoder *json.Decoder) (PeerCapability, error)) NodeOption {
 	return func(n *Node) {
 		if handshakeHandler != nil {
 			n.handshakeHandler = handshakeHandler

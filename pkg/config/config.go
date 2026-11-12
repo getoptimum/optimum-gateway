@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -32,6 +33,7 @@ const (
 	DefaultAttestationPublishAfterMs int64   = 4000
 	DefaultAttestationPublishCapMs   int64   = 8000
 	DefaultAttestationMaxSlotAge     uint64  = 0
+	dynamicConfigFetchTimeout                = 30 * time.Second
 )
 
 // AppConfig holds all the configuration for the gateway service
@@ -51,6 +53,7 @@ type AppConfig struct {
 	AgentLibP2PPort       int      `yaml:"agent_lib_p2p_port" env:"OPT_AGENT_LIB_P2P_PORT" default:"33212"`
 	AgentMumP2PPort       int      `yaml:"agent_mump2p_port" env:"OPT_AGENT_MUMP2P_PORT" default:"33213"`
 	DirectCLPeers         []string `yaml:"direct_cl_peers" env:"OPT_DIRECT_CL_PEERS"`
+	AllowNonDirectCLPeers bool     `yaml:"allow_non_direct_cl_peers" env:"OPT_ALLOW_NON_DIRECT_CL_PEERS" default:"false"`
 	TelemetryEnable       bool     `yaml:"telemetry_enable" env:"OPT_ENABLE_TELEMETRY" default:"false"`
 	TelemetryPort         int      `yaml:"telemetry_port" env:"OPT_TELEMETRY_PORT" default:"48123"`
 	TelemetryAddr         string   `yaml:"telemetry_addr" env:"OPT_TELEMETRY_ADDR" default:""` // empty binds all IPv4 interfaces; use 127.0.0.1 under host networking
@@ -147,6 +150,10 @@ type AppConfig struct {
 	RemotePushWALDir string `yaml:"remote_push_wal_dir" env:"OPT_REMOTE_PUSH_WAL_DIR" default:"/gateway/storage/wal"`
 
 	rotator               *commonconfig.Rotator
+	dcReady               chan struct{}
+	dcOnce                sync.Once
+	dcErr                 error
+	startedOpt            atomic.Pointer[commonentities.OptimumConfig]
 	propagationEnabled    atomic.Bool
 	skipMessageFromSelf   atomic.Bool
 	aggregationIntervalMs atomic.Int64
@@ -203,6 +210,10 @@ func (c *AppConfig) InitRuntime(ctx context.Context, log logger.AppLogger, chain
 	if bootstrapURL != "" && !strings.HasPrefix(bootstrapURL, "http://") && !strings.HasPrefix(bootstrapURL, "https://") {
 		bootstrapURL = "https://" + bootstrapURL
 	}
+	c.dcReady = make(chan struct{})
+	c.dcErr = nil
+	c.dcOnce = sync.Once{}
+	wantVersion := "gateway-" + c.Version
 	c.rotator = commonconfig.NewConfigRotator(ctx,
 		log,
 		&commonentities.OptimumConfig{
@@ -211,17 +222,20 @@ func (c *AppConfig) InitRuntime(ctx context.Context, log logger.AppLogger, chain
 			ShardFactor:              DefaultShardFactor,
 			PublisherShardMultiplier: DefaultPublisherShardMultiplier,
 			ForwardShardThreshold:    DefaultForwardShardThreshold,
-			MeshDegreeTarget:         DefaultMeshDegreeTarget,
-			MeshDegreeMin:            DefaultMeshDegreeMin,
-			MeshDegreeMax:            DefaultMeshDegreeMax,
 		},
 		ch.String(),
 		c.GatewayClusterID,
 		func(dc *commonentities.DynamicConfig) {
 			c.propagationEnabled.Store(dc.PropagationEnabled)
 			c.skipMessageFromSelf.Store(dc.ExcludeSelfMessages)
+			c.dcOnce.Do(func() {
+				if dc.ServiceVersion != wantVersion {
+					c.dcErr = fmt.Errorf("dynamic config service_version %q, want %q", dc.ServiceVersion, wantVersion)
+				}
+				close(c.dcReady)
+			})
 		},
-		commonconfig.WithServiceVersion("gateway-"+c.Version),
+		commonconfig.WithServiceVersion(wantVersion),
 		commonconfig.WithBootstrapBaseURL(bootstrapURL),
 	)
 	// Start periodic config logging goroutine (every 10 minutes).
@@ -250,6 +264,39 @@ func (c *AppConfig) logConfigPeriodically(ctx context.Context) {
 
 func (c *AppConfig) GetDCRotator() *commonconfig.Rotator {
 	return c.rotator
+}
+
+// WaitDynamicConfig blocks until the first dynamic-config fetch is applied.
+// The mump2p node reads mesh and coding from that row at process start.
+func (c *AppConfig) WaitDynamicConfig(ctx context.Context) (*commonentities.OptimumConfig, error) {
+	if c.dcReady == nil {
+		return nil, fmt.Errorf("dynamic config fetch has not started")
+	}
+	timer := time.NewTimer(dynamicConfigFetchTimeout)
+	defer timer.Stop()
+	select {
+	case <-c.dcReady:
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-timer.C:
+		return nil, fmt.Errorf("timed out waiting for dynamic config")
+	}
+	if c.dcErr != nil {
+		return nil, c.dcErr
+	}
+	cfg := c.rotator.Get()
+	if cfg == nil {
+		return nil, fmt.Errorf("dynamic config is empty")
+	}
+	// Mesh and coding are copied into the node once. Later rotations must not
+	// change what self_info reports for those fields.
+	c.startedOpt.Store(cfg)
+	return cfg, nil
+}
+
+// StartedOptimumConfig is the dynamic config the mump2p node started with.
+func (c *AppConfig) StartedOptimumConfig() *commonentities.OptimumConfig {
+	return c.startedOpt.Load()
 }
 
 // InitDerived seeds atomics from yaml/env fields. Required for hand-built configs;
@@ -283,7 +330,7 @@ func (c *AppConfig) EnrollmentLabel() string {
 }
 
 // EnrollmentDir resolves where the enrollment credential lives, defaulting to the
-// mumP2P identity directory the credential's peer_id comes from.
+// mump2p identity directory the credential's peer_id comes from.
 func (c *AppConfig) EnrollmentDir() string {
 	if c.EnrollCredDir != "" {
 		return c.EnrollCredDir

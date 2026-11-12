@@ -189,7 +189,7 @@ func (s *Service) pubsubMsgID(pmsg *pubsubpb.Message) string {
 }
 
 // onPeerConnected disconnects peers not listed in direct_cl_peers when that
-// config is set (connect-time allowlist, not a ConnectionGater).
+// config is set, unless allow_non_direct_cl_peers disables the allowlist.
 func (s *Service) onPeerConnected(_ network.Network, conn network.Conn) {
 	peerID := conn.RemotePeer()
 	if !s.isAllowedCLPeer(peerID) {
@@ -250,6 +250,9 @@ func (s *Service) onPeerDisconnected(n network.Network, conn network.Conn) {
 }
 
 func (s *Service) isAllowedCLPeer(p peer.ID) bool {
+	if s.cfg != nil && s.cfg.AllowNonDirectCLPeers {
+		return true
+	}
 	_, ok := s.directCLPeersAllowlist[p]
 	return ok || len(s.directCLPeersAllowlist) == 0
 }
