@@ -28,6 +28,9 @@ const (
 	// The gateway serves no blocks or sidecars; a slot past any real one makes clients that honor
 	// earliest_available_slot skip it for those requests. 2^53-1 stays exact in JavaScript clients.
 	noDataEarliestAvailableSlot consensus.Slot = 1<<53 - 1
+	// Bump with any change to the advertised metadata: peers that cached it under this persistent
+	// identity compare it with our ping reply to decide whether to re-fetch.
+	metadataSeqNumber = 1
 
 	statusV1Protocol protocol.ID = "/eth2/beacon_chain/req/status/1/ssz_snappy"
 	statusV2Protocol protocol.ID = "/eth2/beacon_chain/req/status/2/ssz_snappy"
@@ -265,16 +268,17 @@ func newMetadataMessage(topicMetadata string) consensus.Marshaler {
 	if strings.Contains(topicMetadata, "metadata/1") {
 		return &consensus.MetaDataV0{
 			Attnets:   attNets,
-			SeqNumber: 0, // initial; increase per request if ordering needed
+			SeqNumber: metadataSeqNumber,
 		}
 	} else if strings.Contains(topicMetadata, "metadata/2") {
 		return &consensus.MetaDataV1{
 			Attnets:   attNets,
-			SeqNumber: 0, // initial; increase per request if ordering needed
+			SeqNumber: metadataSeqNumber,
 			Syncnets:  syncNetsNone,
 		}
 	} else if strings.Contains(topicMetadata, "metadata/3") {
 		return &consensus.MetaDataV2{
+			SeqNumber:         metadataSeqNumber,
 			Attnets:           attNets,
 			Syncnets:          syncNetsNone,
 			CustodyGroupCount: advertisedCustodyGroupCount,
@@ -335,12 +339,14 @@ func (s *Service) registerPingHandler(topicPing string) {
 			logger.WithPeerID(stream.Conn().RemotePeer()),
 		)
 		l.Debug("received ping message")
-		msg := new(consensus.SSZUint64)
-		if err := s.sszEncoder.DecodeWithMaxLength(stream, msg); err != nil {
+		// Decoding validates the request; the peer's seq itself is unused because the reply carries ours.
+		var peerSeq consensus.SSZUint64
+		if err := s.sszEncoder.DecodeWithMaxLength(stream, &peerSeq); err != nil {
 			l.Error("failed to decode ping request", err)
 			return
 		}
-		s.finishStream(l, stream, msg)
+		pong := consensus.SSZUint64(metadataSeqNumber)
+		s.finishStream(l, stream, &pong)
 	})
 }
 
