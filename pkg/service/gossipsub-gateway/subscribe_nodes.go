@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	libp2ppubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -15,6 +16,7 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
 	"github.com/getoptimum/optimum-gateway/pkg/protocol/consensus"
 	"github.com/getoptimum/optimum-gateway/pkg/protocol/topics"
+	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
 	"github.com/getoptimum/optimum-gateway/pkg/utils"
 )
 
@@ -297,9 +299,10 @@ func (s *Service) serveMetadata(stream network.Stream) {
 func (s *Service) registerGoodByeHandler(topicGoodbye string) {
 	s.hostLibP2P.SetStreamHandler(protocol.ID(topicGoodbye), func(stream network.Stream) {
 		defer stream.Close()
+		peerID := stream.Conn().RemotePeer()
 		l := s.log.With(
 			logger.WithFlow("goodbye"),
-			logger.WithString("peer", stream.Conn().RemotePeer().String()),
+			logger.WithPeerID(peerID),
 		)
 
 		// 1) Decode SSZ-snappy payload: a single uint64 reason
@@ -310,8 +313,17 @@ func (s *Service) registerGoodByeHandler(topicGoodbye string) {
 			return
 		}
 
-		reasonText := consensus.GoodbyeCodeMessages[uint64(reason)]
-		l.Info("received goodbye reason", logger.WithString("reason", reasonText))
+		code := uint64(reason)
+		reasonText, known := consensus.GoodbyeCodeMessages[code]
+		reasonLabel := strconv.FormatUint(code, 10)
+		if !known {
+			reasonText, reasonLabel = "other", "other"
+		}
+		l.Info("received goodbye reason", logger.WithString("reason", reasonText), logger.WithUint64("code", code))
+		if !s.isAllowedCLPeer(peerID) {
+			return
+		}
+		telemetry.CLPeerGoodbye(s.peerClientFamily(peerID), reasonLabel)
 	})
 }
 
