@@ -2,7 +2,6 @@ package mum_p2p
 
 import (
 	"fmt"
-	"math"
 
 	"github.com/libp2p/go-libp2p/core/connmgr"
 
@@ -13,9 +12,8 @@ import (
 )
 
 type Config struct {
-	ClusterID      string `yaml:"cluster_id"`
-	ListenPort     int    `yaml:"listen_port"`
-	MaxMessageSize int64  `yaml:"max_message_size_bytes"`
+	ClusterID  string `yaml:"cluster_id"`
+	ListenPort int    `yaml:"listen_port"`
 
 	BootstrapPeers []string `yaml:"bootstrap_peers"`
 
@@ -36,9 +34,6 @@ type Config struct {
 func (cfg *Config) Validate() error {
 	if cfg.ListenPort <= 0 {
 		return fmt.Errorf("listen port must be positive: %d", cfg.ListenPort)
-	}
-	if cfg.MaxMessageSize <= 0 || cfg.MaxMessageSize > math.MaxInt {
-		return fmt.Errorf("random message size must be positive and less than max int: %d", cfg.MaxMessageSize)
 	}
 	return nil
 }

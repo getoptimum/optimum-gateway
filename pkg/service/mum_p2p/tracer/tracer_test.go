@@ -138,7 +138,7 @@ func TestTracerIncrementsShardMetrics(t *testing.T) {
 		})
 	}
 
-	require.Equal(t, float64(len(shardEvents)), counterValue(t, reg, "testns_mump2p_shards_total"))
+	require.Equal(t, float64(1), counterValue(t, reg, "testns_mump2p_shards_total"))
 }
 
 func counterValue(t *testing.T, reg *prometheus.Registry, name string) float64 {

@@ -13,10 +13,6 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
 )
 
-// BenchmarkServer
-// BenchmarkServer-12    	  108684	     10969 ns/op
-
-// BenchmarkServer-12    	 2832513	       409.5 ns/op
 func BenchmarkServer(b *testing.B) {
 	psCfg := mump2pcfg.DefaultGossipSubConfig()
 	shmSvc, err := rlncshm.New(psCfg)

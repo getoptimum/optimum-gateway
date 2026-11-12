@@ -45,13 +45,10 @@ func (p *MumP2P) notifyMetrics(kind entities.MumP2PTraceEventKind) {
 	case entities.MumP2PTraceEventHelpfulSymbol:
 		telemetry.AddTotalShardCount()
 	case entities.MumP2PTraceEventRedundantSymbol:
-		telemetry.AddTotalShardCount()
 		telemetry.AddDuplicateShardCount()
 	case entities.MumP2PTraceEventUnnecessarySymbol:
-		telemetry.AddTotalShardCount()
 		telemetry.AddUnnecessaryShardCount()
 	case entities.MumP2PTraceEventInconsistentSymbol:
-		telemetry.AddTotalShardCount()
 		telemetry.AddUnhelpfulShardCount()
 	}
 }

@@ -81,9 +81,8 @@ func hasRLNCServerSemaphore(tb testing.TB, dir string) bool {
 
 func NewTestConfig(ctx context.Context, log logger.AppLogger, clusterID string, listenPort int, boostrapPeers []string) *mum_p2p.Config {
 	cfg := &mum_p2p.Config{
-		ClusterID:      clusterID,
-		ListenPort:     listenPort,
-		MaxMessageSize: cfgpkg.DefaultMaxMessageSize,
+		ClusterID:  clusterID,
+		ListenPort: listenPort,
 		// Empty chain skips the remote fetch. These tests have no bootstrap, and
 		// startup rejects a rotator still at zero mesh and coding.
 		Rotator: commonconfig.NewConfigRotator(

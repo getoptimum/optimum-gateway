@@ -40,8 +40,8 @@ type Node struct {
 	log      logger.AppLogger
 	cfg      *Config
 	host     host.Host        // The libp2p host managing network connections and identity
-	ps       *pubsub.PubSub   // The Optimum pub-sub instance
-	psRouter *partial.Manager // The Optimum pub-sub instance
+	ps       *pubsub.PubSub   // GossipSub instance. Mesh membership and topic joins.
+	psRouter *partial.Manager // Partial-message manager. Incoming symbols, decode, and delivery.
 
 	tracer         *tracer.MumP2P
 	meshCollector  *telemetry.MumP2PCollector
@@ -290,7 +290,8 @@ func (n *Node) CountConnectedPeers() (totalPeers int, perTopicPeers map[string]i
 	return len(n.host.Network().Peers()), perTopicPeers
 }
 
-// GetMeshPeers returns the list of peer in the state variable mesh[topic] at the node.
+// GetMeshPeers returns peers grafted into the topic, taken from gossipsub graft and
+// prune traces. Callers use it for metrics, logs, and self_info, not to choose the mesh.
 func (n *Node) GetMeshPeers(topic string) []peer.ID {
 	return n.meshCollector.MeshPeers(topic)
 }

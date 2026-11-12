@@ -46,7 +46,7 @@ func initMumP2PMetrics() {
 	mpRejectedCount = commonmetrics.NewCounterVec("dropped_rejected_total", "mump2p", "Dropped messages (other)", []string{labelTopic})
 
 	// Shard-level counters (unlabeled)
-	totalShardsCount = commonmetrics.NewCounterVec("shards_total", "mump2p", "Total shards processed", nil)
+	totalShardsCount = commonmetrics.NewCounterVec("shards_total", "mump2p", "New shards", nil)
 	duplicateShardsCount = commonmetrics.NewCounterVec("shards_duplicate_total", "mump2p", "Duplicate shards", nil)
 	unnecessaryShardCount = commonmetrics.NewCounterVec("shards_unnecessary_total", "mump2p", "Unnecessary shards", nil)
 	unhelpfulShardCount = commonmetrics.NewCounterVec("shards_unhelpful_total", "mump2p", "Unhelpful shards", nil)
