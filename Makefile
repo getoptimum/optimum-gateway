@@ -11,7 +11,7 @@ COVERAGE_PASS_THRESHOLD := $(shell echo "$(COVERAGE_TOTAL) $(COVERAGE_THRESHOLD)
 # (#955/#951) so the impact is bounded. Rationale in govulncheck.yaml and #924.
 VULN_EXCEPTION_NAMES := ["GO-2024-3218"]
 
-RLNC_VERSION ?= v0.10.0
+RLNC_VERSION ?= v0.13.1
 RLNC_REPOSITORY ?= https://github.com/getoptimum/rlnc.git
 RLNC_SERVER_OUTPUT ?= ./bin/rlnc-server
 
