@@ -4,13 +4,13 @@ import (
 	"log/slog"
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/require"
 
 	tracepb "github.com/getoptimum/mump2p-protocol/pkg/pb"
 	protocoltelemetry "github.com/getoptimum/mump2p-protocol/pkg/telemetry"
 	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
-	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
 )
 
 func TestEnableProtocolMetricsRecordsPartialControl(t *testing.T) {
@@ -24,6 +24,10 @@ func TestEnableProtocolMetricsRecordsPartialControl(t *testing.T) {
 		RedundancyFraction:    1.5,
 		RelayCreditMultiplier: 5,
 	})
+	reg := prometheus.NewRegistry()
+	protocoltelemetry.SetRegisterer(reg)
+	t.Cleanup(func() { protocoltelemetry.SetRegisterer(nil) })
+
 	metrics, err := newProtocolMetrics(psCfg, "optimum_test", "peer-1", slog.New(slog.DiscardHandler))
 	require.NoError(t, err)
 	require.Empty(t, psCfg.ClusterID, "metric identity must not rewrite the live config")
@@ -38,7 +42,7 @@ func TestEnableProtocolMetricsRecordsPartialControl(t *testing.T) {
 		},
 	}})
 
-	families, err := telemetry.MetricsGatherer().Gather()
+	families, err := reg.Gather()
 	require.NoError(t, err)
 
 	var control float64
