@@ -138,12 +138,12 @@ func TestInspectIncomingRPCKeepsSubscriptions(t *testing.T) {
 }
 
 func incomingRPC() *pubsub.RPC {
-	return &pubsub.RPC{RPC: pb.RPC{
+	return &pubsub.RPC{
 		Subscriptions: []*pb.RPC_SubOpts{{}},
 		Publish:       []*pb.Message{{Data: []byte("hello")}},
 		Partial:       &pb.PartialMessagesExtension{},
 		Control:       &pb.ControlMessage{},
-	}}
+	}
 }
 
 func TestDisconnectClearsCachedCapability(t *testing.T) {
