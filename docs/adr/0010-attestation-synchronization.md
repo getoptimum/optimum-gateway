@@ -240,7 +240,7 @@ Pure synchronization is unsafe if one validator is late or offline. A deadline e
 * Changing Ethereum attestation semantics.
 * Changing inbound CL validation rules.
 * Replacing the existing router-level validator filter from [ADR-008](./0008-attestation-subnet-boost.md).
-* Replacing the slot-aware publish window from [ADR-0009](./0009-slot-aware-attestation-gate.md).
+* Replacing the slot-aware publish window from [ADR-0009](./0009-slot-aware-attestation-gate.md). [ADR-0014](./0014-attestation-gate-benchmark.md) later removed that window. This ADR does not define it, and it is no longer in the code.
 
 This ADR is an additional synchronization layer on top of those mechanisms, not a replacement for them.
 

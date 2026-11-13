@@ -13,6 +13,7 @@ import (
 	commonhash "github.com/getoptimum/optimum-common/pkg/hash"
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	"github.com/getoptimum/optimum-common/pkg/syncx"
+	"github.com/getoptimum/optimum-gateway/pkg/config"
 	"github.com/getoptimum/optimum-gateway/pkg/protocol/topics"
 	"github.com/getoptimum/optimum-gateway/pkg/service/aggregator"
 	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
@@ -38,8 +39,6 @@ func (f *fakeEmitter) EmitAggregatedMessage(payload []byte) {
 	copy(cp, payload)
 	f.ch <- cp
 }
-
-func (f *fakeEmitter) LastBlockReceivedMs() int64 { return 0 }
 
 func (f *fakeEmitter) run(t *testing.T) {
 	t.Helper()
@@ -119,6 +118,23 @@ func TestAggregation_Emission(t *testing.T) {
 		}
 	}
 	require.Empty(t, sendItems, "all sent items should have been received")
+}
+
+// A configured aggregator emits on the next aggregation tick at any point in the
+// slot: there is no slot-aware hold (ADR-0014).
+func TestAggregation_EmitsOnNextTickWithConfig(t *testing.T) {
+	cfg := &config.AppConfig{}
+	cfg.InitDerived()
+	em := newFakeEmitter()
+	srv := aggregator.NewAggregator(t.Context(), em, cfg, logger.NewAppSLogger(logger.Debug), nil)
+
+	srv.Enqueue("topic0", topics.ParseTopicMeta("topic0"), []byte("payload"))
+
+	select {
+	case <-em.ch:
+	case <-time.After(200 * time.Millisecond):
+		t.Fatal("aggregator held the emit past the next tick")
+	}
 }
 
 func TestAggregation(t *testing.T) {
