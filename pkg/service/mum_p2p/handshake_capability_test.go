@@ -7,6 +7,7 @@ import (
 	"github.com/libp2p/go-libp2p"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	pb "github.com/libp2p/go-libp2p-pubsub/pb"
+	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/stretchr/testify/require"
 
@@ -157,4 +158,42 @@ func TestDisconnectClearsCachedCapability(t *testing.T) {
 	require.False(t, ok)
 	_, approved := n.peersApprovedMap.Load(peerID)
 	require.False(t, approved)
+}
+
+func TestNormalDisconnectRevokesAdmissionAndReconnectUsesCachedHandshake(t *testing.T) {
+	n := newCapabilityNode(t)
+	peerID := newTestPeerID(t)
+	n.markHandshakeValid(peerID, readOnly)
+
+	// A closed connection must not revoke a peer while another connection to
+	// that peer remains active.
+	n.revokePeerAdmissionIfDisconnected(peerID, network.Connected)
+	_, approved := n.peersApprovedMap.Load(peerID)
+	require.True(t, approved)
+
+	// The last connection closing revokes admission but keeps the valid cached
+	// handshake so a reconnect can be re-admitted without widening capability.
+	n.revokePeerAdmissionIfDisconnected(peerID, network.NotConnected)
+	_, approved = n.peersApprovedMap.Load(peerID)
+	require.False(t, approved)
+	state, ok := n.getPeerState(peerID)
+	require.True(t, ok)
+	require.Equal(t, entities.PeerStateHandshakeValid, state)
+
+	n.allowPeerWithCapability(peerID, n.readmitCapability(n.log, peerID))
+	capability, ok := n.peerCapabilities.Load(peerID)
+	require.True(t, ok)
+	require.False(t, capability.CanPublish)
+	_, approved = n.peersApprovedMap.Load(peerID)
+	require.True(t, approved)
+
+	// After the cached handshake expires, stale admission must not let the peer
+	// publish before it completes a new handshake.
+	n.revokePeerAdmissionIfDisconnected(peerID, network.NotConnected)
+	n.peersMap.Delete(peerID)
+	rpc := incomingRPC()
+	require.NoError(t, n.inspectIncomingRPC(peerID, rpc))
+	require.Nil(t, rpc.Publish)
+	require.Nil(t, rpc.Partial)
+	require.Len(t, rpc.Subscriptions, 1)
 }
