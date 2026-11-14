@@ -28,6 +28,21 @@ func TestIsBeaconBlockTopic(t *testing.T) {
 	}
 }
 
+func TestIsExecutionPayloadTopic(t *testing.T) {
+	table := map[string]bool{
+		"execution_payload":                               true,
+		"/eth2/c6ecb76c/execution_payload/ssz_snappy":     true,
+		"execution_payload_bid":                           false,
+		"/eth2/c6ecb76c/execution_payload_bid/ssz_snappy": false,
+		"/eth2/c6ecb76c/beacon_block/ssz_snappy":          false,
+		"payload_attestation_message":                     false,
+		"":                                                false,
+	}
+	for topic, expect := range table {
+		require.Equal(t, expect, utils.IsExecutionPayloadTopic(topic), topic)
+	}
+}
+
 func TestIsAttestationTopic(t *testing.T) {
 	table := map[string]bool{
 		"beacon_attestation_0":                            true,

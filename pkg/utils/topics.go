@@ -12,6 +12,7 @@ import (
 const (
 	BeaconBlockBase        = "beacon_block"
 	BeaconAttestationBase  = "beacon_attestation"
+	ExecutionPayloadBase   = "execution_payload"
 	AttestationSubnetCount = 64
 	// singleAttestationSSZSize is the fixed SSZ size of an Electra SingleAttestation:
 	// committee_index(8) + attester_index(8) + AttestationData(128) + signature(96).
@@ -20,6 +21,17 @@ const (
 
 func IsBeaconBlockTopic(topic string) bool {
 	return strings.Contains(topic, BeaconBlockBase)
+}
+
+// IsExecutionPayloadTopic reports the Gloas execution_payload topic.
+// The name has to match exactly: execution_payload_bid contains it.
+func IsExecutionPayloadTopic(topic string) bool {
+	topic = strings.TrimSpace(topic)
+	if topic == ExecutionPayloadBase {
+		return true
+	}
+	parts := strings.Split(topic, "/")
+	return len(parts) == 5 && parts[1] == "eth2" && parts[3] == ExecutionPayloadBase && parts[4] == "ssz_snappy"
 }
 
 func IsAttestationTopic(topic string) bool {

@@ -11,22 +11,25 @@ func TestFilterEthTopics_MumP2PNode(t *testing.T) {
 	beaconBlockTopic := "/eth2/c6ecb76c/beacon_block/ssz_snappy"
 	svc, _ := newGateway(t)
 
-	t.Run("should be 2 topics for mump2p", func(t *testing.T) {
+	t.Run("should be 3 topics for mump2p", func(t *testing.T) {
 		// when
 		got := svc.filterAndBuildEthTopics("c6ecb76c", true)
 
 		// then
 		require.Contains(t, got, beaconBlockTopic)
+		require.Contains(t, got, "/eth2/c6ecb76c/execution_payload/ssz_snappy")
+		require.NotContains(t, got, "/eth2/c6ecb76c/execution_payload_bid/ssz_snappy")
 		require.Contains(t, got, mumP2PAggregatedMessagesTopic)
-		require.Len(t, got, 2)
+		require.Len(t, got, 3)
 	})
-	t.Run("should be 65 topics for cl", func(t *testing.T) {
+	t.Run("should be 66 topics for cl", func(t *testing.T) {
 		// when
 		got := svc.filterAndBuildEthTopics("c6ecb76c", false)
 
 		// then
 		require.Contains(t, got, beaconBlockTopic)
-		require.Len(t, got, 65)
+		require.Contains(t, got, "/eth2/c6ecb76c/execution_payload/ssz_snappy")
+		require.Len(t, got, 66)
 		for _, topic := range got {
 			require.Contains(t, topic, "c6ecb76c")
 		}

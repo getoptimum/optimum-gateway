@@ -160,8 +160,8 @@ func (s *Service) refreshTopics() {
 			continue
 		}
 		l := s.log.With(logger.WithTopic(topicSubscribe))
-		if utils.IsBeaconBlockTopic(topicSubscribe) && s.nodeMumP2P != nil {
-			// we subscribe mump2p just for 2 topics - beacon and aggregate
+		if s.nodeMumP2P != nil && (utils.IsBeaconBlockTopic(topicSubscribe) || utils.IsExecutionPayloadTopic(topicSubscribe)) {
+			// mump2p carries beacon_block, execution_payload, and the aggregated attestation topic.
 			if err := s.nodeMumP2P.SubscribeTopic(topicSubscribe); err != nil {
 				l.Error("failed to subscribe local mump2p node to topic", err)
 			}
