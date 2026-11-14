@@ -5,31 +5,21 @@ import (
 
 	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
 	"github.com/getoptimum/optimum-common/pkg/logger"
-	"github.com/getoptimum/optimum-gateway/pkg/config"
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
 	"github.com/getoptimum/optimum-gateway/pkg/protocol/consensus"
 	"github.com/getoptimum/optimum-gateway/pkg/protocol/topics"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
-	"github.com/getoptimum/optimum-gateway/pkg/utils"
 )
 
-// executionPayloadLimit is the largest payload this side will publish.
-// The CL budget is MaxCompressedGossipSize. The mesh budget is the existing
-// 1 MiB cap plus its framing overhead, and that cap stays.
-func executionPayloadLimit(toMesh bool) int {
-	cl := consensus.MaxCompressedGossipSize()
-	if !toMesh {
-		return cl
-	}
-	mesh, err := utils.CalculateMaxSize(config.DefaultMaxMessageSize)
-	if err != nil || mesh <= 0 || mesh > cl {
-		return cl
-	}
-	return mesh
+// executionPayloadLimit is the largest envelope this gateway will forward.
+// Both directions use the consensus-client budget. The 1 MiB GossipSub cap
+// bounds one RPC after the mesh library shards the payload.
+func executionPayloadLimit() int {
+	return consensus.MaxCompressedGossipSize()
 }
 
 func (s *Service) skipOversizedExecutionPayload(l logger.AppLogger, msg []byte, toMesh bool) bool {
-	limit := executionPayloadLimit(toMesh)
+	limit := executionPayloadLimit()
 	if len(msg) <= limit {
 		return false
 	}

@@ -19,12 +19,8 @@ import (
 
 const testExecutionPayloadTopic = "/eth2/deadbeef/execution_payload/ssz_snappy"
 
-func TestExecutionPayloadLimitStaysInsideTheMeshCap(t *testing.T) {
-	mesh, err := utils.CalculateMaxSize(config.DefaultMaxMessageSize)
-	require.NoError(t, err)
-	require.Equal(t, mesh, executionPayloadLimit(true))
-	require.Less(t, executionPayloadLimit(true), consensus.MaxCompressedGossipSize())
-	require.Equal(t, consensus.MaxCompressedGossipSize(), executionPayloadLimit(false))
+func TestExecutionPayloadLimitMatchesTheConsensusBudget(t *testing.T) {
+	require.Equal(t, consensus.MaxCompressedGossipSize(), executionPayloadLimit())
 }
 
 func TestExecutionPayloadOversizeIsNotPublished(t *testing.T) {
@@ -34,11 +30,18 @@ func TestExecutionPayloadOversizeIsNotPublished(t *testing.T) {
 
 	mesh, err := utils.CalculateMaxSize(config.DefaultMaxMessageSize)
 	require.NoError(t, err)
-	tooBigForMesh := make([]byte, mesh+1)
+	aboveOldMeshCap := make([]byte, mesh+1)
 	svc.processCLExecutionPayload(svc.log, &entities.CLMessage{
-		Topic: testExecutionPayloadTopic, Message: tooBigForMesh,
+		Topic: testExecutionPayloadTopic, Message: aboveOldMeshCap,
 	})
-	_, seen := svc.messagesMap.Get(commonhash.XXHash(tooBigForMesh))
+	_, seen := svc.messagesMap.Get(commonhash.XXHash(aboveOldMeshCap))
+	require.True(t, seen, "a payload above the old 1 MiB mesh budget still reaches the publish path")
+
+	tooBig := make([]byte, consensus.MaxCompressedGossipSize()+1)
+	svc.processCLExecutionPayload(svc.log, &entities.CLMessage{
+		Topic: testExecutionPayloadTopic, Message: tooBig,
+	})
+	_, seen = svc.messagesMap.Get(commonhash.XXHash(tooBig))
 	require.False(t, seen, "an oversized payload must be skipped before the mesh publish")
 	require.Equal(t, float64(1), executionPayloadSkips(t, "mump2p"))
 
@@ -47,18 +50,17 @@ func TestExecutionPayloadOversizeIsNotPublished(t *testing.T) {
 		Topic: testExecutionPayloadTopic, Message: small,
 	})
 	_, seen = svc.messagesMap.Get(commonhash.XXHash(small))
-	require.True(t, seen, "a payload inside the mesh budget reaches the publish path")
-	require.Equal(t, float64(1), executionPayloadCount(t, "execution_payload_received_total", "cl"))
+	require.True(t, seen, "a payload inside the consensus budget reaches the publish path")
+	require.Equal(t, float64(2), executionPayloadCount(t, "execution_payload_received_total", "cl"))
 
 	svc.processMumP2PMessage(svc.log, &commonentities.P2PMessage{
 		SourceNodeID: testPeerID, Topic: testExecutionPayloadTopic, Message: []byte{4, 5, 6},
 	})
 	require.Equal(t, float64(1), executionPayloadCount(t, "execution_payload_received_total", "mump2p"))
 
-	tooBigForCL := make([]byte, consensus.MaxCompressedGossipSize()+1)
 	sub := joinCLTopic(t, svc, testExecutionPayloadTopic)
 	svc.processMumP2PMessage(svc.log, &commonentities.P2PMessage{
-		SourceNodeID: testPeerID, Topic: testExecutionPayloadTopic, Message: tooBigForCL,
+		SourceNodeID: testPeerID, Topic: testExecutionPayloadTopic, Message: tooBig,
 	})
 	ctx, cancel := context.WithTimeout(t.Context(), 200*time.Millisecond)
 	defer cancel()
