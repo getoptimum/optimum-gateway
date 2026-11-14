@@ -86,6 +86,9 @@ func newLocalBootstrapServer(t *testing.T, rig *AuthTestRig) *LocalBootstrapServ
 		messages.Store(p["gateway_id"], p)
 		return nil
 	})
+	app.Get("/api/v1/:chain/:cluster/config", func(c fiber.Ctx) error {
+		return c.JSON(TestDynamicConfig(c.Params("chain"), c.Params("cluster"), c.Query("service_version")))
+	})
 	app.Get(utils.BootstrapForkDigestPath, func(c fiber.Ctx) error {
 		if rig != nil {
 			require.True(t, c.HasHeader("Authorization"))

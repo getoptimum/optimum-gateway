@@ -11,6 +11,7 @@ const (
 	TopicUnknown TopicKind = iota
 	TopicBeaconBlock
 	TopicAttestation
+	TopicExecutionPayload
 )
 
 func (s *TopicKind) String() string {
@@ -19,6 +20,8 @@ func (s *TopicKind) String() string {
 		return "BeaconBlock"
 	case TopicAttestation:
 		return "Attestation"
+	case TopicExecutionPayload:
+		return "ExecutionPayload"
 	default:
 		return "Unknown"
 	}
@@ -35,8 +38,16 @@ func (m *TopicMeta) IsBeaconBlock() bool { return m != nil && m.Kind == TopicBea
 
 func (m *TopicMeta) IsAttestation() bool { return m != nil && m.Kind == TopicAttestation }
 
+func (m *TopicMeta) IsExecutionPayload() bool {
+	return m != nil && m.Kind == TopicExecutionPayload
+}
+
 func ParseTopicMeta(fullTopic string) *TopicMeta {
 	meta := &TopicMeta{Kind: TopicUnknown}
+	if utils.IsExecutionPayloadTopic(fullTopic) {
+		meta.Kind = TopicExecutionPayload
+		return meta
+	}
 	if utils.IsBeaconBlockTopic(fullTopic) {
 		meta.Kind = TopicBeaconBlock
 		return meta

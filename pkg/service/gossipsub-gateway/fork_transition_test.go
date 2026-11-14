@@ -202,6 +202,7 @@ func TestRefreshTopicsFollowsBootstrapForkDigests(t *testing.T) {
 	const unknownDigest = "abcdef12"
 	allTopics := len(svc.filterAndBuildEthTopics(forkCurDigest, false))
 	block := func(digest string) string { return topics.BuildFullTopic(digest, utils.BeaconBlockBase) }
+	payload := func(digest string) string { return topics.BuildFullTopic(digest, utils.ExecutionPayloadBase) }
 	joined := func(digest string) int {
 		n := 0
 		for _, topic := range svc.libP2PTopics.Keys() {
@@ -237,6 +238,7 @@ func TestRefreshTopicsFollowsBootstrapForkDigests(t *testing.T) {
 	require.Equal(t, allTopics, joined(forkCurDigest))
 	require.Zero(t, joined(forkNextDigest))
 	require.True(t, onMum(block(forkCurDigest)))
+	require.True(t, onMum(payload(forkCurDigest)))
 
 	// overlap: the CL advertises next-fork topics and one unsupported digest
 	cl := startForkCL(t, svc)
@@ -258,7 +260,9 @@ func TestRefreshTopicsFollowsBootstrapForkDigests(t *testing.T) {
 	require.Equal(t, 2, joined(forkNextDigest))
 	require.Zero(t, joined(unknownDigest))
 	require.True(t, onMum(block(forkCurDigest)))
+	require.True(t, onMum(payload(forkCurDigest)))
 	require.True(t, onMum(block(forkNextDigest)))
+	require.False(t, onMum(payload(forkNextDigest)))
 	require.False(t, onMum(block(unknownDigest)))
 	waitForkMesh(t, svc, cl, block(forkCurDigest))
 
@@ -267,8 +271,10 @@ func TestRefreshTopicsFollowsBootstrapForkDigests(t *testing.T) {
 	refresh()
 	require.Zero(t, joined(forkCurDigest))
 	require.False(t, onMum(block(forkCurDigest)))
+	require.False(t, onMum(payload(forkCurDigest)))
 	require.Equal(t, allTopics, joined(forkNextDigest))
 	require.True(t, onMum(block(forkNextDigest)))
+	require.True(t, onMum(payload(forkNextDigest)))
 	require.Zero(t, joined(unknownDigest))
 	require.Eventually(t, func() bool { return len(cl.ps.ListPeers(block(forkCurDigest))) == 0 }, 10*time.Second, 50*time.Millisecond)
 
@@ -276,20 +282,25 @@ func TestRefreshTopicsFollowsBootstrapForkDigests(t *testing.T) {
 	refresh()
 	require.Zero(t, joined(forkCurDigest))
 	require.False(t, onMum(block(forkCurDigest)))
+	require.False(t, onMum(payload(forkCurDigest)))
 
 	// bootstrap flaps back and forth: every topic of the active digest comes back each time
 	setFork(forkCurDigest, forkNextDigest)
 	refresh()
 	require.Equal(t, allTopics, joined(forkCurDigest))
 	require.True(t, onMum(block(forkCurDigest)))
+	require.True(t, onMum(payload(forkCurDigest)))
 	require.Zero(t, joined(forkNextDigest))
 	require.False(t, onMum(block(forkNextDigest)))
+	require.False(t, onMum(payload(forkNextDigest)))
 
 	setFork(forkNextDigest, forkCurDigest)
 	refresh()
 	require.Equal(t, allTopics, joined(forkNextDigest))
 	require.True(t, onMum(block(forkNextDigest)))
+	require.True(t, onMum(payload(forkNextDigest)))
 	require.Zero(t, joined(forkCurDigest))
 	require.False(t, onMum(block(forkCurDigest)))
+	require.False(t, onMum(payload(forkCurDigest)))
 	require.Zero(t, joined(unknownDigest))
 }

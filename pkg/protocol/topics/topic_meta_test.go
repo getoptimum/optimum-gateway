@@ -23,7 +23,17 @@ func TestParseTopicMeta_AttestationSubnet(t *testing.T) {
 	meta = topics.ParseTopicMeta("/eth2/c6ecb76c/beacon_block/ssz_snappy")
 	require.False(t, meta.IsAttestation())
 	require.True(t, meta.IsBeaconBlock())
+	require.False(t, meta.IsExecutionPayload())
 	require.Equal(t, topics.TopicBeaconBlock, meta.Kind)
+
+	meta = topics.ParseTopicMeta("/eth2/c6ecb76c/execution_payload/ssz_snappy")
+	require.True(t, meta.IsExecutionPayload())
+	require.False(t, meta.IsBeaconBlock())
+	require.Equal(t, topics.TopicExecutionPayload, meta.Kind)
+
+	meta = topics.ParseTopicMeta("/eth2/c6ecb76c/execution_payload_bid/ssz_snappy")
+	require.False(t, meta.IsExecutionPayload())
+	require.Equal(t, topics.TopicUnknown, meta.Kind)
 
 	meta = topics.ParseTopicMeta("completely-unknown-topic")
 	require.False(t, meta.IsAttestation())

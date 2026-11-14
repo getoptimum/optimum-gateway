@@ -27,6 +27,7 @@ func (s *Service) filterAndBuildEthTopics(forkDigest string, mumP2PNode bool) []
 	if mumP2PNode {
 		return []string{
 			s.buildFullTopic(forkDigest, utils.BeaconBlockBase),
+			s.buildFullTopic(forkDigest, utils.ExecutionPayloadBase),
 			mumP2PAggregatedMessagesTopic,
 		}
 	}
@@ -34,6 +35,7 @@ func (s *Service) filterAndBuildEthTopics(forkDigest string, mumP2PNode bool) []
 	descriptors := utils.UnpackTopics([]string{
 		utils.BeaconAttestationBase,
 		utils.BeaconBlockBase,
+		utils.ExecutionPayloadBase,
 	})
 	filtered := make([]string, 0, len(descriptors))
 	for _, topic := range descriptors {
@@ -59,9 +61,9 @@ func (s *Service) buildFullTopic(forkDigest, topic string) string {
 
 // subscribeToTopic subscribes to a single topic.
 func (s *Service) subscribeToTopic(topic string) error {
-	valid := utils.IsBeaconBlockTopic(topic) || utils.IsAttestationTopic(topic) // validate topic format
+	valid := utils.IsBeaconBlockTopic(topic) || utils.IsAttestationTopic(topic) || utils.IsExecutionPayloadTopic(topic)
 	if !valid {
-		s.log.Debug("skipping subscription to topic, not a beacon block or attestation topic", logger.WithTopic(topic))
+		s.log.Debug("skipping subscription to topic, not a bridged topic", logger.WithTopic(topic))
 		return nil
 	}
 	// Check if already subscribed
