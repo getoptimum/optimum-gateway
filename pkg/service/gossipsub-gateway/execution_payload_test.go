@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
-	commonhash "github.com/getoptimum/optimum-common/pkg/hash"
 	"github.com/stretchr/testify/require"
 
+	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
+	commonhash "github.com/getoptimum/optimum-common/pkg/hash"
 	"github.com/getoptimum/optimum-gateway/pkg/config"
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
 	"github.com/getoptimum/optimum-gateway/pkg/protocol/consensus"
