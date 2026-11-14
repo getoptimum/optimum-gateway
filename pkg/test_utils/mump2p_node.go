@@ -84,17 +84,13 @@ func NewTestConfig(ctx context.Context, log logger.AppLogger, clusterID string, 
 		ClusterID:      clusterID,
 		ListenPort:     listenPort,
 		MaxMessageSize: cfgpkg.DefaultMaxMessageSize,
+		// Empty chain skips the remote fetch. These tests have no bootstrap, and
+		// startup rejects a rotator still at zero mesh and coding.
 		Rotator: commonconfig.NewConfigRotator(
 			ctx,
 			log,
-			&commonentities.OptimumConfig{
-				MaxMessageSize:           cfgpkg.DefaultMaxMessageSize,
-				RandomMessageSize:        cfgpkg.DefaultRandomMessageSize,
-				ShardFactor:              cfgpkg.DefaultShardFactor,
-				PublisherShardMultiplier: cfgpkg.DefaultPublisherShardMultiplier,
-				ForwardShardThreshold:    cfgpkg.DefaultForwardShardThreshold,
-			},
-			"hoodi",
+			TestOptimumConfig(),
+			"",
 			clusterID,
 			func(*commonentities.DynamicConfig) {},
 		),
