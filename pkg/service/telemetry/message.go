@@ -37,13 +37,13 @@ func initMessageSizeMetrics() {
 	executionPayloadSkipped = commonmetrics.NewCounterVec(
 		"execution_payload_skipped_total",
 		subsystem,
-		"Execution payloads skipped before publish because they exceed the destination budget",
+		"Execution payloads not published because they exceed the consensus budget. Not counted when mesh-to-CL propagation is off. direction is the destination. A skip ratio is skipped/(skipped+received)",
 		[]string{labelDirection},
 	)
 	executionPayloadReceived = commonmetrics.NewCounterVec(
 		"execution_payload_received_total",
 		subsystem,
-		"Execution payloads received, by the side they arrived on",
+		"First accepted execution payload on each side, after dedup. direction is the side it arrived on",
 		[]string{labelDirection},
 	)
 	executionPayloadSizeBytes = commonmetrics.NewSimpleHistogram(

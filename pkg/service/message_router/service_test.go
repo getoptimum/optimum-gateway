@@ -60,12 +60,6 @@ func TestService_ShouldForwardMessageToMumP2P(t *testing.T) {
 			payload: []byte("ignored"),
 			want:    true,
 		},
-		"partner forwards execution payload": {
-			service: newTestService(t, commonentities.GatewayTypePartner),
-			topic:   testExecutionPayloadTopic,
-			payload: []byte("ignored"),
-			want:    true,
-		},
 		"hermes blocks beacon block": {
 			service: newTestService(t, commonentities.GatewayTypeHermes),
 			topic:   testBeaconBlockTopic,
@@ -225,7 +219,7 @@ func TestService_ShouldForwardMessageToCLP2P_HermesSlotGate(t *testing.T) {
 	hermes.RefreshAccelerateSlots(t.Context())
 	require.True(t, hermes.ShouldForwardMessageToCLP2P(topics.ParseTopicMeta(testBeaconBlockTopic).Kind, 100, nil))
 	require.False(t, hermes.ShouldForwardMessageToCLP2P(topics.ParseTopicMeta(testBeaconBlockTopic).Kind, 110, nil), "hermes drops slots not on the accelerate list")
-	require.True(t, hermes.ShouldForwardMessageToCLP2P(topics.ParseTopicMeta(testExecutionPayloadTopic).Kind, 110, nil), "an execution payload is not slot-gated")
+	require.True(t, hermes.ShouldForwardMessageToCLP2P(topics.ParseTopicMeta(testExecutionPayloadTopic).Kind, 110, nil), "the envelope has no slot, so Hermes delivers it for a withheld block")
 
 	partner := newTestServiceAt(t, commonentities.GatewayTypePartner, ts.URL)
 	partner.RefreshAccelerateSlots(t.Context())

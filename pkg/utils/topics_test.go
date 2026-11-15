@@ -61,10 +61,13 @@ func TestSimplifyTopic(t *testing.T) {
 	table := map[string]string{
 		"/eth2/deadbeef/beacon_block/ssz_snappy":         utils.BeaconBlockBase,
 		"/eth2/12345678/beacon_attestation_5/ssz_snappy": utils.BeaconAttestationBase,
-		"beacon_block":               utils.BeaconBlockBase,
-		"beacon_attestation_31":      utils.BeaconAttestationBase,
-		"beacon_aggregate_and_proof": "beacon_aggregate_and_proof",
-		"beacon_attestation":         "beacon_attestation",
+		"beacon_block":                                    utils.BeaconBlockBase,
+		"beacon_attestation_31":                           utils.BeaconAttestationBase,
+		"beacon_aggregate_and_proof":                      "beacon_aggregate_and_proof",
+		"beacon_attestation":                              "beacon_attestation",
+		"/eth2/deadbeef/execution_payload/ssz_snappy":     utils.ExecutionPayloadBase,
+		"execution_payload":                               utils.ExecutionPayloadBase,
+		"/eth2/deadbeef/execution_payload_bid/ssz_snappy": "/eth2/deadbeef/execution_payload_bid/ssz_snappy",
 	}
 	for topic, result := range table {
 		require.Equal(t, result, utils.SimplifyTopic(topic))

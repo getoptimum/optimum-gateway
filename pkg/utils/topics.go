@@ -64,6 +64,9 @@ func SimplifyTopic(topic string) string {
 	if IsAttestationTopic(topic) {
 		return BeaconAttestationBase
 	}
+	if IsExecutionPayloadTopic(topic) {
+		return ExecutionPayloadBase
+	}
 	return topic
 }
 

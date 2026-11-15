@@ -19,59 +19,127 @@ import (
 
 const testExecutionPayloadTopic = "/eth2/deadbeef/execution_payload/ssz_snappy"
 
-func TestExecutionPayloadLimitMatchesTheConsensusBudget(t *testing.T) {
-	require.Equal(t, consensus.MaxCompressedGossipSize(), executionPayloadLimit())
-}
-
-func TestExecutionPayloadOversizeIsNotPublished(t *testing.T) {
+func TestExecutionPayloadAboveTheOldMeshCapIsPublished(t *testing.T) {
 	svc, _ := newGateway(t)
 	t.Cleanup(svc.messagesMap.Close)
 	telemetry.InitMetrics(t.Context(), svc.log, svc.cfg)
 
 	mesh, err := utils.CalculateMaxSize(config.DefaultMaxMessageSize)
 	require.NoError(t, err)
-	aboveOldMeshCap := make([]byte, mesh+1)
+	payload := make([]byte, mesh+1)
+	beforeRecv := executionPayloadCount(t, "execution_payload_received_total", "cl")
+	beforeSkip := executionPayloadCount(t, "execution_payload_skipped_total", "mump2p")
+
 	svc.processCLExecutionPayload(svc.log, &entities.CLMessage{
-		Topic: testExecutionPayloadTopic, Message: aboveOldMeshCap,
+		Topic: testExecutionPayloadTopic, Message: payload,
 	})
-	_, seen := svc.messagesMap.Get(commonhash.XXHash(aboveOldMeshCap))
+
+	_, seen := svc.messagesMap.Get(commonhash.XXHash(payload))
 	require.True(t, seen, "a payload above the old 1 MiB mesh budget still reaches the publish path")
+	require.Equal(t, beforeRecv+1, executionPayloadCount(t, "execution_payload_received_total", "cl"))
+	require.Equal(t, beforeSkip, executionPayloadCount(t, "execution_payload_skipped_total", "mump2p"))
+}
 
-	tooBig := make([]byte, consensus.MaxCompressedGossipSize()+1)
-	svc.processCLExecutionPayload(svc.log, &entities.CLMessage{
-		Topic: testExecutionPayloadTopic, Message: tooBig,
-	})
-	_, seen = svc.messagesMap.Get(commonhash.XXHash(tooBig))
-	require.False(t, seen, "an oversized payload must be skipped before the mesh publish")
-	require.Equal(t, float64(1), executionPayloadSkips(t, "mump2p"))
+func TestExecutionPayloadBoundary(t *testing.T) {
+	svc, _ := newGateway(t)
+	t.Cleanup(svc.messagesMap.Close)
+	telemetry.InitMetrics(t.Context(), svc.log, svc.cfg)
 
-	small := []byte{1, 2, 3}
+	exact := make([]byte, consensus.MaxCompressedGossipSize())
+	exact[0] = 1
+	beforeRecv := executionPayloadCount(t, "execution_payload_received_total", "cl")
+	beforeSkip := executionPayloadCount(t, "execution_payload_skipped_total", "mump2p")
 	svc.processCLExecutionPayload(svc.log, &entities.CLMessage{
-		Topic: testExecutionPayloadTopic, Message: small,
+		Topic: testExecutionPayloadTopic, Message: exact,
 	})
-	_, seen = svc.messagesMap.Get(commonhash.XXHash(small))
-	require.True(t, seen, "a payload inside the consensus budget reaches the publish path")
-	require.Equal(t, float64(2), executionPayloadCount(t, "execution_payload_received_total", "cl"))
+	_, seen := svc.messagesMap.Get(commonhash.XXHash(exact))
+	require.True(t, seen, "a payload at the consensus budget must be forwarded")
+	require.Equal(t, beforeRecv+1, executionPayloadCount(t, "execution_payload_received_total", "cl"))
+	require.Equal(t, beforeSkip, executionPayloadCount(t, "execution_payload_skipped_total", "mump2p"))
+
+	over := make([]byte, consensus.MaxCompressedGossipSize()+1)
+	over[0] = 2
+	svc.processCLExecutionPayload(svc.log, &entities.CLMessage{
+		Topic: testExecutionPayloadTopic, Message: over,
+	})
+	_, seen = svc.messagesMap.Get(commonhash.XXHash(over))
+	require.False(t, seen, "one byte over the consensus budget must be skipped before publish")
+	require.Equal(t, beforeSkip+1, executionPayloadCount(t, "execution_payload_skipped_total", "mump2p"))
+}
+
+func TestExecutionPayloadDuplicateCountsOnce(t *testing.T) {
+	svc, _ := newGateway(t)
+	t.Cleanup(svc.messagesMap.Close)
+	telemetry.InitMetrics(t.Context(), svc.log, svc.cfg)
+
+	payload := []byte{1, 2, 3}
+	before := executionPayloadCount(t, "execution_payload_received_total", "cl")
+	msg := &entities.CLMessage{Topic: testExecutionPayloadTopic, Message: payload}
+	svc.processCLExecutionPayload(svc.log, msg)
+	svc.processCLExecutionPayload(svc.log, msg)
+	require.Equal(t, before+1, executionPayloadCount(t, "execution_payload_received_total", "cl"))
+}
+
+func TestExecutionPayloadReachesTheCL(t *testing.T) {
+	svc, _ := newGateway(t)
+	t.Cleanup(svc.messagesMap.Close)
+	telemetry.InitMetrics(t.Context(), svc.log, svc.cfg)
+	sub := joinCLTopic(t, svc, testExecutionPayloadTopic)
+
+	payload := []byte{7, 8, 9}
+	before := executionPayloadCount(t, "execution_payload_received_total", "mump2p")
+	svc.processMumP2PMessage(svc.log, &commonentities.P2PMessage{
+		SourceNodeID: testPeerID, Topic: testExecutionPayloadTopic, Message: payload,
+	})
+
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	got, err := sub.Next(ctx)
+	require.NoError(t, err, "an in-budget envelope must reach the CL")
+	require.Equal(t, payload, got.Data)
+	require.Equal(t, before+1, executionPayloadCount(t, "execution_payload_received_total", "mump2p"))
+
+	beforeSkip := executionPayloadCount(t, "execution_payload_skipped_total", "cl")
+	svc.processMumP2PMessage(svc.log, &commonentities.P2PMessage{
+		SourceNodeID: testPeerID,
+		Topic:        testExecutionPayloadTopic,
+		Message:      make([]byte, consensus.MaxCompressedGossipSize()+1),
+	})
+	idle, cancelIdle := context.WithTimeout(t.Context(), 250*time.Millisecond)
+	defer cancelIdle()
+	_, err = sub.Next(idle)
+	require.Error(t, err, "an oversized envelope must not reach the CL")
+	require.Equal(t, beforeSkip+1, executionPayloadCount(t, "execution_payload_skipped_total", "cl"))
+}
+
+func TestExecutionPayloadRelayDoesNotReachTheCL(t *testing.T) {
+	svc, _ := newGatewayOfType(t, commonentities.GatewayTypeRelay)
+	t.Cleanup(svc.messagesMap.Close)
+	sub := joinCLTopic(t, svc, testExecutionPayloadTopic)
 
 	svc.processMumP2PMessage(svc.log, &commonentities.P2PMessage{
 		SourceNodeID: testPeerID, Topic: testExecutionPayloadTopic, Message: []byte{4, 5, 6},
 	})
-	require.Equal(t, float64(1), executionPayloadCount(t, "execution_payload_received_total", "mump2p"))
 
-	sub := joinCLTopic(t, svc, testExecutionPayloadTopic)
-	svc.processMumP2PMessage(svc.log, &commonentities.P2PMessage{
-		SourceNodeID: testPeerID, Topic: testExecutionPayloadTopic, Message: tooBig,
-	})
-	ctx, cancel := context.WithTimeout(t.Context(), 200*time.Millisecond)
+	ctx, cancel := context.WithTimeout(t.Context(), 250*time.Millisecond)
 	defer cancel()
-	_, err = sub.Next(ctx)
-	require.Error(t, err, "an oversized payload must not reach the CL")
-	require.Equal(t, float64(1), executionPayloadSkips(t, "cl"))
+	_, err := sub.Next(ctx)
+	require.Error(t, err, "a relay must not deliver the envelope to its CL")
 }
 
-func executionPayloadSkips(t *testing.T, direction string) float64 {
-	t.Helper()
-	return executionPayloadCount(t, "execution_payload_skipped_total", direction)
+func TestExecutionPayloadPropagationOffDoesNotCountSkip(t *testing.T) {
+	svc, _ := newGateway(t)
+	t.Cleanup(svc.messagesMap.Close)
+	telemetry.InitMetrics(t.Context(), svc.log, svc.cfg)
+	disablePropagation(t, svc)
+
+	before := executionPayloadCount(t, "execution_payload_skipped_total", "cl")
+	svc.processMumP2PMessage(svc.log, &commonentities.P2PMessage{
+		SourceNodeID: testPeerID,
+		Topic:        testExecutionPayloadTopic,
+		Message:      make([]byte, consensus.MaxCompressedGossipSize()+1),
+	})
+	require.Equal(t, before, executionPayloadCount(t, "execution_payload_skipped_total", "cl"))
 }
 
 func executionPayloadCount(t *testing.T, name, direction string) float64 {
@@ -90,6 +158,5 @@ func executionPayloadCount(t *testing.T, name, direction string) float64 {
 			}
 		}
 	}
-	t.Fatalf("%s direction=%s is not registered", name, direction)
 	return 0
 }

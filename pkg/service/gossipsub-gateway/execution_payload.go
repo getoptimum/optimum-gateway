@@ -11,29 +11,15 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
 )
 
-// executionPayloadLimit is the largest envelope this gateway will forward.
-// Both directions use the consensus-client budget. The 1 MiB GossipSub cap
-// bounds one RPC after the mesh library shards the payload.
-func executionPayloadLimit() int {
-	return consensus.MaxCompressedGossipSize()
-}
-
-func (s *Service) skipOversizedExecutionPayload(l logger.AppLogger, msg []byte, toMesh bool) bool {
-	limit := executionPayloadLimit()
-	if len(msg) <= limit {
-		return false
-	}
-	direction := "cl"
-	if toMesh {
-		direction = "mump2p"
-	}
+// noteExecutionPayloadSkipped counts an envelope that was not published.
+// direction is the side the publish would have gone to.
+func noteExecutionPayloadSkipped(l logger.AppLogger, msg []byte, direction string) {
 	telemetry.IncExecutionPayloadSkipped(direction)
 	l.Info("skipping execution_payload, larger than the publish budget",
 		logger.WithInt("size", len(msg)),
-		logger.WithInt("limit", limit),
+		logger.WithInt("limit", consensus.MaxCompressedGossipSize()),
 		logger.WithString("direction", direction),
 	)
-	return true
 }
 
 func (s *Service) noteExecutionPayloadArrival(l logger.AppLogger, direction string, msg []byte) {
@@ -44,14 +30,19 @@ func (s *Service) noteExecutionPayloadArrival(l logger.AppLogger, direction stri
 	)
 }
 
+// processCLExecutionPayload forwards a consensus-client envelope into the mesh.
+// Every gateway type does this, including relay. The message router is not
+// consulted, matching beacon blocks.
 func (s *Service) processCLExecutionPayload(l logger.AppLogger, msg *entities.CLMessage) {
-	if s.skipOversizedExecutionPayload(l, msg.Message, true) {
+	if len(msg.Message) > consensus.MaxCompressedGossipSize() {
+		noteExecutionPayloadSkipped(l, msg.Message, "mump2p")
 		return
 	}
-	s.noteExecutionPayloadArrival(l, "cl", msg.Message)
+	// Count after dedup so cl and mump2p are both first-seen.
 	if s.isDuplicateMessage(msg.Message) {
 		return
 	}
+	s.noteExecutionPayloadArrival(l, "cl", msg.Message)
 	if s.nodeMumP2P == nil {
 		return
 	}
@@ -67,7 +58,11 @@ func (s *Service) processCLExecutionPayload(l logger.AppLogger, msg *entities.CL
 }
 
 func (s *Service) processMumP2PExecutionPayload(l logger.AppLogger, msg *commonentities.P2PMessage) {
-	if s.skipOversizedExecutionPayload(l, msg.Message, false) {
+	if len(msg.Message) > consensus.MaxCompressedGossipSize() {
+		// Propagation off would not have forwarded it, so it is not a skip.
+		if !s.propagationDisabled(l) {
+			noteExecutionPayloadSkipped(l, msg.Message, "cl")
+		}
 		return
 	}
 	s.noteExecutionPayloadArrival(l, "mump2p", msg.Message)
@@ -78,7 +73,6 @@ func (s *Service) processMumP2PExecutionPayload(l logger.AppLogger, msg *commone
 		return
 	}
 	if err := s.publishToCLTopic(msg.Message, msg.Topic); err != nil {
-		telemetry.IncParseSSZError(msg.Topic, entities.SourceMumP2P)
 		telemetry.IncreaseBadMessagesToCL()
 		l.Error("failed to publish execution payload to CL", err)
 	}
