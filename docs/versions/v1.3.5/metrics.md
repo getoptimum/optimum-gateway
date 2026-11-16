@@ -32,9 +32,13 @@ All gateway metrics carry these global labels: `gateway_id`, `gateway_cluster_id
 | `mump2p_gateway_cl_mesh_peer`                   | Gauge   | topic, peer_id | CL peers in the GossipSub mesh per topic (1 per peer) |
 | `mump2p_gateway_mump2p_mesh_peer`               | Gauge   | topic, peer_id | mump2p peers in the mesh per topic (1 per peer)       |
 | `mump2p_gateway_cl_peer_connected_total`        | Counter | —              | Cumulative CL peer connections established            |
-| `mump2p_gateway_cl_peer_disconnected_total`     | Counter | —              | Cumulative CL peer disconnections                     |
+| `mump2p_gateway_cl_peer_disconnected_total`            | Counter | —                    | Cumulative CL peer disconnections                     |
+| `mump2p_gateway_cl_peer_disconnected_by_client_total` | Counter | peer_client          | CL peer disconnections by client                      |
+| `mump2p_gateway_cl_peer_goodbye_total`                 | Counter | peer_client, reason  | Goodbye messages received from CL peers               |
 | `mump2p_gateway_mump2p_peer_connected_total`    | Counter | —              | Cumulative mump2p peer connections established        |
 | `mump2p_gateway_mump2p_peer_disconnected_total` | Counter | —              | Cumulative mump2p peer disconnections                 |
+
+`peer_client` is the first segment of the peer's agent string, lowercased: `lighthouse`, `prysm`, `teku`, `nimbus`, `lodestar`, `grandine`, `erigon`, or `hermes`. Any other identified agent is `other`. A peer with no agent string is `unknown`. `reason` is the goodbye code as a decimal number. A code the gateway does not recognize is `other`. The CL connect, disconnect, and goodbye counters count peers the allowlist kept. A peer the allowlist rejects is closed and is not counted.
 
 ## Messages
 

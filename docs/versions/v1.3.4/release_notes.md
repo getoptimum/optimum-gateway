@@ -11,7 +11,7 @@
 * **Registration no longer sends `gateway_http_addr`.** Bootstrap did not use it. No partner configuration change.
 * **Listeners use plain TCP ([CVE-2026-98432](https://www.cve.org/CVERecord?id=CVE-2026-98432)).** Go 1.24 and later accept MPTCP by default, and that is the listener the published exploit of this Linux kernel bug uses. v1.3.4 turns MPTCP off for every gateway listener. No partner configuration change. The complete fix lies on the partner's side, in the host kernel update.
 
-Upgrading from v1.3.2 or earlier? Also read the [v1.3.3 release notes](../v1.3.3/release_notes.md).
+v1.3.2 and v1.3.3 are unsupported because they contained security vulnerabilities. Upgrade to [v1.3.5](../v1.3.5/release_notes.md).
 
 ## Upgrade from an earlier release
 

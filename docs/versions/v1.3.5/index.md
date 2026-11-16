@@ -1,8 +1,8 @@
 # Optimum Gateway - User Guide
 
-> **Current release:** v1.3.3 is the current release. v1.3.2 remains supported, but upgrading is recommended because it is affected by [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787). Networking and CL peering are unchanged.
+> **Current release:** v1.3.5 is the current release. v1.3.2 and v1.3.3 are unsupported because they contained security vulnerabilities. v1.3.4 remains supported; upgrade it for [CVE-2026-78661](https://www.cve.org/CVERecord?id=CVE-2026-78661). No partner configuration change.
 
-> **Release Notes:** [What's new in v1.3.3](./release_notes.md)
+> **Release Notes:** [What's new in v1.3.5](./release_notes.md)
 
 > **Security audit:** ProbeLab, 2026 - [Full report](https://cdn.probelab.io/media/documents/2026-08-ProbeLab-Security_Audit_Report_Optimum_Gateway.pdf)
 
