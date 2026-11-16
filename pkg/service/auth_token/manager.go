@@ -271,12 +271,17 @@ func (m *Service) DynamicConfigToken(ctx context.Context) (string, error) {
 	if !m.IsEnabled() {
 		return "", nil
 	}
-	tok, err := m.ServicesToken(ctx)
-	if err != nil {
+	// ServicesToken may return the handshake token. The poll must not use that
+	// value: read the services token only after its claims are present.
+	if _, err := m.ServicesToken(ctx); err != nil {
 		m.log.Error("dynamic config poll skipped; keeping the current config", err)
 		return "", err
 	}
-	if tok == "" || m.servicesClaims.Load() == nil {
+	tok := ""
+	if m.servicesClaims.Load() != nil {
+		tok = pointers.FromPointer(m.servicesToken.Load())
+	}
+	if tok == "" {
 		if n := m.dcFleetPolls.Add(1); n == 1 || n%10 == 0 {
 			m.log.Info("dynamic config poll staying on the fleet route: no aud=services token")
 		}
