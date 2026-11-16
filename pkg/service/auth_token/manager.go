@@ -59,7 +59,7 @@ type Service struct {
 	// because no aud=services token was available. The first poll is logged,
 	// then every tenth, so a gateway that stays there keeps showing it.
 	dcFleetPolls atomic.Uint32
-	operatorID     atomic.Pointer[string]
+	operatorID   atomic.Pointer[string]
 	// enrollResult is replayed by RefreshAuthMetrics: New runs before
 	// telemetry.InitMetrics, so incrementing at enrollment time is dropped.
 	enrollResult string
