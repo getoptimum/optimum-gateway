@@ -18,20 +18,18 @@ import (
 )
 
 const (
-	DefaultMaxMessageSize            int64   = 1024 * 1024 // 1MB
-	DefaultRandomMessageSize         uint32  = 512
-	DefaultShardFactor               uint32  = 4
-	DefaultPublisherShardMultiplier  float64 = 1.2
-	DefaultForwardShardThreshold     float64 = 0.75
-	DefaultMeshDegreeTarget          int64   = 6
-	DefaultMeshDegreeMin             int64   = 4
-	DefaultMeshDegreeMax             int64   = 12
-	DefaultAggregationIntervalMs     int64   = 25
-	maxAggregationIntervalMs         int64   = 600000 // 10 minutes
-	DefaultAttestationSyncChunkSize  int     = 64
-	DefaultAttestationPublishAfterMs int64   = 4000
-	DefaultAttestationPublishCapMs   int64   = 8000
-	DefaultAttestationMaxSlotAge     uint64  = 0
+	DefaultMaxMessageSize           int64   = 1024 * 1024 // 1MB
+	DefaultRandomMessageSize        uint32  = 512
+	DefaultShardFactor              uint32  = 4
+	DefaultPublisherShardMultiplier float64 = 1.2
+	DefaultForwardShardThreshold    float64 = 0.75
+	DefaultMeshDegreeTarget         int64   = 6
+	DefaultMeshDegreeMin            int64   = 4
+	DefaultMeshDegreeMax            int64   = 12
+	DefaultAggregationIntervalMs    int64   = 25
+	maxAggregationIntervalMs        int64   = 600000 // 10 minutes
+	DefaultAttestationSyncChunkSize int     = 64
+	DefaultAttestationMaxSlotAge    uint64  = 0
 )
 
 // AppConfig holds all the configuration for the gateway service
@@ -476,20 +474,6 @@ func (c *AppConfig) GetSkipMessagesFromSelf() bool {
 
 func (c *AppConfig) GetAggregationInterval() time.Duration {
 	return time.Duration(c.aggregationIntervalMs.Load()) * time.Millisecond
-}
-
-// GetAttestationPublishGate is the no-block fallback: 4s after slot start.
-// When a beacon block has arrived this slot, the aggregator releases 2s after
-// the latest arrival instead, including when that is later than 4s. A
-// non-positive value disables the gate. See ADR-0009.
-func (c *AppConfig) GetAttestationPublishGate() time.Duration {
-	return time.Duration(DefaultAttestationPublishAfterMs) * time.Millisecond
-}
-
-// GetAttestationPublishCap returns the slot-aware cap duration that closes the
-// publish window (8s). 0 means no cap (publish until slot end). See ADR-0009.
-func (c *AppConfig) GetAttestationPublishCap() time.Duration {
-	return time.Duration(DefaultAttestationPublishCapMs) * time.Millisecond
 }
 
 // GetAttestationMaxSlotAge returns the maximum slot age (in slots) of
