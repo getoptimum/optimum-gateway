@@ -181,7 +181,8 @@ func LoadConfig(confFile string) (*AppConfig, error) {
 // Empty values are ignored so the yaml/env defaults stay in place.
 // servicesToken is read on every dynamic-config poll. A non-empty token
 // selects the authenticated route. Nil, or a token that is empty, stays on
-// the fleet route.
+// the fleet route. An error skips that poll and leaves the current config
+// in place; it does not fall back to the fleet route.
 func (c *AppConfig) InitRuntime(ctx context.Context, log logger.AppLogger, chainStr, gatewayID, gatewayType, orgID string, servicesToken func(context.Context) (string, error)) error {
 	if strings.TrimSpace(chainStr) == "" {
 		chainStr = c.Chain

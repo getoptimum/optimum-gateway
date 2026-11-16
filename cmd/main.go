@@ -80,7 +80,7 @@ func main() {
 		gatewayType = c.Type.String()
 		orgID = authMgr.OperatorID()
 	}
-	if err = appConf.InitRuntime(ctx, appLogger, chainID, gatewayID, gatewayType, orgID, authMgr.ServicesToken); err != nil {
+	if err = appConf.InitRuntime(ctx, appLogger, chainID, gatewayID, gatewayType, orgID, authMgr.DynamicConfigToken); err != nil {
 		appLogger.Fatal("unable to initialize runtime", err)
 	}
 	if authMgr.IsEnabled() {

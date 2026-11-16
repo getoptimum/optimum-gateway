@@ -55,6 +55,10 @@ type Service struct {
 	servicesToken  atomic.Pointer[string]
 	claims         atomic.Pointer[jwks_verifier.Claims]
 	servicesClaims atomic.Pointer[jwks_verifier.Claims]
+	// dcFleetPolls counts dynamic-config polls that stayed on the fleet route
+	// because no aud=services token was available. The first poll is logged,
+	// then every tenth, so a gateway that stays there keeps showing it.
+	dcFleetPolls atomic.Uint32
 	operatorID     atomic.Pointer[string]
 	// enrollResult is replayed by RefreshAuthMetrics: New runs before
 	// telemetry.InitMetrics, so incrementing at enrollment time is dropped.
@@ -256,6 +260,29 @@ func (m *Service) ServicesToken(ctx context.Context) (string, error) {
 		return tok, nil
 	}
 	return pointers.FromPointer(m.token.Load()), nil
+}
+
+// DynamicConfigToken is the token for one dynamic-config poll.
+// A verified aud=services token selects the authenticated route. An empty
+// string stays on the fleet route. The handshake token is not returned: it is
+// aud=p2p, and the authenticated route rejects that audience. A mint error is
+// returned unchanged, which skips that poll and keeps the current config.
+func (m *Service) DynamicConfigToken(ctx context.Context) (string, error) {
+	if !m.IsEnabled() {
+		return "", nil
+	}
+	tok, err := m.ServicesToken(ctx)
+	if err != nil {
+		m.log.Error("dynamic config poll skipped; keeping the current config", err)
+		return "", err
+	}
+	if tok == "" || m.servicesClaims.Load() == nil {
+		if n := m.dcFleetPolls.Add(1); n == 1 || n%10 == 0 {
+			m.log.Info("dynamic config poll staying on the fleet route: no aud=services token")
+		}
+		return "", nil
+	}
+	return tok, nil
 }
 
 // OwnClaims returns the parsed claims of our cached JWT (nil before first
