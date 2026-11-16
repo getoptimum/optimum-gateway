@@ -23,6 +23,7 @@ import (
 // currently works with:
 // * attestation topics
 // * beacon block topics
+// * execution payload topics
 // rest topics will be dropped
 // require connection to optimum's bootstrap service
 type Service struct {
@@ -54,7 +55,7 @@ var slotRoots = syncx.NewTTLMap[uint64, [32]byte](1*time.Minute, 12*time.Second)
 // ShouldForwardMessageToMumP2P decides whether the gateway may fan out a locally-produced CL message into MumP2P
 func (s *Service) ShouldForwardMessageToMumP2P(l logger.AppLogger, kind topics.TopicKind, srcTopic string, payload []byte) bool {
 	if kind == topics.TopicBeaconBlock {
-		return true // blindly forward all beacon blocks from any CL
+		return true // beacon blocks go out from any CL
 	}
 
 	// Reject if we don't have a valid token (only when auth is configured).
@@ -134,6 +135,8 @@ func (s *Service) ResolveValidatorChunk(attesterIndex uint64) (chunkID, chunkSiz
 
 // ShouldForwardMessageToCLP2P decides whether an inbound MumP2P message should be forwarded to the local CL libp2p peer.
 // Beacon blocks: partners publish every slot; Hermes only slots on the accelerate list; relay drops.
+// Execution payloads use the same authorization. The envelope has no slot field, only beacon_block_root,
+// so Hermes delivers every envelope, including slots whose block it withheld.
 func (s *Service) ShouldForwardMessageToCLP2P(kind topics.TopicKind, slot uint64, _ []byte) bool {
 	gwType := commonentities.GatewayType("")
 	if c := s.authMgr.OwnClaims(); c != nil {
@@ -144,7 +147,7 @@ func (s *Service) ShouldForwardMessageToCLP2P(kind topics.TopicKind, slot uint64
 		return gwType != commonentities.GatewayTypeRelay
 	}
 
-	if kind == topics.TopicBeaconBlock {
+	if kind == topics.TopicBeaconBlock || kind == topics.TopicExecutionPayload {
 		gwAuthorized := s.authMgr.IsEnabled() && s.authMgr.HasValidToken()
 		if !gwAuthorized {
 			return false
@@ -153,6 +156,11 @@ func (s *Service) ShouldForwardMessageToCLP2P(kind topics.TopicKind, slot uint64
 		case commonentities.GatewayTypePartner:
 			return true
 		case commonentities.GatewayTypeHermes:
+			// The envelope carries beacon_block_root and no slot, so the
+			// accelerate list cannot apply. It stays on beacon_block.
+			if kind == topics.TopicExecutionPayload {
+				return true
+			}
 			return s.ShouldAccelerateBlock(slot)
 		}
 	}

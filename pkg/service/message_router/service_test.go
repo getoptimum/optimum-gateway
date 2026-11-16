@@ -29,6 +29,7 @@ const validAttestationHex = "f001043900090108142c1305090828672a0508110188a50e909
 const (
 	testBeaconBlockTopic       = "/eth2/c6ecb76c/beacon_block/ssz_snappy"
 	testBeaconAttestationTopic = "/eth2/c6ecb76c/beacon_attestation_31/ssz_snappy"
+	testExecutionPayloadTopic  = "/eth2/c6ecb76c/execution_payload/ssz_snappy"
 )
 
 func TestService_ShouldForwardMessageToMumP2P(t *testing.T) {
@@ -180,6 +181,21 @@ func TestService_ShouldForwardMessageToCLP2P(t *testing.T) {
 			topic:       testBeaconBlockTopic,
 			wantForward: false,
 		},
+		"partner forwards execution payload": {
+			service:     newTestService(t, commonentities.GatewayTypePartner),
+			topic:       testExecutionPayloadTopic,
+			wantForward: true,
+		},
+		"hermes forwards execution payload": {
+			service:     newTestService(t, commonentities.GatewayTypeHermes),
+			topic:       testExecutionPayloadTopic,
+			wantForward: true,
+		},
+		"relay blocks execution payload": {
+			service:     newTestService(t, commonentities.GatewayTypeRelay),
+			topic:       testExecutionPayloadTopic,
+			wantForward: false,
+		},
 	}
 
 	for name, tc := range tests {
@@ -203,6 +219,7 @@ func TestService_ShouldForwardMessageToCLP2P_HermesSlotGate(t *testing.T) {
 	hermes.RefreshAccelerateSlots(t.Context())
 	require.True(t, hermes.ShouldForwardMessageToCLP2P(topics.ParseTopicMeta(testBeaconBlockTopic).Kind, 100, nil))
 	require.False(t, hermes.ShouldForwardMessageToCLP2P(topics.ParseTopicMeta(testBeaconBlockTopic).Kind, 110, nil), "hermes drops slots not on the accelerate list")
+	require.True(t, hermes.ShouldForwardMessageToCLP2P(topics.ParseTopicMeta(testExecutionPayloadTopic).Kind, 110, nil), "the envelope has no slot, so Hermes delivers it for a withheld block")
 
 	partner := newTestServiceAt(t, commonentities.GatewayTypePartner, ts.URL)
 	partner.RefreshAccelerateSlots(t.Context())

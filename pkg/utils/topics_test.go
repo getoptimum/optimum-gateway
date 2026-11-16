@@ -28,6 +28,21 @@ func TestIsBeaconBlockTopic(t *testing.T) {
 	}
 }
 
+func TestIsExecutionPayloadTopic(t *testing.T) {
+	table := map[string]bool{
+		"execution_payload":                               true,
+		"/eth2/c6ecb76c/execution_payload/ssz_snappy":     true,
+		"execution_payload_bid":                           false,
+		"/eth2/c6ecb76c/execution_payload_bid/ssz_snappy": false,
+		"/eth2/c6ecb76c/beacon_block/ssz_snappy":          false,
+		"payload_attestation_message":                     false,
+		"":                                                false,
+	}
+	for topic, expect := range table {
+		require.Equal(t, expect, utils.IsExecutionPayloadTopic(topic), topic)
+	}
+}
+
 func TestIsAttestationTopic(t *testing.T) {
 	table := map[string]bool{
 		"beacon_attestation_0":                            true,
@@ -46,10 +61,13 @@ func TestSimplifyTopic(t *testing.T) {
 	table := map[string]string{
 		"/eth2/deadbeef/beacon_block/ssz_snappy":         utils.BeaconBlockBase,
 		"/eth2/12345678/beacon_attestation_5/ssz_snappy": utils.BeaconAttestationBase,
-		"beacon_block":               utils.BeaconBlockBase,
-		"beacon_attestation_31":      utils.BeaconAttestationBase,
-		"beacon_aggregate_and_proof": "beacon_aggregate_and_proof",
-		"beacon_attestation":         "beacon_attestation",
+		"beacon_block":                                    utils.BeaconBlockBase,
+		"beacon_attestation_31":                           utils.BeaconAttestationBase,
+		"beacon_aggregate_and_proof":                      "beacon_aggregate_and_proof",
+		"beacon_attestation":                              "beacon_attestation",
+		"/eth2/deadbeef/execution_payload/ssz_snappy":     utils.ExecutionPayloadBase,
+		"execution_payload":                               utils.ExecutionPayloadBase,
+		"/eth2/deadbeef/execution_payload_bid/ssz_snappy": "/eth2/deadbeef/execution_payload_bid/ssz_snappy",
 	}
 	for topic, result := range table {
 		require.Equal(t, result, utils.SimplifyTopic(topic))

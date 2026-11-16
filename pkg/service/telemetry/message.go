@@ -15,6 +15,10 @@ var (
 
 	badMsgToMum = uint64(0)
 	badMsgToCL  = uint64(0)
+
+	executionPayloadSkipped   *prometheus.CounterVec
+	executionPayloadReceived  *prometheus.CounterVec
+	executionPayloadSizeBytes prometheus.Histogram
 )
 
 func initMessageSizeMetrics() {
@@ -30,11 +34,50 @@ func initMessageSizeMetrics() {
 		"Size of received beacon block messages in bytes",
 		prometheus.ExponentialBuckets(64, 2, 16),
 	)
+	executionPayloadSkipped = commonmetrics.NewCounterVec(
+		"execution_payload_skipped_total",
+		subsystem,
+		"Execution payloads not published because they exceed the consensus budget. Not counted when mesh-to-CL propagation is off. direction is the destination. A skip ratio is skipped/(skipped+received)",
+		[]string{labelDirection},
+	)
+	executionPayloadReceived = commonmetrics.NewCounterVec(
+		"execution_payload_received_total",
+		subsystem,
+		"First accepted execution payload on each side, after dedup. direction is the side it arrived on",
+		[]string{labelDirection},
+	)
+	executionPayloadSizeBytes = commonmetrics.NewSimpleHistogram(
+		"execution_payload_size_bytes",
+		subsystem,
+		"Size of received execution payloads in bytes",
+		prometheus.ExponentialBuckets(64, 2, 16),
+	)
 }
 
 func ObserveBeaconBlockSize(sizeBytes int) {
 	if enabledMetrics {
 		beaconBlockSizeBytes.Observe(float64(sizeBytes))
+	}
+}
+
+// IncExecutionPayloadSkipped counts an execution payload that was not published.
+// direction is "mump2p" or "cl", the side the publish would have gone to.
+func IncExecutionPayloadSkipped(direction string) {
+	if enabledMetrics && executionPayloadSkipped != nil {
+		executionPayloadSkipped.WithLabelValues(direction).Inc()
+	}
+}
+
+// ObserveExecutionPayload records one arrival. direction is "mump2p" or "cl".
+func ObserveExecutionPayload(direction string, size int) {
+	if !enabledMetrics {
+		return
+	}
+	if executionPayloadReceived != nil {
+		executionPayloadReceived.WithLabelValues(direction).Inc()
+	}
+	if executionPayloadSizeBytes != nil {
+		executionPayloadSizeBytes.Observe(float64(size))
 	}
 }
 

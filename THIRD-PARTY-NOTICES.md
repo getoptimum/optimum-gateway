@@ -12,7 +12,7 @@ distributed with this binary.
 Attribution notices required by these licenses (Apache-2.0 §4 and the upstream
 `NOTICE` files it references) are reproduced in the accompanying `NOTICE` file.
 
-Total distributed third-party packages: 248
+Total distributed third-party packages: 247
 
 ## Summary
 
@@ -20,7 +20,7 @@ Total distributed third-party packages: 248
 | --- | --- |
 | MIT | 108 |
 | Apache-2.0 | 79 |
-| BSD-3-Clause | 45 |
+| BSD-3-Clause | 44 |
 | BSD-2-Clause | 6 |
 | ISC | 5 |
 | MPL-2.0 | 4 |
@@ -38,7 +38,7 @@ Total distributed third-party packages: 248
 - [github.com/Azure/azure-sdk-for-go/sdk/internal](https://github.com/Azure/azure-sdk-for-go/blob/sdk/internal/v1.12.0/sdk/internal/LICENSE.txt)
 - [github.com/AzureAD/microsoft-authentication-library-for-go/apps](https://github.com/AzureAD/microsoft-authentication-library-for-go/blob/v1.7.2/LICENSE)
 - [github.com/alecthomas/units](https://github.com/alecthomas/units/blob/0f3dac36c52b/COPYING)
-- [github.com/andybalholm/brotli](https://github.com/andybalholm/brotli/blob/v1.2.2/LICENSE)
+- [github.com/andybalholm/brotli](https://github.com/andybalholm/brotli/blob/v1.2.7/LICENSE)
 - [github.com/benbjohnson/clock](https://github.com/benbjohnson/clock/blob/v1.3.5/LICENSE)
 - [github.com/beorn7/perks/quantile](https://github.com/beorn7/perks/blob/v1.0.1/LICENSE)
 - [github.com/cespare/xxhash/v2](https://github.com/cespare/xxhash/blob/v2.3.0/LICENSE.txt)
@@ -67,7 +67,7 @@ Total distributed third-party packages: 248
 - [github.com/jellydator/ttlcache/v3](https://github.com/jellydator/ttlcache/blob/v3.4.0/LICENSE)
 - [github.com/jpillora/backoff](https://github.com/jpillora/backoff/blob/v1.0.0/LICENSE)
 - [github.com/json-iterator/go](https://github.com/json-iterator/go/blob/v1.1.12/LICENSE)
-- [github.com/klauspost/compress/zstd/internal/xxhash](https://github.com/klauspost/compress/blob/v1.20.1/zstd/internal/xxhash/LICENSE.txt)
+- [github.com/klauspost/compress/zstd/internal/xxhash](https://github.com/klauspost/compress/blob/v1.20.2/zstd/internal/xxhash/LICENSE.txt)
 - [github.com/klauspost/cpuid/v2](https://github.com/klauspost/cpuid/blob/v2.3.0/LICENSE)
 - [github.com/knadh/koanf/maps](https://github.com/knadh/koanf/blob/maps/v0.1.2/maps/LICENSE)
 - [github.com/knadh/koanf/parsers/yaml](https://github.com/knadh/koanf/blob/parsers/yaml/v1.1.0/parsers/yaml/LICENSE)
@@ -89,7 +89,7 @@ Total distributed third-party packages: 248
 - [github.com/libp2p/go-libp2p-routing-helpers/tracing](https://github.com/libp2p/go-libp2p-routing-helpers/blob/v0.7.5/LICENSE)
 - [github.com/libp2p/go-mplex](https://github.com/libp2p/go-mplex/blob/v0.7.0/LICENSE)
 - [github.com/libp2p/go-msgio](https://github.com/libp2p/go-msgio/blob/v0.3.0/LICENSE)
-- [github.com/mattn/go-colorable](https://github.com/mattn/go-colorable/blob/v0.1.15/LICENSE)
+- [github.com/mattn/go-colorable](https://github.com/mattn/go-colorable/blob/v0.1.16/LICENSE)
 - [github.com/mattn/go-isatty](https://github.com/mattn/go-isatty/blob/v0.0.22/LICENSE)
 - [github.com/mitchellh/copystructure](https://github.com/mitchellh/copystructure/blob/v1.2.0/LICENSE)
 - [github.com/mitchellh/mapstructure](https://github.com/mitchellh/mapstructure/blob/v1.5.0/LICENSE)
@@ -170,7 +170,7 @@ Total distributed third-party packages: 248
 - [github.com/googleapis/enterprise-certificate-proxy/client](https://github.com/googleapis/enterprise-certificate-proxy/blob/v0.3.20/LICENSE)
 - [github.com/ipfs/boxo](https://github.com/ipfs/boxo/blob/v0.30.0/LICENSE.md)
 - [github.com/jackpal/go-nat-pmp](https://github.com/jackpal/go-nat-pmp/blob/v1.0.2/LICENSE)
-- [github.com/klauspost/compress](https://github.com/klauspost/compress/blob/v1.20.1/LICENSE)
+- [github.com/klauspost/compress](https://github.com/klauspost/compress/blob/v1.20.2/LICENSE)
 - [github.com/kylelemons/godebug](https://github.com/kylelemons/godebug/blob/v1.1.0/LICENSE)
 - [github.com/libp2p/go-libp2p-pubsub](https://github.com/libp2p/go-libp2p-pubsub/blob/v0.17.0/LICENSE-APACHE)
 - [github.com/libp2p/go-libp2p/p2p/net/nat/internal/nat](https://github.com/libp2p/go-libp2p/blob/v0.48.0/p2p/net/nat/internal/nat/LICENSE)
@@ -227,7 +227,6 @@ Total distributed third-party packages: 248
 ## BSD-3-Clause
 
 - [filippo.io/bigmod](https://github.com/FiloSottile/bigmod/blob/f8a47775ebe5/LICENSE)
-- [github.com/andybalholm/brotli/flate](https://github.com/andybalholm/brotli/blob/v1.2.2/flate/LICENSE)
 - [github.com/aws/aws-sdk-go-v2/internal/sync/singleflight](https://github.com/aws/aws-sdk-go-v2/blob/v1.43.4/internal/sync/singleflight/LICENSE)
 - [github.com/aws/smithy-go/internal/sync/singleflight](https://github.com/aws/smithy-go/blob/v1.27.6/internal/sync/singleflight/LICENSE)
 - [github.com/dunglas/httpsfv](https://github.com/dunglas/httpsfv/blob/v1.1.0/LICENSE)
@@ -242,9 +241,9 @@ Total distributed third-party packages: 248
 - [github.com/googleapis/gax-go/v2](https://github.com/googleapis/gax-go/blob/v2.24.0/v2/LICENSE)
 - [github.com/grafana/regexp](https://github.com/grafana/regexp/blob/f7b3be9d1853/LICENSE)
 - [github.com/hashicorp/golang-lru/v2/simplelru](https://github.com/hashicorp/golang-lru/blob/v2.0.7/simplelru/LICENSE_list)
-- [github.com/klauspost/compress/internal/snapref](https://github.com/klauspost/compress/blob/v1.20.1/internal/snapref/LICENSE)
-- [github.com/klauspost/compress/s2](https://github.com/klauspost/compress/blob/v1.20.1/s2/LICENSE)
-- [github.com/klauspost/compress/snappy](https://github.com/klauspost/compress/blob/v1.20.1/snappy/LICENSE)
+- [github.com/klauspost/compress/internal/snapref](https://github.com/klauspost/compress/blob/v1.20.2/internal/snapref/LICENSE)
+- [github.com/klauspost/compress/s2](https://github.com/klauspost/compress/blob/v1.20.2/s2/LICENSE)
+- [github.com/klauspost/compress/snappy](https://github.com/klauspost/compress/blob/v1.20.2/snappy/LICENSE)
 - [github.com/libp2p/go-netroute](https://github.com/libp2p/go-netroute/blob/v0.4.0/LICENSE)
 - [github.com/miekg/dns](https://github.com/miekg/dns/blob/v1.1.72/LICENSE)
 - [github.com/multiformats/go-base32](https://github.com/multiformats/go-base32/blob/v0.1.0/LICENSE)
@@ -255,14 +254,14 @@ Total distributed third-party packages: 248
 - [github.com/spf13/pflag](https://github.com/spf13/pflag/blob/v1.0.10/LICENSE)
 - [github.com/stretchr/testify/internal/difflib](https://github.com/stretchr/testify/blob/v1.12.1/internal/difflib/LICENSE)
 - [github.com/wlynxg/anet](https://github.com/wlynxg/anet/blob/v0.0.5/LICENSE)
-- [golang.org/x/crypto](https://cs.opensource.google/go/x/crypto/+/v0.57.0:LICENSE)
+- [golang.org/x/crypto](https://cs.opensource.google/go/x/crypto/+/v0.58.0:LICENSE)
 - [golang.org/x/exp](https://cs.opensource.google/go/x/exp/+/c48552f4:LICENSE)
-- [golang.org/x/net](https://cs.opensource.google/go/x/net/+/v0.59.0:LICENSE)
+- [golang.org/x/net](https://cs.opensource.google/go/x/net/+/v0.62.0:LICENSE)
 - [golang.org/x/oauth2](https://cs.opensource.google/go/x/oauth2/+/v0.37.0:LICENSE)
-- [golang.org/x/sync](https://cs.opensource.google/go/x/sync/+/v0.23.0:LICENSE)
-- [golang.org/x/sys](https://cs.opensource.google/go/x/sys/+/v0.48.0:LICENSE)
-- [golang.org/x/term](https://cs.opensource.google/go/x/term/+/v0.46.0:LICENSE)
-- [golang.org/x/text](https://cs.opensource.google/go/x/text/+/v0.42.0:LICENSE)
+- [golang.org/x/sync](https://cs.opensource.google/go/x/sync/+/v0.24.0:LICENSE)
+- [golang.org/x/sys](https://cs.opensource.google/go/x/sys/+/v0.49.0:LICENSE)
+- [golang.org/x/term](https://cs.opensource.google/go/x/term/+/v0.47.0:LICENSE)
+- [golang.org/x/text](https://cs.opensource.google/go/x/text/+/v0.43.0:LICENSE)
 - [golang.org/x/time/rate](https://cs.opensource.google/go/x/time/+/v0.15.0:LICENSE)
 - [gonum.org/v1/gonum/mathext](https://github.com/gonum/gonum/blob/v0.17.0/LICENSE)
 - [google.golang.org/api](https://github.com/googleapis/google-api-go-client/blob/v0.293.0/LICENSE)

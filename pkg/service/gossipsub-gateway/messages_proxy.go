@@ -29,6 +29,8 @@ func (s *Service) handleMessagesFromCL() {
 		switch {
 		case meta.IsBeaconBlock():
 			s.processCLBeaconBlock(l, msg)
+		case meta.IsExecutionPayload():
+			s.processCLExecutionPayload(l, msg)
 		case meta.IsAttestation():
 			s.processCLAttestation(l, msg, meta)
 		}
@@ -124,6 +126,8 @@ func (s *Service) processMumP2PMessage(l logger.AppLogger, msg *commonentities.P
 	switch {
 	case meta.IsBeaconBlock():
 		s.processMumP2PBeaconBlock(l, msg, slot)
+	case meta.IsExecutionPayload():
+		s.processMumP2PExecutionPayload(l, msg)
 	case msg.Topic == mumP2PAggregatedMessagesTopic:
 		s.handleAggregatedMessages(l, msg)
 	}
