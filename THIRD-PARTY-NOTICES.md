@@ -244,7 +244,7 @@ Total distributed third-party packages: 236
 - [github.com/stretchr/testify/internal/difflib](https://github.com/stretchr/testify/blob/v1.12.1/internal/difflib/LICENSE)
 - [github.com/wlynxg/anet](https://github.com/wlynxg/anet/blob/v0.0.5/LICENSE)
 - [golang.org/x/crypto](https://cs.opensource.google/go/x/crypto/+/v0.58.0:LICENSE)
-- [golang.org/x/exp](https://cs.opensource.google/go/x/exp/+/74f9aab9:LICENSE)
+- [golang.org/x/exp](https://cs.opensource.google/go/x/exp/+/c48552f4:LICENSE)
 - [golang.org/x/net](https://cs.opensource.google/go/x/net/+/v0.62.0:LICENSE)
 - [golang.org/x/oauth2](https://cs.opensource.google/go/x/oauth2/+/v0.37.0:LICENSE)
 - [golang.org/x/sync/errgroup](https://cs.opensource.google/go/x/sync/+/v0.24.0:LICENSE)
