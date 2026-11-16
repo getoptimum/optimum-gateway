@@ -84,7 +84,7 @@ This is fully automatic — no extra config. Until the first successful validato
 
 ## Remote Push
 
-Remote push streams your gateway's logs to Optimum's Loki and metrics to Optimum's Mimir, giving the Optimum team visibility to help support you. Both `telemetry_enable` and `remote_push_enable` must be `true`. v1.3.2 uses standard **Prometheus remote write** for metrics push — same setup as v1.1.1.
+Remote push streams your gateway's logs to Optimum's Loki and metrics to Optimum's Mimir, giving the Optimum team visibility to help support you. Both `telemetry_enable` and `remote_push_enable` must be `true`. v1.3.5 uses standard **Prometheus remote write** for metrics push, the same setup as v1.1.1.
 
 ```yaml
 telemetry_enable: true
@@ -109,14 +109,16 @@ The gateway receives automatic config updates from bootstrap.
 | `join_key` | `OPT_JOIN_KEY` | *(empty)* | Org-wide join key (`ojk_live_...`). **Set via env, not YAML.** Mutually exclusive with `api_key`. See [Gateway Self-Enrollment](07_gateway_self_enrollment.md) |
 | `enroll_cred_dir` | `OPT_ENROLL_CRED_DIR` | `identity_mump2p_dir` | Enrollment credential directory (`enrollment.json`). **Must be persistent** |
 | `gateway_id` | `OPT_GATEWAY_ID` | `dev-gateway` | Join-key path only: enrollment label at first boot (unique per host). Overwritten by JWT `sub` after mint. Ignored for API-key path |
+| `chain` | `OPT_DEV_CHAIN` | *(empty)* | Auth-off development only: `hoodi`, `mainnet`, or a numeric chain ID. Ignored when a credential is set |
 | `gateway_cluster_id` | `OPT_GATEWAY_CLUSTER_ID` | *(required)* | Cluster ID assigned by Optimum during onboarding |
 | `agent_lib_p2p_port` | `OPT_AGENT_LIB_P2P_PORT` | 33212 | CL clients connect here (inbound) |
 | `agent_mump2p_port` | `OPT_AGENT_MUMP2P_PORT` | 33213 | mump2p agent port (inbound) |
-| `telemetry_enable` | `OPT_ENABLE_TELEMETRY` | false | Enable metrics / health endpoint |
+| `telemetry_enable` | `OPT_ENABLE_TELEMETRY` | false | Enable the `/metrics` endpoint. `/health` and `/api/v1/self_info` stay available when this is false |
 | `telemetry_port` | `OPT_TELEMETRY_PORT` | 48123 | Telemetry HTTP port (`/health`, `/metrics`, `/api/v1/self_info`) |
+| `telemetry_addr` | `OPT_TELEMETRY_ADDR` | *(empty)* | IP (or `localhost`) the telemetry server binds, without a port. Empty binds all IPv4 interfaces; `::` binds IPv4 and IPv6 (needs IPv6 enabled on the host). Set `127.0.0.1` only with `--network host` or `hostNetwork`; in a bridged container it breaks the `-p` publish |
 | `identity_libp2p_dir` | `OPT_IDENTITY_LIBP2P_DIR` | /tmp/libp2p | libp2p identity dir — **persist as a volume** |
 | `identity_mump2p_dir` | `OPT_IDENTITY_MUMP2P_DIR` | /tmp/mump2p | mump2p identity dir — **persist as a volume** |
-| `direct_cl_peers` | `OPT_DIRECT_CL_PEERS` | *(empty)* | CL node multiaddrs for auto-reconnect; when set, only listed peer IDs may stay connected |
+| `direct_cl_peers` | `OPT_DIRECT_CL_PEERS` | *(empty)* | CL node multiaddrs for auto-reconnect. When set, only listed peer IDs may stay connected, and a listed peer keeps its address after a disconnect |
 | `log_level` | `OPT_LOG_LEVEL` | debug | `debug` / `info` |
 | `remote_push_enable` | `OPT_REMOTE_PUSH_ENABLE` | false | Optional Loki/Mimir push (requires `telemetry_enable: true`) |
 | `stream_enable` | `OPT_STREAM_ENABLE` | false | Enable the consumer block stream (WebSocket + gRPC) |

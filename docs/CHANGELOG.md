@@ -1,21 +1,36 @@
 # Optimum Gateway - Version History & Changelog
 
-**Latest Release:** [v1.3.4](./versions/v1.3.4/release_notes.md)  
-**Latest Docs:** [v1.3.4 Documentation](./versions/v1.3.4/index.md)
+**Latest Release:** [v1.3.5](./versions/v1.3.5/release_notes.md)  
+**Latest Docs:** [v1.3.5 Documentation](./versions/v1.3.5/index.md)
 
 ## Supported Versions
 
 | Version | Status                          | Docker Image                |
 | ------- | ------------------------------- | --------------------------- |
-| v1.3.4  | CURRENT                         | `getoptimum/gateway:v1.3.4` |
-| v1.3.3  | supported / upgrade recommended | `getoptimum/gateway:v1.3.3` |
-| v1.3.2  | supported / upgrade recommended | `getoptimum/gateway:v1.3.2` |
+| v1.3.5  | CURRENT                         | `getoptimum/gateway:v1.3.5` |
+| v1.3.4  | supported / upgrade recommended | `getoptimum/gateway:v1.3.4` |
 
-## v1.3.4 (Current)
+## v1.3.5 (Current)
+
+**Docker Image:** `getoptimum/gateway:v1.3.5`
+
+v1.3.5 is the current release. v1.3.2 and v1.3.3 are unsupported because they contained security vulnerabilities. v1.3.4 remains supported; upgrade it for [CVE-2026-78661](https://www.cve.org/CVERecord?id=CVE-2026-78661). No partner configuration change.
+
+### Highlights
+
+* **HTML-parser denial of service ([CVE-2026-78661](https://www.cve.org/CVERecord?id=CVE-2026-78661)).** The image is built with `golang.org/x/net` v0.62.0. v1.3.4 carries v0.60.0. The gateway does not parse HTML; the bump clears the advisory from the image.
+* **Oversized consensus requests are rejected before they are allocated.** Each request/response type is capped at its own SSZ size (8 bytes for ping and goodbye, 16 to 25 for metadata, 84 or 92 for status), and an idle inbound exchange is closed after 10 seconds.
+* **Consensus clients stop asking the gateway for data columns.** `metadata/3` advertises custody group count 4, and `status/2` sets `earliest_available_slot` to 2^53−1. `status/1` stays an echo. PeerDAS clients that honor the field keep the peer and skip column requests.
+* **Ping and metadata both use sequence number 1.** v1.3.4 echoed the requester on ping and advertised sequence number 0. A peer listed in `direct_cl_peers` keeps its address after a disconnect.
+* **CL disconnect telemetry.** `mump2p_gateway_cl_peer_disconnected_by_client_total{peer_client}` and `mump2p_gateway_cl_peer_goodbye_total{peer_client,reason}`.
+
+[Full release notes](./versions/v1.3.5/release_notes.md) · [Documentation](./versions/v1.3.5/index.md)
+
+## v1.3.4 (Supported)
 
 **Docker Image:** `getoptimum/gateway:v1.3.4`
 
-v1.3.4 is the current release. v1.3.3 and v1.3.2 remain supported; if you run with host networking, upgrade and take the `48123` action in the release notes ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)). Upgrading v1.3.2 is recommended because it is also affected by [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787). CL peering is unchanged.
+v1.3.4 remains supported. Upgrade to v1.3.5 for [CVE-2026-78661](https://www.cve.org/CVERecord?id=CVE-2026-78661). If you run with host networking, also take the `48123` action in the release notes ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)).
 
 ### Highlights
 
@@ -27,64 +42,42 @@ v1.3.4 is the current release. v1.3.3 and v1.3.2 remain supported; if you run wi
 
 [Full release notes](./versions/v1.3.4/release_notes.md) · [Documentation](./versions/v1.3.4/index.md)
 
-## v1.3.3 (Supported)
+## v1.3.3 (Unsupported)
 
-**Docker Image:** `getoptimum/gateway:v1.3.3`
+**v1.3.3 is unsupported.** Docs for this release have been removed. It contained security vulnerabilities. Partners still on v1.3.3 must upgrade to **[v1.3.5](./versions/v1.3.5/release_notes.md)** (`getoptimum/gateway:v1.3.5`).
 
-v1.3.3 remains supported; if you run with host networking, upgrade to v1.3.4 and set `telemetry_addr: 127.0.0.1`, or with Helm move to chart 0.5.0 and gateway v1.3.4 together ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)). Networking and CL peering are unchanged: same ports and firewall rules.
+## v1.3.2 (Unsupported)
 
-### Highlights
-
-* **Certificate-trust fix (medium severity).** The gateway is built with Go 1.27.3, which stops trusting a set of compromised certificate-authority intermediates (CVE-2026-111943). HTTPS calls from the gateway reject those chains. No partner configuration change.
-* **Traffic stays on the current fork until your CL uses the next one.** An early subscription to the next fork no longer moves attestations onto that topic. The gateway follows once a message arrives on it.
-* **Turning propagation off stops attestations too.** Attestations from mump2p are no longer forwarded to your CL when propagation is disabled, the same as blocks.
-* **Health works with telemetry off.** `GET /health` answers when the metrics exporter is disabled, and `mump2p_gateway_last_block_received_timestamp` is set when a block arrives.
-* **Large beacon blocks are accepted.** The CL connection accepts a block up to the compressed size the gateway can decode.
-* **Memory-exhaustion fix for aggregated attestations (medium severity, [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787)).** A pack with any subnet outside 0–63 is rejected whole. v1.3.2 and earlier are affected.
-* **The access token refreshes about every 15 minutes.** A change to gateway type or validator set shows up well before the six-hour token expires.
-
-[Full release notes](./versions/v1.3.3/release_notes.md) · [Documentation](./versions/v1.3.3/index.md)
-
-## v1.3.2 (Supported)
-
-**Docker Image:** `getoptimum/gateway:v1.3.2`
-
-v1.3.2 remains supported, but upgrading is recommended because it is affected by [GHSA-rcrq-vcj2-m787](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-rcrq-vcj2-m787). If you run with host networking, upgrade to v1.3.4 and set `telemetry_addr: 127.0.0.1`, or with Helm move to chart 0.5.0 and gateway v1.3.4 together ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)). Networking and CL peering are unchanged: same ports and firewall rules.
-
-### Highlights
-
-* **Beacon blocks propagated on every slot.** Partner gateways now propagate beacon blocks over mump2p on every slot. On v1.3.0 and v1.3.1 some slots were skipped. No partner configuration change.
-* **Gateway self-enrollment.** Fleet operators can use one org-wide join key (`ojk_`) instead of one API key per host. See [Gateway Self-Enrollment](./versions/v1.3.2/07_gateway_self_enrollment.md).
-* **Legacy API keys unchanged.** The `ogw_` quick-start path is still the default for single-gateway deployments.
-
-[Full release notes](./versions/v1.3.2/release_notes.md) · [Documentation](./versions/v1.3.2/index.md)
+**v1.3.2 is unsupported.** Docs for this release have been removed. It contained security vulnerabilities. Partners still on v1.3.2 must upgrade to **[v1.3.5](./versions/v1.3.5/release_notes.md)** (`getoptimum/gateway:v1.3.5`).
 
 ## v1.3.1 (Deprecated)
 
-**v1.3.1 is deprecated.** Docs for this release have been removed. Partners still on v1.3.1 must upgrade to **[v1.3.4](./versions/v1.3.4/release_notes.md)** (`getoptimum/gateway:v1.3.4`). v1.3.3 and v1.3.2 remain supported.
+**v1.3.1 is deprecated.** Docs for this release have been removed. Partners still on v1.3.1 must upgrade to **[v1.3.5](./versions/v1.3.5/release_notes.md)** (`getoptimum/gateway:v1.3.5`). v1.3.4 remains supported.
 
 ## v1.3.0 (Deprecated)
 
-**v1.3.0 is deprecated.** Docs for this release have been removed. Partners still on v1.3.0 must upgrade to **[v1.3.4](./versions/v1.3.4/release_notes.md)** (`getoptimum/gateway:v1.3.4`). v1.3.3 and v1.3.2 remain supported.
+**v1.3.0 is deprecated.** Docs for this release have been removed. Partners still on v1.3.0 must upgrade to **[v1.3.5](./versions/v1.3.5/release_notes.md)** (`getoptimum/gateway:v1.3.5`). v1.3.4 remains supported.
 
 ## v1.2.0 (Deprecated)
 
-**v1.2.0 is deprecated.** Docs for this release have been removed. Partners still on v1.2.0 must upgrade to **[v1.3.4](./versions/v1.3.4/release_notes.md)** (`getoptimum/gateway:v1.3.4`). v1.3.3 and v1.3.2 remain supported.
+**v1.2.0 is deprecated.** Docs for this release have been removed. Partners still on v1.2.0 must upgrade to **[v1.3.5](./versions/v1.3.5/release_notes.md)** (`getoptimum/gateway:v1.3.5`). v1.3.4 remains supported.
 
 ## v1.1.1 (Deprecated)
 
-**v1.1.1 is deprecated.** Docs for this release have been removed. Partners still on v1.1.1 must upgrade to **[v1.3.4](./versions/v1.3.4/release_notes.md)** (`getoptimum/gateway:v1.3.4`). v1.3.3 and v1.3.2 remain supported.
+**v1.1.1 is deprecated.** Docs for this release have been removed. Partners still on v1.1.1 must upgrade to **[v1.3.5](./versions/v1.3.5/release_notes.md)** (`getoptimum/gateway:v1.3.5`). v1.3.4 remains supported.
 
 ## v1.0.2 (Deprecated)
 
-**v1.0.2 is deprecated.** Docs for this release have been removed. Partners still on v1.0.2 must upgrade to **[v1.3.4](./versions/v1.3.4/release_notes.md)** (`getoptimum/gateway:v1.3.4`). v1.3.3 and v1.3.2 remain supported.
+**v1.0.2 is deprecated.** Docs for this release have been removed. Partners still on v1.0.2 must upgrade to **[v1.3.5](./versions/v1.3.5/release_notes.md)** (`getoptimum/gateway:v1.3.5`). v1.3.4 remains supported.
 
 ## Important: Deprecated Versions
 
-**The following versions are deprecated and no longer supported. Upgrade to v1.3.4. v1.3.3 and v1.3.2 remain supported.**
+**The following versions are deprecated and no longer supported. Upgrade to v1.3.5. v1.3.2 and v1.3.3 are unsupported because they contained security vulnerabilities. v1.3.4 remains supported.**
 
 | Version     | Status     |
 | ----------- | ---------- |
+| v1.3.3      | DEPRECATED |
+| v1.3.2      | DEPRECATED |
 | v1.3.1      | DEPRECATED |
 | v1.3.0      | DEPRECATED |
 | v1.2.0      | DEPRECATED |
@@ -110,7 +103,7 @@ recreate the container:
 
 ```bash
 export OPT_API_KEY=ogw_live_xxx
-docker pull getoptimum/gateway:v1.3.4
+docker pull getoptimum/gateway:v1.3.5
 docker rm -f optimum-gateway
 docker run --name optimum-gateway --rm \
   -p 33212:33212/tcp \
@@ -120,7 +113,7 @@ docker run --name optimum-gateway --rm \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data/libp2p:/tmp/libp2p \
   -v $(pwd)/data/mump2p:/tmp/mump2p \
-  getoptimum/gateway:v1.3.4 \
+  getoptimum/gateway:v1.3.5 \
   -config=/app/config/app_conf.yml
 ```
 
