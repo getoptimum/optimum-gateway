@@ -242,12 +242,12 @@ func TestInitRuntime_GatewayIDFromSub(t *testing.T) {
 	}
 	log := logger.NewAppSLogger(logger.Debug)
 
-	require.NoError(t, cfg.InitRuntime(t.Context(), log, "560048", "ag_test_sub", "hermes", "org-123"))
+	require.NoError(t, cfg.InitRuntime(t.Context(), log, "560048", "ag_test_sub", "hermes", "org-123", nil))
 	require.Equal(t, "ag_test_sub", cfg.GatewayID)
 	require.Equal(t, "hermes", cfg.GatewayType)
 	require.Equal(t, "org-123", cfg.OrgID)
 
-	require.NoError(t, cfg.InitRuntime(t.Context(), log, "hoodi", "", "", ""))
+	require.NoError(t, cfg.InitRuntime(t.Context(), log, "hoodi", "", "", "", nil))
 	require.Equal(t, "ag_test_sub", cfg.GatewayID, "empty sub must not overwrite existing gateway id")
 	require.Equal(t, "hermes", cfg.GatewayType, "empty type must not overwrite existing gateway type")
 }
@@ -287,12 +287,12 @@ func TestInitRuntime_DevChainWhenClaimEmpty(t *testing.T) {
 			Chain:            "hoodi",
 			GatewayClusterID: "optimum_hoodi_v0_3",
 		}
-		require.NoError(t, cfg.InitRuntime(t.Context(), log, "", "", "", ""))
+		require.NoError(t, cfg.InitRuntime(t.Context(), log, "", "", "", "", nil))
 	})
 
 	t.Run("empty claim and empty chain still fail", func(t *testing.T) {
 		cfg := &config.AppConfig{GatewayClusterID: "optimum_hoodi_v0_3"}
-		err := cfg.InitRuntime(t.Context(), log, "  ", "", "", "")
+		err := cfg.InitRuntime(t.Context(), log, "  ", "", "", "", nil)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "empty chain ID")
 	})
@@ -302,7 +302,7 @@ func TestInitRuntime_DevChainWhenClaimEmpty(t *testing.T) {
 			Chain:            "not-a-chain",
 			GatewayClusterID: "optimum_hoodi_v0_3",
 		}
-		require.NoError(t, cfg.InitRuntime(t.Context(), log, "560048", "", "", ""))
+		require.NoError(t, cfg.InitRuntime(t.Context(), log, "560048", "", "", "", nil))
 	})
 
 	// Auth on: a chain / OPT_DEV_CHAIN value must not replace the minted claim,
@@ -335,7 +335,7 @@ func TestInitRuntime_DevChainWhenClaimEmpty(t *testing.T) {
 				chainID = c.ChainID
 			}
 			require.Equal(t, "1", chainID)
-			require.NoError(t, cfg.InitRuntime(t.Context(), log, chainID, "", "", ""))
+			require.NoError(t, cfg.InitRuntime(t.Context(), log, chainID, "", "", "", nil))
 			require.Equal(t, override, cfg.Chain)
 
 			srv, err := forks.NewService(t.Context(), cfg, log, mgr)
