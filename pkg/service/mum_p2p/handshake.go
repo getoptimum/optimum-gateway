@@ -39,7 +39,7 @@ func (n *Node) RegisterHandshakeMessageSender(clusterID string) {
 			ConnectedF: func(_ network.Network, conn network.Conn) {
 				go n.handleNewConnection(clusterID, conn)
 			},
-			DisconnectedF: func(_ network.Network, conn network.Conn) {
+			DisconnectedF: func(netw network.Network, conn network.Conn) {
 				n.log.With(
 					logger.WithString("flow", "notify_disconnected"),
 					logger.WithPeerID(conn.RemotePeer()),
@@ -47,6 +47,7 @@ func (n *Node) RegisterHandshakeMessageSender(clusterID string) {
 					logger.WithString("direction", conn.Stat().Direction.String()),
 					logger.WithString("opened", conn.Stat().Opened.Format(time.DateTime)),
 				).Debug("disconnected from peer")
+				n.revokeAdmissionIfPeerGone(netw, conn.RemotePeer())
 			},
 		},
 	)
@@ -217,6 +218,14 @@ func (n *Node) disconnectPeer(peerID peer.ID) {
 
 func (n *Node) revokePeerAdmission(peerID peer.ID) {
 	n.peersApprovedMap.Delete(peerID)
+}
+
+// revokeAdmissionIfPeerGone drops mesh admission only when no connection remains.
+// The handshake cache stays, so a reconnect inside the TTL is re-admitted.
+func (n *Node) revokeAdmissionIfPeerGone(netw network.Network, peerID peer.ID) {
+	if netw.Connectedness(peerID) == network.NotConnected {
+		n.revokePeerAdmission(peerID)
+	}
 }
 
 func setRPCStreamDeadlines(log logger.AppLogger, stream network.Stream) {

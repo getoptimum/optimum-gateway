@@ -33,8 +33,10 @@ const (
 	DefaultAttestationPublishAfterMs int64   = 4000
 	DefaultAttestationPublishCapMs   int64   = 8000
 	DefaultAttestationMaxSlotAge     uint64  = 0
-	dynamicConfigFetchTimeout                = 30 * time.Second
 )
+
+// dynamicConfigFetchTimeout is how long startup waits for the first dynamic-config row.
+var dynamicConfigFetchTimeout = 30 * time.Second
 
 // AppConfig holds all the configuration for the gateway service
 type AppConfig struct {
