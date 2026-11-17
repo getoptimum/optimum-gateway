@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/adaptor"
 	"github.com/stretchr/testify/require"
 
+	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
 	commonmaps "github.com/getoptimum/optimum-common/pkg/maps"
 	"github.com/getoptimum/optimum-common/pkg/syncx"
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
@@ -42,6 +44,7 @@ type LocalBootstrapServer struct {
 	registerReqs       chan RegisterGatewayRequest
 	exposeReqs         chan ExposeNodesRequest
 	latencyReqs        chan BlockLatencyRequest
+	latencyStatus      *atomic.Int32 // 0 => success; otherwise HTTP status to return for block-latency posts
 	srv                *httptest.Server
 }
 
@@ -59,6 +62,7 @@ func newLocalBootstrapServer(t *testing.T, rig *AuthTestRig) *LocalBootstrapServ
 	registerReqs := make(chan RegisterGatewayRequest, 32)
 	exposeReqs := make(chan ExposeNodesRequest, 32)
 	latencyReqs := make(chan BlockLatencyRequest, 32)
+	latencyStatus := &atomic.Int32{}
 	app := fiber.New()
 	app.Get(utils.BootstrapExposeNodesPath, func(c fiber.Ctx) error {
 		select {
@@ -83,29 +87,57 @@ func newLocalBootstrapServer(t *testing.T, rig *AuthTestRig) *LocalBootstrapServ
 		messages.Store(p["gateway_id"], p)
 		return nil
 	})
+	// The gateway refuses to start mump2p until this row is fetched. Echo the
+	// requested service_version so the startup check matches the test binary.
+	app.Get("/api/v1/:chain/:cluster/config", func(c fiber.Ctx) error {
+		return c.JSON(&commonentities.DynamicConfig{
+			ChainID:                  c.Params("chain"),
+			ClusterID:                c.Params("cluster"),
+			ServiceVersion:           c.Query("service_version"),
+			PropagationEnabled:       true,
+			ExcludeSelfMessages:      true,
+			RandomMessageSize:        512,
+			ShardFactor:              4,
+			PublisherShardMultiplier: 1.5,
+			ForwardShardThreshold:    0.75,
+			MeshDegreeMin:            12,
+			MeshDegreeTarget:         16,
+			MeshDegreeMax:            24,
+			MaxShardSize:             4096,
+			RLNCK:                    16,
+			RedundancyFraction:       1.5,
+			RelayCreditMultiplier:    5,
+			HeartbeatMS:              250,
+			UpdatedAt:                time.Now().UTC(),
+		})
+	})
 	app.Get(utils.BootstrapForkDigestPath, func(c fiber.Ctx) error {
-		if err := requireAuth(rig, c); err != nil {
-			return err
+		if rig != nil {
+			require.True(t, c.HasHeader("Authorization"))
 		}
 		return c.JSON(forksResponse.LoadAll())
 	})
 	app.Get("/api/v2/:chain/accelerate_slots", func(c fiber.Ctx) error {
-		if err := requireAuth(rig, c); err != nil {
-			return err
+		if rig != nil {
+			require.True(t, c.HasHeader("Authorization"))
 		}
 		return c.JSON(accelerateResponse.LoadAll())
 	})
-	app.Post(utils.BootstrapHandleBlockLatencyV2, func(c fiber.Ctx) error {
-		var payload entities.LatencyComparator
-		require.NoError(t, json.Unmarshal(c.Body(), &payload))
-		req := BlockLatencyRequest{
-			Authorization: strings.Clone(c.Get("Authorization")),
-			Payload:       payload,
+	app.Post(utils.BootstrapHandleBlockLatencyBulkV2, func(c fiber.Ctx) error {
+		var payloads []entities.LatencyComparator
+		require.NoError(t, json.Unmarshal(c.Body(), &payloads))
+		for i := range payloads {
+			select {
+			case latencyReqs <- BlockLatencyRequest{
+				Authorization: strings.Clone(c.Get("Authorization")),
+				Payload:       payloads[i],
+			}:
+			default:
+				// Keep latency capture best-effort so unrelated tests never block on this test stub.
+			}
 		}
-		select {
-		case latencyReqs <- req:
-		default:
-			// Keep latency capture best-effort so unrelated tests never block on this test stub.
+		if code := latencyStatus.Load(); code != 0 {
+			return c.SendStatus(int(code))
 		}
 		return nil
 	})
@@ -122,15 +154,14 @@ func newLocalBootstrapServer(t *testing.T, rig *AuthTestRig) *LocalBootstrapServ
 		registerReqs:       registerReqs,
 		exposeReqs:         exposeReqs,
 		latencyReqs:        latencyReqs,
+		latencyStatus:      latencyStatus,
 	}
 }
 
-// Fiber handlers cannot require.FailNow; return 401 instead.
-func requireAuth(rig *AuthTestRig, c fiber.Ctx) error {
-	if rig == nil || c.HasHeader("Authorization") {
-		return nil
-	}
-	return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "missing Authorization header"})
+// SetBlockLatencyStatus makes the block-latency endpoint respond with the given
+// HTTP status. Use 0 to restore success (200). Safe to call concurrently.
+func (m *LocalBootstrapServer) SetBlockLatencyStatus(code int32) {
+	m.latencyStatus.Store(code)
 }
 
 func mapToURLValues(src map[string]string) url.Values {

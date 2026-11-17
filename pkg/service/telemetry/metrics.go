@@ -15,6 +15,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	dto "github.com/prometheus/client_model/go"
 
+	protocoltelemetry "github.com/getoptimum/mump2p-protocol/pkg/telemetry"
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	commonnet "github.com/getoptimum/optimum-common/pkg/net"
 	commonmetrics "github.com/getoptimum/optimum-common/pkg/telemetry"
@@ -53,12 +54,21 @@ const (
 	scrapePushTimeout = 5 * time.Second
 )
 
-// MetricsGatherer returns the gatherer used for /metrics, including remote-write when active.
+// MetricsGatherer returns the gatherer used for /metrics, including remote-write
+// when active. Protocol series are on CustomRegistry: InitMetrics calls
+// SetRegisterer before the node creates them.
 func MetricsGatherer() prometheus.Gatherer {
-	if r := mimirRemoteRegistry(); r != nil {
-		return prometheus.Gatherers{CustomRegistry, r}
+	parts := make(prometheus.Gatherers, 0, 2)
+	if CustomRegistry != nil {
+		parts = append(parts, CustomRegistry)
 	}
-	return CustomRegistry
+	if r := mimirRemoteRegistry(); r != nil {
+		parts = append(parts, r)
+	}
+	if len(parts) == 1 {
+		return parts[0]
+	}
+	return parts
 }
 
 // HTTPMetricsGatherer re-resolves MetricsGatherer on each scrape so async remote-write metrics are included.
@@ -109,6 +119,9 @@ func InitMetrics(ctx context.Context, log logger.AppLogger, cfg *config.AppConfi
 		}
 		maps.Copy(baseLabels, cfg.MetaLabels)
 		labeledRegistry = prometheus.WrapRegistererWith(baseLabels, CustomRegistry)
+		// Before NewMetrics. The protocol series then carry the gateway labels
+		// and are scraped with the rest of CustomRegistry.
+		protocoltelemetry.SetRegisterer(labeledRegistry)
 		labeledRegistry.MustRegister(
 			collectors.NewGoCollector(),
 			collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
@@ -170,6 +183,8 @@ func InitMetricsWithRegistry(log logger.AppLogger, pairedWith string) {
 	initMumP2PMetrics()
 	initP2PMetrics()
 	initStreamMetrics()
+	initBootstrapMetrics()
+	initRLNCMetrics()
 	publicIP, _, err := commonnet.GetExternalIPs()
 	if err != nil {
 		log.Error("could not get public IP", err)

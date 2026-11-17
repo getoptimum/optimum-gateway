@@ -82,7 +82,7 @@ func TestLiveEnroll(t *testing.T) {
 
 	require.Equal(t, cred.ClientID, claims["sub"])
 
-	// The claim the mumP2P handshake gates on. Empty means the gateway would
+	// The claim the mump2p handshake gates on. Empty means the gateway would
 	// authenticate and then fail every handshake.
 	clusters, _ := claims["cluster_ids"].([]any)
 	require.NotEmpty(t, clusters,

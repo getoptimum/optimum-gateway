@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	cfgpkg "github.com/getoptimum/optimum-gateway/pkg/config"
 	"github.com/getoptimum/optimum-gateway/pkg/service/mum_p2p"
 )
 
@@ -18,22 +17,13 @@ func TestConfigValidate(t *testing.T) {
 	}{
 		"rejects non-positive listen port": {
 			cfg: &mum_p2p.Config{
-				ListenPort:     0,
-				MaxMessageSize: cfgpkg.DefaultMaxMessageSize,
+				ListenPort: 0,
 			},
 			wantErr: "listen port must be positive",
 		},
-		"rejects non-positive max message size": {
-			cfg: &mum_p2p.Config{
-				ListenPort:     4001,
-				MaxMessageSize: 0,
-			},
-			wantErr: "random message size must be positive",
-		},
 		"accepts valid config": {
 			cfg: &mum_p2p.Config{
-				ListenPort:     4001,
-				MaxMessageSize: cfgpkg.DefaultMaxMessageSize,
+				ListenPort: 4001,
 			},
 		},
 	}
