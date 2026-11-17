@@ -258,7 +258,7 @@ Total distributed third-party packages: 247
 - [golang.org/x/exp](https://cs.opensource.google/go/x/exp/+/c48552f4:LICENSE)
 - [golang.org/x/net](https://cs.opensource.google/go/x/net/+/v0.62.0:LICENSE)
 - [golang.org/x/oauth2](https://cs.opensource.google/go/x/oauth2/+/v0.37.0:LICENSE)
-- [golang.org/x/sync/errgroup](https://cs.opensource.google/go/x/sync/+/v0.24.0:LICENSE)
+- [golang.org/x/sync](https://cs.opensource.google/go/x/sync/+/v0.24.0:LICENSE)
 - [golang.org/x/sys](https://cs.opensource.google/go/x/sys/+/v0.49.0:LICENSE)
 - [golang.org/x/term](https://cs.opensource.google/go/x/term/+/v0.47.0:LICENSE)
 - [golang.org/x/text](https://cs.opensource.google/go/x/text/+/v0.43.0:LICENSE)
