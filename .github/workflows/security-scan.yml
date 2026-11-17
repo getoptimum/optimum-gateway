@@ -254,6 +254,8 @@ jobs:
           owner: getoptimum
           # Scoped to this repo (push target) plus the private module deps that
           # `go` must fetch to build the branch-tip SBOM, not the whole org.
+          # shm is not imported here, but optimum-common requires it and the
+          # full SBOM's `go list -m all` still resolves it under GOPRIVATE.
           repositories: optimum-gateway,optimum-common,optimum-p2p,mump2p-protocol,rlnc,shm
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:

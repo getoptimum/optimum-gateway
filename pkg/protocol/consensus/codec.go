@@ -77,14 +77,27 @@ func (SSZSnappyCodec) EncodeWithMaxLength(w io.Writer, msg Marshaler) (int, erro
 	return n, sw.Close()
 }
 
+// maxSSZLener reports the largest valid SSZ encoding for a wire type, so the
+// decoder can reject an oversized declared length before allocating for it.
+type maxSSZLener interface{ maxSSZLen() uint64 }
+
 // DecodeWithMaxLength reads a req/resp chunk (uvarint length + snappy frame) and unmarshals it.
 func (SSZSnappyCodec) DecodeWithMaxLength(r io.Reader, msg Unmarshaler) error {
+	// Bound the declared length by the target type's own size, falling back to
+	// the gossip cap. A fixed-size req/resp message is a few dozen bytes, so an
+	// oversized declared length is rejected before the make below or the snappy reader.
+	maxLen := uint64(utils.MaxGossipPayloadSize)
+	if ms, ok := msg.(maxSSZLener); ok {
+		maxLen = ms.maxSSZLen()
+	}
+
 	msgLen, err := binary.ReadUvarint(oneByteReader{r})
 	if err != nil {
 		return err
 	}
-	if msgLen > utils.MaxGossipPayloadSize {
-		return fmt.Errorf("consensus: message length %d exceeds max %d", msgLen, utils.MaxGossipPayloadSize)
+	// Keep the constant gossip bound as well, so the int(msgLen) below stays provably in range.
+	if msgLen > utils.MaxGossipPayloadSize || msgLen > maxLen {
+		return fmt.Errorf("consensus: message length %d exceeds max %d", msgLen, maxLen)
 	}
 
 	maxCompressed := snappy.MaxEncodedLen(int(msgLen))

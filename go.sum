@@ -335,8 +335,8 @@ github.com/gabriel-vasile/mimetype v1.4.13 h1:46nXokslUBsAJE/wMsp5gtO500a4F3Nkz9
 github.com/gabriel-vasile/mimetype v1.4.13/go.mod h1:d+9Oxyo1wTzWdyVUPMmXFvp4F9tea18J8ufA774AB3s=
 github.com/getoptimum/mump2p-protocol v0.3.2-0.20261112181446-508bdad84fe6 h1:kb8G0aAnBykxDpGP/bLdTP/vPL5N02Tr5ajOtyPVt28=
 github.com/getoptimum/mump2p-protocol v0.3.2-0.20261112181446-508bdad84fe6/go.mod h1:tkAYN6rb3al5Fnwdg0ADv/Ro8jxsmPmJx/EK81/h0JM=
-github.com/getoptimum/optimum-common v1.3.3 h1:gdCzoNrR7DimoUbmWX206kUldCK/PWaRsPkDoFGpo4I=
-github.com/getoptimum/optimum-common v1.3.3/go.mod h1:LiVeZYUCbf1i+JPAtFe7HDePnI8DEZGXY782dhFpQxo=
+github.com/getoptimum/optimum-common v1.5.0 h1:Q8KvEgZYnLGRD9McAbBPXIp6ipTToIy2WdnPaWIRvBM=
+github.com/getoptimum/optimum-common v1.5.0/go.mod h1:Mg0sYm3rbBF2BQcCJPLcCPQJ4BEXKGGMzZousyoNZkM=
 github.com/getoptimum/shm v0.5.0 h1:JKAFD2Gavx/vVWvHyEoUCyZ1ZzRJIk0WxciPATJlaz8=
 github.com/getoptimum/shm v0.5.0/go.mod h1:/18YgU96NuigZ/vD0FTiatCndt6lV2h8EJhUi/eypr0=
 github.com/ghostiam/protogetter v1.0.1 h1:q4LLTx2KJHJpxrfO3BniUDWoFkoqWD/UlHhClBlUlLM=
@@ -1219,8 +1219,8 @@ golang.org/x/net v0.0.0-20210226172049-e18ecbb05110/go.mod h1:m0MpNAwzfU5UDzcl9v
 golang.org/x/net v0.0.0-20211015210444-4f30a5c0130f/go.mod h1:9nx3DQGgdP8bBQD5qxJ1jj9UTztislL4KSBs9R2vV5Y=
 golang.org/x/net v0.0.0-20220722155237-a158d28d115b/go.mod h1:XRhObCWvk6IyKnWLug+ECip1KBveYUHfp+8e9klMJ9c=
 golang.org/x/net v0.6.0/go.mod h1:2Tu9+aMcznHK/AK1HMvgo6xiTLG5rD5rZLDS+rp2Bjs=
-golang.org/x/net v0.61.0 h1:RR+6j/BTBCrggOLugxa+66R8FvoN6MHlzDlZIbN9YFw=
-golang.org/x/net v0.61.0/go.mod h1:WgDCOTH8iwtB66T4/GfI94AHo/hhdb7Hah9NDseQfiI=
+golang.org/x/net v0.62.0 h1:18ELalfM5+XNRwzM2nYqXsZQ9ByS1uhj2O/U7+5jqRY=
+golang.org/x/net v0.62.0/go.mod h1:WgDCOTH8iwtB66T4/GfI94AHo/hhdb7Hah9NDseQfiI=
 golang.org/x/oauth2 v0.37.0 h1:JUlcxA8oAtauLfiH8FX2/FkAWHAdi0QtGCGc+hofE98=
 golang.org/x/oauth2 v0.37.0/go.mod h1:IxwZNxUULJmpBFf9K/9NTMSIfZZuvuTy1gGxhigP/58=
 golang.org/x/sync v0.0.0-20190423024810-112230192c58/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=

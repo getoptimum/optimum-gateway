@@ -15,7 +15,7 @@ tool (
 require (
 	github.com/ferranbt/fastssz v1.0.1-0.20251203093649-0b1f38e43198
 	github.com/getoptimum/mump2p-protocol v0.3.2-0.20261112181446-508bdad84fe6
-	github.com/getoptimum/optimum-common v1.3.3
+	github.com/getoptimum/optimum-common v1.5.0
 	github.com/gofiber/fiber/v3 v3.4.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/golang/snappy v1.0.0
@@ -454,7 +454,7 @@ require (
 	golang.org/x/exp v0.0.0-20260611194520-c48552f49976 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20260811152304-ee035b5b010f // indirect
 	golang.org/x/mod v0.42.0 // indirect
-	golang.org/x/net v0.61.0 // indirect
+	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/oauth2 v0.37.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect

@@ -7,9 +7,9 @@ env:
 
 on:
   push:
-    # A non-tag push publishes dev-latest, bumps the internal gitops digests,
-    # and rolls hoodi-dev. A v* tag publishes :latest, bumps gitops, and
-    # deploys the prod VMs.
+    # A merge publishes the SHA image and moves dev-latest, then bumps the
+    # hoodi-dev gitops digests and redeploys that cluster.
+    # A v* tag still publishes :latest, bumps gitops, and deploys the prod VMs.
     branches:
       - main
     tags:

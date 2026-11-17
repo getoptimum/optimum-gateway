@@ -56,6 +56,8 @@ func (s *Status) UnmarshalSSZ(b []byte) error {
 
 func (s *Status) GetForkDigest() [forkDigestSize]byte { return s.ForkDigest }
 
+func (*Status) maxSSZLen() uint64 { return statusSize }
+
 // StatusV2 is the Fulu status handshake message (fixed 92 bytes).
 type StatusV2 struct {
 	ForkDigest            [forkDigestSize]byte
@@ -107,6 +109,8 @@ func (s *StatusV2) V1() *Status {
 		HeadRoot: s.HeadRoot, HeadSlot: s.HeadSlot,
 	}
 }
+
+func (*StatusV2) maxSSZLen() uint64 { return statusV2Size }
 
 // MetaDataV0 is the phase0 metadata message (fixed 16 bytes).
 type MetaDataV0 struct {
@@ -176,3 +180,9 @@ func (m *MetaDataV2) UnmarshalSSZ(b []byte) error {
 	m.CustodyGroupCount = binary.LittleEndian.Uint64(b[17:25])
 	return nil
 }
+
+func (*MetaDataV0) maxSSZLen() uint64 { return metaDataV0Size }
+
+func (*MetaDataV1) maxSSZLen() uint64 { return metaDataV1Size }
+
+func (*MetaDataV2) maxSSZLen() uint64 { return metaDataV2Size }

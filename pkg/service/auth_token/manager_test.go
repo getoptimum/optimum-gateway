@@ -163,6 +163,10 @@ func TestDisabledManager_MethodsAreNoOps(t *testing.T) {
 	require.NoError(t, err)
 	require.Empty(t, st, "disabled Manager.ServicesToken must not attempt to mint")
 
+	dt, err := m.DynamicConfigToken(context.Background())
+	require.NoError(t, err)
+	require.Empty(t, dt, "disabled Manager.DynamicConfigToken must not attempt to mint")
+
 	ht, err := m.HandshakeToken(context.Background())
 	require.NoError(t, err)
 	require.Empty(t, ht, "disabled Manager.HandshakeToken must not attempt to mint")
@@ -265,6 +269,10 @@ func TestServicesToken_PreferredWhenPresent(t *testing.T) {
 	gotServices, err := m.ServicesToken(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, servicesTok, gotServices)
+
+	gotPoll, err := m.DynamicConfigToken(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, servicesTok, gotPoll, "a verified aud=services token is sent on the config poll")
 }
 
 // Symmetric to TestServicesToken_PreferredWhenPresent: call ServicesToken
@@ -321,6 +329,10 @@ func TestServicesToken_FallsBackToHandshakeWhenAbsent(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, handshake, services, "absent services_token must fall back to the handshake token")
 	require.Equal(t, int32(1), rig.Calls.Load(), "fallback must reuse the cached handshake token, not re-mint")
+
+	poll, err := m.DynamicConfigToken(context.Background())
+	require.NoError(t, err)
+	require.Empty(t, poll, "the config poll must not send the aud=p2p handshake token")
 }
 
 // A present-but-invalid services_token (fails local verify) is dropped; pushes
@@ -351,6 +363,10 @@ func TestServicesToken_FallsBackWhenServicesTokenInvalid(t *testing.T) {
 	services, err := m.ServicesToken(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, accessTok, services, "invalid services token falls back to the handshake token")
+
+	poll, err := m.DynamicConfigToken(context.Background())
+	require.NoError(t, err)
+	require.Empty(t, poll, "an unverified services token must not select the authenticated config route")
 }
 
 func newMintedManager(t *testing.T, configure func(*test_utils.AuthTestRig)) (*auth_token.Service, *test_utils.AuthTestRig) {

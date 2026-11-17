@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	libp2ppubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/network"
@@ -35,6 +36,24 @@ const (
 	statusV1Protocol protocol.ID = "/eth2/beacon_chain/req/status/1/ssz_snappy"
 	statusV2Protocol protocol.ID = "/eth2/beacon_chain/req/status/2/ssz_snappy"
 )
+
+// reqRespStreamTimeout bounds an inbound req/resp exchange to the spec RESP_TIMEOUT,
+// matching the outbound handshake deadline, so an idle exchange is closed instead of
+// held open. Var so tests can lower it.
+var reqRespStreamTimeout = 10 * time.Second
+
+// withStreamDeadline sets a whole-exchange deadline before running an inbound handler.
+func (s *Service) withStreamDeadline(h network.StreamHandler) network.StreamHandler {
+	return func(stream network.Stream) {
+		if err := stream.SetDeadline(time.Now().Add(reqRespStreamTimeout)); err != nil &&
+			!strings.Contains(err.Error(), "stream closed") {
+			s.log.Error("failed to set req/resp stream deadline", err)
+			_ = stream.Reset()
+			return
+		}
+		h(stream)
+	}
+}
 
 // filterAndBuildEthTopics returns full eth2 topics built from descriptors (using forkDigest) and, for mump2p nodes, also appends the internal aggregated-messages topic.
 func (s *Service) filterAndBuildEthTopics(forkDigest string, mumP2PNode bool) []string {
@@ -185,12 +204,12 @@ func (s *Service) handleHandshake() {
 	s.registerGoodByeHandler("/eth2/beacon_chain/req/goodbye/1/ssz_snappy")
 	s.registerPingHandler("/eth2/beacon_chain/req/ping/1/ssz_snappy")
 
-	s.hostLibP2P.SetStreamHandler(statusV1Protocol, s.serveHandshake)
-	s.hostLibP2P.SetStreamHandler(statusV2Protocol, s.serveHandshake)
+	s.hostLibP2P.SetStreamHandler(statusV1Protocol, s.withStreamDeadline(s.serveHandshake))
+	s.hostLibP2P.SetStreamHandler(statusV2Protocol, s.withStreamDeadline(s.serveHandshake))
 
-	s.hostLibP2P.SetStreamHandler("/eth2/beacon_chain/req/metadata/1/ssz_snappy", s.serveMetadata)
-	s.hostLibP2P.SetStreamHandler("/eth2/beacon_chain/req/metadata/2/ssz_snappy", s.serveMetadata)
-	s.hostLibP2P.SetStreamHandler("/eth2/beacon_chain/req/metadata/3/ssz_snappy", s.serveMetadata)
+	s.hostLibP2P.SetStreamHandler("/eth2/beacon_chain/req/metadata/1/ssz_snappy", s.withStreamDeadline(s.serveMetadata))
+	s.hostLibP2P.SetStreamHandler("/eth2/beacon_chain/req/metadata/2/ssz_snappy", s.withStreamDeadline(s.serveMetadata))
+	s.hostLibP2P.SetStreamHandler("/eth2/beacon_chain/req/metadata/3/ssz_snappy", s.withStreamDeadline(s.serveMetadata))
 }
 
 // serveHandshake handles the eth2 CL status req/resp handshake (status/1, status/2).
@@ -301,7 +320,7 @@ func (s *Service) serveMetadata(stream network.Stream) {
 }
 
 func (s *Service) registerGoodByeHandler(topicGoodbye string) {
-	s.hostLibP2P.SetStreamHandler(protocol.ID(topicGoodbye), func(stream network.Stream) {
+	s.hostLibP2P.SetStreamHandler(protocol.ID(topicGoodbye), s.withStreamDeadline(func(stream network.Stream) {
 		defer stream.Close()
 		peerID := stream.Conn().RemotePeer()
 		l := s.log.With(
@@ -328,11 +347,11 @@ func (s *Service) registerGoodByeHandler(topicGoodbye string) {
 			return
 		}
 		telemetry.CLPeerGoodbye(s.peerClientFamily(peerID), reasonLabel)
-	})
+	}))
 }
 
 func (s *Service) registerPingHandler(topicPing string) {
-	s.hostLibP2P.SetStreamHandler(protocol.ID(topicPing), func(stream network.Stream) {
+	s.hostLibP2P.SetStreamHandler(protocol.ID(topicPing), s.withStreamDeadline(func(stream network.Stream) {
 		defer stream.Close()
 		l := s.log.With(
 			logger.WithFlow("ping"),
@@ -347,7 +366,7 @@ func (s *Service) registerPingHandler(topicPing string) {
 		}
 		pong := consensus.SSZUint64(metadataSeqNumber)
 		s.finishStream(l, stream, &pong)
-	})
+	}))
 }
 
 func (s *Service) subscribeOnce() {
