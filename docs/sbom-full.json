@@ -3727,18 +3727,18 @@
       ]
     },
     {
-      "bom-ref": "pkg:golang/github.com/getoptimum/optimum-common@v1.5.0?type=module",
+      "bom-ref": "pkg:golang/github.com/getoptimum/optimum-common@v1.5.1?type=module",
       "type": "library",
       "name": "github.com/getoptimum/optimum-common",
-      "version": "v1.5.0",
+      "version": "v1.5.1",
       "scope": "required",
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "43c2af1206589cb1910fd31c01b04f5c8a7a8a94d3a08cb659d9cf696211bc13"
+          "content": "66769478f0afb16bc2d2e83d588c488f25b04fa6fe8fddfbdf1dda132f8cf97a"
         }
       ],
-      "purl": "pkg:golang/github.com/getoptimum/optimum-common@v1.5.0?goarch=amd64&goos=linux&type=module",
+      "purl": "pkg:golang/github.com/getoptimum/optimum-common@v1.5.1?goarch=amd64&goos=linux&type=module",
       "externalReferences": [
         {
           "url": "https://github.com/getoptimum/optimum-common",
@@ -12946,7 +12946,7 @@
       "dependsOn": [
         "pkg:golang/github.com/ferranbt/fastssz@v1.0.1-0.20251203093649-0b1f38e43198?type=module",
         "pkg:golang/github.com/getoptimum/mump2p-protocol@v0.3.2-0.20261112181446-508bdad84fe6?type=module",
-        "pkg:golang/github.com/getoptimum/optimum-common@v1.5.0?type=module",
+        "pkg:golang/github.com/getoptimum/optimum-common@v1.5.1?type=module",
         "pkg:golang/github.com/gofiber/fiber/v3@v3.4.0?type=module",
         "pkg:golang/github.com/golang-jwt/jwt/v5@v5.3.1?type=module",
         "pkg:golang/github.com/golang/snappy@v1.0.0?type=module",
@@ -14303,7 +14303,7 @@
         "pkg:golang/github.com/fsnotify/fsnotify@v1.9.0?type=module",
         "pkg:golang/github.com/fzipp/gocyclo@v0.6.0?type=module",
         "pkg:golang/github.com/gabriel-vasile/mimetype@v1.4.13?type=module",
-        "pkg:golang/github.com/getoptimum/optimum-common@v1.5.0?type=module",
+        "pkg:golang/github.com/getoptimum/optimum-common@v1.5.1?type=module",
         "pkg:golang/github.com/getoptimum/shm@v0.5.0?type=module",
         "pkg:golang/github.com/ghostiam/protogetter@v1.0.1?type=module",
         "pkg:golang/github.com/go-critic/go-critic@v0.15.0?type=module",
@@ -14561,7 +14561,7 @@
       ]
     },
     {
-      "ref": "pkg:golang/github.com/getoptimum/optimum-common@v1.5.0?type=module",
+      "ref": "pkg:golang/github.com/getoptimum/optimum-common@v1.5.1?type=module",
       "dependsOn": [
         "pkg:golang/4d63.com/gocheckcompilerdirectives@v1.4.0?type=module",
         "pkg:golang/4d63.com/gochecknoglobals@v0.2.2?type=module",
