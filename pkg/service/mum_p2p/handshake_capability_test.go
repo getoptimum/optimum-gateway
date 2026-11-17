@@ -222,13 +222,13 @@ func newListeningHost(t *testing.T) host.Host {
 	return h
 }
 
-func dialAdmitted(t *testing.T, capability PeerCapability) (*Node, host.Host, host.Host, peer.ID) {
+func dialAdmitted(t *testing.T, capability PeerCapability) (n *Node, local, remote host.Host, peerID peer.ID) {
 	t.Helper()
-	local := newListeningHost(t)
-	n := capabilityNode(t, local, testPeerTTL)
+	local = newListeningHost(t)
+	n = capabilityNode(t, local, testPeerTTL)
 	n.RegisterHandshakeMessageSender("hoodi")
-	remote := newListeningHost(t)
-	peerID := remote.ID()
+	remote = newListeningHost(t)
+	peerID = remote.ID()
 	n.markHandshakeValid(peerID, capability)
 	connectHosts(t, local, remote)
 	return n, local, remote, peerID
