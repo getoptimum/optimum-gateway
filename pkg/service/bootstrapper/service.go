@@ -189,8 +189,17 @@ func (s *Service) detectedMumP2PAddrs(publicIPV4, publicIPV6 string) ([]ma.Multi
 	if publicIPV4 != "" {
 		return commonnet.BuildAdvertisedAddresses(s.log, publicIPV4, publicIPV6, s.cfg.AgentMumP2PPort)
 	}
-	// BuildAdvertisedAddresses requires IPv4, so IPv6-only hosts announce just the IPv6 address.
-	return commonnet.MultiAddressBuilder(net.ParseIP(publicIPV6), s.cfg.AgentMumP2PPort)
+	// BuildAdvertisedAddresses requires IPv4; keep its interface addrs so same-network IPv4 peers can still dial.
+	addrs, err := commonnet.MultiAddressBuilder(net.ParseIP(publicIPV6), s.cfg.AgentMumP2PPort)
+	if err != nil {
+		return nil, err
+	}
+	for _, ip := range commonnet.GetInterfaceIPs() {
+		if ifaceAddrs, errI := commonnet.MultiAddressBuilder(net.ParseIP(ip), s.cfg.AgentMumP2PPort); errI == nil {
+			addrs = append(addrs, ifaceAddrs...)
+		}
+	}
+	return addrs, nil
 }
 
 func (s *Service) announcedMumP2PAddrInfo() (peer.AddrInfo, string, error) {
