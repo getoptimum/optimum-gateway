@@ -15,7 +15,6 @@ import (
 	"github.com/getoptimum/optimum-common/pkg/identity"
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	commonnet "github.com/getoptimum/optimum-common/pkg/net"
-	"github.com/getoptimum/optimum-common/pkg/slices"
 	"github.com/getoptimum/optimum-common/pkg/syncx"
 	"github.com/getoptimum/optimum-gateway/pkg/config"
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
@@ -74,7 +73,8 @@ func (s *Service) SetGatewayPeerIDStr(peerIDStr string) {
 }
 
 // RegisterAndGetMumP2PPeers registers this gateway with bootstrap and returns mesh peers
-// plus the addresses it sent for registration, which the mesh host must advertise too.
+// plus the addresses the mesh host must advertise. Outbound-only returns no addresses;
+// bootstrap still receives mump2p_addr and not_dialable.
 func (s *Service) RegisterAndGetMumP2PPeers() ([]string, []ma.Multiaddr, error) {
 	predictedAddress, publicIP, err := s.predictMumP2PAddrInfo()
 	if err != nil {
@@ -85,12 +85,13 @@ func (s *Service) RegisterAndGetMumP2PPeers() ([]string, []ma.Multiaddr, error) 
 
 	registerURL := utils.BootstrapRegisterURL(s.cfg.RemoteBootstrapURL)
 	payload := entities.GatewayInfo{
-		GatewayID:  s.cfg.GatewayID,
-		P2PAddr:    commonnet.AddressInfoToString(predictedAddress),
-		ClusterID:  s.cfg.GatewayClusterID,
-		ChainID:    s.srvForkMgr.AppChain().String(),
-		Version:    s.cfg.Version,
-		CommitHash: s.cfg.CommitHash,
+		GatewayID:   s.cfg.GatewayID,
+		P2PAddr:     commonnet.AddressInfoToString(predictedAddress),
+		ClusterID:   s.cfg.GatewayClusterID,
+		ChainID:     s.srvForkMgr.AppChain().String(),
+		Version:     s.cfg.Version,
+		CommitHash:  s.cfg.CommitHash,
+		NotDialable: s.cfg.MumP2PNotDialable,
 	}
 	registerResult, code, err := utils.RetryPostRequest[map[string]string](ctx, registerURL, payload, s.bearerAuthHeader(ctx))
 	res, errE := s.exposeGatewayPeers()
@@ -145,7 +146,13 @@ func (s *Service) RegisterAndGetMumP2PPeers() ([]string, []ma.Multiaddr, error) 
 		}
 		result = append(result, gateway.P2PAddr) // we can add self, it will be just excluded in libp2p
 	}
-	return result, predictedAddress.Addrs, nil
+	advertised := predictedAddress.Addrs
+	if s.cfg.MumP2PNotDialable {
+		// Bootstrap still stores the address (it carries the peer ID) and omits this gateway from expose-nodes.
+		advertised = nil
+		s.log.Info("mump2p outbound-only: registering without announcing a dialable address")
+	}
+	return result, advertised, nil
 }
 
 // predictMumP2PAddrInfo gets future mump2p node information.
@@ -179,28 +186,11 @@ func (s *Service) predictMumP2PAddrInfo() (peerInfo peer.AddrInfo, publicIP stri
 		s.log.Error("unable to determine public IP for bootstrap registration", fmt.Errorf("empty IPv4 and IPv6"))
 		return peer.AddrInfo{}, "", fmt.Errorf("empty IPv4 and IPv6")
 	}
-	addrs, err := s.detectedMumP2PAddrs(publicIPV4, publicIPV6)
+	addrs, err := commonnet.BuildAdvertisedAddresses(s.log, publicIPV4, publicIPV6, s.cfg.AgentMumP2PPort)
 	if err != nil {
 		return peer.AddrInfo{}, "", err
 	}
 	return peer.AddrInfo{ID: id, Addrs: addrs}, publicHost, nil
-}
-
-func (s *Service) detectedMumP2PAddrs(publicIPV4, publicIPV6 string) ([]ma.Multiaddr, error) {
-	if publicIPV4 != "" {
-		return commonnet.BuildAdvertisedAddresses(s.log, publicIPV4, publicIPV6, s.cfg.AgentMumP2PPort)
-	}
-	// BuildAdvertisedAddresses requires IPv4; keep its interface addrs so same-network IPv4 peers can still dial.
-	addrs, err := commonnet.MultiAddressBuilder(net.ParseIP(publicIPV6), s.cfg.AgentMumP2PPort)
-	if err != nil {
-		return nil, err
-	}
-	for _, ip := range commonnet.GetInterfaceIPs() {
-		if ifaceAddrs, errI := commonnet.MultiAddressBuilder(net.ParseIP(ip), s.cfg.AgentMumP2PPort); errI == nil {
-			addrs = append(addrs, ifaceAddrs...)
-		}
-	}
-	return slices.UniqueSlice(addrs), nil
 }
 
 func (s *Service) announcedMumP2PAddrInfo() (peer.AddrInfo, string, error) {

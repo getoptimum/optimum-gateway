@@ -246,6 +246,32 @@ func TestValidate_MumP2PAnnounce(t *testing.T) {
 			require.ErrorContains(t, err, tc.wantErr)
 		})
 	}
+
+	t.Run("not dialable", func(t *testing.T) {
+		cfg := &config.AppConfig{
+			IdentityLibP2PDir: testLibP2PDir,
+			IdentityMumP2PDir: testMumP2PDir,
+			AgentLibP2PPort:   33212,
+			AgentMumP2PPort:   33213,
+			TelemetryPort:     48123,
+			GatewayClusterID:  "cluster",
+			MumP2PNotDialable: true,
+		}
+		require.NoError(t, cfg.Validate())
+	})
+	t.Run("not dialable with announce ip", func(t *testing.T) {
+		cfg := &config.AppConfig{
+			IdentityLibP2PDir: testLibP2PDir,
+			IdentityMumP2PDir: testMumP2PDir,
+			AgentLibP2PPort:   33212,
+			AgentMumP2PPort:   33213,
+			TelemetryPort:     48123,
+			GatewayClusterID:  "cluster",
+			MumP2PAnnounceIP:  "203.0.113.7",
+			MumP2PNotDialable: true,
+		}
+		require.ErrorContains(t, cfg.Validate(), "OPT_AGENT_MUMP2P_NOT_DIALABLE")
+	})
 }
 
 func TestValidate_MissingClusterID(t *testing.T) {
