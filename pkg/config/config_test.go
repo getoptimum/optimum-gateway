@@ -21,6 +21,7 @@ import (
 const (
 	testLibP2PDir = "/tmp/lib"
 	testMumP2PDir = "/tmp/mump2p"
+	testClusterID = "cluster"
 )
 
 // helper to create a temporary config file
@@ -137,7 +138,7 @@ func TestValidate_PProfEnabled_EmptyAddr(t *testing.T) {
 		AgentMumP2PPort:   33213,
 		TelemetryPort:     48123,
 		GatewayID:         "gw-pprof",
-		GatewayClusterID:  "cluster",
+		GatewayClusterID:  testClusterID,
 		EnablePProf:       true,
 		PProfAddr:         "  ",
 	}
@@ -154,7 +155,7 @@ func TestValidate_PProfEnabled_InvalidAddr(t *testing.T) {
 		AgentMumP2PPort:   33213,
 		TelemetryPort:     48123,
 		GatewayID:         "gw-pprof",
-		GatewayClusterID:  "cluster",
+		GatewayClusterID:  testClusterID,
 		EnablePProf:       true,
 		PProfAddr:         "not-a-valid-tcp-addr",
 	}
@@ -176,7 +177,7 @@ func TestValidate_PProfEnabled_ValidAddr(t *testing.T) {
 		AgentMumP2PPort:   33213,
 		TelemetryPort:     48123,
 		GatewayID:         "gw-pprof",
-		GatewayClusterID:  "cluster",
+		GatewayClusterID:  testClusterID,
 		EnablePProf:       true,
 		PProfAddr:         addr,
 	}
@@ -234,7 +235,7 @@ func TestValidate_MumP2PAnnounce(t *testing.T) {
 				AgentLibP2PPort:    33212,
 				AgentMumP2PPort:    33213,
 				TelemetryPort:      48123,
-				GatewayClusterID:   "cluster",
+				GatewayClusterID:   testClusterID,
 				MumP2PAnnounceIP:   tc.ip,
 				MumP2PAnnouncePort: tc.port,
 			}
@@ -254,7 +255,7 @@ func TestValidate_MumP2PAnnounce(t *testing.T) {
 			AgentLibP2PPort:   33212,
 			AgentMumP2PPort:   33213,
 			TelemetryPort:     48123,
-			GatewayClusterID:  "cluster",
+			GatewayClusterID:  testClusterID,
 			MumP2PNotDialable: true,
 		}
 		require.NoError(t, cfg.Validate())
@@ -266,7 +267,7 @@ func TestValidate_MumP2PAnnounce(t *testing.T) {
 			AgentLibP2PPort:   33212,
 			AgentMumP2PPort:   33213,
 			TelemetryPort:     48123,
-			GatewayClusterID:  "cluster",
+			GatewayClusterID:  testClusterID,
 			MumP2PAnnounceIP:  "203.0.113.7",
 			MumP2PNotDialable: true,
 		}
