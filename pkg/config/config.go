@@ -181,7 +181,11 @@ func LoadConfig(confFile string) (*AppConfig, error) {
 // in dev mode); gatewayID is the `sub` claim (or the yaml/OPT_GATEWAY_ID
 // fallback in dev mode); gatewayType is the `type` claim (empty in dev mode).
 // Empty values are ignored so the yaml/env defaults stay in place.
-func (c *AppConfig) InitRuntime(ctx context.Context, log logger.AppLogger, chainStr, gatewayID, gatewayType, orgID string) error {
+// servicesToken is read on every dynamic-config poll. A non-empty token
+// selects the authenticated route. Nil, or a token that is empty, stays on
+// the fleet route. An error skips that poll and leaves the current config
+// in place; it does not fall back to the fleet route.
+func (c *AppConfig) InitRuntime(ctx context.Context, log logger.AppLogger, chainStr, gatewayID, gatewayType, orgID string, servicesToken func(context.Context) (string, error)) error {
 	if strings.TrimSpace(chainStr) == "" {
 		chainStr = c.Chain
 	}
@@ -225,6 +229,7 @@ func (c *AppConfig) InitRuntime(ctx context.Context, log logger.AppLogger, chain
 		},
 		commonconfig.WithServiceVersion("gateway-"+c.Version),
 		commonconfig.WithBootstrapBaseURL(bootstrapURL),
+		commonconfig.WithAuthToken(servicesToken),
 	)
 	// Start periodic config logging goroutine (every 10 minutes).
 	c.logger = log
