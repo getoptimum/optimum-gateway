@@ -81,11 +81,15 @@ func NewNode(
 		return nil, fmt.Errorf("failed to create connection manager: %w", err)
 	}
 
-	if len(cfg.AdvertisedAddrs) == 0 {
-		return nil, fmt.Errorf("advertised addresses are required")
-	}
 	cachedAddrs := cfg.AdvertisedAddrs
-	log.Info("mump2p advertised addresses", logger.WithString("addrs", fmt.Sprintf("%v", cachedAddrs)))
+	if cfg.NotDialable {
+		cachedAddrs = nil
+		log.Info("mump2p outbound-only: announcing no mesh address")
+	} else if len(cfg.AdvertisedAddrs) == 0 {
+		return nil, fmt.Errorf("advertised addresses are required")
+	} else {
+		log.Info("mump2p advertised addresses", logger.WithString("addrs", fmt.Sprintf("%v", cachedAddrs)))
+	}
 
 	libP2POpts := []libp2p.Option{
 		libp2p.ConnectionManager(cn),

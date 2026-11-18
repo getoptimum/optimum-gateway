@@ -179,3 +179,21 @@ func TestRegisterAndGetMumP2PPeers_IPv6Only(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, advertised, registered.Addrs)
 }
+
+func TestRegisterAndGetMumP2PPeers_NotDialable(t *testing.T) {
+	srv, bootstrap, cfg := getTestSrv(t)
+	cfg.AgentMumP2PPort = 33213
+	cfg.MumP2PNotDialable = true
+	t.Cleanup(bootstrapper.SetExternalIPsFunc(func() (string, string, error) {
+		return "203.0.113.9", "", nil
+	}))
+
+	peers, advertised, err := srv.RegisterAndGetMumP2PPeers()
+	require.NoError(t, err)
+
+	require.Empty(t, advertised)
+	require.NotEmpty(t, peers)
+	req := bootstrap.WaitRegisterRequest(t, time.Second)
+	require.Equal(t, "true", req.Payload["not_dialable"])
+	require.Contains(t, req.Payload["mump2p_addr"], "/ip4/203.0.113.9/tcp/33213")
+}
