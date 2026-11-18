@@ -205,6 +205,7 @@ func TestValidate_InvalidPorts(t *testing.T) {
 }
 
 func TestValidate_MumP2PAnnounce(t *testing.T) {
+	const announceIPEnv = "OPT_AGENT_MUMP2P_ANNOUNCE_IP"
 	cases := []struct {
 		name    string
 		ip      string
@@ -214,8 +215,14 @@ func TestValidate_MumP2PAnnounce(t *testing.T) {
 		{name: "unset"},
 		{name: "ipv4 only", ip: "203.0.113.7"},
 		{name: "ipv6 with port", ip: "2001:db8::7", port: 40001},
-		{name: "hostname", ip: "lb.example.com", wantErr: "OPT_AGENT_MUMP2P_ANNOUNCE_IP"},
-		{name: "unspecified", ip: "0.0.0.0", wantErr: "OPT_AGENT_MUMP2P_ANNOUNCE_IP"},
+		{name: "hostname", ip: "lb.example.com", wantErr: announceIPEnv},
+		{name: "private", ip: "10.0.0.5"},
+		{name: "unspecified", ip: "0.0.0.0", wantErr: announceIPEnv},
+		{name: "loopback", ip: "127.0.0.1", wantErr: announceIPEnv},
+		{name: "ipv6 loopback", ip: "::1", wantErr: announceIPEnv},
+		{name: "multicast", ip: "224.0.0.1", wantErr: announceIPEnv},
+		{name: "link-local", ip: "169.254.1.1", wantErr: announceIPEnv},
+		{name: "broadcast", ip: "255.255.255.255", wantErr: announceIPEnv},
 		{name: "port out of range", ip: "203.0.113.7", port: 70000, wantErr: "OPT_AGENT_MUMP2P_ANNOUNCE_PORT"},
 		{name: "port without ip", port: 40001, wantErr: "requires OPT_AGENT_MUMP2P_ANNOUNCE_IP"},
 	}

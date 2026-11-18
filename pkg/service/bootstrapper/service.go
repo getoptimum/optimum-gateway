@@ -23,6 +23,8 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/utils"
 )
 
+var getExternalIPs = commonnet.GetExternalIPs
+
 const (
 	// exposeNodesAmount we can ask bootstrap server to give us 7 mump2p gateway peers
 	// some of them may be unavailable due to not updated
@@ -154,13 +156,10 @@ func (s *Service) predictMumP2PAddrInfo() (peerInfo peer.AddrInfo, publicIP stri
 	if s.cfg.MumP2PAnnounceIP != "" {
 		return s.announcedMumP2PAddrInfo()
 	}
-	publicIPV4, publicIPV6, err := commonnet.GetExternalIPs()
+	// GetExternalIPs already falls back to interface IPs; failing here avoids registering loopback.
+	publicIPV4, publicIPV6, err := getExternalIPs()
 	if err != nil {
-		s.log.Error("failed to get public IP, falling back to interface IP", err)
-		publicIPV4, err = commonnet.ExternalIP()
-		if err != nil {
-			return peer.AddrInfo{}, "", fmt.Errorf("unable to get any IP address: %w", err)
-		}
+		return peer.AddrInfo{}, "", fmt.Errorf("unable to detect public IP, set OPT_AGENT_MUMP2P_ANNOUNCE_IP: %w", err)
 	}
 	s.log.Info("public IP address detected from prediction",
 		logger.WithString("public_ip", publicIPV4),

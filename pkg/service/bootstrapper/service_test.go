@@ -1,6 +1,7 @@
 package bootstrapper_test
 
 import (
+	"errors"
 	"net"
 	"strings"
 	"testing"
@@ -146,4 +147,15 @@ func TestRegisterAndGetMumP2PPeers_AnnounceOverride(t *testing.T) {
 			require.Equal(t, advertised, registered.Addrs)
 		})
 	}
+}
+
+func TestRegisterAndGetMumP2PPeers_FailsWhenIPDetectionFails(t *testing.T) {
+	srv, _, _ := getTestSrv(t)
+	t.Cleanup(bootstrapper.SetExternalIPsFunc(func() (string, string, error) {
+		return "", "", errors.New("no external IP")
+	}))
+
+	_, _, err := srv.RegisterAndGetMumP2PPeers()
+
+	require.ErrorContains(t, err, "OPT_AGENT_MUMP2P_ANNOUNCE_IP")
 }
