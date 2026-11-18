@@ -95,7 +95,7 @@ docker run --name optimum-gateway --rm \
 
 ## Mesh Behind a Load Balancer
 
-By default the gateway announces its autodetected public IP and `agent_mump2p_port` to the mesh. If inbound mesh traffic reaches it through a load balancer or port forward instead, set `agent_mump2p_announce_ip` (and `agent_mump2p_announce_port` if the external port differs) to the address other gateways should dial. The gateway still listens on `agent_mump2p_port`.
+By default the gateway announces its autodetected public IP and interface IPs on `agent_mump2p_port` to the mesh. If inbound mesh traffic reaches it through a load balancer or port forward instead, set `agent_mump2p_announce_ip` (and `agent_mump2p_announce_port` if the external port differs) to the address other gateways should dial. The gateway then announces only that address, not its interface or IPv6 addresses, so peers on the same private network also connect through the load balancer. It still listens on `agent_mump2p_port`.
 
 The load balancer must:
 

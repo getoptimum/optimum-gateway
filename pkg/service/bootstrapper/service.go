@@ -198,6 +198,9 @@ func (s *Service) announcedMumP2PAddrInfo() (peer.AddrInfo, string, error) {
 		return peer.AddrInfo{}, "", err
 	}
 	s.log.Info("using configured mump2p announce address", logger.WithString("announce_addr", addrs[0].String()))
+	if net.ParseIP(s.cfg.MumP2PAnnounceIP).IsPrivate() {
+		s.log.Info("mump2p announce IP is private; gateways outside this network cannot dial it", logger.WithString("announce_ip", s.cfg.MumP2PAnnounceIP))
+	}
 	return peer.AddrInfo{ID: id, Addrs: addrs}, s.cfg.MumP2PAnnounceIP, nil
 }
 

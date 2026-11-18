@@ -314,7 +314,7 @@ func (c *AppConfig) Validate() error {
 		return fmt.Errorf("OPT_AGENT_MUMP2P_PORT must be between 1 and 65535")
 	}
 	if c.MumP2PAnnounceIP != "" {
-		if !isDialableUnicast(net.ParseIP(c.MumP2PAnnounceIP)) {
+		if ip := net.ParseIP(c.MumP2PAnnounceIP); ip == nil || !ip.IsGlobalUnicast() {
 			return fmt.Errorf("OPT_AGENT_MUMP2P_ANNOUNCE_IP must be a dialable unicast IPv4 or IPv6 address, got %q", c.MumP2PAnnounceIP)
 		}
 	}
@@ -540,8 +540,4 @@ func (c *AppConfig) LogConfigState() {
 			logger.WithInt64("aggregation_interval_ms", c.aggregationIntervalMs.Load()),
 		)
 	}
-}
-
-func isDialableUnicast(ip net.IP) bool {
-	return ip != nil && ip.IsGlobalUnicast() && !ip.Equal(net.IPv4bcast)
 }
