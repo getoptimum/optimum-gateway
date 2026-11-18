@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/peer"
+	ma "github.com/multiformats/go-multiaddr"
 
 	"github.com/getoptimum/optimum-common/pkg/identity"
 	"github.com/getoptimum/optimum-common/pkg/logger"
@@ -68,10 +70,12 @@ func (s *Service) SetGatewayPeerIDStr(peerIDStr string) {
 	s.nodeMumP2PStr = peerIDStr
 }
 
-func (s *Service) RegisterAndGetMumP2PPeers() ([]string, error) {
+// RegisterAndGetMumP2PPeers registers this gateway with bootstrap and returns mesh peers
+// plus the addresses it registered, which the mesh host must advertise too.
+func (s *Service) RegisterAndGetMumP2PPeers() ([]string, []ma.Multiaddr, error) {
 	predictedAddress, publicIP, err := s.predictMumP2PAddrInfo()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	ctx, cancel := context.WithTimeout(s.ctx, 5*time.Minute)
 	defer cancel()
@@ -105,7 +109,7 @@ func (s *Service) RegisterAndGetMumP2PPeers() ([]string, error) {
 			// we not able get peers list from any source
 			// we can't work in such degraded mode, fatal here
 			s.log.Error("failed to register gateway and get mump2p peers from bootstrap server", fmt.Errorf("status code: %d, error: %w", code, err))
-			return nil, fmt.Errorf("failed to register mump2p peers from bootstrap server")
+			return nil, nil, fmt.Errorf("failed to register mump2p peers from bootstrap server")
 		}
 	} else {
 		s.log.Info("registered gateway to bootstrap server",
@@ -117,7 +121,7 @@ func (s *Service) RegisterAndGetMumP2PPeers() ([]string, error) {
 
 	if res == nil {
 		s.log.Error("failed to get mump2p peers from bootstrap server: response is nil", fmt.Errorf("status code: %d, error: %w", code, err))
-		return nil, fmt.Errorf("failed to get mump2p peers from bootstrap server")
+		return nil, nil, fmt.Errorf("failed to get mump2p peers from bootstrap server")
 	}
 	s.log.Info("got mump2p peers from bootstrap server", logger.WithInt("peers_count", len(res)))
 	result := make([]string, 0, len(res))
@@ -134,11 +138,11 @@ func (s *Service) RegisterAndGetMumP2PPeers() ([]string, error) {
 		// check that no other gateway registered with same gateway_id but different mump2p key
 		if gateway.GatewayID == s.cfg.GatewayID && addr.ID.String() != predictedAddress.ID.String() {
 			s.log.Error("gateway with same ID already exists", fmt.Errorf("change gateway_id in config"))
-			return nil, fmt.Errorf("gateway with same ID already exists")
+			return nil, nil, fmt.Errorf("gateway with same ID already exists")
 		}
 		result = append(result, gateway.P2PAddr) // we can add self, it will be just excluded in libp2p
 	}
-	return result, nil
+	return result, predictedAddress.Addrs, nil
 }
 
 // predictMumP2PAddrInfo gets future mump2p node information.
@@ -147,6 +151,9 @@ func (s *Service) RegisterAndGetMumP2PPeers() ([]string, error) {
 // after that start the mump2p node with this bootnodes list.
 // if we fail to predict our future peer info, we can't start the mump2p node at all, so we fatal here
 func (s *Service) predictMumP2PAddrInfo() (peerInfo peer.AddrInfo, publicIP string, err error) {
+	if s.cfg.MumP2PAnnounceIP != "" {
+		return s.announcedMumP2PAddrInfo()
+	}
 	publicIPV4, publicIPV6, err := commonnet.GetExternalIPs()
 	if err != nil {
 		s.log.Error("failed to get public IP, falling back to interface IP", err)
@@ -160,14 +167,9 @@ func (s *Service) predictMumP2PAddrInfo() (peerInfo peer.AddrInfo, publicIP stri
 		logger.WithString("public_ip_v6", publicIPV6),
 	)
 
-	if _, err = identity.EnsureIdentity(s.cfg.IdentityMumP2PDir); err != nil {
-		s.log.Error("unable to ensure identity info", err)
-		return peer.AddrInfo{}, "", fmt.Errorf("unable to ensure identity info: %w", err)
-	}
-	identityKey, err := identity.ExtractIdentityFromDir(s.cfg.IdentityMumP2PDir)
+	id, err := s.mumP2PPeerID()
 	if err != nil {
-		s.log.Error("unable to load identity info", err)
-		return peer.AddrInfo{}, "", fmt.Errorf("unable to load identity info: %w", err)
+		return peer.AddrInfo{}, "", err
 	}
 	publicHost := publicIPV4
 	if strings.TrimSpace(publicHost) == "" {
@@ -178,9 +180,39 @@ func (s *Service) predictMumP2PAddrInfo() (peerInfo peer.AddrInfo, publicIP stri
 		return peer.AddrInfo{}, "", fmt.Errorf("empty IPv4 and IPv6")
 	}
 	return peer.AddrInfo{
-		ID:    identityKey.ID,
+		ID:    id,
 		Addrs: commonnet.MustBuildAdvertisedAddresses(s.log, publicIPV4, publicIPV6, s.cfg.AgentMumP2PPort),
 	}, publicHost, nil
+}
+
+func (s *Service) announcedMumP2PAddrInfo() (peer.AddrInfo, string, error) {
+	port := s.cfg.MumP2PAnnouncePort
+	if port == 0 {
+		port = s.cfg.AgentMumP2PPort
+	}
+	addrs, err := commonnet.MultiAddressBuilder(net.ParseIP(s.cfg.MumP2PAnnounceIP), port)
+	if err != nil {
+		return peer.AddrInfo{}, "", fmt.Errorf("invalid mump2p announce address: %w", err)
+	}
+	id, err := s.mumP2PPeerID()
+	if err != nil {
+		return peer.AddrInfo{}, "", err
+	}
+	s.log.Info("using configured mump2p announce address", logger.WithString("announce_addr", addrs[0].String()))
+	return peer.AddrInfo{ID: id, Addrs: addrs}, s.cfg.MumP2PAnnounceIP, nil
+}
+
+func (s *Service) mumP2PPeerID() (peer.ID, error) {
+	if _, err := identity.EnsureIdentity(s.cfg.IdentityMumP2PDir); err != nil {
+		s.log.Error("unable to ensure identity info", err)
+		return "", fmt.Errorf("unable to ensure identity info: %w", err)
+	}
+	identityKey, err := identity.ExtractIdentityFromDir(s.cfg.IdentityMumP2PDir)
+	if err != nil {
+		s.log.Error("unable to load identity info", err)
+		return "", fmt.Errorf("unable to load identity info: %w", err)
+	}
+	return identityKey.ID, nil
 }
 
 // exposeGatewayPeers tries to get peers list from bootstrap server and fallback to GitHub raw if it fails

@@ -204,6 +204,43 @@ func TestValidate_InvalidPorts(t *testing.T) {
 	require.Contains(t, err.Error(), "must be between 1 and 65535")
 }
 
+func TestValidate_MumP2PAnnounce(t *testing.T) {
+	cases := []struct {
+		name    string
+		ip      string
+		port    int
+		wantErr string
+	}{
+		{name: "unset"},
+		{name: "ipv4 only", ip: "203.0.113.7"},
+		{name: "ipv6 with port", ip: "2001:db8::7", port: 40001},
+		{name: "hostname", ip: "lb.example.com", wantErr: "OPT_AGENT_MUMP2P_ANNOUNCE_IP"},
+		{name: "unspecified", ip: "0.0.0.0", wantErr: "OPT_AGENT_MUMP2P_ANNOUNCE_IP"},
+		{name: "port out of range", ip: "203.0.113.7", port: 70000, wantErr: "OPT_AGENT_MUMP2P_ANNOUNCE_PORT"},
+		{name: "port without ip", port: 40001, wantErr: "requires OPT_AGENT_MUMP2P_ANNOUNCE_IP"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &config.AppConfig{
+				IdentityLibP2PDir:  testLibP2PDir,
+				IdentityMumP2PDir:  testMumP2PDir,
+				AgentLibP2PPort:    33212,
+				AgentMumP2PPort:    33213,
+				TelemetryPort:      48123,
+				GatewayClusterID:   "cluster",
+				MumP2PAnnounceIP:   tc.ip,
+				MumP2PAnnouncePort: tc.port,
+			}
+			err := cfg.Validate()
+			if tc.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.ErrorContains(t, err, tc.wantErr)
+		})
+	}
+}
+
 func TestValidate_MissingClusterID(t *testing.T) {
 	// GatewayID is no longer required (JWT subject overrides), but
 	// GatewayClusterID still must be supplied by config.

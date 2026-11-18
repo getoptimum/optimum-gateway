@@ -48,7 +48,7 @@ func TestRegisterAndGetMumP2PPeers_Success(t *testing.T) {
 	srv, bootstrap, cfg := getTestSrv(t)
 
 	// when
-	peers, err := srv.RegisterAndGetMumP2PPeers()
+	peers, _, err := srv.RegisterAndGetMumP2PPeers()
 	require.NoError(t, err)
 
 	// then
@@ -75,7 +75,7 @@ func TestRegisterAndGetMumP2PPeers_Success(t *testing.T) {
 		})
 
 		// when
-		peers, err = srv.RegisterAndGetMumP2PPeers()
+		peers, _, err = srv.RegisterAndGetMumP2PPeers()
 		require.NoError(t, err)
 
 		// then
@@ -96,7 +96,7 @@ func TestRegisterAndGetMumP2PPeers_Success(t *testing.T) {
 		})
 
 		// when
-		peers, err = srv.RegisterAndGetMumP2PPeers()
+		peers, _, err = srv.RegisterAndGetMumP2PPeers()
 		require.NoError(t, err)
 
 		// then — no Fatal was called, peers returned normally
@@ -110,11 +110,40 @@ func TestRegisterAndGetMumP2PPeers_Success(t *testing.T) {
 		})
 
 		// when
-		peers, err = srv.RegisterAndGetMumP2PPeers()
+		peers, _, err = srv.RegisterAndGetMumP2PPeers()
 		require.NoError(t, err)
 
 		// then
 		require.Len(t, peers, 1)
 		require.Contains(t, peers[0], id.ID.String())
 	})
+}
+
+func TestRegisterAndGetMumP2PPeers_AnnounceOverride(t *testing.T) {
+	cases := []struct {
+		name     string
+		ip       string
+		port     int
+		wantAddr string
+	}{
+		{name: "announce port", ip: "203.0.113.7", port: 40001, wantAddr: "/ip4/203.0.113.7/tcp/40001"},
+		{name: "listen port fallback", ip: "2001:db8::7", wantAddr: "/ip6/2001:db8::7/tcp/33213"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			srv, bootstrap, cfg := getTestSrv(t)
+			cfg.AgentMumP2PPort = 33213
+			cfg.MumP2PAnnounceIP = tc.ip
+			cfg.MumP2PAnnouncePort = tc.port
+
+			_, advertised, err := srv.RegisterAndGetMumP2PPeers()
+			require.NoError(t, err)
+
+			require.Len(t, advertised, 1)
+			require.Equal(t, tc.wantAddr, advertised[0].String())
+			registered, err := commonnet.AddressInfoFromString(bootstrap.WaitRegisterRequest(t, time.Second).Payload["mump2p_addr"])
+			require.NoError(t, err)
+			require.Equal(t, advertised, registered.Addrs)
+		})
+	}
 }

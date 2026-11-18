@@ -71,12 +71,6 @@ func NewNode(
 		return nil, fmt.Errorf("failed ensuring identity from %s: %w", identityDir, err)
 	}
 
-	publicIPV4, publicIPV6, err := commonnet.GetExternalIPs()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get public IP address: %w", err)
-	}
-	log.Info("ip detected", logger.WithString("ipv4", publicIPV4), logger.WithString("ipv6", publicIPV6))
-
 	identityKey, err := identity.ExtractIdentityFromDir(identityDir)
 	if err != nil {
 		return nil, fmt.Errorf("unable to extract identity from %s: %w", identityDir, err)
@@ -88,7 +82,16 @@ func NewNode(
 		return nil, fmt.Errorf("failed to create connection manager: %w", err)
 	}
 
-	cachedAddrs := commonnet.MustBuildAdvertisedAddresses(log, publicIPV4, publicIPV6, cfg.ListenPort)
+	cachedAddrs := cfg.AdvertisedAddrs
+	if len(cachedAddrs) == 0 {
+		publicIPV4, publicIPV6, errIP := commonnet.GetExternalIPs()
+		if errIP != nil {
+			return nil, fmt.Errorf("failed to get public IP address: %w", errIP)
+		}
+		log.Info("ip detected", logger.WithString("ipv4", publicIPV4), logger.WithString("ipv6", publicIPV6))
+		cachedAddrs = commonnet.MustBuildAdvertisedAddresses(log, publicIPV4, publicIPV6, cfg.ListenPort)
+	}
+	log.Info("mump2p advertised addresses", logger.WithString("addrs", fmt.Sprintf("%v", cachedAddrs)))
 
 	libP2POpts := []libp2p.Option{
 		libp2p.ConnectionManager(cn),
