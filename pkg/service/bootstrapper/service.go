@@ -159,7 +159,7 @@ func (s *Service) predictMumP2PAddrInfo() (peerInfo peer.AddrInfo, publicIP stri
 	// GetExternalIPs already falls back to interface IPs; failing here avoids registering loopback.
 	publicIPV4, publicIPV6, err := getExternalIPs()
 	if err != nil {
-		return peer.AddrInfo{}, "", fmt.Errorf("unable to detect public IP, set OPT_AGENT_MUMP2P_ANNOUNCE_IP: %w", err)
+		return peer.AddrInfo{}, "", fmt.Errorf("unable to detect public IP: %w", err)
 	}
 	s.log.Info("public IP address detected from prediction",
 		logger.WithString("public_ip", publicIPV4),
@@ -178,10 +178,19 @@ func (s *Service) predictMumP2PAddrInfo() (peerInfo peer.AddrInfo, publicIP stri
 		s.log.Error("unable to determine public IP for bootstrap registration", fmt.Errorf("empty IPv4 and IPv6"))
 		return peer.AddrInfo{}, "", fmt.Errorf("empty IPv4 and IPv6")
 	}
-	return peer.AddrInfo{
-		ID:    id,
-		Addrs: commonnet.MustBuildAdvertisedAddresses(s.log, publicIPV4, publicIPV6, s.cfg.AgentMumP2PPort),
-	}, publicHost, nil
+	addrs, err := s.detectedMumP2PAddrs(publicIPV4, publicIPV6)
+	if err != nil {
+		return peer.AddrInfo{}, "", err
+	}
+	return peer.AddrInfo{ID: id, Addrs: addrs}, publicHost, nil
+}
+
+func (s *Service) detectedMumP2PAddrs(publicIPV4, publicIPV6 string) ([]ma.Multiaddr, error) {
+	if publicIPV4 != "" {
+		return commonnet.BuildAdvertisedAddresses(s.log, publicIPV4, publicIPV6, s.cfg.AgentMumP2PPort)
+	}
+	// BuildAdvertisedAddresses requires IPv4, so IPv6-only hosts announce just the IPv6 address.
+	return commonnet.MultiAddressBuilder(net.ParseIP(publicIPV6), s.cfg.AgentMumP2PPort)
 }
 
 func (s *Service) announcedMumP2PAddrInfo() (peer.AddrInfo, string, error) {

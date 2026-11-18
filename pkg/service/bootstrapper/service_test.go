@@ -157,5 +157,22 @@ func TestRegisterAndGetMumP2PPeers_FailsWhenIPDetectionFails(t *testing.T) {
 
 	_, _, err := srv.RegisterAndGetMumP2PPeers()
 
-	require.ErrorContains(t, err, "OPT_AGENT_MUMP2P_ANNOUNCE_IP")
+	require.ErrorContains(t, err, "unable to detect public IP")
+}
+
+func TestRegisterAndGetMumP2PPeers_IPv6Only(t *testing.T) {
+	srv, bootstrap, cfg := getTestSrv(t)
+	cfg.AgentMumP2PPort = 33213
+	t.Cleanup(bootstrapper.SetExternalIPsFunc(func() (string, string, error) {
+		return "", "2001:db8::1", nil
+	}))
+
+	_, advertised, err := srv.RegisterAndGetMumP2PPeers()
+	require.NoError(t, err)
+
+	require.Len(t, advertised, 1)
+	require.Equal(t, "/ip6/2001:db8::1/tcp/33213", advertised[0].String())
+	registered, err := commonnet.AddressInfoFromString(bootstrap.WaitRegisterRequest(t, time.Second).Payload["mump2p_addr"])
+	require.NoError(t, err)
+	require.Equal(t, advertised, registered.Addrs)
 }

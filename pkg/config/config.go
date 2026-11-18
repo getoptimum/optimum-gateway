@@ -315,7 +315,7 @@ func (c *AppConfig) Validate() error {
 	}
 	if c.MumP2PAnnounceIP != "" {
 		if ip := net.ParseIP(c.MumP2PAnnounceIP); ip == nil || !ip.IsGlobalUnicast() {
-			return fmt.Errorf("OPT_AGENT_MUMP2P_ANNOUNCE_IP must be a dialable unicast IPv4 or IPv6 address, got %q", c.MumP2PAnnounceIP)
+			return fmt.Errorf("OPT_AGENT_MUMP2P_ANNOUNCE_IP must be a unicast IPv4 or IPv6 address, got %q", c.MumP2PAnnounceIP)
 		}
 	}
 	if c.MumP2PAnnouncePort < 0 || c.MumP2PAnnouncePort > 65535 {
