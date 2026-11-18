@@ -31,7 +31,7 @@ type Config struct {
 
 	BootstrapPeers []string `yaml:"bootstrap_peers"`
 
-	// AdvertisedAddrs replaces autodetection so the host announces what bootstrap registered.
+	// AdvertisedAddrs are what bootstrap registered; NewNode requires them so the two cannot drift.
 	AdvertisedAddrs []multiaddr.Multiaddr `yaml:"-"`
 
 	// Trace event categories to broadcast to RegisterListener consumers. Shard metrics

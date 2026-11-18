@@ -20,7 +20,6 @@ import (
 	commonhash "github.com/getoptimum/optimum-common/pkg/hash"
 	"github.com/getoptimum/optimum-common/pkg/identity"
 	"github.com/getoptimum/optimum-common/pkg/logger"
-	commonnet "github.com/getoptimum/optimum-common/pkg/net"
 	"github.com/getoptimum/optimum-common/pkg/syncx"
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
 	discovery "github.com/getoptimum/optimum-gateway/pkg/service/mum_p2p/dhtdiscovery"
@@ -82,15 +81,10 @@ func NewNode(
 		return nil, fmt.Errorf("failed to create connection manager: %w", err)
 	}
 
-	cachedAddrs := cfg.AdvertisedAddrs
-	if len(cachedAddrs) == 0 {
-		publicIPV4, publicIPV6, errIP := commonnet.GetExternalIPs()
-		if errIP != nil {
-			return nil, fmt.Errorf("failed to get public IP address: %w", errIP)
-		}
-		log.Info("ip detected", logger.WithString("ipv4", publicIPV4), logger.WithString("ipv6", publicIPV6))
-		cachedAddrs = commonnet.MustBuildAdvertisedAddresses(log, publicIPV4, publicIPV6, cfg.ListenPort)
+	if len(cfg.AdvertisedAddrs) == 0 {
+		return nil, fmt.Errorf("advertised addresses are required")
 	}
+	cachedAddrs := cfg.AdvertisedAddrs
 	log.Info("mump2p advertised addresses", logger.WithString("addrs", fmt.Sprintf("%v", cachedAddrs)))
 
 	libP2POpts := []libp2p.Option{

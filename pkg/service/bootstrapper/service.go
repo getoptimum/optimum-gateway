@@ -15,6 +15,7 @@ import (
 	"github.com/getoptimum/optimum-common/pkg/identity"
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	commonnet "github.com/getoptimum/optimum-common/pkg/net"
+	"github.com/getoptimum/optimum-common/pkg/slices"
 	"github.com/getoptimum/optimum-common/pkg/syncx"
 	"github.com/getoptimum/optimum-gateway/pkg/config"
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
@@ -73,7 +74,7 @@ func (s *Service) SetGatewayPeerIDStr(peerIDStr string) {
 }
 
 // RegisterAndGetMumP2PPeers registers this gateway with bootstrap and returns mesh peers
-// plus the addresses it registered, which the mesh host must advertise too.
+// plus the addresses it sent for registration, which the mesh host must advertise too.
 func (s *Service) RegisterAndGetMumP2PPeers() ([]string, []ma.Multiaddr, error) {
 	predictedAddress, publicIP, err := s.predictMumP2PAddrInfo()
 	if err != nil {
@@ -199,7 +200,7 @@ func (s *Service) detectedMumP2PAddrs(publicIPV4, publicIPV6 string) ([]ma.Multi
 			addrs = append(addrs, ifaceAddrs...)
 		}
 	}
-	return addrs, nil
+	return slices.UniqueSlice(addrs), nil
 }
 
 func (s *Service) announcedMumP2PAddrInfo() (peer.AddrInfo, string, error) {

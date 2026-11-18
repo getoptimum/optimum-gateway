@@ -172,9 +172,7 @@ func TestRegisterAndGetMumP2PPeers_IPv6Only(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, "/ip6/2001:db8::1/tcp/33213", advertised[0].String())
-	ifaceIPs := commonnet.GetInterfaceIPs()
-	require.Len(t, advertised, 1+len(ifaceIPs))
-	for _, ip := range ifaceIPs {
+	for _, ip := range commonnet.GetInterfaceIPs() {
 		require.Contains(t, advertised, ma.StringCast(fmt.Sprintf("/ip4/%s/tcp/33213", ip)))
 	}
 	registered, err := commonnet.AddressInfoFromString(bootstrap.WaitRegisterRequest(t, time.Second).Payload["mump2p_addr"])
