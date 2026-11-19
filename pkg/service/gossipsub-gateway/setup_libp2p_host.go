@@ -204,6 +204,7 @@ func (s *Service) onPeerConnected(_ network.Network, conn network.Conn) {
 	}
 	s.libP2PDirectPeers.Store(peerID.String(), peerAddress)
 	telemetry.CLPeerConnected()
+	telemetry.SetCLPeerConnection(peerID.String(), true)
 	go func() {
 		l := s.log.With(logger.WithPeerID(peerID), logger.WithString("addr", addr.String()))
 		if errD := s.ps.AddDirectPeer(peerAddress); errD != nil {
@@ -246,6 +247,7 @@ func (s *Service) onPeerDisconnected(n network.Network, conn network.Conn) {
 	if !allowed {
 		return
 	}
+	telemetry.SetCLPeerConnection(peerID.String(), n.Connectedness(peerID) == network.Connected)
 	telemetry.CLPeerDisconnected(s.peerClientFamily(peerID))
 }
 

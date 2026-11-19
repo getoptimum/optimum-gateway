@@ -24,12 +24,14 @@ var (
 
 	clPeerConnected    *prometheus.CounterVec
 	clPeerDisconnected *prometheus.CounterVec
+	clPeerConnection   *prometheus.GaugeVec
 	// Separate from clPeerDisconnected so existing unlabeled queries keep matching cl_peer_connected_total.
 	clPeerDisconnectedByClient *prometheus.CounterVec
 	clPeerGoodbye              *prometheus.CounterVec
 
 	mumP2PPeerConnected    *prometheus.CounterVec
 	mumP2PPeerDisconnected *prometheus.CounterVec
+	mumP2PPeerConnection   *prometheus.GaugeVec
 )
 
 func initPeersMetrics() {
@@ -83,6 +85,12 @@ func initPeersMetrics() {
 		"CL peer disconnections",
 		nil,
 	)
+	clPeerConnection = commonmetrics.NewGaugeVec(
+		"cl_peer_connection",
+		subsystem,
+		"Whether a CL peer currently has at least one connection to the gateway (1=connected, 0=disconnected)",
+		[]string{"peer_id"},
+	)
 	clPeerDisconnectedByClient = commonmetrics.NewCounterVec(
 		"cl_peer_disconnected_by_client_total",
 		subsystem,
@@ -108,6 +116,31 @@ func initPeersMetrics() {
 		"mump2p peer disconnections",
 		nil,
 	)
+	mumP2PPeerConnection = commonmetrics.NewGaugeVec(
+		"mump2p_peer_connection",
+		subsystem,
+		"Whether a mump2p peer currently has at least one connection to the gateway (1=connected, 0=disconnected)",
+		[]string{"peer_id"},
+	)
+}
+
+func SetCLPeerConnection(peerID string, connected bool) {
+	if enabledMetrics {
+		clPeerConnection.WithLabelValues(peerID).Set(boolGaugeValue(connected))
+	}
+}
+
+func SetMumP2PPeerConnection(peerID string, connected bool) {
+	if enabledMetrics {
+		mumP2PPeerConnection.WithLabelValues(peerID).Set(boolGaugeValue(connected))
+	}
+}
+
+func boolGaugeValue(value bool) float64 {
+	if value {
+		return 1
+	}
+	return 0
 }
 
 func CLPeerConnected() {
