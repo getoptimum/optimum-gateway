@@ -72,11 +72,14 @@ func (s *Service) setupMumP2PHost() error {
 	s.log.Info("setup mump2p host completed")
 	s.nodeMumP2P.GetHost().Network().Notify(
 		&network.NotifyBundle{
-			ConnectedF: func(_ network.Network, _ network.Conn) {
+			ConnectedF: func(_ network.Network, conn network.Conn) {
 				telemetry.MumP2PPeerConnected()
+				telemetry.SetMumP2PPeerConnection(conn.RemotePeer().String(), true)
 			},
-			DisconnectedF: func(_ network.Network, _ network.Conn) {
+			DisconnectedF: func(n network.Network, conn network.Conn) {
 				telemetry.MumP2PPeerDisconnected()
+				peerID := conn.RemotePeer()
+				telemetry.SetMumP2PPeerConnection(peerID.String(), n.Connectedness(peerID) == network.Connected)
 			},
 		},
 	)

@@ -42,6 +42,26 @@ func counterSum(t *testing.T, suffix string, labels map[string]string) float64 {
 	return sum
 }
 
+func peerConnectionGauge(t *testing.T, suffix, peerID string) float64 {
+	t.Helper()
+	families, err := telemetry.CustomRegistry.Gather()
+	require.NoError(t, err)
+	for _, family := range families {
+		if !strings.HasSuffix(family.GetName(), suffix) {
+			continue
+		}
+		for _, metric := range family.GetMetric() {
+			for _, label := range metric.GetLabel() {
+				if label.GetName() == "peer_id" && label.GetValue() == peerID {
+					return metric.GetGauge().GetValue()
+				}
+			}
+		}
+	}
+	t.Fatalf("gauge %q for peer %q not found", suffix, peerID)
+	return 0
+}
+
 func startIdentifiedLighthouse(t *testing.T, svc *Service) host.Host {
 	t.Helper()
 	client, err := libp2p.New(libp2p.ListenAddrStrings("/ip4/127.0.0.1/tcp/0"), libp2p.UserAgent("Lighthouse/v8.3.3-test"))
@@ -86,6 +106,16 @@ func TestDisconnectKeepsAgentForLateNotices(t *testing.T) {
 	// A second connection's notification arrives after the first already ran.
 	svc.onPeerDisconnected(svc.hostLibP2P.Network(), fakeConn{remote: client.ID()})
 	require.Equal(t, before+2, counterSum(t, "cl_peer_disconnected_by_client_total", labels))
+}
+
+func TestCLPeerConnectionGaugeTracksPeer(t *testing.T) {
+	svc := newMetricsGateway(t)
+	client := startIdentifiedLighthouse(t, svc)
+
+	require.Equal(t, float64(1), peerConnectionGauge(t, "cl_peer_connection", client.ID().String()))
+
+	disconnect(t, svc, client)
+	require.Equal(t, float64(0), peerConnectionGauge(t, "cl_peer_connection", client.ID().String()))
 }
 
 func TestGoodbyeLabelsClient(t *testing.T) {
