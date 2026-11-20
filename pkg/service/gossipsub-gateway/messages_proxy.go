@@ -119,6 +119,11 @@ func (s *Service) processMumP2PMessage(l logger.AppLogger, msg *commonentities.P
 	if messageFromSelf {
 		return
 	}
+	if meta.IsExecutionPayload() {
+		// Log before dedup, matching beacon blocks. Otherwise the path that
+		// loses the race never gets a received_at_ms.
+		logExecutionPayloadIfInBudget(l, "mump2p", msg.Message)
+	}
 	if s.isDuplicateMessage(msg.Message) {
 		return
 	}

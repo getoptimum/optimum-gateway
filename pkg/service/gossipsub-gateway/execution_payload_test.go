@@ -2,6 +2,7 @@ package gossipsub_gateway
 
 import (
 	"context"
+	"log/slog"
 	"strings"
 	"testing"
 	"time"
@@ -10,6 +11,7 @@ import (
 
 	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
 	commonhash "github.com/getoptimum/optimum-common/pkg/hash"
+	"github.com/getoptimum/optimum-common/pkg/logger"
 	"github.com/getoptimum/optimum-gateway/pkg/config"
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
 	"github.com/getoptimum/optimum-gateway/pkg/protocol/consensus"
@@ -66,6 +68,43 @@ func TestExecutionPayloadBoundary(t *testing.T) {
 	require.False(t, seen, "one byte over the consensus budget must be skipped before publish")
 	require.Equal(t, beforeSkip+1, executionPayloadCount(t, "execution_payload_skipped_total", "mump2p"))
 }
+
+func TestExecutionPayloadBothPathsAreLogged(t *testing.T) {
+	svc, _ := newGateway(t)
+	t.Cleanup(svc.messagesMap.Close)
+	telemetry.InitMetrics(t.Context(), svc.log, svc.cfg)
+	logs := &arrivalLog{}
+
+	payload := []byte{9, 8, 7}
+	beforeMum := executionPayloadCount(t, "execution_payload_received_total", "mump2p")
+	beforeCL := executionPayloadCount(t, "execution_payload_received_total", "cl")
+	svc.processMumP2PMessage(logs, &commonentities.P2PMessage{
+		SourceNodeID: testPeerID, Topic: testExecutionPayloadTopic, Message: payload,
+	})
+	svc.processCLExecutionPayload(logs, &entities.CLMessage{
+		Topic: testExecutionPayloadTopic, Message: payload,
+	})
+
+	require.Equal(t, 2, logs.arrivals, "the losing path still records received_at_ms")
+	require.Equal(t, beforeMum+1, executionPayloadCount(t, "execution_payload_received_total", "mump2p"))
+	require.Equal(t, beforeCL, executionPayloadCount(t, "execution_payload_received_total", "cl"))
+}
+
+type arrivalLog struct {
+	arrivals int
+}
+
+func (a *arrivalLog) Info(message string, _ ...logger.Field) {
+	if message == "execution_payload arrived" {
+		a.arrivals++
+	}
+}
+
+func (a *arrivalLog) Error(string, error, ...logger.Field)  {}
+func (a *arrivalLog) Debug(string, ...logger.Field)         {}
+func (a *arrivalLog) Fatal(string, error, ...logger.Field)  {}
+func (a *arrivalLog) With(...logger.Field) logger.AppLogger { return a }
+func (a *arrivalLog) Slog() *slog.Logger                    { return slog.Default() }
 
 func TestExecutionPayloadDuplicateCountsOnce(t *testing.T) {
 	svc, _ := newGateway(t)

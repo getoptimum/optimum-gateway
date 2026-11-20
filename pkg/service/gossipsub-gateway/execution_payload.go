@@ -22,12 +22,21 @@ func noteExecutionPayloadSkipped(l logger.AppLogger, msg []byte, direction strin
 	)
 }
 
-func (s *Service) noteExecutionPayloadArrival(l logger.AppLogger, direction string, msg []byte) {
-	telemetry.ObserveExecutionPayload(direction, len(msg))
+// logExecutionPayloadArrival records one observation of an in-budget envelope.
+// Both paths log, including the copy that loses the race. The later copy is
+// what makes a same-hub libp2p versus mump2p delta possible.
+func logExecutionPayloadArrival(l logger.AppLogger, direction string) {
 	l.Info("execution_payload arrived",
 		logger.WithInt64("received_at_ms", time.Now().UnixMilli()),
 		logger.WithString("direction", direction),
 	)
+}
+
+func logExecutionPayloadIfInBudget(l logger.AppLogger, direction string, msg []byte) {
+	if len(msg) > consensus.MaxCompressedGossipSize() {
+		return
+	}
+	logExecutionPayloadArrival(l, direction)
 }
 
 // processCLExecutionPayload forwards a consensus-client envelope into the mesh.
@@ -38,11 +47,13 @@ func (s *Service) processCLExecutionPayload(l logger.AppLogger, msg *entities.CL
 		noteExecutionPayloadSkipped(l, msg.Message, "mump2p")
 		return
 	}
-	// Count after dedup so cl and mump2p are both first-seen.
+	// Log before dedup. A payload that already arrived on mump2p is still a
+	// libp2p sample; only the first copy is counted and published.
+	logExecutionPayloadArrival(l, "cl")
 	if s.isDuplicateMessage(msg.Message) {
 		return
 	}
-	s.noteExecutionPayloadArrival(l, "cl", msg.Message)
+	telemetry.ObserveExecutionPayload("cl", len(msg.Message))
 	if s.nodeMumP2P == nil {
 		return
 	}
@@ -65,7 +76,8 @@ func (s *Service) processMumP2PExecutionPayload(l logger.AppLogger, msg *commone
 		}
 		return
 	}
-	s.noteExecutionPayloadArrival(l, "mump2p", msg.Message)
+	// The arrival itself was logged before dedup. This counts the first copy.
+	telemetry.ObserveExecutionPayload("mump2p", len(msg.Message))
 	if s.propagationDisabled(l) {
 		return
 	}
