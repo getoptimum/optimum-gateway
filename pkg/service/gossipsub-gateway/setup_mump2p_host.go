@@ -93,6 +93,7 @@ func (s *Service) handleMessagesFromMumP2PTopics() {
 			}
 			switch data.Command {
 			case entities.MumP2PCommandMessage:
+				s.logMumP2PExecutionPayloadArrival(data.Message)
 				select {
 				case s.mumP2PMessages <- data.Message:
 				case <-s.ctx.Done():

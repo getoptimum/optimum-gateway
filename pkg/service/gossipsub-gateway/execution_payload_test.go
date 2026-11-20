@@ -1,12 +1,17 @@
 package gossipsub_gateway
 
 import (
+	"bytes"
 	"context"
-	"log/slog"
+	"encoding/json"
+	"io"
 	"strings"
 	"testing"
 	"time"
 
+	libp2ppubsub "github.com/libp2p/go-libp2p-pubsub"
+	pubsubpb "github.com/libp2p/go-libp2p-pubsub/pb"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/stretchr/testify/require"
 
 	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
@@ -69,42 +74,82 @@ func TestExecutionPayloadBoundary(t *testing.T) {
 	require.Equal(t, beforeSkip+1, executionPayloadCount(t, "execution_payload_skipped_total", "mump2p"))
 }
 
-func TestExecutionPayloadBothPathsAreLogged(t *testing.T) {
-	svc, _ := newGateway(t)
-	t.Cleanup(svc.messagesMap.Close)
-	telemetry.InitMetrics(t.Context(), svc.log, svc.cfg)
-	logs := &arrivalLog{}
-
+func TestExecutionPayloadTracerLogsEveryLibP2PCopy(t *testing.T) {
+	logs, buf := arrivalLogger()
+	tr := &executionPayloadTracer{log: logs}
 	payload := []byte{9, 8, 7}
-	beforeMum := executionPayloadCount(t, "execution_payload_received_total", "mump2p")
-	beforeCL := executionPayloadCount(t, "execution_payload_received_total", "cl")
-	svc.processMumP2PMessage(logs, &commonentities.P2PMessage{
-		SourceNodeID: testPeerID, Topic: testExecutionPayloadTopic, Message: payload,
-	})
-	svc.processCLExecutionPayload(logs, &entities.CLMessage{
-		Topic: testExecutionPayloadTopic, Message: payload,
-	})
+	from := peer.ID("prysm")
 
-	require.Equal(t, 2, logs.arrivals, "the losing path still records received_at_ms")
-	require.Equal(t, beforeMum+1, executionPayloadCount(t, "execution_payload_received_total", "mump2p"))
-	require.Equal(t, beforeCL, executionPayloadCount(t, "execution_payload_received_total", "cl"))
-}
+	tr.ValidateMessage(pubsubMessage(testExecutionPayloadTopic, payload, from))
+	tr.DuplicateMessage(pubsubMessage(testExecutionPayloadTopic, payload, from))
+	tr.ValidateMessage(pubsubMessage("/eth2/deadbeef/beacon_block/ssz_snappy", payload, from))
+	tr.ValidateMessage(pubsubMessage("/eth2/deadbeef/execution_payload_bid/ssz_snappy", payload, from))
 
-type arrivalLog struct {
-	arrivals int
-}
-
-func (a *arrivalLog) Info(message string, _ ...logger.Field) {
-	if message == "execution_payload arrived" {
-		a.arrivals++
+	lines := arrivals(t, buf)
+	require.Len(t, lines, 2, "first and duplicate copies are logged, other topics are not")
+	for i, line := range lines {
+		require.Equal(t, "cl", line["direction"])
+		require.Equal(t, executionPayloadHash(payload), line["payload_hash"])
+		require.Equal(t, from.String(), line["peer"])
+		require.Equal(t, i == 0, line["first_seen"])
+		require.Positive(t, line["received_at_ms"])
 	}
 }
 
-func (a *arrivalLog) Error(string, error, ...logger.Field)  {}
-func (a *arrivalLog) Debug(string, ...logger.Field)         {}
-func (a *arrivalLog) Fatal(string, error, ...logger.Field)  {}
-func (a *arrivalLog) With(...logger.Field) logger.AppLogger { return a }
-func (a *arrivalLog) Slog() *slog.Logger                    { return slog.Default() }
+func TestExecutionPayloadMumP2PArrivalIsStampedAtReceive(t *testing.T) {
+	svc, _ := newGateway(t)
+	t.Cleanup(svc.messagesMap.Close)
+	logs, buf := arrivalLogger()
+	svc.log = logs
+	payload := []byte{9, 8, 7}
+
+	svc.logMumP2PExecutionPayloadArrival(&commonentities.P2PMessage{
+		SourceNodeID: svc.nodeMumP2PStr, Topic: testExecutionPayloadTopic, Message: payload,
+	})
+	svc.logMumP2PExecutionPayloadArrival(&commonentities.P2PMessage{
+		SourceNodeID: testPeerID, Topic: "/eth2/deadbeef/beacon_block/ssz_snappy", Message: payload,
+	})
+	svc.logMumP2PExecutionPayloadArrival(&commonentities.P2PMessage{
+		SourceNodeID: testPeerID, Topic: testExecutionPayloadTopic, Message: make([]byte, consensus.MaxCompressedGossipSize()+1),
+	})
+	svc.logMumP2PExecutionPayloadArrival(&commonentities.P2PMessage{
+		SourceNodeID: testPeerID, Topic: testExecutionPayloadTopic, Message: payload,
+	})
+
+	lines := arrivals(t, buf)
+	require.Len(t, lines, 1, "only an in-budget envelope from another node is logged")
+	require.Equal(t, "mump2p", lines[0]["direction"])
+	require.Equal(t, testPeerID, lines[0]["source_node_id"])
+	require.Equal(t, executionPayloadHash(payload), lines[0]["payload_hash"], "joins the libp2p line for the same envelope")
+}
+
+func arrivalLogger() (logger.AppLogger, *bytes.Buffer) {
+	buf := &bytes.Buffer{}
+	return logger.InitLogger([]io.Writer{buf}, logger.Info), buf
+}
+
+func arrivals(t *testing.T, buf *bytes.Buffer) []map[string]any {
+	t.Helper()
+	var out []map[string]any
+	for _, raw := range bytes.Split(bytes.TrimSpace(buf.Bytes()), []byte("\n")) {
+		if len(raw) == 0 {
+			continue
+		}
+		line := map[string]any{}
+		require.NoError(t, json.Unmarshal(raw, &line))
+		if line["msg"] == "execution_payload arrived" {
+			out = append(out, line)
+		}
+	}
+	return out
+}
+
+func pubsubMessage(topic string, data []byte, from peer.ID) *libp2ppubsub.Message {
+	return &libp2ppubsub.Message{
+		Message:      &pubsubpb.Message{Topic: &topic, Data: data},
+		ReceivedFrom: from,
+	}
+}
 
 func TestExecutionPayloadDuplicateCountsOnce(t *testing.T) {
 	svc, _ := newGateway(t)
