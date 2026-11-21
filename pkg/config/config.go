@@ -85,10 +85,14 @@ type AppConfig struct {
 	// It is no longer inert under join_key: EnrollmentLabel reads it before the
 	// mint, and that label is unique per org, so it must be unique per host.
 	GatewayID string `yaml:"gateway_id" env:"OPT_GATEWAY_ID" default:"dev-gateway"`
-	// Chain is the dev-mode chain (hoodi, mainnet, or a numeric id). InitRuntime
-	// uses it only when the JWT chain_id claim is empty. A prod boot passes the
-	// claim, and this value is ignored.
+	// Chain is the dev-mode chain (a built-in name, a custom_chains name, or a
+	// numeric id). InitRuntime uses it only when the JWT chain_id claim is empty.
+	// A prod boot passes the claim, and this value is ignored.
 	Chain string `yaml:"chain" env:"OPT_DEV_CHAIN" default:""`
+	// CustomChains are registered in LoadConfig, before anything resolves the
+	// chain, so `chain` or the JWT chain_id claim can name a devnet such as
+	// Kurtosis. Empty leaves the built-ins only.
+	CustomChains []CustomChainCfg `yaml:"custom_chains"`
 	// GatewayType is JWT-sourced — InitRuntime sets it from the `type` claim
 	// (hermes|partner|relay) once the auth manager has minted. Empty in dev
 	// mode (OPT_ENABLE_AUTH=false), where there is no minted claim. Used as
@@ -168,6 +172,9 @@ func LoadConfig(confFile string) (*AppConfig, error) {
 	cfg.CommitHash = version.GetCommitHash()
 	cfg.InitDerived()
 
+	if err := cfg.registerCustomChains(); err != nil {
+		return nil, fmt.Errorf("failed to register custom chains: %w", err)
+	}
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("failed to validate config: %w", err)
 	}
@@ -255,6 +262,28 @@ func (c *AppConfig) logConfigPeriodically(ctx context.Context) {
 
 func (c *AppConfig) GetDCRotator() *commonconfig.Rotator {
 	return c.rotator
+}
+
+// CustomChainCfg is a chain optimum-common does not know. Sepolia and
+// Platåberget are built in.
+type CustomChainCfg struct {
+	Name        string `yaml:"name"`
+	ChainID     uint64 `yaml:"chain_id"`
+	GenesisTime uint64 `yaml:"genesis_time"`
+}
+
+// registerCustomChains adds custom_chains to the optimum-common registry and
+// rewrites each name to its canonical form.
+func (c *AppConfig) registerCustomChains() error {
+	for i := range c.CustomChains {
+		ch := &c.CustomChains[i]
+		canon, err := chain.RegisterChain(ch.Name, ch.ChainID, ch.GenesisTime)
+		if err != nil {
+			return fmt.Errorf("custom chain %q: %w", ch.Name, err)
+		}
+		ch.Name = canon.String()
+	}
+	return nil
 }
 
 // InitDerived seeds atomics from yaml/env fields. Required for hand-built configs;

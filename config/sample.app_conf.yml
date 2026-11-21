@@ -70,6 +70,15 @@ telemetry_port: 48123
 #                                          # EXCEPT under join_key: it is read before the
 #                                          # mint as the enrollment label, so set it per host
 
+# ─── Custom chains (optional; devnets such as Kurtosis) ──────────────────────
+# Registered at startup so `chain` or the JWT chain_id claim can name them.
+# Sepolia and Platåberget are built in. The bootstrap needs the same entry in
+# its own custom_chains to serve this chain's fork digest.
+# custom_chains:
+#   - name: kurtosis
+#     chain_id: 3151908                    # the devnet's network id
+#     genesis_time: 1763700000             # beacon genesis, unix seconds
+
 # ─── Direct CL peers (optional) ──────────────────────────────────────────────
 # direct_cl_peers:
 #   - /ip4/1.2.3.4/tcp/13000/p2p/16Uiu2...

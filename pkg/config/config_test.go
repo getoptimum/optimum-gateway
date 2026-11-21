@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/getoptimum/optimum-common/pkg/chain"
 	"github.com/getoptimum/optimum-common/pkg/logger"
 	"github.com/getoptimum/optimum-common/pkg/version"
 	"github.com/getoptimum/optimum-gateway/pkg/config"
@@ -55,6 +56,65 @@ telemetry_port: 9999`)
 	require.Equal(t, "127.0.0.1:6060", cfg.PProfAddr)
 	require.Equal(t, version.GetVersion(), cfg.Version)
 	require.Equal(t, version.GetCommitHash(), cfg.CommitHash)
+}
+
+func TestLoadConfig_CustomChains_Registered(t *testing.T) {
+	// given: a devnet the common registry does not know, named by the dev-mode chain
+	confPath := writeTempConfig(t, `
+identity_libp2p_dir: "/tmp/lib"
+identity_mump2p_dir: "/tmp/mump2p"
+agent_lib_p2p_port: 4000
+agent_mump2p_port: 4001
+gateway_cluster_id: "gw-cluster"
+chain: "GW-Test-Devnet"
+custom_chains:
+  - name: "GW-Test-Devnet"
+    chain_id: 3151908001
+    genesis_time: 1763700000`)
+
+	// when
+	cfg, err := config.LoadConfig(confPath)
+	require.NoError(t, err)
+
+	// then: the name is canonical and the chain resolves by name and id
+	require.Equal(t, "gw-test-devnet", cfg.CustomChains[0].Name)
+	ch, err := chain.ChainFromString(cfg.Chain)
+	require.NoError(t, err)
+	require.Equal(t, uint64(3151908001), ch.ID())
+	genesis, ok := chain.GenesisTime("3151908001")
+	require.True(t, ok)
+	require.Equal(t, uint64(1763700000), genesis)
+}
+
+func TestLoadConfig_CustomChains_Invalid_ShouldFail(t *testing.T) {
+	cases := map[string]string{
+		"zero genesis time": `
+  - name: "gw-test-no-genesis"
+    chain_id: 3151908002
+    genesis_time: 0`,
+		"id taken by a built-in": `
+  - name: "gw-test-hoodi-clash"
+    chain_id: 560048
+    genesis_time: 1763700000`,
+		"built-in name with other parameters": `
+  - name: "hoodi"
+    chain_id: 3151908003
+    genesis_time: 1763700000`,
+	}
+	for name, entry := range cases {
+		t.Run(name, func(t *testing.T) {
+			confPath := writeTempConfig(t, `
+identity_libp2p_dir: "/tmp/lib"
+identity_mump2p_dir: "/tmp/mump2p"
+agent_lib_p2p_port: 4000
+agent_mump2p_port: 4001
+gateway_cluster_id: "gw-cluster"
+custom_chains:`+entry)
+
+			_, err := config.LoadConfig(confPath)
+			require.ErrorContains(t, err, "failed to register custom chains")
+		})
+	}
 }
 
 func TestLoadConfig_FileNotFound_ShouldFail(t *testing.T) {
