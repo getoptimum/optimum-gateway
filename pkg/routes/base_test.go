@@ -31,7 +31,7 @@ func TestAppRouter(t *testing.T) {
 	srvAuth.Start(cnt.Ctx)
 	_, err = srvAuth.Token(t.Context())
 	require.NoError(t, err)
-	require.NoError(t, cfg.InitRuntime(cnt.Ctx, cnt.Log, srvAuth.Chain().String(), cfg.GatewayID, cfg.GatewayType, cfg.OrgID))
+	require.NoError(t, cfg.InitRuntime(cnt.Ctx, cnt.Log, srvAuth.Chain().String(), cfg.GatewayID, cfg.GatewayType, cfg.OrgID, nil))
 
 	srvMessageRouter, err := message_router.NewService(cnt.Ctx, cfg, cnt.Log, srvAuth)
 	require.NoError(t, err)
