@@ -21,6 +21,8 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
 )
 
+const gatewayIDField = "gateway_id"
+
 func getTestSrv(t *testing.T) (*bootstrapper.Service, *test_utils.LocalBootstrapServer, *config.AppConfig) {
 	t.Helper()
 
@@ -72,8 +74,8 @@ func TestRegisterAndGetMumP2PPeers_Success(t *testing.T) {
 		require.NoError(t, maErr)
 		pa := peer.AddrInfo{ID: peer.ID("peerValid"), Addrs: []ma.Multiaddr{ma1[0]}}
 		bootstrap.SetMessagesResponse(map[string]any{
-			"gw-valid":   map[string]any{"gateway_id": "gw-valid", "mump2p_addr": commonnet.AddressInfoToString(pa)},
-			"gw-invalid": map[string]any{"gateway_id": "gw-invalid", "mump2p_addr": "not-a-valid-multiaddr"},
+			"gw-valid":   map[string]any{gatewayIDField: "gw-valid", "mump2p_addr": commonnet.AddressInfoToString(pa)},
+			"gw-invalid": map[string]any{gatewayIDField: "gw-invalid", "mump2p_addr": "not-a-valid-multiaddr"},
 		})
 
 		// when
@@ -92,7 +94,7 @@ func TestRegisterAndGetMumP2PPeers_Success(t *testing.T) {
 		pa := peer.AddrInfo{ID: id.ID, Addrs: []ma.Multiaddr{ma1[0]}}
 		bootstrap.SetMessagesResponse(map[string]any{
 			"gw-test": map[string]any{
-				"gateway_id":  "gw-test",
+				gatewayIDField:  "gw-test",
 				"mump2p_addr": commonnet.AddressInfoToString(pa),
 			},
 		})
@@ -107,8 +109,8 @@ func TestRegisterAndGetMumP2PPeers_Success(t *testing.T) {
 
 	t.Run("skip_all_invalid_bootstrap_peers_except_self", func(t *testing.T) {
 		bootstrap.SetMessagesResponse(map[string]any{
-			"gw-invalid-1": map[string]any{"gateway_id": "gw-invalid-1", "mump2p_addr": "not-a-valid-multiaddr"},
-			"gw-invalid-2": map[string]any{"gateway_id": "gw-invalid-2", "mump2p_addr": "still-not-a-valid-multiaddr"},
+			"gw-invalid-1": map[string]any{gatewayIDField: "gw-invalid-1", "mump2p_addr": "not-a-valid-multiaddr"},
+			"gw-invalid-2": map[string]any{gatewayIDField: "gw-invalid-2", "mump2p_addr": "still-not-a-valid-multiaddr"},
 		})
 
 		// when
@@ -191,8 +193,8 @@ func TestRegisterAndGetMumP2PPeers_NotDialable(t *testing.T) {
 	dialable := commonnet.AddressInfoToString(peer.AddrInfo{ID: peer.ID("peerDialable"), Addrs: []ma.Multiaddr{ma.StringCast("/ip4/198.51.100.7/tcp/4001")}})
 	outbound := commonnet.AddressInfoToString(peer.AddrInfo{ID: peer.ID("peerOutbound"), Addrs: []ma.Multiaddr{ma.StringCast("/ip4/198.51.100.8/tcp/4001")}})
 	bootstrap.SetMessagesResponse(map[string]any{
-		"gw-dialable": map[string]any{"gateway_id": "gw-dialable", "mump2p_addr": dialable},
-		"gw-outbound": map[string]any{"gateway_id": "gw-outbound", "mump2p_addr": outbound, "not_dialable": true},
+		"gw-dialable": map[string]any{gatewayIDField: "gw-dialable", "mump2p_addr": dialable},
+		"gw-outbound": map[string]any{gatewayIDField: "gw-outbound", "mump2p_addr": outbound, "not_dialable": true},
 	})
 
 	peers, advertised, err := srv.RegisterAndGetMumP2PPeers()
