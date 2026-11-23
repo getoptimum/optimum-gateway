@@ -188,11 +188,18 @@ func TestRegisterAndGetMumP2PPeers_NotDialable(t *testing.T) {
 		return "203.0.113.9", "", nil
 	}))
 
+	dialable := commonnet.AddressInfoToString(peer.AddrInfo{ID: peer.ID("peerDialable"), Addrs: []ma.Multiaddr{ma.StringCast("/ip4/198.51.100.7/tcp/4001")}})
+	outbound := commonnet.AddressInfoToString(peer.AddrInfo{ID: peer.ID("peerOutbound"), Addrs: []ma.Multiaddr{ma.StringCast("/ip4/198.51.100.8/tcp/4001")}})
+	bootstrap.SetMessagesResponse(map[string]any{
+		"gw-dialable": map[string]any{"gateway_id": "gw-dialable", "mump2p_addr": dialable},
+		"gw-outbound": map[string]any{"gateway_id": "gw-outbound", "mump2p_addr": outbound, "not_dialable": true},
+	})
+
 	peers, advertised, err := srv.RegisterAndGetMumP2PPeers()
 	require.NoError(t, err)
 
 	require.Empty(t, advertised)
-	require.NotEmpty(t, peers)
+	require.Equal(t, []string{dialable}, peers)
 	req := bootstrap.WaitRegisterRequest(t, time.Second)
 	require.Equal(t, "true", req.Payload["not_dialable"])
 	require.Contains(t, req.Payload["mump2p_addr"], "/ip4/203.0.113.9/tcp/33213")

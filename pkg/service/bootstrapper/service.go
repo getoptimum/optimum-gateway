@@ -144,6 +144,9 @@ func (s *Service) RegisterAndGetMumP2PPeers() ([]string, []ma.Multiaddr, error) 
 			s.log.Error("gateway with same ID already exists", fmt.Errorf("change gateway_id in config"))
 			return nil, nil, fmt.Errorf("gateway with same ID already exists")
 		}
+		if gateway.NotDialable {
+			continue // an older bootstrap may still expose outbound-only gateways
+		}
 		result = append(result, gateway.P2PAddr) // we can add self, it will be just excluded in libp2p
 	}
 	advertised := predictedAddress.Addrs
