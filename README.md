@@ -93,13 +93,15 @@ To run the gateway image directly:
 docker run --name optimum-gateway --rm \
   -p 33212:33212/tcp \
   -p 33213:33213/tcp \
-  -p 48123:48123/tcp \
+  -p 127.0.0.1:48123:48123/tcp \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data/libp2p:/tmp/libp2p \
   -v $(pwd)/data/mump2p:/tmp/mump2p \
-  getoptimum/gateway:v1.3.2 \
+  getoptimum/gateway:${version} \
   -config=/app/config/app_conf.yml
 ```
+
+`${version}` is the latest tag on the [releases](https://github.com/getoptimum/optimum-gateway/releases/latest) page.
 
 `agent_mump2p_port` (default `33213`) must be reachable by other gateways in the mesh.
 
@@ -153,7 +155,7 @@ See [`config/sample.app_conf.yml`](config/sample.app_conf.yml) and [`guide.md`](
 
 ## APIs
 
-The gateway exposes an HTTP server on `telemetry_port` (default `48123`):
+The gateway exposes an unauthenticated HTTP server on `telemetry_port` (default `48123`). It binds all IPv4 interfaces unless `telemetry_addr` (`OPT_TELEMETRY_ADDR`) is set; under host networking, set it to `127.0.0.1`:
 
 | Endpoint                | Description                                                                                                                 |
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------- |

@@ -92,3 +92,51 @@ func TestCodecRejectsOversized(t *testing.T) {
 
 	require.Error(t, codec.DecodeGossip(make([]byte, 13*1024*1024), &got))
 }
+
+// fatalAfterPrefixReader yields a uvarint length, then fails the test if the
+// decoder reads any further, so the test confirms an oversized length is rejected
+// before the body is read.
+type fatalAfterPrefixReader struct {
+	t      *testing.T
+	prefix []byte
+	pos    int
+}
+
+func (r *fatalAfterPrefixReader) Read(p []byte) (int, error) {
+	if r.pos >= len(r.prefix) {
+		r.t.Fatal("decoder read past the length prefix for an oversized length")
+	}
+	p[0] = r.prefix[r.pos]
+	r.pos++
+	return 1, nil
+}
+
+func TestDecodeWithMaxLengthRejectsOversizedLength(t *testing.T) {
+	var codec consensus.SSZSnappyCodec
+	// 10 MiB: within the gossip cap, far above any req/resp type's own size.
+	prefix := binary.AppendUvarint(nil, 10*1024*1024)
+
+	for name, msg := range map[string]consensus.Unmarshaler{
+		"status":    new(consensus.Status),
+		"statusV2":  new(consensus.StatusV2),
+		"sszUint64": new(consensus.SSZUint64),
+		"metaV2":    new(consensus.MetaDataV2),
+	} {
+		r := &fatalAfterPrefixReader{t: t, prefix: prefix}
+		err := codec.DecodeWithMaxLength(r, msg)
+		require.Error(t, err, name)
+		require.Contains(t, err.Error(), "exceeds max", name)
+	}
+}
+
+func TestDecodeWithMaxLengthAcceptsExactSize(t *testing.T) {
+	var codec consensus.SSZSnappyCodec
+	in := &consensus.StatusV2{HeadSlot: 400, EarliestAvailableSlot: 32}
+	var buf bytes.Buffer
+	_, err := codec.EncodeWithMaxLength(&buf, in)
+	require.NoError(t, err)
+
+	got := new(consensus.StatusV2)
+	require.NoError(t, codec.DecodeWithMaxLength(&buf, got))
+	require.Equal(t, *in, *got)
+}

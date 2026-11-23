@@ -52,6 +52,7 @@ The gateway accepts configuration through environment variables as well. Environ
 - `OPT_AGENT_MUMP2P_PORT`: TCP port used for the gateway-to-gateway mesh
 - `OPT_ENABLE_TELEMETRY`: Enable local API and Prometheus metrics
 - `OPT_TELEMETRY_PORT`: HTTP port for `/health`, `/metrics`, `/api/v1/self_info`
+- `OPT_TELEMETRY_ADDR`: IP the telemetry server binds (default: all IPv4 interfaces). Set `127.0.0.1` under host networking
 - `OPT_REMOTE_PUSH_ENABLE`: Push metrics/logs to Optimum (requires telemetry + API key)
 
 ## Startup Flow
@@ -82,9 +83,11 @@ docker run --name optimum-gateway --rm \
   -v $(pwd)/config:/app/config \
   -v $(pwd)/data/libp2p:/tmp/libp2p \
   -v $(pwd)/data/mump2p:/tmp/mump2p \
-  getoptimum/gateway:v1.3.2 \
+  getoptimum/gateway:${version} \
   -config=/app/config/app_conf.yml
 ```
+
+`${version}` is the latest tag on the [releases](https://github.com/getoptimum/optimum-gateway/releases/latest) page.
 
 `agent_mump2p_port` (sample `43213`) is used for gateway-to-gateway mesh egress.
 

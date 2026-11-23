@@ -107,8 +107,8 @@ stream_buffer_size: 64         # per-connection ring buffer (drop-on-overflow)
 Set `stream_only: true` if you only want the stream and do not run a consensus
 client. The gateway still joins the mesh but does not publish. Because it never
 starts the CL host, `/health` reports `cl_peers`, `cl_health` and
-`subscribed_topics` as `skipped` and returns 200 on the mesh signals alone
-(with `telemetry_enable: true`, which drives the `mump2p_health` check).
+`subscribed_topics` as `skipped` and returns 200 on the mesh signals alone.
+`/health` does not require `telemetry_enable`.
 
 The gateway verifies consumer tokens against the JWKS at your `remote_auth_url`,
 so it must point at the same auth service that mints the stream tokens.
@@ -123,10 +123,15 @@ so it must point at the same auth service that mints the stream tokens.
 
 Open the [Optimum Partner Console](https://console.getoptimum.xyz/) and select
 the operator you are minting for. **Check the network picker (top right) first** —
-the key is minted for the selected chain (Hoodi or Mainnet). Open the API keys
-section (labelled **Manage Gateways** for a customer-role login), choose the
+the key is minted for the selected chain (Hoodi or Mainnet). Open
+**Signal** → **Gateways & keys** (**Manage gateways**, or **Keys** on a
+self-serve account, when Signal is not enabled), choose the
 **Stream consumers** tab, create a key, name it after the downstream consumer,
 and copy the value.
+
+The **Stream consumers** tab is hidden while Optimum has consumer keys switched
+off. Signal then says the account cannot mint a consumer token yet; contact
+Optimum support.
 
 * The raw `osc_` key is shown **once** and cannot be retrieved again — copy it
   before dismissing the dialog.

@@ -123,10 +123,15 @@ so it must point at the same auth service that mints the stream tokens.
 
 Open the [Optimum Partner Console](https://console.getoptimum.xyz/) and select
 the operator you are minting for. **Check the network picker (top right) first** —
-the key is minted for the selected chain (Hoodi or Mainnet). Open the API keys
-section (labelled **Manage Gateways** for a customer-role login), choose the
+the key is minted for the selected chain (Hoodi or Mainnet). Open
+**Signal** → **Gateways & keys** (**Manage gateways**, or **Keys** on a
+self-serve account, when Signal is not enabled), choose the
 **Stream consumers** tab, create a key, name it after the downstream consumer,
 and copy the value.
+
+The **Stream consumers** tab is hidden while Optimum has consumer keys switched
+off. Signal then says the account cannot mint a consumer token yet; contact
+Optimum support.
 
 * The raw `osc_` key is shown **once** and cannot be retrieved again — copy it
   before dismissing the dialog.

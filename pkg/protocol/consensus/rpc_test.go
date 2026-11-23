@@ -65,3 +65,20 @@ func requireSSZRoundTrip(t *testing.T, want sszRoundTripper, size int) {
 	require.NoError(t, got.UnmarshalSSZ(raw))
 	require.Equal(t, want, got)
 }
+
+func TestGoodbyeCodeMessagesUseSpecCodes(t *testing.T) {
+	for code, want := range map[uint64]string{
+		1:   "client shutdown",
+		2:   "irrelevant network",
+		3:   "fault/error",
+		130: "rate limited (teku)",
+		237: "peer score too low (nimbus)",
+		238: "communication timeout (nimbus)",
+		250: "peer score too low",
+	} {
+		require.Equal(t, want, consensus.GoodbyeCodeMessages[code], code)
+	}
+	for _, stale := range []uint64{4, 5, 6} {
+		require.NotContains(t, consensus.GoodbyeCodeMessages, stale)
+	}
+}

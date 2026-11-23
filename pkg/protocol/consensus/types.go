@@ -26,3 +26,5 @@ func (s *SSZUint64) UnmarshalSSZ(buf []byte) error {
 	*s = SSZUint64(binary.LittleEndian.Uint64(buf))
 	return nil
 }
+
+func (*SSZUint64) maxSSZLen() uint64 { return 8 }

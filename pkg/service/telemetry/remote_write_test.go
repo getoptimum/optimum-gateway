@@ -16,6 +16,8 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/common/model"
+	"github.com/prometheus/prometheus/discovery"
 	"github.com/stretchr/testify/require"
 
 	"github.com/getoptimum/optimum-common/pkg/logger"
@@ -91,6 +93,21 @@ func TestBuildMimirPromConfig(t *testing.T) {
 		require.NotNil(t, auth)
 		require.Equal(t, "Bearer", auth.Type)
 		require.Equal(t, wantToken, string(auth.Credentials))
+	})
+
+	t.Run("scrape target follows telemetry_addr", func(t *testing.T) {
+		for addr, want := range map[string]string{
+			"":         "127.0.0.1:48123",
+			"10.0.0.5": "10.0.0.5:48123",
+			"::1":      "[::1]:48123",
+		} {
+			c := &config.AppConfig{RemotePushMimirURL: cfg.RemotePushMimirURL, TelemetryPort: cfg.TelemetryPort, TelemetryAddr: addr}
+			promCfg, err := buildMimirPromConfig(c, mimirScrapeInterval)
+			require.NoError(t, err)
+			sd := promCfg.ScrapeConfigs[0].ServiceDiscoveryConfigs[0].(discovery.StaticConfig)
+			require.Equal(t, model.LabelValue(want), sd[0].Targets[0][model.AddressLabel], addr)
+			require.Equal(t, model.LabelValue("127.0.0.1:48123"), sd[0].Labels[model.InstanceLabel], addr)
+		}
 	})
 
 	t.Run("concurrent", func(t *testing.T) {

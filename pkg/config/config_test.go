@@ -242,12 +242,12 @@ func TestInitRuntime_GatewayIDFromSub(t *testing.T) {
 	}
 	log := logger.NewAppSLogger(logger.Debug)
 
-	require.NoError(t, cfg.InitRuntime(t.Context(), log, "560048", "ag_test_sub", "hermes", "org-123"))
+	require.NoError(t, cfg.InitRuntime(t.Context(), log, "560048", "ag_test_sub", "hermes", "org-123", nil))
 	require.Equal(t, "ag_test_sub", cfg.GatewayID)
 	require.Equal(t, "hermes", cfg.GatewayType)
 	require.Equal(t, "org-123", cfg.OrgID)
 
-	require.NoError(t, cfg.InitRuntime(t.Context(), log, "hoodi", "", "", ""))
+	require.NoError(t, cfg.InitRuntime(t.Context(), log, "hoodi", "", "", "", nil))
 	require.Equal(t, "ag_test_sub", cfg.GatewayID, "empty sub must not overwrite existing gateway id")
 	require.Equal(t, "hermes", cfg.GatewayType, "empty type must not overwrite existing gateway type")
 }
@@ -287,12 +287,12 @@ func TestInitRuntime_DevChainWhenClaimEmpty(t *testing.T) {
 			Chain:            "hoodi",
 			GatewayClusterID: "optimum_hoodi_v0_3",
 		}
-		require.NoError(t, cfg.InitRuntime(t.Context(), log, "", "", "", ""))
+		require.NoError(t, cfg.InitRuntime(t.Context(), log, "", "", "", "", nil))
 	})
 
 	t.Run("empty claim and empty chain still fail", func(t *testing.T) {
 		cfg := &config.AppConfig{GatewayClusterID: "optimum_hoodi_v0_3"}
-		err := cfg.InitRuntime(t.Context(), log, "  ", "", "", "")
+		err := cfg.InitRuntime(t.Context(), log, "  ", "", "", "", nil)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "empty chain ID")
 	})
@@ -302,7 +302,7 @@ func TestInitRuntime_DevChainWhenClaimEmpty(t *testing.T) {
 			Chain:            "not-a-chain",
 			GatewayClusterID: "optimum_hoodi_v0_3",
 		}
-		require.NoError(t, cfg.InitRuntime(t.Context(), log, "560048", "", "", ""))
+		require.NoError(t, cfg.InitRuntime(t.Context(), log, "560048", "", "", "", nil))
 	})
 
 	// Auth on: a chain / OPT_DEV_CHAIN value must not replace the minted claim,
@@ -335,7 +335,7 @@ func TestInitRuntime_DevChainWhenClaimEmpty(t *testing.T) {
 				chainID = c.ChainID
 			}
 			require.Equal(t, "1", chainID)
-			require.NoError(t, cfg.InitRuntime(t.Context(), log, chainID, "", "", ""))
+			require.NoError(t, cfg.InitRuntime(t.Context(), log, chainID, "", "", "", nil))
 			require.Equal(t, override, cfg.Chain)
 
 			srv, err := forks.NewService(t.Context(), cfg, log, mgr)
@@ -568,4 +568,106 @@ func TestGatewayCredentialConfig(t *testing.T) {
 		require.Equal(t, "ogw_test_secret", cfg.APIKey)
 		require.Empty(t, cfg.JoinKey)
 	})
+}
+
+const (
+	loopbackTelemetry = "127.0.0.1:48123"
+	tcp4              = "tcp4"
+)
+
+func TestTelemetryAddr(t *testing.T) {
+	base := func(t *testing.T) {
+		t.Helper()
+		t.Setenv("OPT_IDENTITY_LIBP2P_DIR", "./libid")
+		t.Setenv("OPT_IDENTITY_MUMP2P_DIR", "./mump2pid")
+		t.Setenv("OPT_GATEWAY_CLUSTER_ID", "gw-cluster")
+	}
+
+	t.Run("defaults to all interfaces on 48123", func(t *testing.T) {
+		base(t)
+		requireUnset(t, "OPT_TELEMETRY_ADDR", "OPT_TELEMETRY_PORT")
+		cfg, err := config.LoadConfig("")
+		require.NoError(t, err)
+		require.Empty(t, cfg.TelemetryAddr)
+		require.Equal(t, ":48123", cfg.TelemetryListenAddr())
+	})
+
+	t.Run("yaml sets it and env overrides yaml", func(t *testing.T) {
+		base(t)
+		requireUnset(t, "OPT_TELEMETRY_ADDR")
+		confPath := writeTempConfig(t, `telemetry_addr: "127.0.0.1"`)
+		cfg, err := config.LoadConfig(confPath)
+		require.NoError(t, err)
+		require.Equal(t, "127.0.0.1", cfg.TelemetryAddr)
+
+		t.Setenv("OPT_TELEMETRY_ADDR", "::1")
+		cfg, err = config.LoadConfig(confPath)
+		require.NoError(t, err)
+		require.Equal(t, "::1", cfg.TelemetryAddr)
+	})
+
+	for _, addr := range []string{"", "0.0.0.0", "::", "127.0.0.1", "::1", "localhost", "LOCALHOST"} {
+		t.Run("accepts "+addr, func(t *testing.T) {
+			base(t)
+			t.Setenv("OPT_TELEMETRY_ADDR", addr)
+			_, err := config.LoadConfig("")
+			require.NoError(t, err)
+		})
+	}
+	for _, addr := range []string{loopbackTelemetry, "[::1]", "not a host", "http://x"} {
+		t.Run("rejects "+addr, func(t *testing.T) {
+			base(t)
+			t.Setenv("OPT_TELEMETRY_ADDR", addr)
+			_, err := config.LoadConfig("")
+			require.ErrorContains(t, err, "telemetry_addr")
+		})
+	}
+}
+
+func TestTelemetryListenAndLocalTarget(t *testing.T) {
+	for _, tc := range []struct {
+		addr, listen, network, target string
+	}{
+		{"", ":48123", tcp4, loopbackTelemetry},
+		{"0.0.0.0", "0.0.0.0:48123", tcp4, loopbackTelemetry},
+		{"localhost", loopbackTelemetry, tcp4, loopbackTelemetry},
+		{"Localhost", loopbackTelemetry, tcp4, loopbackTelemetry},
+		{"127.0.0.1", loopbackTelemetry, tcp4, loopbackTelemetry},
+		{"10.0.0.5", "10.0.0.5:48123", tcp4, "10.0.0.5:48123"},
+		{"::", "[::]:48123", "tcp", loopbackTelemetry},
+		{"::1", "[::1]:48123", "tcp6", "[::1]:48123"},
+		{"fd00::5", "[fd00::5]:48123", "tcp6", "[fd00::5]:48123"},
+	} {
+		t.Run(tc.addr, func(t *testing.T) {
+			cfg := &config.AppConfig{TelemetryAddr: tc.addr, TelemetryPort: 48123}
+			require.Equal(t, tc.listen, cfg.TelemetryListenAddr())
+			require.Equal(t, tc.network, cfg.TelemetryListenNetwork())
+			require.Equal(t, tc.target, cfg.TelemetryLocalTarget())
+		})
+	}
+}
+
+// Each accepted address must actually bind with the network we pick, and the
+// self-scrape target must reach it.
+func TestTelemetryBindReachesLocalTarget(t *testing.T) {
+	for _, addr := range []string{"", "0.0.0.0", "127.0.0.1", "localhost", "::", "::1"} {
+		t.Run(addr, func(t *testing.T) {
+			cfg := &config.AppConfig{TelemetryAddr: addr}
+			if cfg.TelemetryListenNetwork() != tcp4 {
+				probe, err := net.Listen("tcp6", "[::1]:0")
+				if err != nil {
+					t.Skipf("no IPv6 on this host: %v", err)
+				}
+				_ = probe.Close()
+			}
+			ln, err := net.Listen(cfg.TelemetryListenNetwork(), cfg.TelemetryListenAddr())
+			require.NoError(t, err)
+			t.Cleanup(func() { _ = ln.Close() })
+			cfg.TelemetryPort = ln.Addr().(*net.TCPAddr).Port
+
+			conn, err := net.Dial("tcp", cfg.TelemetryLocalTarget())
+			require.NoError(t, err)
+			_ = conn.Close()
+		})
+	}
 }

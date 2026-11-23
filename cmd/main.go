@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -81,7 +80,7 @@ func main() {
 		gatewayType = c.Type.String()
 		orgID = authMgr.OperatorID()
 	}
-	if err = appConf.InitRuntime(ctx, appLogger, chainID, gatewayID, gatewayType, orgID); err != nil {
+	if err = appConf.InitRuntime(ctx, appLogger, chainID, gatewayID, gatewayType, orgID, authMgr.DynamicConfigToken); err != nil {
 		appLogger.Fatal("unable to initialize runtime", err)
 	}
 	if authMgr.IsEnabled() {
@@ -202,7 +201,7 @@ func main() {
 	}
 
 	// HTTP server, but expose /metrics only if telemetry is enabled.
-	appRouter := routes.NewAppRouter(l, srvGateway, appConf, fmt.Sprintf(":%d", appConf.TelemetryPort))
+	appRouter := routes.NewAppRouter(l, srvGateway, appConf)
 	go func() {
 		if runErr := appRouter.Run(ctx); runErr != nil {
 			l.Fatal("failed to run http server", runErr)

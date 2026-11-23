@@ -30,10 +30,9 @@ func NewAppRouter(
 	log logger.AppLogger,
 	srvGateway *gateway.Service,
 	cfg *config.AppConfig,
-	address string,
 ) *Server {
 	app := &Server{
-		appAddr: address,
+		appAddr: cfg.TelemetryListenAddr(),
 		httpEngine: fiber.New(fiber.Config{
 			GETOnly:      true,
 			AppName:      "optimum-gateway",
@@ -118,7 +117,7 @@ func (s *Server) handleSelfInfo(ctx fiber.Ctx) error {
 // Run starts the HTTP Server. ctx is used to bound the lifetime of the
 // pprof memstat dumper; the Fiber listener itself is stopped via Stop().
 func (s *Server) Run(ctx context.Context) error {
-	s.log.Info("starting http server", logger.WithString("port", s.appAddr))
+	s.log.Info("starting http server", logger.WithString("addr", s.appAddr))
 	if s.cfg.EnablePProf {
 		go func() {
 			go utils.DumpMemStat(ctx, s.log, 5*time.Second)
@@ -129,6 +128,7 @@ func (s *Server) Run(ctx context.Context) error {
 		}()
 	}
 	return s.httpEngine.Listen(s.appAddr, fiber.ListenConfig{
+		ListenerNetwork:       s.cfg.TelemetryListenNetwork(),
 		DisableStartupMessage: true,
 	})
 }

@@ -223,7 +223,7 @@ curl -s http://localhost:9596/eth/v1/node/identity | jq '.data.peer_id, .data.p2
 When `direct_cl_peers` is set, the gateway disconnects any libp2p peer whose ID is missing from that list, including a second beacon node you forgot to add. A wrong peer ID means `cl_peers` stays 0 even though the CL is dialing `33212`. An empty list applies no peer-ID filter. Either way, open `33212` only to the CL.
 :::
 
-The gateway advertises a custody group count of 8 in its libp2p metadata so PeerDAS clients keep it as a useful peer. That advertisement is in the binary. There is no custody flag to set on the gateway. See the [Fulu p2p metadata spec](https://github.com/ethereum/consensus-specs/blob/master/specs/fulu/p2p-interface.md#metadata).
+The gateway advertises a custody group count of 4 (the Fulu `CUSTODY_REQUIREMENT`) in its libp2p metadata, and advertises no data availability in its status reply (a far-future `earliest_available_slot`), so PeerDAS clients keep it as a peer but do not ask it for data columns it cannot serve. That advertisement is in the binary. There is no custody flag to set on the gateway. See the [Fulu p2p metadata spec](https://github.com/ethereum/consensus-specs/blob/master/specs/fulu/p2p-interface.md#metadata).
 
 ## Verify
 
@@ -248,7 +248,7 @@ A peered CL is `cl_peers.value` of at least 1 and `libp2p.total_peers` of at lea
 | CL flag was copied from `.data.peer_id` or from `mump2p.peer_ids` | Wrong ID | Replace it with `self_info.peer_id`. |
 | Worked, then died after a gateway restart | Lighthouse or Nimbus did not re-dial, or the peer ID changed | Persist the identity volume. Add `direct_cl_peers`. |
 | Worked, then the peer ID in `self_info` changed | Identity directory was not a volume | Mount `identity_libp2p_dir` and update the CL flag. |
-| Lighthouse says goodbye, or drops the gateway | Peer table prune, or a custody metadata mismatch on an old gateway build | `--boot-nodes` plus `--trusted-peers` as above, on gateway v1.3.2. `--semi-supernode` does not fix the session. |
+| Lighthouse says goodbye, or drops the gateway | Peer table prune, or a custody metadata mismatch on an old gateway build | `--boot-nodes` plus `--trusted-peers` as above, on gateway v1.3.3 or later. `--semi-supernode` does not fix the session. |
 | Teku `NoSuchElementException` at `MetadataDasPeerCustodyTracker` | Teku older than v26.4.0 | Upgrade. Current stable is 26.9.1. |
 | Teku connects, then the gateway disappears | `--p2p-static-peers` only | Switch to `--p2p-direct-peers`. |
 | Nimbus logs `Adding privileged direct peer` and never connects | Firewall, or the netkey is `random` | Stable `--netkey-file`, both ports open, public or routable IP in `direct_cl_peers`. |

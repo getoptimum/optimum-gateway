@@ -76,7 +76,7 @@ Counters per topic (libp2p, mump2p) to isolate heavy topics.
 
 ### Propagation state
 
-* **`propagation_state`** — runtime gauge (`1` = propagating mump2p → CL, `0` = disabled via Optimum dynamic config). Matches `propagation_enabled` in `/api/v1/self_info`. Distinct from attestation propagation latency below.
+* **`propagation_state`** — runtime gauge (`1` = forwarding mump2p blocks and attestations to the CL, `0` = disabled via Optimum dynamic config). Matches `propagation_enabled` in `/api/v1/self_info`. Distinct from attestation propagation latency below.
 
 ### Attestation KPIs
 

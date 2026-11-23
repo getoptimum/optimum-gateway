@@ -10,6 +10,14 @@ Before starting the Optimum Gateway, ensure your firewall allows these ports:
 | 33213 | Inbound   | mump2p agent - Optimum network peers connect here                   |
 | 48123 | Localhost | Telemetry / Health / API — **local access only** (see Docker below) |
 
+## Load balancers
+
+`33212` stays on the private network. The beacon node dials that sidecar by peer ID. Keep it off the public internet, and do not put it behind a load balancer.
+
+`33213` is a long-lived raw TCP session. An HTTP load balancer cannot carry it. A TCP load balancer in front of the sidecar does not make the sidecar reachable either: the gateway announces the address it detects on the host, and it has no setting to announce the load balancer's address. Remote peers then dial the wrong place. The same limit is why the [Kubernetes install](05_kubernetes.md#networking-why-hostnetwork-is-required) uses the node's own address rather than a Service.
+
+The sidecar joins the mesh by dialing out, so allow that egress. Keep one sidecar per beacon node. A balancer that sends the connection to a different process presents a different peer ID, and the beacon node will not stay connected to it.
+
 ## Docker
 
 Publish **33212** (CL clients) and **33213** (Optimum mump2p mesh) to the network. Bind **48123** to localhost only — metrics and health stay available on the host (e.g. local Grafana) but are not reachable from the public internet. Optimum receives telemetry via remote push; you do not need to expose 48123 externally.
@@ -18,10 +26,12 @@ Publish **33212** (CL clients) and **33213** (Optimum mump2p mesh) to the networ
 docker run -p 33212:33212 -p 33213:33213 -p 127.0.0.1:48123:48123 \
   --name optimum-gateway \
   -e OPT_API_KEY=ogw_live_xxx \
-  getoptimum/gateway:v1.3.2
+  getoptimum/gateway:v1.3.4
 ```
 
-If Prometheus runs in another container on the same Docker network, omit the `48123` publish and scrape the gateway by container name instead.
+If Prometheus runs in another container, put both on one Docker network and scrape the gateway by container name (see [Metrics & Grafana](03_telemetry.md#step-3-prometheus-configuration)). Keep the loopback publish for local `curl` checks.
+
+Optimum never connects inbound to `48123`. If you run the gateway with `--network host`, `-p` does not apply, so set `telemetry_addr: 127.0.0.1` (or `OPT_TELEMETRY_ADDR=127.0.0.1`) to keep `48123` on loopback.
 
 ## Consumer block stream (optional)
 

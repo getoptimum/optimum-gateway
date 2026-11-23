@@ -192,7 +192,7 @@ func TestGatewayReal(t *testing.T) {
 
 	srv, appConf := getGatewayNode(ctx, t, logger.NewAppSLogger(logger.Debug), "local", false)
 	require.NoError(t, srv.Run())
-	appRouter := routes.NewAppRouter(l, srv, appConf, fmt.Sprintf(":%d", appConf.TelemetryPort))
+	appRouter := routes.NewAppRouter(l, srv, appConf)
 	go func() {
 		require.NoError(t, appRouter.Run(ctx))
 	}()
@@ -331,7 +331,7 @@ func spawnGateway(
 		require.NoError(t, err)
 	}
 
-	require.NoError(t, cfg.InitRuntime(ctx, l, srvAuth.Chain().String(), cfg.GatewayID, cfg.GatewayType, cfg.OrgID))
+	require.NoError(t, cfg.InitRuntime(ctx, l, srvAuth.Chain().String(), cfg.GatewayID, cfg.GatewayType, cfg.OrgID, nil))
 
 	srvMessageRouter, err := message_router.NewService(ctx, cfg, l, srvAuth)
 	require.NoError(t, err)

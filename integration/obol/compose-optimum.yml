@@ -9,7 +9,7 @@ services:
     ports:
       - "${GATEWAY_PORT_LIBP2P:-33212}:33212"
       - "${GATEWAY_PORT_MUMP2P:-33213}:33213"
-      - "${GATEWAY_PORT_TELEMETRY:-48123}:48123"
+      - "127.0.0.1:${GATEWAY_PORT_TELEMETRY:-48123}:48123"
     volumes:
       - ./optimum/config:/app/config
       - ./optimum/identity/libp2p:/tmp/libp2p

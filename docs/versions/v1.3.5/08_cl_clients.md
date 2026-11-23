@@ -28,12 +28,13 @@ Peering flags are the same on these releases. For Hoodi and mainnet, run:
 
 ## Do you set `direct_cl_peers`
 
-The gateway uses that list for two things, and only when it is non-empty.
+The gateway uses that list for three things, and only when it is non-empty.
 
 * It dials each entry and keeps retrying. That is what brings the session back after a gateway restart.
 * It treats the list as an allowlist. Any other libp2p peer is disconnected as soon as it connects.
+* A peer on the list keeps the address saved for it after a disconnect, so a later dial by peer ID still has that address. A peer that is not on the list loses that address.
 
-An empty list means the gateway dials nobody and applies no peer-ID filter. The CL has to dial the gateway, and the firewall on `33212` is the only restriction. `33212` stays private to the CL. `33213` is the port the Optimum mesh uses from the internet.
+An empty list means the gateway dials nobody, applies no peer-ID filter, and drops a peer's saved address on disconnect. The CL has to dial the gateway, and the firewall on `33212` is the only restriction. `33212` stays private to the CL. `33213` is the port the Optimum mesh uses from the internet.
 
 The field is a list. A second beacon node is fine, and once any entry is set, every beacon node that should stay connected has to be on the list. One that is missing is disconnected.
 
@@ -223,7 +224,9 @@ curl -s http://localhost:9596/eth/v1/node/identity | jq '.data.peer_id, .data.p2
 When `direct_cl_peers` is set, the gateway disconnects any libp2p peer whose ID is missing from that list, including a second beacon node you forgot to add. A wrong peer ID means `cl_peers` stays 0 even though the CL is dialing `33212`. An empty list applies no peer-ID filter. Either way, open `33212` only to the CL.
 :::
 
-The gateway advertises a custody group count of 8 in its libp2p metadata so PeerDAS clients keep it as a useful peer. That advertisement is in the binary. There is no custody flag to set on the gateway. See the [Fulu p2p metadata spec](https://github.com/ethereum/consensus-specs/blob/master/specs/fulu/p2p-interface.md#metadata).
+The gateway answers `metadata/3` with custody group count 4, the Fulu `CUSTODY_REQUIREMENT`. Lighthouse disconnects a peer that advertises less. v1.3.4 advertised 8. The `status/2` reply sets `earliest_available_slot` to 2^53−1, past any real slot, so a PeerDAS client that honors the field skips data-column requests. `status/1` has no such field, and that reply stays the peer's own status. Outbound handshakes try `status/2` first. The gateway serves no blocks or column sidecars. Both values are in the binary. There is no custody flag to set. See the [Fulu p2p metadata spec](https://github.com/ethereum/consensus-specs/blob/master/specs/fulu/p2p-interface.md#metadata).
+
+Metadata responses and the ping reply both use sequence number 1. v1.3.4 answered a ping with the requester's sequence number, and its metadata sequence number was 0. A peer compares the ping reply with the metadata it cached, so the two have to match.
 
 ## Verify
 
@@ -248,7 +251,8 @@ A peered CL is `cl_peers.value` of at least 1 and `libp2p.total_peers` of at lea
 | CL flag was copied from `.data.peer_id` or from `mump2p.peer_ids` | Wrong ID | Replace it with `self_info.peer_id`. |
 | Worked, then died after a gateway restart | Lighthouse or Nimbus did not re-dial, or the peer ID changed | Persist the identity volume. Add `direct_cl_peers`. |
 | Worked, then the peer ID in `self_info` changed | Identity directory was not a volume | Mount `identity_libp2p_dir` and update the CL flag. |
-| Lighthouse says goodbye, or drops the gateway | Peer table prune, or a custody metadata mismatch on an old gateway build | `--boot-nodes` plus `--trusted-peers` as above, on gateway v1.3.3. `--semi-supernode` does not fix the session. |
+| Lighthouse says goodbye, or drops the gateway | Peer table prune | `--boot-nodes` plus `--trusted-peers` as above. |
+| Lighthouse goodbye while exchanging metadata | A build before v1.3.5 advertised custody group count 8 | Upgrade to v1.3.5. It answers `metadata/3` with custody group count 4 and sets a far-future `earliest_available_slot` on `status/2`. |
 | Teku `NoSuchElementException` at `MetadataDasPeerCustodyTracker` | Teku older than v26.4.0 | Upgrade. Current stable is 26.9.1. |
 | Teku connects, then the gateway disappears | `--p2p-static-peers` only | Switch to `--p2p-direct-peers`. |
 | Nimbus logs `Adding privileged direct peer` and never connects | Firewall, or the netkey is `random` | Stable `--netkey-file`, both ports open, public or routable IP in `direct_cl_peers`. |
