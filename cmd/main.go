@@ -105,6 +105,10 @@ func main() {
 		logger.WithGatewayID(appConf.GatewayID),
 		logger.WithClusterID(appConf.GatewayClusterID),
 	)
+	// The auth manager was built on appLogger, before the JWT named this gateway.
+	// Move it to the final logger so its refresh logs carry the same gateway_id
+	// as everything else and reach the file and Loki writers.
+	authMgr.SetLogger(l)
 	l.Info("app starting",
 		logger.WithString("version", appConf.Version),
 		logger.WithString("commit", appConf.CommitHash),

@@ -39,7 +39,9 @@ const (
 )
 
 type Service struct {
-	log     logger.AppLogger
+	// log starts as the boot logger and is replaced by SetLogger once main has
+	// built the final one. Read it through logger().
+	log     atomic.Pointer[logger.AppLogger]
 	apiKey  string
 	mintURL string
 	// peerID binds the minted token to this node's mumP2P identity (the cnf claim).
@@ -135,21 +137,21 @@ func New(ctx context.Context, log logger.AppLogger, appCfg *config.AppConfig) (*
 	issuer := enrollment.NormalizeIssuer(appCfg.RemoteAuthURL)
 
 	svc := &Service{
-		log:      log.With(logger.WithService("auth_token")),
 		apiKey:   appCfg.APIKey,
 		peerID:   identityKey.ID.String(),
 		mintURL:  issuer + enrollment.MintPath,
 		mintAud:  issuer + enrollment.MintPath,
 		verifier: verifier,
 	}
+	svc.SetLogger(log)
 
 	if appCfg.JoinKey != "" {
 		// An empty label is exempt from the per-org unique index, so nothing stops a
 		// lost credential directory re-enrolling on every boot until the key cap.
 		if appCfg.EnrollmentLabel() == "" {
-			svc.log.Info("enrolling without a label: set gateway_id so a re-enrollment is refused rather than silently duplicating")
+			svc.logger().Info("enrolling without a label: set gateway_id so a re-enrollment is refused rather than silently duplicating")
 		}
-		cred, reused, enrollErr := enrollment.LoadOrEnroll(ctx, svc.log, &enrollment.Options{
+		cred, reused, enrollErr := enrollment.LoadOrEnroll(ctx, svc.logger(), &enrollment.Options{
 			Issuer:  issuer,
 			Dir:     appCfg.EnrollmentDir(),
 			JoinKey: appCfg.JoinKey,
@@ -195,7 +197,22 @@ func (m *Service) buildMintPayload() (map[string]string, error) {
 // AppConfig — useful for tests that need a non-nil authMgr argument but
 // don't exercise the auth path.
 func NewDisabled(log logger.AppLogger) *Service {
-	return &Service{log: log.With(logger.WithService("auth_token"))}
+	svc := &Service{}
+	svc.SetLogger(log)
+	return svc
+}
+
+// SetLogger replaces the logger for everything logged from now on. The Service is
+// built before the first mint, so it starts on a logger that predates the JWT
+// identity; main calls this once the final logger exists. Safe to call while the
+// refresh loop and the dynamic-config poll are running.
+func (m *Service) SetLogger(log logger.AppLogger) {
+	scoped := log.With(logger.WithService("auth_token"))
+	m.log.Store(&scoped)
+}
+
+func (m *Service) logger() logger.AppLogger {
+	return *m.log.Load()
 }
 
 // IsEnabled reports whether the Manager will actually mint and verify JWTs.
@@ -274,7 +291,7 @@ func (m *Service) DynamicConfigToken(ctx context.Context) (string, error) {
 	// ServicesToken may return the handshake token. The poll must not use that
 	// value: read the services token only after its claims are present.
 	if _, err := m.ServicesToken(ctx); err != nil {
-		m.log.Error("dynamic config poll skipped; keeping the current config", err)
+		m.logger().Error("dynamic config poll skipped; keeping the current config", err)
 		return "", err
 	}
 	tok := ""
@@ -283,7 +300,7 @@ func (m *Service) DynamicConfigToken(ctx context.Context) (string, error) {
 	}
 	if tok == "" {
 		if n := m.dcFleetPolls.Add(1); n == 1 || n%10 == 0 {
-			m.log.Info("dynamic config poll staying on the fleet route: no aud=services token")
+			m.logger().Info("dynamic config poll staying on the fleet route: no aud=services token")
 		}
 		return "", nil
 	}
@@ -359,7 +376,7 @@ func (m *Service) Start(ctx context.Context) {
 	if !m.IsEnabled() {
 		return
 	}
-	m.log.Info("auth_token manager started")
+	m.logger().Info("auth_token manager started")
 	go m.refreshLoop(ctx)
 }
 
@@ -467,7 +484,7 @@ func (m *Service) mint(ctx context.Context) (string, error) {
 	pushToken := parsed.AccessToken
 	if parsed.ServicesToken != "" {
 		if sClaims, verr := m.verifier.Verify(parsed.ServicesToken, jwks_verifier.AudServices); verr != nil {
-			m.log.Error("services token failed local verify; using handshake token for pushes", verr)
+			m.logger().Error("services token failed local verify; using handshake token for pushes", verr)
 			m.servicesToken.Store(new(""))
 			m.servicesClaims.Store(nil)
 		} else {
@@ -484,7 +501,7 @@ func (m *Service) mint(ctx context.Context) (string, error) {
 	telemetry.SetPushToken(pushToken)
 	telemetry.SetAppBuildPairedWith(claims.Type.String())
 
-	m.log.Info("minted gateway JWT",
+	m.logger().Info("minted gateway JWT",
 		logger.WithString("sub", claims.Subject),
 		logger.WithString("chain_id", claims.ChainID),
 		logger.WithString("type", claims.Type.String()),
@@ -521,14 +538,14 @@ func (m *Service) refreshLoop(ctx context.Context) {
 				return
 			}
 			if m.MintErrorIsTerminal(err) {
-				m.log.Error("credential terminal failure, refresh loop exiting", err)
+				m.logger().Error("credential terminal failure, refresh loop exiting", err)
 				return
 			}
 			// Back off from 1m so recovery is quick. It does not bound staleness:
 			// Token() never checks exp, so an outage past the 6h token lifetime keeps
 			// serving an expired JWT.
 			backoff = NextRetryBackoff(backoff)
-			m.log.Error("auth refresh failed; retrying sooner", err)
+			m.logger().Error("auth refresh failed; retrying sooner", err)
 			continue
 		}
 		backoff = 0
