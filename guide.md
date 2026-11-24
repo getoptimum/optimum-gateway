@@ -102,6 +102,10 @@ The load balancer must:
 - **Forward plain TCP to exactly one gateway.** Peers authenticate by peer ID, so an address shared by several gateways fails the dial. Gateways can share one IP on different ports, but each peer connects to at most 8 of them, because libp2p allows 8 connections per remote IP (per IPv4 address, or per IPv6 /56).
 - **Preserve the client source IP.** The mesh allows 8 connections per source IPv4 address. A load balancer that rewrites the source address (for example an AWS NLB with client IP preservation off, or a Kubernetes Service with `externalTrafficPolicy: Cluster`) caps the gateway at 8 inbound mesh peers.
 
+## Outbound-only
+
+Set `agent_mump2p_not_dialable: true` when nothing can dial this gateway. It still registers `mump2p_addr` (that address carries the peer ID) and still dials the peers bootstrap returns, but it announces no mesh address and bootstrap leaves it out of `expose-nodes`. This needs a bootstrap that understands `not_dialable`. Do not set it together with `agent_mump2p_announce_ip`. Two outbound-only gateways cannot dial each other.
+
 ## Connect Your CL Client
 
 Get the gateway peer info:
