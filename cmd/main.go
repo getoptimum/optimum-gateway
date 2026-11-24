@@ -106,7 +106,7 @@ func main() {
 	// Install this before Start and InitRuntime. Both launch goroutines that
 	// log through the auth manager, and the field is a plain assignment.
 	authMgr.SetLogger(l)
-	if err = appConf.InitRuntime(ctx, appLogger, chainID, gatewayID, gatewayType, orgID, authMgr.DynamicConfigToken); err != nil {
+	if err = appConf.InitRuntime(ctx, l, chainID, gatewayID, gatewayType, orgID, authMgr.DynamicConfigToken); err != nil {
 		l.Fatal("unable to initialize runtime", err)
 	}
 	if authMgr.IsEnabled() {
