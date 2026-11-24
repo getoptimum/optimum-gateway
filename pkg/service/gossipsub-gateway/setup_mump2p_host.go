@@ -28,6 +28,7 @@ func (s *Service) setupMumP2PHost() error {
 		MaxMessageSize:  config.DefaultMaxMessageSize,
 		BootstrapPeers:  filtered,
 		AdvertisedAddrs: advertisedAddrs,
+		NotDialable:     s.cfg.MumP2PNotDialable,
 		ClusterID:       s.cfg.GatewayClusterID,
 		Rotator:         s.cfg.GetDCRotator(),
 		TraceMesh:       s.cfg.TraceMesh,

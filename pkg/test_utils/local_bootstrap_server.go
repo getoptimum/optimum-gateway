@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -74,8 +75,17 @@ func newLocalBootstrapServer(t *testing.T, rig *AuthTestRig) *LocalBootstrapServ
 		return c.JSON(commonmaps.MapValues(messages.LoadAll()))
 	})
 	app.Post(utils.BootstrapRegisterPath, func(c fiber.Ctx) error {
-		var p map[string]string
-		require.NoError(t, json.Unmarshal(c.Body(), &p))
+		var raw map[string]any
+		require.NoError(t, json.Unmarshal(c.Body(), &raw))
+		p := make(map[string]string, len(raw))
+		for key, value := range raw {
+			switch typed := value.(type) {
+			case string:
+				p[key] = typed
+			case bool:
+				p[key] = strconv.FormatBool(typed)
+			}
+		}
 		select {
 		case registerReqs <- RegisterGatewayRequest{
 			Authorization: strings.Clone(c.Get("Authorization")),
@@ -83,7 +93,7 @@ func newLocalBootstrapServer(t *testing.T, rig *AuthTestRig) *LocalBootstrapServ
 		}:
 		default:
 		}
-		messages.Store(p["gateway_id"], p)
+		messages.Store(p["gateway_id"], raw)
 		return nil
 	})
 	app.Get("/api/v1/:chain/:cluster/config", func(c fiber.Ctx) error {
