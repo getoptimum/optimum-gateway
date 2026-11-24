@@ -67,7 +67,6 @@ func main() {
 	if _, mintErr := authMgr.Token(ctx); mintErr != nil {
 		appLogger.Fatal("initial JWT mint failed", mintErr)
 	}
-	authMgr.Start(ctx)
 
 	// Resolve the JWT-sourced identity. When auth is enabled, the JWT's
 	// `chain_id` and `sub` claims are authoritative. In dev mode they're
@@ -80,11 +79,10 @@ func main() {
 		gatewayType = c.Type.String()
 		orgID = authMgr.OperatorID()
 	}
-	if err = appConf.InitRuntime(ctx, appLogger, chainID, gatewayID, gatewayType, orgID, authMgr.DynamicConfigToken); err != nil {
-		appLogger.Fatal("unable to initialize runtime", err)
-	}
-	if authMgr.IsEnabled() {
-		appConf.MetaLabels = authMgr.GatewayLabels()
+	// Loki labels and the logger field are copied at construction. Set the
+	// subject first so both match the identity InitRuntime records.
+	if gatewayID != "" {
+		appConf.GatewayID = gatewayID
 	}
 
 	// remote_push_enable currently requires telemetry_enable=true because Mimir
@@ -105,6 +103,16 @@ func main() {
 		logger.WithGatewayID(appConf.GatewayID),
 		logger.WithClusterID(appConf.GatewayClusterID),
 	)
+	// Install this before Start and InitRuntime. Both launch goroutines that
+	// log through the auth manager, and the field is a plain assignment.
+	authMgr.SetLogger(l)
+	if err = appConf.InitRuntime(ctx, l, chainID, gatewayID, gatewayType, orgID, authMgr.DynamicConfigToken); err != nil {
+		l.Fatal("unable to initialize runtime", err)
+	}
+	if authMgr.IsEnabled() {
+		appConf.MetaLabels = authMgr.GatewayLabels()
+	}
+	authMgr.Start(ctx)
 	l.Info("app starting",
 		logger.WithString("version", appConf.Version),
 		logger.WithString("commit", appConf.CommitHash),
