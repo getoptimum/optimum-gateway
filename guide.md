@@ -99,7 +99,7 @@ By default the gateway announces its autodetected public IP and interface IPs on
 
 The load balancer must:
 
-- **Forward plain TCP to exactly one gateway.** Peers authenticate by peer ID, so an address shared by several gateways fails the dial. Give each gateway its own IP. Separate ports on one IP work for up to 8 gateways, because each peer opens at most 8 connections to a single IPv4 address.
+- **Forward plain TCP to exactly one gateway.** Peers authenticate by peer ID, so an address shared by several gateways fails the dial. Gateways can share one IP on different ports, but each peer connects to at most 8 of them, because libp2p allows 8 connections per remote IP (per IPv4 address, or per IPv6 /56).
 - **Preserve the client source IP.** The mesh allows 8 connections per source IPv4 address. A load balancer that rewrites the source address (for example an AWS NLB with client IP preservation off, or a Kubernetes Service with `externalTrafficPolicy: Cluster`) caps the gateway at 8 inbound mesh peers.
 
 ## Outbound-only
