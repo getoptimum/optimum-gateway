@@ -50,6 +50,8 @@ The gateway accepts configuration through environment variables as well. Environ
 - `OPT_IDENTITY_MUMP2P_DIR`: Directory for the mump2p mesh identity
 - `OPT_AGENT_LIB_P2P_PORT`: TCP port used for the CL-facing libp2p listener
 - `OPT_AGENT_MUMP2P_PORT`: TCP port used for the gateway-to-gateway mesh
+- `OPT_AGENT_MUMP2P_ANNOUNCE_IP`: IP other gateways dial for the mesh, instead of the autodetected public IP. See [Mesh behind a load balancer](#mesh-behind-a-load-balancer)
+- `OPT_AGENT_MUMP2P_ANNOUNCE_PORT`: Port announced with `OPT_AGENT_MUMP2P_ANNOUNCE_IP` (default: `OPT_AGENT_MUMP2P_PORT`)
 - `OPT_ENABLE_TELEMETRY`: Enable local API and Prometheus metrics
 - `OPT_TELEMETRY_PORT`: HTTP port for `/health`, `/metrics`, `/api/v1/self_info`
 - `OPT_TELEMETRY_ADDR`: IP the telemetry server binds (default: all IPv4 interfaces). Set `127.0.0.1` under host networking
@@ -90,6 +92,15 @@ docker run --name optimum-gateway --rm \
 `${version}` is the latest tag on the [releases](https://github.com/getoptimum/optimum-gateway/releases/latest) page.
 
 `agent_mump2p_port` (sample `43213`) is used for gateway-to-gateway mesh egress.
+
+## Mesh Behind a Load Balancer
+
+By default the gateway announces its autodetected public IP and interface IPs on `agent_mump2p_port` to the mesh. If inbound mesh traffic reaches it through a load balancer or port forward instead, set `agent_mump2p_announce_ip` (and `agent_mump2p_announce_port` if the external port differs) to the address other gateways should dial. The gateway then announces only that address, not its interface or IPv6 addresses, so peers on the same private network also connect through the load balancer. It still listens on `agent_mump2p_port`.
+
+The load balancer must:
+
+- **Forward plain TCP to exactly one gateway.** Peers authenticate by peer ID, so an address shared by several gateways fails the dial. Gateways can share one IP on different ports, but each peer connects to at most 8 of them, because libp2p allows 8 connections per remote IP (per IPv4 address, or per IPv6 /56).
+- **Preserve the client source IP.** The mesh allows 8 connections per source IPv4 address. A load balancer that rewrites the source address (for example an AWS NLB with client IP preservation off, or a Kubernetes Service with `externalTrafficPolicy: Cluster`) caps the gateway at 8 inbound mesh peers.
 
 ## Connect Your CL Client
 

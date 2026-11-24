@@ -15,7 +15,7 @@ import (
 )
 
 func (s *Service) setupMumP2PHost() error {
-	filtered, err := s.srvBootstrapper.RegisterAndGetMumP2PPeers()
+	filtered, advertisedAddrs, err := s.srvBootstrapper.RegisterAndGetMumP2PPeers()
 	if err != nil {
 		return fmt.Errorf("failed register mump2p peer: %w", err)
 	}
@@ -31,6 +31,7 @@ func (s *Service) setupMumP2PHost() error {
 		MeshDegreeMin:            int(config.DefaultMeshDegreeMin),
 		MeshDegreeMax:            int(config.DefaultMeshDegreeMax),
 		BootstrapPeers:           filtered,
+		AdvertisedAddrs:          advertisedAddrs,
 		ClusterID:                s.cfg.GatewayClusterID,
 		Rotator:                  s.cfg.GetDCRotator(),
 		TraceMesh:                s.cfg.TraceMesh,

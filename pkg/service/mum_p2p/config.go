@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/connmgr"
+	"github.com/multiformats/go-multiaddr"
 
 	commonconfig "github.com/getoptimum/optimum-common/pkg/config"
 	commonentities "github.com/getoptimum/optimum-common/pkg/entities"
@@ -29,6 +30,9 @@ type Config struct {
 	MeshDegreeMax    int `yaml:"mesh_degree_max"`
 
 	BootstrapPeers []string `yaml:"bootstrap_peers"`
+
+	// AdvertisedAddrs are what bootstrap registered; NewNode requires them so the two cannot drift.
+	AdvertisedAddrs []multiaddr.Multiaddr `yaml:"-"`
 
 	// Trace event categories to broadcast to RegisterListener consumers. Shard metrics
 	// always run regardless of these; they only gate which raw trace events are fanned
