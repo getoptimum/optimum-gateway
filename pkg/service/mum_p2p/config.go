@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/libp2p/go-libp2p/core/connmgr"
+	"github.com/multiformats/go-multiaddr"
 
 	mump2pcfg "github.com/getoptimum/mump2p-protocol/pkg/config"
 	commonconfig "github.com/getoptimum/optimum-common/pkg/config"
@@ -16,6 +17,11 @@ type Config struct {
 	ListenPort int    `yaml:"listen_port"`
 
 	BootstrapPeers []string `yaml:"bootstrap_peers"`
+
+	// AdvertisedAddrs are what bootstrap registered; NewNode requires them so the two cannot drift.
+	// NotDialable is the exception: the host announces nothing, and AdvertisedAddrs stays empty.
+	AdvertisedAddrs []multiaddr.Multiaddr `yaml:"-"`
+	NotDialable     bool                  `yaml:"-"`
 
 	// Trace event categories to broadcast to RegisterListener consumers. Shard metrics
 	// always run regardless of these; they only gate which raw trace events are fanned

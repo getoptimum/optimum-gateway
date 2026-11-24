@@ -1,6 +1,8 @@
 package bootstrapper_test
 
 import (
+	"errors"
+	"fmt"
 	"net"
 	"strings"
 	"testing"
@@ -17,6 +19,11 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/service/auth_token"
 	"github.com/getoptimum/optimum-gateway/pkg/service/bootstrapper"
 	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
+)
+
+const (
+	gatewayIDField  = "gateway_id"
+	mump2pAddrField = "mump2p_addr"
 )
 
 func getTestSrv(t *testing.T) (*bootstrapper.Service, *test_utils.LocalBootstrapServer, *config.AppConfig) {
@@ -48,7 +55,7 @@ func TestRegisterAndGetMumP2PPeers_Success(t *testing.T) {
 	srv, bootstrap, cfg := getTestSrv(t)
 
 	// when
-	peers, err := srv.RegisterAndGetMumP2PPeers()
+	peers, _, err := srv.RegisterAndGetMumP2PPeers()
 	require.NoError(t, err)
 
 	// then
@@ -70,12 +77,12 @@ func TestRegisterAndGetMumP2PPeers_Success(t *testing.T) {
 		require.NoError(t, maErr)
 		pa := peer.AddrInfo{ID: peer.ID("peerValid"), Addrs: []ma.Multiaddr{ma1[0]}}
 		bootstrap.SetMessagesResponse(map[string]any{
-			"gw-valid":   map[string]any{"gateway_id": "gw-valid", "mump2p_addr": commonnet.AddressInfoToString(pa)},
-			"gw-invalid": map[string]any{"gateway_id": "gw-invalid", "mump2p_addr": "not-a-valid-multiaddr"},
+			"gw-valid":   map[string]any{gatewayIDField: "gw-valid", mump2pAddrField: commonnet.AddressInfoToString(pa)},
+			"gw-invalid": map[string]any{gatewayIDField: "gw-invalid", mump2pAddrField: "not-a-valid-multiaddr"},
 		})
 
 		// when
-		peers, err = srv.RegisterAndGetMumP2PPeers()
+		peers, _, err = srv.RegisterAndGetMumP2PPeers()
 		require.NoError(t, err)
 
 		// then
@@ -90,13 +97,13 @@ func TestRegisterAndGetMumP2PPeers_Success(t *testing.T) {
 		pa := peer.AddrInfo{ID: id.ID, Addrs: []ma.Multiaddr{ma1[0]}}
 		bootstrap.SetMessagesResponse(map[string]any{
 			"gw-test": map[string]any{
-				"gateway_id":  "gw-test",
-				"mump2p_addr": commonnet.AddressInfoToString(pa),
+				gatewayIDField:  "gw-test",
+				mump2pAddrField: commonnet.AddressInfoToString(pa),
 			},
 		})
 
 		// when
-		peers, err = srv.RegisterAndGetMumP2PPeers()
+		peers, _, err = srv.RegisterAndGetMumP2PPeers()
 		require.NoError(t, err)
 
 		// then — no Fatal was called, peers returned normally
@@ -105,16 +112,100 @@ func TestRegisterAndGetMumP2PPeers_Success(t *testing.T) {
 
 	t.Run("skip_all_invalid_bootstrap_peers_except_self", func(t *testing.T) {
 		bootstrap.SetMessagesResponse(map[string]any{
-			"gw-invalid-1": map[string]any{"gateway_id": "gw-invalid-1", "mump2p_addr": "not-a-valid-multiaddr"},
-			"gw-invalid-2": map[string]any{"gateway_id": "gw-invalid-2", "mump2p_addr": "still-not-a-valid-multiaddr"},
+			"gw-invalid-1": map[string]any{gatewayIDField: "gw-invalid-1", mump2pAddrField: "not-a-valid-multiaddr"},
+			"gw-invalid-2": map[string]any{gatewayIDField: "gw-invalid-2", mump2pAddrField: "still-not-a-valid-multiaddr"},
 		})
 
 		// when
-		peers, err = srv.RegisterAndGetMumP2PPeers()
+		peers, _, err = srv.RegisterAndGetMumP2PPeers()
 		require.NoError(t, err)
 
 		// then
 		require.Len(t, peers, 1)
 		require.Contains(t, peers[0], id.ID.String())
 	})
+}
+
+func TestRegisterAndGetMumP2PPeers_AnnounceOverride(t *testing.T) {
+	cases := []struct {
+		name     string
+		ip       string
+		port     int
+		wantAddr string
+	}{
+		{name: "announce port", ip: "203.0.113.7", port: 40001, wantAddr: "/ip4/203.0.113.7/tcp/40001"},
+		{name: "listen port fallback", ip: "2001:db8::7", wantAddr: "/ip6/2001:db8::7/tcp/33213"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			srv, bootstrap, cfg := getTestSrv(t)
+			cfg.AgentMumP2PPort = 33213
+			cfg.MumP2PAnnounceIP = tc.ip
+			cfg.MumP2PAnnouncePort = tc.port
+
+			_, advertised, err := srv.RegisterAndGetMumP2PPeers()
+			require.NoError(t, err)
+
+			require.Len(t, advertised, 1)
+			require.Equal(t, tc.wantAddr, advertised[0].String())
+			registered, err := commonnet.AddressInfoFromString(bootstrap.WaitRegisterRequest(t, time.Second).Payload[mump2pAddrField])
+			require.NoError(t, err)
+			require.Equal(t, advertised, registered.Addrs)
+		})
+	}
+}
+
+func TestRegisterAndGetMumP2PPeers_FailsWhenIPDetectionFails(t *testing.T) {
+	srv, _, _ := getTestSrv(t)
+	t.Cleanup(bootstrapper.SetExternalIPsFunc(func() (string, string, error) {
+		return "", "", errors.New("no external IP")
+	}))
+
+	_, _, err := srv.RegisterAndGetMumP2PPeers()
+
+	require.ErrorContains(t, err, "unable to detect public IP")
+}
+
+func TestRegisterAndGetMumP2PPeers_IPv6Only(t *testing.T) {
+	srv, bootstrap, cfg := getTestSrv(t)
+	cfg.AgentMumP2PPort = 33213
+	t.Cleanup(bootstrapper.SetExternalIPsFunc(func() (string, string, error) {
+		return "", "2001:db8::1", nil
+	}))
+
+	_, advertised, err := srv.RegisterAndGetMumP2PPeers()
+	require.NoError(t, err)
+
+	require.Equal(t, "/ip6/2001:db8::1/tcp/33213", advertised[0].String())
+	for _, ip := range commonnet.GetInterfaceIPs() {
+		require.Contains(t, advertised, ma.StringCast(fmt.Sprintf("/ip4/%s/tcp/33213", ip)))
+	}
+	registered, err := commonnet.AddressInfoFromString(bootstrap.WaitRegisterRequest(t, time.Second).Payload[mump2pAddrField])
+	require.NoError(t, err)
+	require.Equal(t, advertised, registered.Addrs)
+}
+
+func TestRegisterAndGetMumP2PPeers_NotDialable(t *testing.T) {
+	srv, bootstrap, cfg := getTestSrv(t)
+	cfg.AgentMumP2PPort = 33213
+	cfg.MumP2PNotDialable = true
+	t.Cleanup(bootstrapper.SetExternalIPsFunc(func() (string, string, error) {
+		return "203.0.113.9", "", nil
+	}))
+
+	dialable := commonnet.AddressInfoToString(peer.AddrInfo{ID: peer.ID("peerDialable"), Addrs: []ma.Multiaddr{ma.StringCast("/ip4/198.51.100.7/tcp/4001")}})
+	outbound := commonnet.AddressInfoToString(peer.AddrInfo{ID: peer.ID("peerOutbound"), Addrs: []ma.Multiaddr{ma.StringCast("/ip4/198.51.100.8/tcp/4001")}})
+	bootstrap.SetMessagesResponse(map[string]any{
+		"gw-dialable": map[string]any{gatewayIDField: "gw-dialable", mump2pAddrField: dialable},
+		"gw-outbound": map[string]any{gatewayIDField: "gw-outbound", mump2pAddrField: outbound, "not_dialable": true},
+	})
+
+	peers, advertised, err := srv.RegisterAndGetMumP2PPeers()
+	require.NoError(t, err)
+
+	require.Empty(t, advertised)
+	require.Equal(t, []string{dialable}, peers)
+	req := bootstrap.WaitRegisterRequest(t, time.Second)
+	require.Equal(t, "true", req.Payload["not_dialable"])
+	require.Contains(t, req.Payload[mump2pAddrField], "/ip4/203.0.113.9/tcp/33213")
 }
