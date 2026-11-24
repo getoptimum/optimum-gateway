@@ -73,8 +73,8 @@ func (s *Service) SetGatewayPeerIDStr(peerIDStr string) {
 }
 
 // RegisterAndGetMumP2PPeers registers this gateway with bootstrap and returns mesh peers
-// plus the addresses the mesh host must advertise. Outbound-only returns no addresses;
-// bootstrap still receives mump2p_addr and not_dialable.
+// plus the addresses it sent for registration, which the mesh host must advertise.
+// Outbound-only returns no addresses; bootstrap still receives mump2p_addr and not_dialable.
 func (s *Service) RegisterAndGetMumP2PPeers() ([]string, []ma.Multiaddr, error) {
 	predictedAddress, publicIP, err := s.predictMumP2PAddrInfo()
 	if err != nil {
