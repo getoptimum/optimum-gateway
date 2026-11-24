@@ -5,6 +5,7 @@ import (
 	"math"
 
 	"github.com/libp2p/go-libp2p/core/connmgr"
+	"github.com/multiformats/go-multiaddr"
 
 	mump2pcfg "github.com/getoptimum/mump2p-protocol/pkg/config"
 	commonconfig "github.com/getoptimum/optimum-common/pkg/config"
@@ -18,6 +19,9 @@ type Config struct {
 	MaxMessageSize int64  `yaml:"max_message_size_bytes"`
 
 	BootstrapPeers []string `yaml:"bootstrap_peers"`
+
+	// AdvertisedAddrs are what bootstrap registered; NewNode requires them so the two cannot drift.
+	AdvertisedAddrs []multiaddr.Multiaddr `yaml:"-"`
 
 	// Trace event categories to broadcast to RegisterListener consumers. Shard metrics
 	// always run regardless of these; they only gate which raw trace events are fanned

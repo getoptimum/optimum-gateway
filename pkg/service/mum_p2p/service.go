@@ -25,7 +25,6 @@ import (
 	"github.com/getoptimum/mump2p-protocol/pkg/telemetry/rlnctrace"
 	"github.com/getoptimum/optimum-common/pkg/identity"
 	"github.com/getoptimum/optimum-common/pkg/logger"
-	commonnet "github.com/getoptimum/optimum-common/pkg/net"
 	"github.com/getoptimum/optimum-common/pkg/syncx"
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
 	discovery "github.com/getoptimum/optimum-gateway/pkg/service/mum_p2p/dhtdiscovery"
@@ -80,12 +79,6 @@ func NewNode(
 		return nil, fmt.Errorf("failed ensuring identity from %s: %w", identityDir, err)
 	}
 
-	publicIPV4, publicIPV6, err := commonnet.GetExternalIPs()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get public IP address: %w", err)
-	}
-	log.Info("ip detected", logger.WithString("ipv4", publicIPV4), logger.WithString("ipv6", publicIPV6))
-
 	identityKey, err := identity.ExtractIdentityFromDir(identityDir)
 	if err != nil {
 		return nil, fmt.Errorf("unable to extract identity from %s: %w", identityDir, err)
@@ -97,7 +90,11 @@ func NewNode(
 		return nil, fmt.Errorf("failed to create connection manager: %w", err)
 	}
 
-	cachedAddrs := commonnet.MustBuildAdvertisedAddresses(log, publicIPV4, publicIPV6, cfg.ListenPort)
+	if len(cfg.AdvertisedAddrs) == 0 {
+		return nil, fmt.Errorf("advertised addresses are required")
+	}
+	cachedAddrs := cfg.AdvertisedAddrs
+	log.Info("mump2p advertised addresses", logger.WithString("addrs", fmt.Sprintf("%v", cachedAddrs)))
 
 	libP2POpts := []libp2p.Option{
 		libp2p.ConnectionManager(cn),

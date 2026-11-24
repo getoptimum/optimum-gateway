@@ -50,6 +50,8 @@ type AppConfig struct {
 	IdentityMumP2PDir     string   `yaml:"identity_mump2p_dir" env:"OPT_IDENTITY_MUMP2P_DIR" default:"/tmp/mump2p"`
 	AgentLibP2PPort       int      `yaml:"agent_lib_p2p_port" env:"OPT_AGENT_LIB_P2P_PORT" default:"33212"`
 	AgentMumP2PPort       int      `yaml:"agent_mump2p_port" env:"OPT_AGENT_MUMP2P_PORT" default:"33213"`
+	MumP2PAnnounceIP      string   `yaml:"agent_mump2p_announce_ip" env:"OPT_AGENT_MUMP2P_ANNOUNCE_IP"`                 // overrides the autodetected mesh IP, e.g. a load balancer dedicated to this gateway
+	MumP2PAnnouncePort    int      `yaml:"agent_mump2p_announce_port" env:"OPT_AGENT_MUMP2P_ANNOUNCE_PORT" default:"0"` // 0 announces agent_mump2p_port
 	DirectCLPeers         []string `yaml:"direct_cl_peers" env:"OPT_DIRECT_CL_PEERS"`
 	AllowNonDirectCLPeers bool     `yaml:"allow_non_direct_cl_peers" env:"OPT_ALLOW_NON_DIRECT_CL_PEERS" default:"false"`
 	TelemetryEnable       bool     `yaml:"telemetry_enable" env:"OPT_ENABLE_TELEMETRY" default:"false"`
@@ -351,6 +353,17 @@ func (c *AppConfig) Validate() error {
 	if c.AgentMumP2PPort <= 0 || c.AgentMumP2PPort > 65535 {
 		return fmt.Errorf("OPT_AGENT_MUMP2P_PORT must be between 1 and 65535")
 	}
+	if c.MumP2PAnnounceIP != "" {
+		if ip := net.ParseIP(c.MumP2PAnnounceIP); ip == nil || !ip.IsGlobalUnicast() {
+			return fmt.Errorf("OPT_AGENT_MUMP2P_ANNOUNCE_IP must be a global or private unicast IP (not loopback, link-local, multicast or unspecified), got %q", c.MumP2PAnnounceIP)
+		}
+	}
+	if c.MumP2PAnnouncePort < 0 || c.MumP2PAnnouncePort > 65535 {
+		return fmt.Errorf("OPT_AGENT_MUMP2P_ANNOUNCE_PORT must be between 0 and 65535")
+	}
+	if c.MumP2PAnnouncePort != 0 && c.MumP2PAnnounceIP == "" {
+		return fmt.Errorf("OPT_AGENT_MUMP2P_ANNOUNCE_PORT requires OPT_AGENT_MUMP2P_ANNOUNCE_IP")
+	}
 	if c.TelemetryPort <= 0 || c.TelemetryPort > 65535 {
 		return fmt.Errorf("OPT_TELEMETRY_PORT must be between 1 and 65535")
 	}
@@ -483,6 +496,8 @@ func (c *AppConfig) LogConfigState() {
 		logger.WithClusterID(c.GatewayClusterID),
 		logger.WithInt("libp2p_port", c.AgentLibP2PPort),
 		logger.WithInt("mump2p_port", c.AgentMumP2PPort),
+		logger.WithString("mump2p_announce_ip", c.MumP2PAnnounceIP),
+		logger.WithInt("mump2p_announce_port", c.MumP2PAnnouncePort),
 		logger.WithInt("telemetry_port", c.TelemetryPort),
 		logger.WithBool("telemetry_enable", c.TelemetryEnable),
 		logger.WithBool("enable_pprof", c.EnablePProf),

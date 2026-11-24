@@ -15,7 +15,7 @@ import (
 )
 
 func (s *Service) setupMumP2PHost() error {
-	filtered, err := s.srvBootstrapper.RegisterAndGetMumP2PPeers()
+	filtered, advertisedAddrs, err := s.srvBootstrapper.RegisterAndGetMumP2PPeers()
 	if err != nil {
 		return fmt.Errorf("failed register mump2p peer: %w", err)
 	}
@@ -24,14 +24,15 @@ func (s *Service) setupMumP2PHost() error {
 	}
 	s.log.Info("setting mump2p host")
 	optCfg := &mum_p2p.Config{
-		ListenPort:     s.cfg.AgentMumP2PPort,
-		MaxMessageSize: config.DefaultMaxMessageSize,
-		BootstrapPeers: filtered,
-		ClusterID:      s.cfg.GatewayClusterID,
-		Rotator:        s.cfg.GetDCRotator(),
-		TraceMesh:      s.cfg.TraceMesh,
-		TraceRPC:       s.cfg.TraceRPC,
-		TraceShard:     s.cfg.TraceShard,
+		ListenPort:      s.cfg.AgentMumP2PPort,
+		MaxMessageSize:  config.DefaultMaxMessageSize,
+		BootstrapPeers:  filtered,
+		AdvertisedAddrs: advertisedAddrs,
+		ClusterID:       s.cfg.GatewayClusterID,
+		Rotator:         s.cfg.GetDCRotator(),
+		TraceMesh:       s.cfg.TraceMesh,
+		TraceRPC:        s.cfg.TraceRPC,
+		TraceShard:      s.cfg.TraceShard,
 	}
 	if s.customMumP2PConnectionGater != nil {
 		optCfg.CustomConnectionGater = s.customMumP2PConnectionGater
