@@ -48,8 +48,9 @@ type AppConfig struct {
 	IdentityMumP2PDir     string   `yaml:"identity_mump2p_dir" env:"OPT_IDENTITY_MUMP2P_DIR" default:"/tmp/mump2p"`
 	AgentLibP2PPort       int      `yaml:"agent_lib_p2p_port" env:"OPT_AGENT_LIB_P2P_PORT" default:"33212"`
 	AgentMumP2PPort       int      `yaml:"agent_mump2p_port" env:"OPT_AGENT_MUMP2P_PORT" default:"33213"`
-	MumP2PAnnounceIP      string   `yaml:"agent_mump2p_announce_ip" env:"OPT_AGENT_MUMP2P_ANNOUNCE_IP"`                 // overrides the autodetected mesh IP, e.g. a load balancer dedicated to this gateway
-	MumP2PAnnouncePort    int      `yaml:"agent_mump2p_announce_port" env:"OPT_AGENT_MUMP2P_ANNOUNCE_PORT" default:"0"` // 0 announces agent_mump2p_port
+	MumP2PAnnounceIP      string   `yaml:"agent_mump2p_announce_ip" env:"OPT_AGENT_MUMP2P_ANNOUNCE_IP"`                   // overrides the autodetected mesh IP, e.g. a load balancer dedicated to this gateway
+	MumP2PAnnouncePort    int      `yaml:"agent_mump2p_announce_port" env:"OPT_AGENT_MUMP2P_ANNOUNCE_PORT" default:"0"`   // 0 announces agent_mump2p_port
+	MumP2PNotDialable     bool     `yaml:"agent_mump2p_not_dialable" env:"OPT_AGENT_MUMP2P_NOT_DIALABLE" default:"false"` // register, but do not announce an address other gateways can dial
 	DirectCLPeers         []string `yaml:"direct_cl_peers" env:"OPT_DIRECT_CL_PEERS"`
 	TelemetryEnable       bool     `yaml:"telemetry_enable" env:"OPT_ENABLE_TELEMETRY" default:"false"`
 	TelemetryPort         int      `yaml:"telemetry_port" env:"OPT_TELEMETRY_PORT" default:"48123"`
@@ -327,6 +328,9 @@ func (c *AppConfig) Validate() error {
 	if c.MumP2PAnnouncePort != 0 && c.MumP2PAnnounceIP == "" {
 		return fmt.Errorf("OPT_AGENT_MUMP2P_ANNOUNCE_PORT requires OPT_AGENT_MUMP2P_ANNOUNCE_IP")
 	}
+	if c.MumP2PNotDialable && (c.MumP2PAnnounceIP != "" || c.MumP2PAnnouncePort != 0) {
+		return fmt.Errorf("OPT_AGENT_MUMP2P_NOT_DIALABLE cannot be combined with OPT_AGENT_MUMP2P_ANNOUNCE_IP")
+	}
 	if c.TelemetryPort <= 0 || c.TelemetryPort > 65535 {
 		return fmt.Errorf("OPT_TELEMETRY_PORT must be between 1 and 65535")
 	}
@@ -511,6 +515,7 @@ func (c *AppConfig) LogConfigState() {
 		logger.WithInt("mump2p_port", c.AgentMumP2PPort),
 		logger.WithString("mump2p_announce_ip", c.MumP2PAnnounceIP),
 		logger.WithInt("mump2p_announce_port", c.MumP2PAnnouncePort),
+		logger.WithBool("mump2p_not_dialable", c.MumP2PNotDialable),
 		logger.WithInt("telemetry_port", c.TelemetryPort),
 		logger.WithString("telemetry_listen_addr", c.TelemetryListenAddr()),
 		logger.WithBool("telemetry_enable", c.TelemetryEnable),
