@@ -186,13 +186,12 @@ Healthy looks like: `status: "healthy"`, `cl: "ok"`, `cl_peers: 1`, and
 going ready. On a `stream_only` deployment `cl` reads `skipped` and `cl_peers`
 prints `null` (the check carries no value), while `status` is still `"healthy"`.
 
-Under the default `hostNetwork` setup without an announce override, `multiaddrs`
-should include the node's **public IP**; if it only shows a private or pod
-address (`10.x`), nothing outside your cluster can dial you and `mump2p_peers`
-will stay at 0. When using `agent_mump2p_announce_ip` or
-`agent_mump2p_not_dialable`, `libp2p.multiaddrs` still shows the pod/node CL
-listener (`33212`); check startup logs for `using configured mump2p announce
-address` (or `mump2p outbound-only`) and confirm `mump2p_peers` is at least 1.
+`libp2p.multiaddrs` is the CL listener on `33212`. A private or pod address
+there does not say whether mesh peers can dial this gateway. Read the mesh
+startup log and `mump2p_peers`. On the default `hostNetwork` setup the log line
+is `mump2p advertised addresses`. With `agent_mump2p_announce_ip` it is
+`using configured mump2p announce address`. With `agent_mump2p_not_dialable` it
+is `mump2p outbound-only`. In each case `mump2p_peers` should be at least 1.
 
 For the full meaning of each `/health` and `self_info` field, see
 [Telemetry & Monitoring](./03_telemetry.md).
@@ -324,7 +323,7 @@ Kubernetes-specific symptoms below. For gateway behaviour that isn't K8s-specifi
 | `mump2p_peers: 0` after a few minutes | Inbound **33213** is not reachable from the internet (or `agent_mump2p_announce_ip`/`port` does not match the TCP LoadBalancer, or outbound TCP egress is blocked in `agent_mump2p_not_dialable` mode) |
 | `mump2p_peers` stays capped around 8 behind a LoadBalancer Service | `externalTrafficPolicy: Cluster` rewrites the client source IP (mesh caps at 8 connections per source IPv4 or IPv6 `/56`). Set `externalTrafficPolicy: Local` |
 | `mump2p_peers: 0` after a join-key enrollment, port open | The join key's cluster scope does not include `gateway.clusterId`. The enrolled credential keeps that scope: put a correctly scoped join key in the Secret, revoke the credential, and remove `enrollment.json` as above |
-| `multiaddrs` shows only private IPs | Under the default `hostNetwork` setup, the node has no public IP or `networking.hostNetwork` was disabled. On private nodes, use a dedicated TCP LoadBalancer with `agent_mump2p_announce_ip` (`externalTrafficPolicy: Local`), or run outbound-only with `agent_mump2p_not_dialable: true` |
+| `libp2p.multiaddrs` shows only private IPs | That field is the CL listener (`33212`), not the mesh address. Mesh reachability is the startup log (`mump2p advertised addresses`, `using configured mump2p announce address`, or `mump2p outbound-only`) and `mump2p_peers` |
 | Pod stuck `Pending` | No node with capacity; the chart also keeps one gateway per node |
 
 ## Getting help
