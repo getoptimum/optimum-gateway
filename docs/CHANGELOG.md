@@ -21,7 +21,7 @@ v1.3.6 is the current release. A gateway already reachable on `33213` needs no c
 
 * **Load-balancer announce address.** `agent_mump2p_announce_ip` and `agent_mump2p_announce_port` are the address other gateways dial. The gateway still listens on `agent_mump2p_port`. Unset, it announces the address it detects on the host.
 * **Outbound-only gateways.** `agent_mump2p_not_dialable: true` registers the gateway and announces no mesh address. Other gateways do not dial it. Do not combine it with the announce IP or port.
-* **Attestations are forwarded on each aggregation tick.** The gateway no longer waits for a beacon block in that slot. Attestations older than the current slot are still dropped.
+* **Attestations are forwarded on each aggregation tick.** The gateway no longer holds them until 2s after the slot's block (4s without one) or cuts them off 8s into the slot. Attestations outside the current slot are still dropped.
 
 [Full release notes](./versions/v1.3.6/release_notes.md) · [Documentation](./versions/v1.3.6/index.md)
 

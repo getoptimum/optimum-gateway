@@ -66,16 +66,19 @@ Docker host-mode) and one gateway per node via anti-affinity, since it binds hos
 ports. That remains the default path when you do not set an announce address:
 schedule the pod on a node with a public IP and open inbound **33213**.
 
-The chart does not expose dedicated values for the mesh-address flags yet; set
-them in the gateway config or environment (`OPT_AGENT_MUMP2P_ANNOUNCE_IP`,
-`OPT_AGENT_MUMP2P_ANNOUNCE_PORT`, or `OPT_AGENT_MUMP2P_NOT_DIALABLE`):
+The chart has no dedicated values for the mesh-address flags yet. Set them through
+the existing escape hatches: `gateway.extraConfig` for `agent_mump2p_announce_ip`,
+`agent_mump2p_announce_port`, and `agent_mump2p_not_dialable`, or `gateway.extraEnv`
+for `OPT_AGENT_MUMP2P_ANNOUNCE_IP`, `OPT_AGENT_MUMP2P_ANNOUNCE_PORT`, and
+`OPT_AGENT_MUMP2P_NOT_DIALABLE`:
 
-* **Dedicated TCP LoadBalancer:** give each gateway its own external address
-  (peers authenticate by peer ID), forward plain TCP to `agent_mump2p_port`
-  (`33213`), set `agent_mump2p_announce_ip` (and `agent_mump2p_announce_port` if
-  the external port differs), and set `externalTrafficPolicy: Local` on the
-  Service so client source IPs are preserved (leaving it on `Cluster` rewrites
-  source IP and caps inbound mesh peers at 8).
+* **Dedicated TCP LoadBalancer:** publish the mesh port with its own Service per
+  gateway (the chart's headless Service also publishes the CL port `33212`, so do
+  not switch that one to `LoadBalancer`). Forward only plain TCP to
+  `agent_mump2p_port` (`33213`), set `externalTrafficPolicy: Local` so client
+  source IPs are preserved (`Cluster` rewrites the source IP and caps inbound mesh
+  peers at 8), and set `agent_mump2p_announce_ip` to the Service's external address
+  (and `agent_mump2p_announce_port` when the published port differs).
 * **Outbound-only:** when pods have no inbound mesh address, set
   `agent_mump2p_not_dialable: true` (do not combine it with the announce flags).
   The gateway dials out to dialable peers and requires outbound TCP egress plus
