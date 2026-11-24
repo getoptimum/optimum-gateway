@@ -60,6 +60,8 @@ type Service struct {
 	// then every tenth, so a gateway that stays there keeps showing it.
 	dcFleetPolls atomic.Uint32
 	operatorID   atomic.Pointer[string]
+	// gatewayIDLogged is set on the first verified mint. Later mints keep that logger.
+	gatewayIDLogged bool
 	// enrollResult is replayed by RefreshAuthMetrics: New runs before
 	// telemetry.InitMetrics, so incrementing at enrollment time is dropped.
 	enrollResult string
@@ -141,7 +143,7 @@ func New(ctx context.Context, log logger.AppLogger, appCfg *config.AppConfig) (*
 		mintAud:  issuer + enrollment.MintPath,
 		verifier: verifier,
 	}
-	svc.SetLogger(log)
+	svc.log = log.With(logger.WithService("auth_token"))
 
 	if appCfg.JoinKey != "" {
 		// An empty label is exempt from the per-org unique index, so nothing stops a
@@ -196,14 +198,8 @@ func (m *Service) buildMintPayload() (map[string]string, error) {
 // don't exercise the auth path.
 func NewDisabled(log logger.AppLogger) *Service {
 	svc := &Service{}
-	svc.SetLogger(log)
+	svc.log = log.With(logger.WithService("auth_token"))
 	return svc
-}
-
-// SetLogger replaces the logger for everything logged from now on. main calls
-// it after the first mint and before Start, so nothing is reading log yet.
-func (m *Service) SetLogger(log logger.AppLogger) {
-	m.log = log.With(logger.WithService("auth_token"))
 }
 
 // IsEnabled reports whether the Manager will actually mint and verify JWTs.
@@ -467,6 +463,11 @@ func (m *Service) mint(ctx context.Context) (string, error) {
 	m.token.Store(new(parsed.AccessToken))
 	m.claims.Store(claims)
 	m.operatorID.Store(new(parsed.OperatorID))
+	// The JWT subject is the gateway_id. Stamp it once, before this mint is logged.
+	if claims.Subject != "" && !m.gatewayIDLogged {
+		m.log = m.log.With(logger.WithGatewayID(claims.Subject))
+		m.gatewayIDLogged = true
+	}
 	m.indexes.Replace(parsed.ValidatorIndexes)
 
 	// Cache the services token (aud=services) for centralized pushes. Verified

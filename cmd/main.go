@@ -91,9 +91,6 @@ func main() {
 	if gatewayID != "" {
 		appConf.GatewayID = gatewayID
 		l = l.With(logger.WithGatewayID(gatewayID))
-		// Install this before Start and InitRuntime. Both launch goroutines that
-		// log through the auth manager, and the field is a plain assignment.
-		authMgr.SetLogger(l)
 	}
 	if lokiWriter != nil {
 		lokiWriter.UseIdentity(authMgr.OperatorID(), appConf.GatewayID)
