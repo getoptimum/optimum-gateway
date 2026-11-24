@@ -135,13 +135,13 @@ func New(ctx context.Context, log logger.AppLogger, appCfg *config.AppConfig) (*
 	issuer := enrollment.NormalizeIssuer(appCfg.RemoteAuthURL)
 
 	svc := &Service{
-		log:      log.With(logger.WithService("auth_token")),
 		apiKey:   appCfg.APIKey,
 		peerID:   identityKey.ID.String(),
 		mintURL:  issuer + enrollment.MintPath,
 		mintAud:  issuer + enrollment.MintPath,
 		verifier: verifier,
 	}
+	svc.SetLogger(log)
 
 	if appCfg.JoinKey != "" {
 		// An empty label is exempt from the per-org unique index, so nothing stops a
@@ -195,7 +195,15 @@ func (m *Service) buildMintPayload() (map[string]string, error) {
 // AppConfig — useful for tests that need a non-nil authMgr argument but
 // don't exercise the auth path.
 func NewDisabled(log logger.AppLogger) *Service {
-	return &Service{log: log.With(logger.WithService("auth_token"))}
+	svc := &Service{}
+	svc.SetLogger(log)
+	return svc
+}
+
+// SetLogger replaces the logger for everything logged from now on. main calls
+// it after the first mint and before Start, so nothing is reading log yet.
+func (m *Service) SetLogger(log logger.AppLogger) {
+	m.log = log.With(logger.WithService("auth_token"))
 }
 
 // IsEnabled reports whether the Manager will actually mint and verify JWTs.
