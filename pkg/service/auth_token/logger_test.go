@@ -28,7 +28,7 @@ func TestMintStampsGatewayID(t *testing.T) {
 	require.NoError(t, m.MintForTest(t.Context()))
 
 	var minted int
-	for _, line := range strings.Split(strings.TrimSpace(buf.String()), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(buf.String()), "\n") {
 		var got map[string]any
 		require.NoError(t, json.Unmarshal([]byte(line), &got))
 		if got["msg"] != "minted gateway JWT" {
