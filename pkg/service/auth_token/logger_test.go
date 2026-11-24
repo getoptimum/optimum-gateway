@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"io"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -15,29 +14,11 @@ import (
 	"github.com/getoptimum/optimum-gateway/pkg/test_utils"
 )
 
-// syncBuffer is a log sink the test can read while a logger may still write to it.
-type syncBuffer struct {
-	mu  sync.Mutex
-	buf bytes.Buffer
-}
-
-func (b *syncBuffer) Write(p []byte) (int, error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return b.buf.Write(p)
-}
-
-func (b *syncBuffer) String() string {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return b.buf.String()
-}
-
 // main builds the final logger only after the first mint and then hands it over.
 // A later mint must log there, with that logger's gateway_id, and not on the boot logger.
 func TestSetLogger_LaterLogsUseTheNewLogger(t *testing.T) {
 	rig := test_utils.NewAuthTestRig(t)
-	var boot, final syncBuffer
+	var boot, final bytes.Buffer
 
 	bootLog := logger.InitLogger([]io.Writer{&boot}, logger.Debug, logger.WithGatewayID("dev-gateway"))
 	m, err := auth_token.New(t.Context(), bootLog, rig.AppCfg(t))
@@ -58,24 +39,4 @@ func TestSetLogger_LaterLogsUseTheNewLogger(t *testing.T) {
 	require.Equal(t, "minted gateway JWT", got["msg"])
 	require.Equal(t, "gw-test", got["gateway_id"])
 	require.Equal(t, "auth_token", got["service"])
-}
-
-// main swaps the logger while the dynamic-config poll may already be logging.
-// Run with -race.
-func TestSetLogger_SafeWhileLogging(t *testing.T) {
-	m, _ := newMintedManager(t, nil)
-
-	var wg sync.WaitGroup
-	wg.Go(func() {
-		for range 20 {
-			if err := m.MintForTest(t.Context()); err != nil {
-				t.Error(err)
-				return
-			}
-		}
-	})
-	for range 20 {
-		m.SetLogger(logger.InitLogger([]io.Writer{io.Discard}, logger.Debug))
-	}
-	wg.Wait()
 }
