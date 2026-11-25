@@ -1,25 +1,40 @@
 # Optimum Gateway - Version History & Changelog
 
-**Latest Release:** [v1.3.5](./versions/v1.3.5/release_notes.md)  
-**Latest Docs:** [v1.3.5 Documentation](./versions/v1.3.5/index.md)
+**Latest Release:** [v1.3.6](./versions/v1.3.6/release_notes.md)  
+**Latest Docs:** [v1.3.6 Documentation](./versions/v1.3.6/index.md)
 
 ## Supported Versions
 
 | Version | Status                          | Docker Image                |
 | ------- | ------------------------------- | --------------------------- |
-| v1.3.5  | CURRENT                         | `getoptimum/gateway:v1.3.5` |
+| v1.3.6  | CURRENT                         | `getoptimum/gateway:v1.3.6` |
+| v1.3.5  | supported                       | `getoptimum/gateway:v1.3.5` |
 | v1.3.4  | supported / upgrade recommended | `getoptimum/gateway:v1.3.4` |
 
-## v1.3.5 (Current)
+## v1.3.6 (Current)
+
+**Docker Image:** `getoptimum/gateway:v1.3.6`
+
+v1.3.6 is the current release. A gateway already reachable on `33213` needs no configuration change. v1.3.5 stays supported. v1.3.4 stays supported; upgrade it for [CVE-2026-78661](https://www.cve.org/CVERecord?id=CVE-2026-78661).
+
+### Highlights
+
+* **Load-balancer announce address.** `agent_mump2p_announce_ip` and `agent_mump2p_announce_port` are the address other gateways dial. The gateway still listens on `agent_mump2p_port`. Unset, it announces the address it detects on the host.
+* **Outbound-only gateways.** `agent_mump2p_not_dialable: true` registers the gateway and announces no mesh address. Other gateways do not dial it. Do not combine it with the announce IP or port.
+* **Attestations are forwarded on each aggregation tick.** The gateway no longer holds them until 2s after the slot's block (4s without one) or cuts them off 8s into the slot. Attestations outside the current slot are still dropped.
+
+[Full release notes](./versions/v1.3.6/release_notes.md) · [Documentation](./versions/v1.3.6/index.md)
+
+## v1.3.5 (Supported)
 
 **Docker Image:** `getoptimum/gateway:v1.3.5`
 
-v1.3.5 is the current release. v1.3.2 and v1.3.3 are unsupported because they contained security vulnerabilities. v1.3.4 remains supported; upgrade it for [CVE-2026-78661](https://www.cve.org/CVERecord?id=CVE-2026-78661). No partner configuration change.
+v1.3.5 stays supported. v1.3.2 and v1.3.3 are unsupported because they contained security vulnerabilities. v1.3.4 remains supported; upgrade it for [CVE-2026-78661](https://www.cve.org/CVERecord?id=CVE-2026-78661). No partner configuration change.
 
 ### Highlights
 
 * **HTML-parser denial of service ([CVE-2026-78661](https://www.cve.org/CVERecord?id=CVE-2026-78661)).** The image is built with `golang.org/x/net` v0.62.0. v1.3.4 carries v0.60.0. The gateway does not parse HTML; the bump clears the advisory from the image.
-* **Oversized consensus requests are rejected before they are allocated.** Each request/response type is capped at its own SSZ size (8 bytes for ping and goodbye, 16 to 25 for metadata, 84 or 92 for status), and an idle inbound exchange is closed after 10 seconds.
+* **Oversized consensus requests are rejected before they are allocated ([GHSA-q3pr-7m34-94pc](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-q3pr-7m34-94pc)).** Each request/response type is capped at its own SSZ size (8 bytes for ping and goodbye, 16 to 25 for metadata, 84 or 92 for status), and an idle inbound exchange is closed after 10 seconds.
 * **Consensus clients stop asking the gateway for data columns.** `metadata/3` advertises custody group count 4, and `status/2` sets `earliest_available_slot` to 2^53−1. `status/1` stays an echo. PeerDAS clients that honor the field keep the peer and skip column requests.
 * **Ping and metadata both use sequence number 1.** v1.3.4 echoed the requester on ping and advertised sequence number 0. A peer listed in `direct_cl_peers` keeps its address after a disconnect.
 * **CL disconnect telemetry.** `mump2p_gateway_cl_peer_disconnected_by_client_total{peer_client}` and `mump2p_gateway_cl_peer_goodbye_total{peer_client,reason}`.
@@ -30,7 +45,7 @@ v1.3.5 is the current release. v1.3.2 and v1.3.3 are unsupported because they co
 
 **Docker Image:** `getoptimum/gateway:v1.3.4`
 
-v1.3.4 remains supported. Upgrade to v1.3.5 for [CVE-2026-78661](https://www.cve.org/CVERecord?id=CVE-2026-78661). If you run with host networking, also take the `48123` action in the release notes ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)).
+v1.3.4 remains supported. Upgrade to v1.3.6 for [CVE-2026-78661](https://www.cve.org/CVERecord?id=CVE-2026-78661). If you run with host networking, also take the `48123` action in the release notes ([GHSA-gr6w-cqh2-3c5g](https://github.com/getoptimum/optimum-gateway/security/advisories/GHSA-gr6w-cqh2-3c5g)).
 
 ### Highlights
 
