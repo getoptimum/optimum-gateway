@@ -46,7 +46,7 @@ func initGatewayHealthMetrics() {
 	mumHealthy = commonmetrics.NewGaugeVec(
 		"mump2p_health_status",
 		subsystem,
-		"Gateway MumP2P health: 1 = healthy, 0 = degraded",
+		"Gateway mump2p health: 1 = healthy, 0 = degraded",
 		nil,
 	).WithLabelValues()
 	go bgUpdateHealthStatus()

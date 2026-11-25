@@ -487,7 +487,7 @@ func LoadOrEnroll(ctx context.Context, log logger.AppLogger, opts *Options) (cre
 		// regenerated under it, every mint 401s with nothing pointing at the cause.
 		if cred.PeerID != "" && opts.PeerID != "" && cred.PeerID != opts.PeerID {
 			return nil, false, fmt.Errorf(
-				"enrollment: %s was enrolled for peer %s but this node is %s; the mumP2P identity changed",
+				"enrollment: %s was enrolled for peer %s but this node is %s; the mump2p identity changed",
 				credentialPath(opts.Dir), cred.PeerID, opts.PeerID,
 			)
 		}

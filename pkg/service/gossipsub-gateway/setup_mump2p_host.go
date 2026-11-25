@@ -7,7 +7,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 
 	"github.com/getoptimum/optimum-common/pkg/logger"
-	"github.com/getoptimum/optimum-gateway/pkg/config"
 	"github.com/getoptimum/optimum-gateway/pkg/entities"
 	"github.com/getoptimum/optimum-gateway/pkg/service/mum_p2p"
 	"github.com/getoptimum/optimum-gateway/pkg/service/telemetry"
@@ -19,25 +18,20 @@ func (s *Service) setupMumP2PHost() error {
 	if err != nil {
 		return fmt.Errorf("failed register mump2p peer: %w", err)
 	}
+	if _, err = s.cfg.WaitDynamicConfig(s.ctx); err != nil {
+		return fmt.Errorf("dynamic config: %w", err)
+	}
 	s.log.Info("setting mump2p host")
 	optCfg := &mum_p2p.Config{
-		ListenPort:               s.cfg.AgentMumP2PPort,
-		MaxMessageSize:           config.DefaultMaxMessageSize,
-		RandomMessageSize:        config.DefaultRandomMessageSize,
-		ShardFactor:              config.DefaultShardFactor,
-		PublisherShardMultiplier: config.DefaultPublisherShardMultiplier,
-		ForwardShardThreshold:    config.DefaultForwardShardThreshold,
-		MeshDegreeTarget:         int(config.DefaultMeshDegreeTarget),
-		MeshDegreeMin:            int(config.DefaultMeshDegreeMin),
-		MeshDegreeMax:            int(config.DefaultMeshDegreeMax),
-		BootstrapPeers:           filtered,
-		AdvertisedAddrs:          advertisedAddrs,
-		NotDialable:              s.cfg.MumP2PNotDialable,
-		ClusterID:                s.cfg.GatewayClusterID,
-		Rotator:                  s.cfg.GetDCRotator(),
-		TraceMesh:                s.cfg.TraceMesh,
-		TraceRPC:                 s.cfg.TraceRPC,
-		TraceShard:               s.cfg.TraceShard,
+		ListenPort:      s.cfg.AgentMumP2PPort,
+		BootstrapPeers:  filtered,
+		AdvertisedAddrs: advertisedAddrs,
+		NotDialable:     s.cfg.MumP2PNotDialable,
+		ClusterID:       s.cfg.GatewayClusterID,
+		Rotator:         s.cfg.GetDCRotator(),
+		TraceMesh:       s.cfg.TraceMesh,
+		TraceRPC:        s.cfg.TraceRPC,
+		TraceShard:      s.cfg.TraceShard,
 	}
 	if s.customMumP2PConnectionGater != nil {
 		optCfg.CustomConnectionGater = s.customMumP2PConnectionGater
@@ -45,7 +39,7 @@ func (s *Service) setupMumP2PHost() error {
 
 	s.nodeMumP2P, err = mum_p2p.NewNode(
 		s.ctx,
-		s.log.With(logger.WithService("mump2p")),
+		s.log,
 		optCfg,
 		s.cfg.IdentityMumP2PDir,
 		mum_p2p.WithCustomHandshakeBuilder(s.handshakeBuilder),

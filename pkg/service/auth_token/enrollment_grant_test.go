@@ -28,7 +28,7 @@ func joinKeyCfg(t *testing.T, rig *test_utils.AuthTestRig, dir string) *config.A
 }
 
 // restartOf models the same node booting again: a fresh config that keeps the
-// node's mumP2P identity, which the enrolled credential is bound to.
+// node's mump2p identity, which the enrolled credential is bound to.
 func restartOf(t *testing.T, rig *test_utils.AuthTestRig, prev *config.AppConfig) *config.AppConfig {
 	t.Helper()
 	// AppCfg makes a fresh identity and repoints rig.DefaultPeerID at it. A restart

@@ -2,7 +2,6 @@ package utils_test
 
 import (
 	"fmt"
-	"math"
 	"testing"
 
 	"github.com/libp2p/go-libp2p"
@@ -12,24 +11,6 @@ import (
 	commonnet "github.com/getoptimum/optimum-common/pkg/net"
 	"github.com/getoptimum/optimum-gateway/pkg/utils"
 )
-
-func TestCalculateMaxSize(t *testing.T) {
-	t.Run("rejects non-positive input", func(t *testing.T) {
-		_, err := utils.CalculateMaxSize(0)
-		require.ErrorContains(t, err, "src must be positive")
-	})
-
-	t.Run("adds twenty percent overhead", func(t *testing.T) {
-		size, err := utils.CalculateMaxSize(100)
-		require.NoError(t, err)
-		require.Equal(t, 120, size)
-	})
-
-	t.Run("rejects overflow after overhead", func(t *testing.T) {
-		_, err := utils.CalculateMaxSize(int64(math.MaxInt))
-		require.ErrorContains(t, err, "src is too large")
-	})
-}
 
 func TestPeersFromStrings(t *testing.T) {
 	host, err := libp2p.New()

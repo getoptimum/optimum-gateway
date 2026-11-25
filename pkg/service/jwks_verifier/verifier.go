@@ -22,7 +22,7 @@ const (
 	signingAlg = "ES256"                  // ES256 is the only allowed signing algorithm.
 )
 
-// AudP2P is the audience for the peer-visible handshake token used at the libp2p mumP2P handshake.
+// AudP2P is the audience for the peer-visible handshake token used at the libp2p mump2p handshake.
 // AudServices is the audience for the services token that carries operator_id to centralized services.
 // AudStream is the audience for consumer block-stream JWTs (ADR-0011).
 const (

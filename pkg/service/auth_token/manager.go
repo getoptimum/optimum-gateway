@@ -42,7 +42,7 @@ type Service struct {
 	log     logger.AppLogger
 	apiKey  string
 	mintURL string
-	// peerID binds the minted token to this node's mumP2P identity (the cnf claim).
+	// peerID binds the minted token to this node's mump2p identity (the cnf claim).
 	peerID string
 	// cred is set only in enrollment mode.
 	cred     *enrollment.Credential

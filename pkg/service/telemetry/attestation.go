@@ -6,9 +6,14 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	commonmetrics "github.com/getoptimum/optimum-common/pkg/telemetry"
+	"github.com/getoptimum/optimum-gateway/pkg/entities"
 )
 
 var (
+	attestationForwardedTotalMumP2P prometheus.Counter
+	attestationForwardedTotalCL     prometheus.Counter
+
+	// TODO: verify do we need this
 	attestationPackTotal          prometheus.Counter
 	attestationPackErrorTotal     prometheus.Counter
 	attestationPackSizeBytes      prometheus.Histogram
@@ -18,7 +23,6 @@ var (
 	attestationSubnetMessages *prometheus.CounterVec
 
 	attestationEvaluatedTotal       prometheus.Counter
-	attestationForwardedTotal       prometheus.Counter
 	attestationDroppedTotal         *prometheus.CounterVec
 	attestationInclusionDelay       prometheus.Histogram
 	attestationPackLatencyMs        prometheus.Histogram
@@ -68,10 +72,15 @@ func initAttestationMetrics() {
 		subsystem,
 		"Total attestations evaluated by the router (forwarded + dropped, for inclusion rate)",
 	)
-	attestationForwardedTotal = commonmetrics.NewCounter(
+	attestationForwardedTotalMumP2P = commonmetrics.NewCounter(
 		"attestation_forwarded_mump2p_total",
 		subsystem,
 		"Attestations forwarded to mump2p after router filter",
+	)
+	attestationForwardedTotalCL = commonmetrics.NewCounter(
+		"attestation_forwarded_cl_total",
+		subsystem,
+		"Attestations forwarded to CL after router filter",
 	)
 	attestationDroppedTotal = commonmetrics.NewCounterVec(
 		"attestation_dropped_total",
@@ -141,9 +150,15 @@ func IncAttestationEvaluated() {
 	}
 }
 
-func IncAttestationForwarded() {
-	if enabledMetrics {
-		attestationForwardedTotal.Inc()
+func IncAttestationForwarded(target entities.Source) {
+	if !enabledMetrics {
+		return
+	}
+	switch target {
+	case entities.SourceLibP2P:
+		attestationForwardedTotalCL.Inc()
+	case entities.SourceMumP2P:
+		attestationForwardedTotalMumP2P.Inc()
 	}
 }
 
