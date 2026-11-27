@@ -38,34 +38,43 @@ func main() {
 	if err != nil {
 		logger.NewAppSLogger(logger.Production).Fatal("unable to load config", err)
 	}
-	appLogger := logger.NewAppSLogger(logger.LogMode(appConf.LogLevel),
-		logger.WithGatewayID(appConf.GatewayID),
-		logger.WithClusterID(appConf.GatewayClusterID),
-	)
-
-	// Create rotating file writer for debug logs
-	rotatingFile, err := commonio.NewRotatingFileWriter("/gateway/logs/gateway-debug.log", commonio.DefaultMaxFileSize)
-	if err != nil {
-		// Fall back to stdout-only logging if file creation fails
-		appLogger.Error("failed to create rotating log file", err)
-		rotatingFile = nil
-	}
-
-	// Initialize logger with stdout and rotating file
-	var writers []io.Writer
-	writers = append(writers, os.Stdout)
-	if rotatingFile != nil {
+	// One logger for the whole process: stdout, the debug file, and Loki.
+	// The JWT gateway_id is added with With after the first mint.
+	writers := []io.Writer{os.Stdout}
+	rotatingFile, fileErr := commonio.NewRotatingFileWriter("/gateway/logs/gateway-debug.log", commonio.DefaultMaxFileSize)
+	if fileErr == nil {
 		writers = append(writers, rotatingFile)
 		defer rotatingFile.Close()
 	}
 
+	// remote_push_enable currently requires telemetry_enable=true because Mimir
+	// push depends on the Prometheus registry initialized by InitMetrics.
+	authConfigured := appConf.EnableAuth && (appConf.APIKey != "" || appConf.JoinKey != "")
+	var lokiWriter *telemetry.LokiWriter
+	if appConf.RemotePushEnable && authConfigured {
+		lokiWriter = telemetry.NewLokiWriter(appConf, "", logger.NewAppSLogger(logger.LogMode(appConf.LogLevel)))
+		writers = append(writers, lokiWriter)
+	}
+
+	l := logger.InitLogger(writers,
+		logger.LogMode(appConf.LogLevel),
+		logger.WithGatewayID(appConf.GatewayID),
+		logger.WithClusterID(appConf.GatewayClusterID),
+	)
+	if fileErr != nil {
+		l.Error("failed to create rotating log file", fileErr)
+	}
+	if appConf.RemotePushEnable && lokiWriter == nil {
+		l.Info("remote_push_enable is true but auth is disabled — loki push disabled")
+	}
+
 	// Initialize auth manager.
-	authMgr, err := auth_token.New(ctx, appLogger, appConf)
+	authMgr, err := auth_token.New(ctx, l, appConf)
 	if err != nil {
-		appLogger.Fatal("unable to initialize auth_token manager", err)
+		l.Fatal("unable to initialize auth_token manager", err)
 	}
 	if _, mintErr := authMgr.Token(ctx); mintErr != nil {
-		appLogger.Fatal("initial JWT mint failed", mintErr)
+		l.Fatal("initial JWT mint failed", mintErr)
 	}
 
 	// Resolve the JWT-sourced identity. When auth is enabled, the JWT's
@@ -79,33 +88,13 @@ func main() {
 		gatewayType = c.Type.String()
 		orgID = authMgr.OperatorID()
 	}
-	// Loki labels and the logger field are copied at construction. Set the
-	// subject first so both match the identity InitRuntime records.
 	if gatewayID != "" {
 		appConf.GatewayID = gatewayID
+		l = l.With(logger.WithGatewayID(gatewayID))
 	}
-
-	// remote_push_enable currently requires telemetry_enable=true because Mimir
-	// push depends on the Prometheus registry initialized by InitMetrics.
-	var lokiWriter *telemetry.LokiWriter
-	if appConf.RemotePushEnable {
-		if authMgr.IsEnabled() {
-			// operator_id comes from the /auth/token response body, not the JWT.
-			lokiWriter = telemetry.NewLokiWriter(appConf, authMgr.OperatorID(), appLogger)
-			writers = append(writers, lokiWriter)
-		} else {
-			appLogger.Info("remote_push_enable is true but auth is disabled — loki push disabled")
-		}
+	if lokiWriter != nil {
+		lokiWriter.UseIdentity(authMgr.OperatorID(), appConf.GatewayID)
 	}
-
-	l := logger.InitLogger(writers,
-		logger.LogMode(appConf.LogLevel),
-		logger.WithGatewayID(appConf.GatewayID),
-		logger.WithClusterID(appConf.GatewayClusterID),
-	)
-	// Install this before Start and InitRuntime. Both launch goroutines that
-	// log through the auth manager, and the field is a plain assignment.
-	authMgr.SetLogger(l)
 	if err = appConf.InitRuntime(ctx, l, chainID, gatewayID, gatewayType, orgID, authMgr.DynamicConfigToken); err != nil {
 		l.Fatal("unable to initialize runtime", err)
 	}

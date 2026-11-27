@@ -80,6 +80,17 @@ func (w *LokiWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
+// UseIdentity sets the gateway and operator stream labels after the first mint,
+// before Start. Buffered lines are flushed with those labels.
+func (w *LokiWriter) UseIdentity(operatorID, gatewayID string) {
+	if operatorID != "" {
+		w.streamLabels[lokiLabelOperatorID] = operatorID
+	}
+	if gatewayID != "" {
+		w.streamLabels[lokiLabelGatewayID] = gatewayID
+	}
+}
+
 // Start launches the background flush goroutine. The returned channel is
 // closed once the final flush has completed so callers can wait for clean shutdown.
 func (w *LokiWriter) Start(ctx context.Context) <-chan struct{} {
