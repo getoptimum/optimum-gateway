@@ -155,7 +155,33 @@ New counter for push outcomes, labelled `accepted`, `duplicate`, `stale`,
 should shrink it. The per-source metrics above explain where a gain comes from;
 they are not the success criterion.
 
-### 6. Prerequisites outside this repository
+### 6. Network isolation
+
+Turbonet is internal infrastructure. No part of it is reachable from the public
+internet.
+
+* **Gateway ↔ Turbonode.** The gateway serves the stream on loopback only
+  (`stream_grpc_addr` on `127.0.0.1`, the deployment default). The Turbonode
+  runs on the same host and connects over loopback. The push path never crosses
+  a network.
+* **Turbonode ↔ Turbonode.** Turbonodes of different Turbo gateway clusters link
+  over private addresses inside the operator's cloud network, which routes
+  private addresses between regions. No public firewall rule exists for a
+  Turbonode port; the network's internal-traffic rule already admits these
+  links.
+* **Defense in depth.** Gateway hosts have public addresses for mump2p and CL
+  p2p. A Turbonode therefore binds its listener to the host's private address,
+  not `0.0.0.0`, so a mistaken firewall rule does not expose it. If it runs in a
+  container, the published port binds the private address too.
+* **Scope.** A Turbo gateway cluster contains only hosts on that private
+  network. Linking a Turbonode to a host outside it needs a private
+  interconnect first, not a public rule. Development and production gateways do
+  not share one Turbonet.
+
+The deployment specifics (networks, ports, firewall rules) live in the private
+infrastructure repository.
+
+### 7. Prerequisites outside this repository
 
 * `optimum-common`: `GrantStreamPublish`.
 * optimum-auth mints `aud=stream` tokens with `scope: "stream:publish"` for
